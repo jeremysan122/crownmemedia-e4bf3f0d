@@ -18,30 +18,33 @@ export interface FilterStreak {
  */
 export function useFilterStreaks() {
   const { user } = useAuth();
+  // Use the stable user id primitive so callbacks aren't recreated on every
+  // User object property change (e.g. last_sign_in_at refresh).
+  const userId = user?.id;
   const [streaks, setStreaks] = useState<Record<string, FilterStreak>>({});
 
   const refresh = useCallback(async () => {
-    if (!user) { setStreaks({}); return; }
+    if (!userId) { setStreaks({}); return; }
     const { data } = await supabase
       .from("filter_streaks")
       .select("filter, current_streak, longest_streak, last_vote_date")
-      .eq("user_id", user.id);
+      .eq("user_id", userId);
     const map: Record<string, FilterStreak> = {};
     (data ?? []).forEach((r) => { map[r.filter] = r as FilterStreak; });
     setStreaks(map);
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
   const bump = useCallback(async (filter: FilterId | null | undefined) => {
-    if (!user || !filter || filter === "none") return;
+    if (!userId || !filter || filter === "none") return;
     const { data, error } = await supabase.rpc("bump_filter_streak", { _filter: filter });
     if (error) return;
     if (data) {
       const row = (Array.isArray(data) ? data[0] : data) as FilterStreak;
       if (row) setStreaks((s) => ({ ...s, [row.filter]: row }));
     }
-  }, [user]);
+  }, [userId]);
 
   return { streaks, bump, refresh };
 }

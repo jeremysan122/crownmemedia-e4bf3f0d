@@ -53,34 +53,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   const loadProfileAndRoles = async (uid: string, email?: string | null) => {
-    const { data: prof } = await supabase.from("profiles").select("*").eq("id", uid).maybeSingle();
-    setProfile(prof as Profile | null);
-    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", uid);
-    const adminRoles = ["admin", "super_admin", "finance_admin", "security_admin", "content_admin", "support_admin"];
-    const moderatorRoles = [...adminRoles, "moderator"];
-    setIsAdmin(!!roles?.some((r) => adminRoles.includes(r.role as string)));
-    setIsModerator(!!roles?.some((r) => moderatorRoles.includes(r.role as string)));
-    const { data: priv } = await supabase
-      .from("profiles_private")
-      .select("age_confirmed, onboarded_at, welcome_email_sent_at")
-      .eq("id", uid)
-      .maybeSingle();
-    setAgeConfirmed(priv ? !!priv.age_confirmed : false);
-    const privAny = priv as { onboarded_at?: string | null; welcome_email_sent_at?: string | null } | null;
-    setNeedsOnboarding(!!priv && !privAny?.onboarded_at);
-    // Fire welcome email once, after we have a profile and a verified user.
-    if (priv && !privAny?.welcome_email_sent_at && email && (prof as Profile | null)) {
-      const p = prof as Profile;
-      supabase.functions.invoke("send-transactional-email", {
-        body: {
-          templateName: "welcome",
-          recipientEmail: email,
-          idempotencyKey: `welcome-${uid}`,
-          templateData: { username: p.username, first_name: (p as unknown as { first_name?: string }).first_name },
-        },
-      }).then(async () => {
-        await supabase.from("profiles_private").update({ welcome_email_sent_at: new Date().toISOString() }).eq("id", uid);
-      }).catch(() => { /* noop — will retry next session */ });
+    try {
+      const { data: prof } = await supabase.from("profiles").select("*").eq("id", uid).maybeSingle();
+      setProfile(prof as Profile | null);
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", uid);
+      const adminRoles = ["admin", "super_admin", "finance_admin", "security_admin", "content_admin", "support_admin"];
+      const moderatorRoles = [...adminRoles, "moderator"];
+      setIsAdmin(!!roles?.some((r) => adminRoles.includes(r.role as string)));
+      setIsModerator(!!roles?.some((r) => moderatorRoles.includes(r.role as string)));
+      const { data: priv } = await supabase
+        .from("profiles_private")
+        .select("age_confirmed, onboarded_at, welcome_email_sent_at")
+        .eq("id", uid)
+        .maybeSingle();
+      setAgeConfirmed(priv ? !!priv.age_confirmed : false);
+      const privAny = priv as { onboarded_at?: string | null; welcome_email_sent_at?: string | null } | null;
+      setNeedsOnboarding(!!priv && !privAny?.onboarded_at);
+      // Fire welcome email once, after we have a profile and a verified user.
+      if (priv && !privAny?.welcome_email_sent_at && email && (prof as Profile | null)) {
+        const p = prof as Profile;
+        supabase.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "welcome",
+            recipientEmail: email,
+            idempotencyKey: `welcome-${uid}`,
+            templateData: { username: p.username, first_name: (p as unknown as { first_name?: string }).first_name },
+          },
+        }).then(async () => {
+          await supabase.from("profiles_private").update({ welcome_email_sent_at: new Date().toISOString() }).eq("id", uid);
+        }).catch(() => { /* noop — will retry next session */ });
+      }
+    } catch (err) {
+      // Network hiccup or Supabase error — session remains valid; profile stays
+      // null until the next auth state change triggers a fresh load attempt.
+      console.error("[AuthContext] loadProfileAndRoles failed:", err);
     }
   };
 

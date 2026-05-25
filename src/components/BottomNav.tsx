@@ -28,7 +28,7 @@ export function getRememberedBottomTab(): string | null {
 
 export default function BottomNav() {
   const loc = useLocation();
-  const hide = ["/", "/auth", "/age-gate"].includes(loc.pathname);
+  const hide = ["/", "/auth", "/age-gate", "/verify-age", "/onboarding"].includes(loc.pathname);
 
   // Persist the active tab whenever the route matches one of the bottom-nav items.
   useEffect(() => {

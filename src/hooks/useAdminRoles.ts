@@ -11,7 +11,9 @@ export function useAdminRoles() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let alive = true;
-    getMyAdminRoles().then((r) => { if (alive) { setRoles(r); setLoading(false); } });
+    getMyAdminRoles()
+      .then((r) => { if (alive) { setRoles(r); setLoading(false); } })
+      .catch(() => { if (alive) setLoading(false); }); // prevent perpetual spinner on DB error
     return () => { alive = false; };
   }, []);
   const has = (list: AdminRole[]) => roles.some((r) => list.includes(r));

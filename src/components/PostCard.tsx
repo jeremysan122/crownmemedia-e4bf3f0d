@@ -287,7 +287,9 @@ export default function PostCard({ post, onCommentClick }: { post: FeedPost; onC
       setCounts((c) => ({ ...c, ...byType, total: byType.crown + byType.fire + byType.diamond }));
     };
     load();
-  }, [post.id, user]);
+  // user?.id — the stable primitive, not the full User object, prevents
+  // redundant refetches when other user properties update.
+  }, [post.id, user?.id]);
 
   // Realtime status — for graceful loading/error UI when the channel drops
   const [rtStatus, setRtStatus] = useState<"connecting" | "live" | "reconnecting" | "error">("connecting");
@@ -413,7 +415,9 @@ export default function PostCard({ post, onCommentClick }: { post: FeedPost; onC
       if (reconnectTimer) clearTimeout(reconnectTimer);
       teardown();
     };
-  }, [post.id, user]);
+  // user?.id — stable primitive dep avoids spurious channel teardown/rebuild
+  // whenever unrelated User object properties refresh.
+  }, [post.id, user?.id]);
 
   const VOTE_WEIGHT: Record<VoteType, number> = { crown: 1, fire: 0.5, diamond: 1.5, dislike: 0 };
   const [scoreBump, setScoreBump] = useState(false);

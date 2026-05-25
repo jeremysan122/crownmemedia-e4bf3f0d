@@ -52,7 +52,11 @@ export default function Settings() {
       .select("is_private, hide_likes, hide_comments, hide_views, posts_visibility")
       .eq("id", profile.id)
       .maybeSingle()
-      .then(({ data }) => data && setPriv(data as PrivacyRow));
+      .then(({ data, error }) => {
+        if (error) console.error("[Settings] privacy fetch failed:", error.message);
+        else if (data) setPriv(data as PrivacyRow);
+      })
+      .catch((e) => console.error("[Settings] privacy fetch threw:", e));
   }, [profile?.id]);
 
   const updatePriv = async (patch: Partial<PrivacyRow>) => {

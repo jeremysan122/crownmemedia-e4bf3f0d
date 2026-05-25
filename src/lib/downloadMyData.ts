@@ -64,8 +64,8 @@ export async function downloadMyData(userId: string, username?: string | null): 
   };
 
   for (const p of posts as any[]) {
-    pushMedia("post.media", "posts", p?.media_path ?? null);
-    pushMedia("post.thumbnail", "posts", p?.thumbnail_path ?? null);
+    pushMedia("post.image", "posts", p?.image_url ?? null);
+    pushMedia("post.video", "posts", p?.video_url ?? null);
   }
   for (const m of [...(sentMessages as any[]), ...(receivedMessages as any[])]) {
     pushMedia("message.attachment", "dm-attachments", m?.attachment_path ?? null);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -97,7 +97,12 @@ export default function Onboarding() {
     if (perm === "granted") toast.success("Notifications enabled");
   };
 
-  if (step === "follows") loadSuggested();
+  // Load suggested users only when the "follows" step becomes active —
+  // calling this in the render body triggered a DB fetch on every re-render.
+  useEffect(() => {
+    if (step === "follows") loadSuggested();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/80 flex flex-col items-center px-4 py-10">

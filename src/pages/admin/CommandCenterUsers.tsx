@@ -1,12 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionCard, EmptyState, PillBadge } from "@/components/admin/cc/CommandCenterUI";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
 import { suspendUser, unsuspendUser, issueStrike, grantRole, revokeRole, banUser, unbanUser, type AdminRole } from "@/lib/admin";
 import { toast } from "sonner";
 
 const ROLES: AdminRole[] = ["moderator","content_admin","support_admin","finance_admin","security_admin","admin","super_admin"];
+
+type PendingBan = { id: string; banned: boolean };
+type PendingStrike = { id: string };
 
 export default function CommandCenterUsers() {
   const [q, setQ] = useState("");
@@ -14,10 +20,21 @@ export default function CommandCenterUsers() {
   const [roles, setRoles] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
 
+  // In-page dialog state — replaces window.confirm / window.prompt
+  const [pendingBan, setPendingBan] = useState<PendingBan | null>(null);
+  const [banReason, setBanReason] = useState("");
+  const [pendingStrike, setPendingStrike] = useState<PendingStrike | null>(null);
+  const [strikeReason, setStrikeReason] = useState("");
+  const [actionBusy, setActionBusy] = useState(false);
+
   const search = async () => {
     setLoading(true);
     const term = q.trim();
-    let query = supabase.from("profiles").select("id, username, city, country, is_suspended, is_banned, banned_reason, followers_count, created_at").order("created_at", { ascending: false }).limit(40);
+    let query = supabase
+      .from("profiles")
+      .select("id, username, city, country, is_suspended, is_banned, banned_reason, followers_count, created_at")
+      .order("created_at", { ascending: false })
+      .limit(40);
     if (term) query = query.ilike("username", `%${term}%`);
     const { data } = await query;
     setUsers(data ?? []);
@@ -41,24 +58,59 @@ export default function CommandCenterUsers() {
     } catch (e: any) { toast.error(e.message ?? "Failed"); }
   };
 
-  const onBan = async (id: string, banned: boolean) => {
-    if (banned) {
-      if (!window.confirm("Unban this user?")) return;
-      try { await unbanUser(id); toast.success("Unbanned"); search(); }
-      catch (e: any) { toast.error(e.message ?? "Failed"); }
-    } else {
-      const reason = window.prompt("Ban reason (required):");
-      if (!reason) return;
-      try { await banUser(id, reason); toast.success("Banned"); search(); }
-      catch (e: any) { toast.error(e.message ?? "Failed"); }
+  // ---- Ban flow ----
+  const openBanDialog = (id: string, banned: boolean) => {
+    setBanReason("");
+    setPendingBan({ id, banned });
+  };
+
+  const confirmBan = async () => {
+    if (!pendingBan) return;
+    const { id, banned } = pendingBan;
+    if (!banned && !banReason.trim()) {
+      toast.error("Ban reason is required");
+      return;
+    }
+    setActionBusy(true);
+    try {
+      if (banned) {
+        await unbanUser(id);
+        toast.success("Unbanned");
+      } else {
+        await banUser(id, banReason.trim());
+        toast.success("Banned");
+      }
+      setPendingBan(null);
+      search();
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed");
+    } finally {
+      setActionBusy(false);
     }
   };
 
-  const onStrike = async (id: string) => {
-    const reason = window.prompt("Strike reason:");
-    if (!reason) return;
-    try { await issueStrike(id, reason, "minor"); toast.success("Strike issued"); }
-    catch (e: any) { toast.error(e.message ?? "Failed"); }
+  // ---- Strike flow ----
+  const openStrikeDialog = (id: string) => {
+    setStrikeReason("");
+    setPendingStrike({ id });
+  };
+
+  const confirmStrike = async () => {
+    if (!pendingStrike) return;
+    if (!strikeReason.trim()) {
+      toast.error("Strike reason is required");
+      return;
+    }
+    setActionBusy(true);
+    try {
+      await issueStrike(pendingStrike.id, strikeReason.trim(), "minor");
+      toast.success("Strike issued");
+      setPendingStrike(null);
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed");
+    } finally {
+      setActionBusy(false);
+    }
   };
 
   const toggleRole = async (id: string, role: AdminRole) => {
@@ -96,16 +148,25 @@ export default function CommandCenterUsers() {
                     {ROLES.map((r) => {
                       const has = ur.includes(r);
                       return (
-                        <button key={r} onClick={() => toggleRole(u.id, r)} className={`text-[10px] px-1.5 py-0.5 rounded border ${has ? "bg-gold/15 border-gold/40 text-gold" : "border-border/60 text-muted-foreground hover:text-foreground"}`}>
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => toggleRole(u.id, r)}
+                          className={`text-[10px] px-1.5 py-0.5 rounded border ${has ? "bg-gold/15 border-gold/40 text-gold" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
+                        >
                           {r}
                         </button>
                       );
                     })}
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => onSuspend(u.id, u.is_suspended)}>{u.is_suspended ? "Unsuspend" : "Suspend"}</Button>
-                    <Button size="sm" variant={u.is_banned ? "outline" : "destructive"} className="h-7 text-[10px]" onClick={() => onBan(u.id, u.is_banned)}>{u.is_banned ? "Unban" : "Ban"}</Button>
-                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => onStrike(u.id)}>Strike</Button>
+                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => onSuspend(u.id, u.is_suspended)}>
+                      {u.is_suspended ? "Unsuspend" : "Suspend"}
+                    </Button>
+                    <Button size="sm" variant={u.is_banned ? "outline" : "destructive"} className="h-7 text-[10px]" onClick={() => openBanDialog(u.id, u.is_banned)}>
+                      {u.is_banned ? "Unban" : "Ban"}
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => openStrikeDialog(u.id)}>Strike</Button>
                   </div>
                 </li>
               );
@@ -113,6 +174,68 @@ export default function CommandCenterUsers() {
           </ul>
         )}
       </SectionCard>
+
+      {/* Ban dialog */}
+      <Dialog open={!!pendingBan} onOpenChange={(o) => { if (!o) setPendingBan(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{pendingBan?.banned ? "Unban user" : "Ban user"}</DialogTitle>
+            <DialogDescription>
+              {pendingBan?.banned
+                ? "This will restore the user's access to CrownMe."
+                : "Enter a reason for the ban. This will be logged and shown to the user."}
+            </DialogDescription>
+          </DialogHeader>
+          {!pendingBan?.banned && (
+            <Input
+              autoFocus
+              placeholder="Ban reason (required)"
+              value={banReason}
+              onChange={(e) => setBanReason(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && confirmBan()}
+            />
+          )}
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="ghost" onClick={() => setPendingBan(null)} disabled={actionBusy}>Cancel</Button>
+            <Button
+              type="button"
+              variant={pendingBan?.banned ? "outline" : "destructive"}
+              onClick={confirmBan}
+              disabled={actionBusy || (!pendingBan?.banned && !banReason.trim())}
+            >
+              {pendingBan?.banned ? "Confirm unban" : "Confirm ban"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Strike dialog */}
+      <Dialog open={!!pendingStrike} onOpenChange={(o) => { if (!o) setPendingStrike(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Issue strike</DialogTitle>
+            <DialogDescription>Enter a reason for this strike. It will be logged against the user's account.</DialogDescription>
+          </DialogHeader>
+          <Input
+            autoFocus
+            placeholder="Strike reason (required)"
+            value={strikeReason}
+            onChange={(e) => setStrikeReason(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && confirmStrike()}
+          />
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="ghost" onClick={() => setPendingStrike(null)} disabled={actionBusy}>Cancel</Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={confirmStrike}
+              disabled={actionBusy || !strikeReason.trim()}
+            >
+              Issue strike
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
