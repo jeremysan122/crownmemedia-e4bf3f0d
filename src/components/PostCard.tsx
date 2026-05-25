@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Crown, Flame, Gem, Gift, MessageCircle, Share2, MapPin, MoreHorizontal, Pencil, Flag, Ban, Sparkles, Trash2, Archive, Bookmark, Pin, PinOff, Zap, BarChart3, Repeat2, Clock, } from "lucide-react";
 import { BrokenCrown } from "@/components/icons/BrokenCrown";
@@ -79,7 +79,46 @@ export interface FeedPost {
   rank?: number | null;
 }
 
-export default function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (id: string) => void }) {
+// ── Module-level VoteBtn ────────────────────────────────────────────────────
+// Defined outside PostCard so React sees the same component type across renders.
+// An inline `const VoteBtn = (...)` inside the render body creates a *new* function
+// type on every render, causing React to unmount + remount the button DOM tree.
+interface VoteBtnProps {
+  type: VoteType;
+  icon: typeof Crown; // Lucide icon type — same as original inline VoteBtn
+  color: string;
+  active: boolean;
+  burst: VoteType | null;
+  showLikes: boolean;
+  count: number;
+  onVote: (t: VoteType) => void;
+}
+const VoteBtn = memo(function VoteBtn({ type, icon: Icon, color, active, burst, showLikes, count, onVote }: VoteBtnProps) {
+  return (
+    <button
+      onPointerDown={() => {
+        if (typeof navigator !== "undefined" && navigator.vibrate) {
+          try { navigator.vibrate(active ? 8 : 14); } catch { /* noop */ }
+        }
+      }}
+      onClick={() => onVote(type)}
+      aria-pressed={active}
+      aria-label={`${type} vote`}
+      className={`flex items-center gap-1 px-2 py-1 rounded-full transition-all active:scale-95 ${
+        active ? `bg-gradient-to-br ${color} text-white shadow-lg` : "bg-muted/50 text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      <Icon size={14} className={burst === type ? "animate-vote-burst" : ""} fill={active ? "currentColor" : "none"} />
+      {showLikes ? (
+        <span className="text-[11px] font-bold tabular-nums">{count}</span>
+      ) : (
+        <HiddenCountLock kind="likes" />
+      )}
+    </button>
+  );
+});
+
+function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (id: string) => void }) {
   const { user } = useAuth();
   const isPassMember = useIsRoyalPassUser(post.user_id);
   const [myVotes, setMyVotes] = useState<Set<VoteType>>(new Set());
@@ -88,6 +127,11 @@ export default function PostCard({ post, onCommentClick }: { post: FeedPost; onC
     shares: post.share_count ?? 0, battleWins: post.battle_wins ?? 0,
   });
   const [burst, setBurst] = useState<VoteType | null>(null);
+  // Timer refs — clear on component unmount to prevent setState on unmounted component.
+  const burstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scoreBumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const filterBoostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const commentBumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
   const [activeGift, setActiveGift] = useState<RoyalGift | null>(null);
@@ -439,7 +483,8 @@ export default function PostCard({ post, onCommentClick }: { post: FeedPost; onC
         score: c.score + Math.max(0.1, c.score * 0.01),
       }));
       setScoreBump(true);
-      setTimeout(() => setScoreBump(false), 700);
+      if (commentBumpTimerRef.current) clearTimeout(commentBumpTimerRef.current);
+      commentBumpTimerRef.current = setTimeout(() => setScoreBump(false), 700);
     };
     window.addEventListener("crownme:comment-added", handler as EventListener);
     return () => window.removeEventListener("crownme:comment-added", handler as EventListener);
@@ -447,7 +492,17 @@ export default function PostCard({ post, onCommentClick }: { post: FeedPost; onC
 
   const [filterBoost, setFilterBoost] = useState<VoteType | null>(null);
   const { bump: bumpFilterStreak } = useFilterStreaks();
-  const onVote = async (t: VoteType) => {
+
+  // Cleanup all pending timers when the card unmounts so we never call setState
+  // on an unmounted component (e.g. user navigates away mid-animation).
+  useEffect(() => () => {
+    if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
+    if (scoreBumpTimerRef.current) clearTimeout(scoreBumpTimerRef.current);
+    if (filterBoostTimerRef.current) clearTimeout(filterBoostTimerRef.current);
+    if (commentBumpTimerRef.current) clearTimeout(commentBumpTimerRef.current);
+  }, []);
+
+  const onVote = useCallback(async (t: VoteType) => {
     if (!user) return;
     const had = myVotes.has(t);
     // Mutual exclusivity: if a different reaction is currently active, it will
@@ -456,7 +511,8 @@ export default function PostCard({ post, onCommentClick }: { post: FeedPost; onC
       ? ((["crown", "fire", "diamond", "dislike"] as VoteType[]).find((x) => myVotes.has(x)) ?? null)
       : null;
     setBurst(t);
-    setTimeout(() => setBurst(null), 500);
+    if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
+    burstTimerRef.current = setTimeout(() => setBurst(null), 500);
     if (!had) {
       if (t !== "dislike") fxVote(t); // celebratory chime — skip for dislike
       setOverlayBurst({
@@ -464,10 +520,12 @@ export default function PostCard({ post, onCommentClick }: { post: FeedPost; onC
         delta: t === "dislike" ? "" : `+${VOTE_WEIGHT[t]}`,
       });
       setScoreBump(true);
-      setTimeout(() => setScoreBump(false), 700);
+      if (scoreBumpTimerRef.current) clearTimeout(scoreBumpTimerRef.current);
+      scoreBumpTimerRef.current = setTimeout(() => setScoreBump(false), 700);
       if (liveFilter && liveFilter !== "none" && t !== "dislike") {
         setFilterBoost(t);
-        setTimeout(() => setFilterBoost(null), 650);
+        if (filterBoostTimerRef.current) clearTimeout(filterBoostTimerRef.current);
+        filterBoostTimerRef.current = setTimeout(() => setFilterBoost(null), 650);
         bumpFilterStreak(liveFilter);
       }
     } else {
@@ -499,37 +557,11 @@ export default function PostCard({ post, onCommentClick }: { post: FeedPost; onC
       nextC.total = Math.max(0, c.total + totalDelta);
       return nextC;
     });
-    await toggleVote(post.id, user.id, t);
-  };
+    await toggleVote(post.id, user!.id, t);
+  }, [user?.id, myVotes, counts, liveFilter, bumpFilterStreak, post.id]);
 
   const showLikes = canSeeLikes(post.profile, { isOwner });
   const showComments = canSeeComments(post.profile, { isOwner });
-
-  const VoteBtn = ({ type, icon: Icon, color }: { type: VoteType; icon: typeof Crown; color: string }) => {
-    const active = myVotes.has(type);
-    return (
-      <button
-        onPointerDown={() => {
-          if (typeof navigator !== "undefined" && navigator.vibrate) {
-            try { navigator.vibrate(active ? 8 : 14); } catch { /* noop */ }
-          }
-        }}
-        onClick={() => onVote(type)}
-        aria-pressed={active}
-        aria-label={`${type} vote`}
-        className={`flex items-center gap-1 px-2 py-1 rounded-full transition-all active:scale-95 ${
-          active ? `bg-gradient-to-br ${color} text-white shadow-lg` : "bg-muted/50 text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Icon size={14} className={burst === type ? "animate-vote-burst" : ""} fill={active ? "currentColor" : "none"} />
-        {showLikes ? (
-          <span className="text-[11px] font-bold tabular-nums">{counts[type]}</span>
-        ) : (
-          <HiddenCountLock kind="likes" />
-        )}
-      </button>
-    );
-  };
 
   if (hidden) return null;
   return (
@@ -820,10 +852,10 @@ export default function PostCard({ post, onCommentClick }: { post: FeedPost; onC
       {/* Actions */}
       <div className="px-2 pt-2 pb-1 flex items-center justify-between gap-1 relative">
         <div className="flex items-center gap-1 relative">
-          <VoteBtn type="crown" icon={Crown} color="from-amber-500 to-yellow-600" />
-          <VoteBtn type="fire" icon={Flame} color="from-orange-500 to-red-600" />
-          <VoteBtn type="diamond" icon={Gem} color="from-cyan-400 to-blue-600" />
-          <VoteBtn type="dislike" icon={BrokenCrown} color="from-zinc-500 to-zinc-700" />
+          <VoteBtn type="crown" icon={Crown} color="from-amber-500 to-yellow-600" active={myVotes.has("crown")} burst={burst} showLikes={showLikes} count={counts.crown} onVote={onVote} />
+          <VoteBtn type="fire" icon={Flame} color="from-orange-500 to-red-600" active={myVotes.has("fire")} burst={burst} showLikes={showLikes} count={counts.fire} onVote={onVote} />
+          <VoteBtn type="diamond" icon={Gem} color="from-cyan-400 to-blue-600" active={myVotes.has("diamond")} burst={burst} showLikes={showLikes} count={counts.diamond} onVote={onVote} />
+          <VoteBtn type="dislike" icon={BrokenCrown} color="from-zinc-500 to-zinc-700" active={myVotes.has("dislike")} burst={burst} showLikes={showLikes} count={counts.dislike} onVote={onVote} />
           <VoteBurst
             type={overlayBurst?.type ?? null}
             delta={overlayBurst?.delta}
@@ -971,3 +1003,9 @@ export default function PostCard({ post, onCommentClick }: { post: FeedPost; onC
     </article>
   );
 }
+
+// Wrap in React.memo so Feed doesn't re-render all 25 cards when unrelated Feed
+// state changes (e.g. loadingMore, openComment, pull-to-refresh dist). The
+// rankedPosts useMemo in Feed ensures `post` references are stable across renders,
+// so the default shallow-equality check works without a custom comparator.
+export default memo(PostCard);

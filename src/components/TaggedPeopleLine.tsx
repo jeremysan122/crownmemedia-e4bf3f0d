@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Users as UsersIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,7 @@ interface Props { ids: string[] }
 /** Resolves a list of user ids to @username chips. Cached per id in-session. */
 const usernameCache = new Map<string, string>();
 
-export default function TaggedPeopleLine({ ids }: Props) {
+function TaggedPeopleLine({ ids }: Props) {
   const [map, setMap] = useState<Map<string, string>>(() => {
     const m = new Map<string, string>();
     ids.forEach((id) => { const u = usernameCache.get(id); if (u) m.set(id, u); });
@@ -51,3 +51,6 @@ export default function TaggedPeopleLine({ ids }: Props) {
     </p>
   );
 }
+
+// Stable comparator: re-render only when the set of tagged ids changes.
+export default memo(TaggedPeopleLine, (prev, next) => prev.ids.join(",") === next.ids.join(","));

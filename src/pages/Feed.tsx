@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import TrendingHashtags from "@/components/TrendingHashtags";
-import { Hash, X as XIcon, ArrowUp, Loader2, Clock, TrendingUp, Flame as FlameIcon } from "lucide-react";
+import { Hash, X as XIcon, ArrowUp, Loader2, Clock, TrendingUp, Flame as FlameIcon, type LucideIcon } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import PostCard, { FeedPost } from "@/components/PostCard";
 import CommentsDrawer from "@/components/CommentsDrawer";
@@ -72,6 +72,51 @@ const windowSince = (w: TimeWindow): string | null => {
   const ms = w === "24h" ? 86400e3 : w === "7d" ? 7 * 86400e3 : 30 * 86400e3;
   return new Date(Date.now() - ms).toISOString();
 };
+
+// ── Hoisted chip components ──────────────────────────────────────────────────
+// Defined outside Feed so React sees a stable component type on every render.
+// An inline definition would cause React to unmount+remount the DOM subtree on
+// every Feed state change — even when the chip hasn't changed at all.
+
+interface SortChipProps {
+  value: SortMode; label: string; icon: LucideIcon;
+  currentSort: SortMode; onSort: (v: SortMode) => void;
+}
+const SortChip = memo(function SortChip({ value, label, icon: Icon, currentSort, onSort }: SortChipProps) {
+  return (
+    <button
+      onClick={() => onSort(value)}
+      className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border transition ${
+        currentSort === value
+          ? "bg-gradient-gold text-primary-foreground border-transparent gold-shadow"
+          : "bg-card/60 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
+      }`}
+      aria-pressed={currentSort === value}
+    >
+      <Icon size={12} /> {label}
+    </button>
+  );
+});
+
+interface WindowChipProps {
+  value: TimeWindow; label: string;
+  currentWindow: TimeWindow; onWindow: (v: TimeWindow) => void;
+}
+const WindowChip = memo(function WindowChip({ value, label, currentWindow, onWindow }: WindowChipProps) {
+  return (
+    <button
+      onClick={() => onWindow(value)}
+      className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition ${
+        currentWindow === value
+          ? "bg-primary/15 text-primary border-primary/40"
+          : "bg-card/60 text-muted-foreground border-border hover:text-foreground"
+      }`}
+      aria-pressed={currentWindow === value}
+    >
+      {label}
+    </button>
+  );
+});
 
 export default function Feed() {
   const { profile, user } = useAuth();
@@ -291,19 +336,25 @@ export default function Feed() {
   }, [matchesCurrentFilters]);
 
   // Show queued new posts at the top of the feed.
-  const showNewPosts = () => {
-    if (newPosts.length === 0) return;
+  // Wrapped in useCallback so the "new posts" pill button gets a stable onClick ref.
+  const showNewPosts = useCallback(() => {
     setPosts((prev) => {
       const seen = new Set(prev.map((p) => p.id));
       return [...newPosts.filter((p) => !seen.has(p.id)), ...prev];
     });
     setNewPosts([]);
     try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch { /* noop */ }
-  };
+  // newPosts is intentionally captured here — it's the batch we want to prepend.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newPosts]);
 
   // Pull-to-refresh (mobile only)
   const ptrRef = useRef<HTMLDivElement | null>(null);
   const [pullDist, setPullDist] = useState(0);
+  // ↓ Ref keeps the live pullDist value available inside the effect's onEnd
+  // closure WITHOUT putting pullDist in the dep array — which would re-register
+  // the touch listeners on every pixel of a pull gesture (~90×/swipe).
+  const pullDistRef = useRef(0);
   const [refreshing, setRefreshing] = useState(false);
   useEffect(() => {
     const el = ptrRef.current;
@@ -318,14 +369,17 @@ export default function Feed() {
     const onMove = (e: TouchEvent) => {
       if (!active) return;
       const dy = e.touches[0].clientY - startY;
-      if (dy > 0) setPullDist(Math.min(90, dy * 0.5));
+      if (dy > 0) {
+        const d = Math.min(90, dy * 0.5);
+        pullDistRef.current = d;
+        setPullDist(d);
+      }
     };
     const onEnd = async () => {
       if (!active) return;
       active = false;
-      if (pullDist >= 60) {
+      if (pullDistRef.current >= 60) {
         setRefreshing(true);
-        // trigger reload by toggling a no-op state — easiest is to refetch directly.
         try {
           let q = buildQuery({ cursor: null });
           if (tab === "following" && followingIds && followingIds.length) q = q.in("user_id", followingIds);
@@ -337,6 +391,7 @@ export default function Feed() {
         } catch { /* noop */ }
         setRefreshing(false);
       }
+      pullDistRef.current = 0;
       setPullDist(0);
     };
     el.addEventListener("touchstart", onStart, { passive: true });
@@ -347,7 +402,8 @@ export default function Feed() {
       el.removeEventListener("touchmove", onMove);
       el.removeEventListener("touchend", onEnd);
     };
-  }, [pullDist, buildQuery, tab, followingIds]);
+  // pullDist removed — read via pullDistRef.current inside onEnd instead.
+  }, [buildQuery, tab, followingIds]);
 
   const showRank = catFilter !== "all" || tab === "city" || tab === "state";
 
@@ -386,32 +442,12 @@ export default function Feed() {
     }).map((x) => x.p);
   }, [posts, debouncedFilterSort, filterPopularity]);
 
-  const SortChip = ({ value, label, icon: Icon }: { value: SortMode; label: string; icon: typeof Clock }) => (
-    <button
-      onClick={() => setSort(value)}
-      className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border transition ${
-        sort === value
-          ? "bg-gradient-gold text-primary-foreground border-transparent gold-shadow"
-          : "bg-card/60 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
-      }`}
-      aria-pressed={sort === value}
-    >
-      <Icon size={12} /> {label}
-    </button>
-  );
-
-  const WindowChip = ({ value, label }: { value: TimeWindow; label: string }) => (
-    <button
-      onClick={() => setTimeWindow(value)}
-      className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition ${
-        timeWindow === value
-          ? "bg-primary/15 text-primary border-primary/40"
-          : "bg-card/60 text-muted-foreground border-border hover:text-foreground"
-      }`}
-      aria-pressed={timeWindow === value}
-    >
-      {label}
-    </button>
+  // Pre-attach rank to each post inside a useMemo so the rendered objects are
+  // stable references — avoids creating a new `{ ...p, rank }` object on every
+  // Feed render, which would defeat React.memo on PostCard.
+  const rankedPosts = useMemo(
+    () => orderedPosts.map((p, i) => ({ ...p, rank: showRank ? i + 1 : null })),
+    [orderedPosts, showRank],
   );
 
   return (
@@ -482,15 +518,15 @@ export default function Feed() {
 
         {/* Sort + time window chips */}
         <div className="px-3 lg:px-0 pt-3 flex flex-wrap items-center gap-2">
-          <SortChip value="latest" label="Latest" icon={Clock} />
-          <SortChip value="top" label="Top" icon={TrendingUp} />
-          <SortChip value="rising" label="Rising" icon={FlameIcon} />
+          <SortChip value="latest" label="Latest" icon={Clock} currentSort={sort} onSort={setSort} />
+          <SortChip value="top" label="Top" icon={TrendingUp} currentSort={sort} onSort={setSort} />
+          <SortChip value="rising" label="Rising" icon={FlameIcon} currentSort={sort} onSort={setSort} />
           {sort === "top" && (
             <div className="flex items-center gap-1.5 ml-1">
-              <WindowChip value="24h" label="24h" />
-              <WindowChip value="7d" label="7d" />
-              <WindowChip value="30d" label="30d" />
-              <WindowChip value="all" label="All" />
+              <WindowChip value="24h" label="24h" currentWindow={timeWindow} onWindow={setTimeWindow} />
+              <WindowChip value="7d" label="7d" currentWindow={timeWindow} onWindow={setTimeWindow} />
+              <WindowChip value="30d" label="30d" currentWindow={timeWindow} onWindow={setTimeWindow} />
+              <WindowChip value="all" label="All" currentWindow={timeWindow} onWindow={setTimeWindow} />
             </div>
           )}
           <Link
@@ -627,8 +663,8 @@ export default function Feed() {
             </div>
           ) : (
             <>
-              {orderedPosts.map((p, i) => (
-                <PostCard key={p.id} post={{ ...p, rank: showRank ? i + 1 : null }} onCommentClick={setOpenComment} />
+              {rankedPosts.map((p) => (
+                <PostCard key={p.id} post={p} onCommentClick={setOpenComment} />
               ))}
               <div ref={sentinelRef} className="h-12 flex items-center justify-center">
                 {loadingMore && (

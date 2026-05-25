@@ -29,6 +29,28 @@ interface CrownLeader {
   region_name: string;
 }
 
+// ── Module-level TTL cache ───────────────────────────────────────────────────
+// Shared across all mounted RaceProgressBar instances so that multiple cards
+// in the same category/region (e.g. 25 "city:Austin:fitness" posts) only fire
+// ONE crown-leader query instead of 25 parallel ones. 30-second TTL; realtime
+// channel updates invalidate entries immediately via setCachedLeader(key, null).
+const LEADER_CACHE_TTL_MS = 30_000;
+interface LeaderCacheEntry { data: CrownLeader | null; ts: number }
+const leaderCache = new Map<string, LeaderCacheEntry>();
+
+function getCachedLeader(key: string): CrownLeader | null | undefined {
+  const entry = leaderCache.get(key);
+  if (!entry) return undefined; // cache miss
+  if (Date.now() - entry.ts > LEADER_CACHE_TTL_MS) { leaderCache.delete(key); return undefined; }
+  return entry.data;
+}
+function setCachedLeader(key: string, data: CrownLeader | null) {
+  leaderCache.set(key, { data, ts: Date.now() });
+}
+function invalidateCachedLeader(key: string) {
+  leaderCache.delete(key);
+}
+
 function pickScope(city: string | null, state: string | null, country: string | null): RegionScope {
   if (city) return "city";
   if (state) return "state";
@@ -123,6 +145,17 @@ export default function RaceProgressBar({
   useEffect(() => {
     if (!region) { setLoading(false); return; }
     let cancelled = false;
+    const cacheKey = `${effectiveScope}:${region}:${category}`;
+
+    // Serve from cache immediately if available (avoids N+1 on feed load).
+    const cached = getCachedLeader(cacheKey);
+    if (cached !== undefined) {
+      setLeader(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     const fetchLeader = async () => {
       const { data } = await supabase
         .from("crowns")
@@ -135,18 +168,28 @@ export default function RaceProgressBar({
         .limit(1)
         .maybeSingle();
       if (!cancelled) {
-        setLeader((data as CrownLeader) ?? null);
+        const result = (data as CrownLeader) ?? null;
+        setCachedLeader(cacheKey, result);
+        setLeader(result);
         setLoading(false);
       }
     };
-    setLoading(true);
+
     fetchLeader();
+
+    // One realtime channel per unique region+category combination, not per post.
+    // We reuse the same channel name so Supabase deduplicates subscriptions when
+    // multiple posts share the same scope (the UUID suffix is intentionally absent here).
     const ch = supabase
-      .channel(`race-${postId}-${effectiveScope}-${region}-${category}-${crypto.randomUUID()}`)
+      .channel(`race-leader-${effectiveScope}-${region}-${category}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "crowns", filter: `region_type=eq.${effectiveScope}` },
-        fetchLeader,
+        () => {
+          // Invalidate the cache entry so the next render triggers a fresh fetch.
+          invalidateCachedLeader(cacheKey);
+          fetchLeader();
+        },
       ).subscribe();
     return () => { cancelled = true; supabase.removeChannel(ch); };
   }, [postId, region, effectiveScope, category]);
