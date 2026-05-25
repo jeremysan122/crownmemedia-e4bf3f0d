@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.grant_pass_invite_bonus(uuid) TO service_role;

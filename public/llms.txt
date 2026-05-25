@@ -1,0 +1,24 @@
+# CrownMe Media
+
+> CrownMe is the 18+ social photo competition. Members post photos, get voted by other members, and climb city, country, and global leaderboards. No gambling, no real-money prizes.
+
+## Pages
+
+- [Home](/): Sign up or log in to CrownMe.
+- [Sign up — Age gate](/age-gate): 18+ age verification before signup.
+- [Log in](/auth): Existing member login.
+
+## Legal
+
+- [Legal Center](/legal): Index of all CrownMe legal documents.
+- [Terms of Service](/terms): User agreement and service terms.
+- [Privacy Policy](/privacy): How CrownMe handles personal data.
+- [Community Guidelines](/conduct): Conduct rules for members.
+- [Cookie Policy](/cookies): Cookies and tracking technologies.
+- [DMCA & Copyright Policy](/dmca): Copyright takedown procedure.
+- [Acceptable Use Policy](/acceptable-use): What is and isn't allowed.
+- [EULA](/eula): End-user license agreement.
+- [Subscription Terms](/subscription-terms): Royal Pass and subscription billing.
+- [Virtual Goods Policy](/virtual-goods): Shekels, gifts, and in-app currency.
+- [Child Safety Policy](/csae-policy): CSAE prevention and reporting.
+- [Legal Contact](/contact-legal): How to reach legal, DPO, and DMCA agent.

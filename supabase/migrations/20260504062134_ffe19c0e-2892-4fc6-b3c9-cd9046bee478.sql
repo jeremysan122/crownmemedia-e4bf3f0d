@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Avatars public exact path read" ON storage.objects;

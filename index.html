@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta name="google-site-verification" content="hYy_BJ467QXXhIRcM_3BJPQ3izHiLqw-Kt9BRG-I7yY" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CrownMe — Earn the crown. Defend the throne.</title>
+    <meta name="description" content="CrownMe is THE social competition platform. Post your best content, earn votes from the community, and climb the global leaderboard to claim your crown.">
+    <meta name="author" content="CrownMe" />
+    <meta name="theme-color" content="#0b0612" />
+
+    <link rel="canonical" href="https://crownmemedia.com/" />
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://crownmemedia.com/" />
+    <meta property="og:image" content="https://crownmemedia.com/og-image.png">
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="CrownMe" />
+    <meta property="og:site_name" content="CrownMe" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://crownmemedia.com/og-image.png">
+    <meta name="twitter:image:alt" content="CrownMe" />
+    
+  
+  
+  
+  <meta name="rating" content="adult">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "CrownMe",
+      "url": "https://crownmemedia.com",
+      "applicationCategory": "SocialNetworkingApplication",
+      "operatingSystem": "Web",
+      "description": "The 18+ social photo competition. Post, get voted, climb city, country, and global leaderboards.",
+      "audience": { "@type": "PeopleAudience", "suggestedMinAge": 18 },
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    }
+  </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "CrownMe Media",
+      "url": "https://crownmemedia.com",
+      "logo": "https://crownmemedia.com/apple-touch-icon.png",
+      "sameAs": ["https://crownmemedia.lovable.app"]
+    }
+  </script>
+  <meta property="og:title" content="CrownMe — Earn the crown. Defend the throne.">
+  <meta name="twitter:title" content="CrownMe — Earn the crown. Defend the throne.">
+  <meta property="og:description" content="CrownMe is THE social competition platform. Post your best content, earn votes from the community, and climb the global leaderboard to claim your crown.">
+  <meta name="twitter:description" content="CrownMe is THE social competition platform. Post your best content, earn votes from the community, and climb the global leaderboard to claim your crown.">
+</head>
+
+  <body>
+    <script>
+      // Apply saved theme before paint to avoid flash
+      (function () {
+        try {
+          var t = localStorage.getItem('crownme.theme') || 'dark';
+          var resolved = t === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+            : t;
+          document.documentElement.classList.add(resolved);
+          document.documentElement.style.colorScheme = resolved;
+        } catch (e) {}
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

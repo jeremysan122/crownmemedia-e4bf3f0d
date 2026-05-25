@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://crownmemedia.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://crownmemedia.com/age-gate</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crownmemedia.com/verify-age</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://crownmemedia.com/feed</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://crownmemedia.com/upload</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://crownmemedia.com/leaderboard</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://crownmemedia.com/map</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
+  <url><loc>https://crownmemedia.com/auth</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crownmemedia.com/legal</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://crownmemedia.com/terms</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crownmemedia.com/privacy</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crownmemedia.com/conduct</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crownmemedia.com/cookies</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://crownmemedia.com/dmca</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://crownmemedia.com/virtual-goods</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://crownmemedia.com/subscription-terms</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://crownmemedia.com/csae-policy</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://crownmemedia.com/eula</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://crownmemedia.com/acceptable-use</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://crownmemedia.com/contact-legal</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+</urlset>

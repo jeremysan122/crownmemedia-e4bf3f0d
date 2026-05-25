@@ -1,0 +1,190 @@
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import AppShell from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { useRoyalPass } from "@/hooks/useRoyalPass";
+import { Crown, Loader2, ExternalLink, Receipt, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { toast } from "sonner";
+
+interface PlanInfo { name: string; usd: number; interval: string }
+
+export default function RoyalPassSettings() {
+  const { user } = useAuth();
+  const nav = useNavigate();
+  const pass = useRoyalPass();
+  const [plan, setPlan] = useState<PlanInfo | null>(null);
+  const [working, setWorking] = useState<"portal" | "cancel" | "resume" | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+
+  useEffect(() => {
+    if (!pass.planId) { setPlan(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("royal_pass_plans")
+        .select("name, usd, interval")
+        .eq("id", pass.planId)
+        .maybeSingle();
+      if (!cancelled && data) setPlan(data as PlanInfo);
+    })();
+    return () => { cancelled = true; };
+  }, [pass.planId]);
+
+  const openPortal = async () => {
+    setWorking("portal");
+    try {
+      const { data, error } = await supabase.functions.invoke("royal-pass-portal");
+      if (error) throw error;
+      const url = (data as { url?: string; error?: string })?.url;
+      const errMsg = (data as { error?: string })?.error;
+      if (errMsg) throw new Error(errMsg);
+      if (!url) throw new Error("No portal URL returned");
+      window.location.href = url;
+    } catch (e) {
+      toast.error((e as Error).message || "Could not open billing portal");
+    } finally { setWorking(null); }
+  };
+
+  const setCancel = async (resume: boolean) => {
+    setWorking(resume ? "resume" : "cancel");
+    try {
+      const { data, error } = await supabase.functions.invoke("royal-pass-cancel", {
+        body: { resume },
+      });
+      if (error) throw error;
+      const errMsg = (data as { error?: string })?.error;
+      if (errMsg) throw new Error(errMsg);
+      toast.success(resume ? "Subscription resumed" : "Cancellation scheduled");
+      pass.refresh();
+    } catch (e) {
+      toast.error((e as Error).message || "Could not update subscription");
+    } finally {
+      setWorking(null);
+      setConfirmCancel(false);
+    }
+  };
+
+  const renews = pass.currentPeriodEnd
+    ? new Date(pass.currentPeriodEnd).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })
+    : null;
+
+  return (
+    <AppShell title="ROYAL PASS">
+      <div className="px-4 py-4 max-w-2xl mx-auto space-y-5">
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-2xl text-gold flex items-center gap-2">
+            <Crown size={22} className="text-gold" /> Royal Pass
+          </h1>
+          <Button variant="ghost" size="sm" onClick={() => pass.refresh()} disabled={pass.loading}>
+            <RefreshCw size={14} className={pass.loading ? "animate-spin" : ""} />
+          </Button>
+        </div>
+
+        {pass.loading ? (
+          <div className="royal-card p-8 flex items-center justify-center text-muted-foreground text-sm">
+            <Loader2 size={16} className="animate-spin mr-2" /> Checking subscription…
+          </div>
+        ) : !pass.active ? (
+          <div className="royal-card p-6 text-center space-y-3">
+            <ShieldCheck size={28} className="mx-auto text-muted-foreground" />
+            <h2 className="font-display text-lg">No active Royal Pass</h2>
+            <p className="text-xs text-muted-foreground">
+              Subscribe from the Royal Store to unlock crown-tier perks.
+            </p>
+            <Button onClick={() => nav("/store?tab=pass")} className="bg-gradient-gold text-primary-foreground">
+              See Royal Pass plans
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="royal-card p-5 space-y-4 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-gold opacity-[0.08] pointer-events-none" />
+              <div className="relative flex items-center gap-3">
+                <div className="size-12 rounded-xl bg-gradient-gold flex items-center justify-center text-primary-foreground gold-shadow">
+                  <Crown size={22} />
+                </div>
+                <div className="flex-1">
+                  <div className="font-display text-lg text-gold leading-none">{plan?.name ?? "Royal Pass"}</div>
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    {plan ? `$${Number(plan.usd).toFixed(2)} / ${plan.interval}` : ""}
+                  </div>
+                </div>
+                <span className={`relative px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                  pass.cancelAtPeriodEnd
+                    ? "bg-amber-500/15 text-amber-500 border-amber-500/30"
+                    : "bg-emerald-500/15 text-emerald-500 border-emerald-500/30"
+                }`}>
+                  {pass.cancelAtPeriodEnd ? "Cancelling" : pass.status ?? "Active"}
+                </span>
+              </div>
+
+              <dl className="relative grid grid-cols-2 gap-3 text-xs pt-2 border-t border-border/50">
+                <div>
+                  <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Status</dt>
+                  <dd className="font-semibold capitalize">{pass.status ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {pass.cancelAtPeriodEnd ? "Ends on" : "Renews on"}
+                  </dt>
+                  <dd className="font-semibold">{renews ?? "—"}</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="royal-card p-4 space-y-2">
+              <Button onClick={openPortal} disabled={working !== null} className="w-full bg-gradient-gold text-primary-foreground">
+                {working === "portal" ? <Loader2 size={14} className="animate-spin mr-2" /> : <ExternalLink size={14} className="mr-2" />}
+                Manage billing in Stripe
+              </Button>
+
+              {pass.cancelAtPeriodEnd ? (
+                <Button onClick={() => setCancel(true)} disabled={working !== null} variant="outline" className="w-full">
+                  {working === "resume" ? <Loader2 size={14} className="animate-spin mr-2" /> : <RefreshCw size={14} className="mr-2" />}
+                  Resume subscription
+                </Button>
+              ) : (
+                <Button onClick={() => setConfirmCancel(true)} disabled={working !== null} variant="outline"
+                  className="w-full text-destructive border-destructive/40">
+                  <X size={14} className="mr-2" /> Cancel at period end
+                </Button>
+              )}
+
+              <Button asChild variant="ghost" className="w-full">
+                <Link to="/wallet"><Receipt size={14} className="mr-2" /> View billing history</Link>
+              </Button>
+            </div>
+          </>
+        )}
+
+        <p className="text-[10px] text-center text-muted-foreground">
+          Subscriptions are billed and processed by Stripe.
+        </p>
+      </div>
+
+      <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Royal Pass?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your Royal Pass perks will remain active until {renews ?? "the end of the current period"}.
+              You can resume any time before then.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep subscription</AlertDialogCancel>
+            <AlertDialogAction onClick={() => setCancel(false)} className="bg-destructive text-destructive-foreground">
+              Yes, cancel
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </AppShell>
+  );
+}
