@@ -173,7 +173,11 @@ const App = () => (
                 <Route path="feature-flags" element={<CommandCenterFeatureFlags />} />
               </Route>
               <Route path="/me" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/u/:username" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              {/* Public — anyone (including Google/bots) can view profiles and posts.
+                  RLS on the DB already restricts private data; the component shows
+                  a login prompt for actions that need auth (follow, vote, comment). */}
+              <Route path="/u/:username" element={<Profile />} />
+              <Route path="/post/:id" element={<PostPage />} />
               <Route path="/reports/mine" element={<ProtectedRoute><MyReports /></ProtectedRoute>} />
               <Route path="/blocked" element={<ProtectedRoute><BlockedAccounts /></ProtectedRoute>} />
               <Route path="/preferences" element={<ProtectedRoute><Preferences /></ProtectedRoute>} />
@@ -183,7 +187,6 @@ const App = () => (
               <Route path="/invite" element={<ProtectedRoute><Invite /></ProtectedRoute>} />
               <Route path="/drafts" element={<ProtectedRoute><Drafts /></ProtectedRoute>} />
               <Route path="/archived" element={<ProtectedRoute><ArchivedPosts /></ProtectedRoute>} />
-              <Route path="/post/:id" element={<ProtectedRoute><PostPage /></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -1,16 +1,70 @@
+# CrownMe — robots.txt
+# https://crownmemedia.com
+
+# ── Crawlers we explicitly welcome ───────────────────────────────────
 User-agent: Googlebot
 Allow: /
+Disallow: /admin
+Disallow: /admin/
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin
+Disallow: /admin/
 
+# Social link-preview bots — give them full access to profile and post pages
 User-agent: Twitterbot
 Allow: /
+Allow: /u/
+Allow: /post/
 
 User-agent: facebookexternalhit
 Allow: /
+Allow: /u/
+Allow: /post/
 
+User-agent: LinkedInBot
+Allow: /
+Allow: /u/
+Allow: /post/
+
+User-agent: Slackbot
+Allow: /
+Allow: /u/
+Allow: /post/
+
+User-agent: Discordbot
+Allow: /
+Allow: /u/
+Allow: /post/
+
+# ── Default: crawl public pages, skip private/auth-only sections ─────
 User-agent: *
 Allow: /
+
+# Private / auth-only sections — exclude to preserve crawl budget
+Disallow: /admin
+Disallow: /admin/
+Disallow: /feed
+Disallow: /upload
+Disallow: /messages
+Disallow: /notifications
+Disallow: /settings
+Disallow: /edit-profile
+Disallow: /wallet
+Disallow: /royal-pass
+Disallow: /store/success
+Disallow: /drafts
+Disallow: /archived
+Disallow: /me
+Disallow: /invite
+Disallow: /onboarding
+Disallow: /verify-age
+Disallow: /blocked
+Disallow: /restricted
+Disallow: /preferences
+Disallow: /muted-words
+Disallow: /reset-password
+Disallow: /unsubscribe
 
 Sitemap: https://crownmemedia.com/sitemap.xml

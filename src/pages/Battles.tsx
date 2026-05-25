@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppShell from "@/components/AppShell";
+import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -57,6 +58,11 @@ function CountdownPill({ endsAt }: { endsAt: string }) {
 }
 
 export default function Battles() {
+  useSeoMeta({
+    title: "Battles · CrownMe",
+    description:
+      "Head-to-head crown battles. Challenge rivals, vote for the best, and watch who takes the throne.",
+  });
   const { user } = useAuth();
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();

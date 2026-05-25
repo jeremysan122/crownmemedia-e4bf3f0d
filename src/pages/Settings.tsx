@@ -6,6 +6,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { LogOut, Shield, Bell, ChevronRight, Store, MessageCircle, AtSign, Reply, Coins, Swords, Trophy, Smartphone, Volume2, Play, Crown, Edit3, Scale, Lock, Flag, Sun, Moon, Monitor, Gift, Ban, Eye, EyeOff, Users, Globe2, Archive, FileEdit, SlidersHorizontal, Filter, UserMinus, Download } from "lucide-react";
 import { downloadMyData } from "@/lib/downloadMyData";
 import { toast } from "sonner";
+import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { useNotificationPrefs } from "@/hooks/useNotificationPrefs";
 import { useUnreadByType } from "@/hooks/useUnreadByType";
 import StripeConnectSection from "@/components/settings/StripeConnectSection";
@@ -18,6 +19,7 @@ import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function Settings() {
+  useSeoMeta({ title: "Settings · CrownMe", noIndex: true });
   const { signOut, isModerator, profile, refreshProfile } = useAuth();
   const nav = useNavigate();
   const { prefs, update: updatePrefs } = useNotificationPrefs();

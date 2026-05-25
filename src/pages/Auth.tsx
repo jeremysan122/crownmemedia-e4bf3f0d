@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +44,14 @@ export default function Auth() {
   const nav = useNavigate();
   const initialMode = params.get("mode") === "login" ? "login" : "signup";
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
+  useSeoMeta({
+    title: mode === "login" ? "Sign In · CrownMe" : "Join CrownMe — The Social Crown Competition",
+    description:
+      mode === "login"
+        ? "Sign in to CrownMe and defend your throne."
+        : "Create your CrownMe account. Post photos, earn votes, and compete for the crown of your city.",
+    noIndex: true, // auth page shouldn't be indexed
+  });
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     email: "", password: "", confirmPassword: "", username: "",

@@ -1,0 +1,3 @@
+# Netlify SPA redirect — all routes serve index.html so React Router handles them.
+# Without this, refreshing on /u/username or /post/abc returns a 404 from the CDN.
+/*  /index.html  200

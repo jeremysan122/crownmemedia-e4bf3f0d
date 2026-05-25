@@ -1,68 +1,147 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
-    <meta name="google-site-verification" content="hYy_BJ467QXXhIRcM_3BJPQ3izHiLqw-Kt9BRG-I7yY" />
+    <!-- ── Character set & viewport (must be first) ──────────────────── -->
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- ── Google verification ───────────────────────────────────────── -->
+    <meta name="google-site-verification" content="hYy_BJ467QXXhIRcM_3BJPQ3izHiLqw-Kt9BRG-I7yY" />
+
+    <!-- ── Core identity ─────────────────────────────────────────────── -->
     <title>CrownMe — Earn the crown. Defend the throne.</title>
-    <meta name="description" content="CrownMe is THE social competition platform. Post your best content, earn votes from the community, and climb the global leaderboard to claim your crown.">
-    <meta name="author" content="CrownMe" />
+    <meta name="description" content="The 18+ social photo competition. Post your best content, earn votes from the community, and climb city, country &amp; global leaderboards to claim your crown." />
+    <meta name="author" content="CrownMe Media" />
+    <meta name="keywords" content="social competition, photo contest, crown, leaderboard, vote, community, social media, 18+" />
+    <meta name="robots" content="index,follow" />
+    <meta name="rating" content="adult" />
     <meta name="theme-color" content="#0b0612" />
 
+    <!-- ── Canonical & Alternate ─────────────────────────────────────── -->
     <link rel="canonical" href="https://crownmemedia.com/" />
-    <link rel="icon" type="image/png" href="/favicon.png">
+
+    <!-- ── DNS prefetch / Preconnect (critical third-party origins) ───── -->
+    <link rel="preconnect" href="https://pbfuhitldiftvucuqtai.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://pbfuhitldiftvucuqtai.supabase.co" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://api.mapbox.com" crossorigin />
+    <link rel="dns-prefetch" href="https://api.mapbox.com" />
+
+    <!-- ── Icons & Manifest ──────────────────────────────────────────── -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="shortcut icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
+    <!-- ── Apple PWA / Safari meta ───────────────────────────────────── -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CrownMe" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="CrownMe" />
+
+    <!-- ── Open Graph ────────────────────────────────────────────────── -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CrownMe" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://crownmemedia.com/" />
-    <meta property="og:image" content="https://crownmemedia.com/og-image.png">
+    <meta property="og:title" content="CrownMe — Earn the crown. Defend the throne." />
+    <meta property="og:description" content="The 18+ social photo competition. Post, earn votes, and climb city, country &amp; global leaderboards to claim your crown." />
+    <meta property="og:image" content="https://crownmemedia.com/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="CrownMe" />
-    <meta property="og:site_name" content="CrownMe" />
+    <meta property="og:image:alt" content="CrownMe — Earn the crown. Defend the throne." />
+    <meta property="og:image:type" content="image/png" />
 
+    <!-- ── Twitter / X Card ──────────────────────────────────────────── -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://crownmemedia.com/og-image.png">
-    <meta name="twitter:image:alt" content="CrownMe" />
-    
-  
-  
-  
-  <meta name="rating" content="adult">
-  <script type="application/ld+json">
+    <meta name="twitter:site" content="@CrownMeMedia" />
+    <meta name="twitter:creator" content="@CrownMeMedia" />
+    <meta name="twitter:title" content="CrownMe — Earn the crown. Defend the throne." />
+    <meta name="twitter:description" content="The 18+ social photo competition. Post, earn votes, and climb city, country &amp; global leaderboards to claim your crown." />
+    <meta name="twitter:image" content="https://crownmemedia.com/og-image.png" />
+    <meta name="twitter:image:alt" content="CrownMe — Earn the crown. Defend the throne." />
+
+    <!-- ── Structured Data: WebApplication ───────────────────────────── -->
+    <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
       "name": "CrownMe",
       "url": "https://crownmemedia.com",
       "applicationCategory": "SocialNetworkingApplication",
-      "operatingSystem": "Web",
+      "operatingSystem": "Web, iOS, Android",
       "description": "The 18+ social photo competition. Post, get voted, climb city, country, and global leaderboards.",
-      "audience": { "@type": "PeopleAudience", "suggestedMinAge": 18 },
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      "featureList": [
+        "Photo competitions",
+        "Real-time voting",
+        "City, country & global leaderboards",
+        "Crown battles",
+        "Virtual gifts and Shekels",
+        "Royal Pass subscription"
+      ],
+      "audience": {
+        "@type": "PeopleAudience",
+        "suggestedMinAge": 18
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "screenshot": "https://crownmemedia.com/og-image.png"
     }
-  </script>
-  <script type="application/ld+json">
+    </script>
+
+    <!-- ── Structured Data: Organization ─────────────────────────────── -->
+    <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Organization",
       "name": "CrownMe Media",
       "url": "https://crownmemedia.com",
-      "logo": "https://crownmemedia.com/apple-touch-icon.png",
-      "sameAs": ["https://crownmemedia.lovable.app"]
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://crownmemedia.com/apple-touch-icon.png",
+        "width": 512,
+        "height": 512
+      },
+      "sameAs": [
+        "https://twitter.com/CrownMeMedia",
+        "https://www.instagram.com/crownmemedia",
+        "https://crownmemedia.lovable.app"
+      ],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "legal",
+        "email": "legal@crownmemedia.com",
+        "url": "https://crownmemedia.com/contact-legal"
+      }
     }
-  </script>
-  <meta property="og:title" content="CrownMe — Earn the crown. Defend the throne.">
-  <meta name="twitter:title" content="CrownMe — Earn the crown. Defend the throne.">
-  <meta property="og:description" content="CrownMe is THE social competition platform. Post your best content, earn votes from the community, and climb the global leaderboard to claim your crown.">
-  <meta name="twitter:description" content="CrownMe is THE social competition platform. Post your best content, earn votes from the community, and climb the global leaderboard to claim your crown.">
-</head>
+    </script>
 
+    <!-- ── Structured Data: Website (for Sitelinks Searchbox) ────────── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "CrownMe",
+      "url": "https://crownmemedia.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://crownmemedia.com/feed?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+  </head>
   <body>
+    <!-- Apply saved theme before first paint to avoid flash -->
     <script>
-      // Apply saved theme before paint to avoid flash
       (function () {
         try {
           var t = localStorage.getItem('crownme.theme') || 'dark';

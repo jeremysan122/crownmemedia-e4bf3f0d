@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
+import { useSeoMeta } from "@/hooks/useSeoMeta";
 
 /**
  * Post-OAuth age verification. The Auth page already requires email/password
@@ -20,6 +21,7 @@ import { trackEvent } from "@/lib/analytics";
  * Server-side enforcement: confirm_my_age() rejects DOBs under 18.
  */
 export default function VerifyAge() {
+  useSeoMeta({ title: "Verify Your Age · CrownMe", noIndex: true });
   const nav = useNavigate();
   const { user, loading, ageConfirmed, refreshProfile, signOut } = useAuth();
   const [confirmed, setConfirmed] = useState(false);

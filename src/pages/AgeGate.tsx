@@ -8,8 +8,10 @@ import { calculateAge } from "@/lib/crown";
 import { ShieldAlert } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { trackEvent } from "@/lib/analytics";
+import { useSeoMeta } from "@/hooks/useSeoMeta";
 
 export default function AgeGate() {
+  useSeoMeta({ title: "Age Verification · CrownMe", noIndex: true });
   const nav = useNavigate();
   const [confirmed, setConfirmed] = useState(false);
   const [dob, setDob] = useState("");

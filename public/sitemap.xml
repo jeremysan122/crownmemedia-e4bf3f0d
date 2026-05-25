@@ -1,23 +1,115 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://crownmemedia.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://crownmemedia.com/age-gate</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://crownmemedia.com/verify-age</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://crownmemedia.com/feed</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://crownmemedia.com/upload</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://crownmemedia.com/leaderboard</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://crownmemedia.com/map</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
-  <url><loc>https://crownmemedia.com/auth</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://crownmemedia.com/legal</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://crownmemedia.com/terms</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://crownmemedia.com/privacy</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://crownmemedia.com/conduct</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://crownmemedia.com/cookies</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://crownmemedia.com/dmca</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://crownmemedia.com/virtual-goods</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://crownmemedia.com/subscription-terms</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://crownmemedia.com/csae-policy</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://crownmemedia.com/eula</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://crownmemedia.com/acceptable-use</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://crownmemedia.com/contact-legal</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <!-- ── Core public pages ─────────────────────────────────────────── -->
+  <url>
+    <loc>https://crownmemedia.com/</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://crownmemedia.com/age-gate</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- ── Legal center ──────────────────────────────────────────────── -->
+  <url>
+    <loc>https://crownmemedia.com/legal</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://crownmemedia.com/terms</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://crownmemedia.com/privacy</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://crownmemedia.com/conduct</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://crownmemedia.com/cookies</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://crownmemedia.com/dmca</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://crownmemedia.com/virtual-goods</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://crownmemedia.com/subscription-terms</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://crownmemedia.com/csae-policy</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://crownmemedia.com/eula</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://crownmemedia.com/acceptable-use</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://crownmemedia.com/contact-legal</loc>
+    <lastmod>2025-05-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <!--
+    NOTE: /u/:username and /post/:id are now publicly accessible
+    (no login required). Individual profile and post URLs are
+    dynamic — submitted to Google Search Console via the URL
+    Inspection API once the platform has meaningful content.
+
+    Example format (to be added via GSC or a server-generated
+    sitemap-users.xml in the future):
+
+    <url>
+      <loc>https://crownmemedia.com/u/USERNAME</loc>
+      <changefreq>daily</changefreq>
+      <priority>0.8</priority>
+    </url>
+
+    Pages intentionally excluded from this sitemap:
+      /auth, /verify-age, /onboarding  — auth flow, noindex
+      /feed, /upload, /battles, /messages, /notifications,
+      /settings, /wallet, /me, /admin/*  — require login or
+      contain private user data.
+  -->
+
 </urlset>

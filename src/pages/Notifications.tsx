@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppShell from "@/components/AppShell";
+import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { timeAgo } from "@/lib/crown";
@@ -40,6 +41,7 @@ function targetFor(n: any): string | null {
 }
 
 export default function Notifications() {
+  useSeoMeta({ title: "Notifications · CrownMe", noIndex: true });
   const { user } = useAuth();
   const nav = useNavigate();
   const [list, setList] = useState<any[]>([]);

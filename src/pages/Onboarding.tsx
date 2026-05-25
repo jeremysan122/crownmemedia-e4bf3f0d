@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ const STEPS: Step[] = ["avatar", "follows", "notifications"];
 type Suggested = { id: string; username: string; profile_photo_url: string | null };
 
 export default function Onboarding() {
+  useSeoMeta({ title: "Getting Started · CrownMe", noIndex: true });
   const { user, profile, refreshProfile, markOnboarded } = useAuth();
   const nav = useNavigate();
   const [step, setStep] = useState<Step>("avatar");

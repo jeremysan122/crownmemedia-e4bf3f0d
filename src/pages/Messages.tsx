@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import AppShell from "@/components/AppShell";
+import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
@@ -125,6 +126,7 @@ function EmojiTotalChip({ emoji, count }: { emoji: string; count: number }) {
 }
 
 export default function Messages() {
+  useSeoMeta({ title: "Messages · CrownMe", noIndex: true });
   const { otherId } = useParams();
   const { user } = useAuth();
   const [threads, setThreads] = useState<any[]>([]);
