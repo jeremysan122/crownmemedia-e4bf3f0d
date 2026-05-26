@@ -195,6 +195,8 @@ const App = () => (
               <Route path="/archived" element={<ProtectedRoute><ArchivedPosts /></ProtectedRoute>} />
               <Route path="/creator" element={<ProtectedRoute><CreatorProgram /></ProtectedRoute>} />
               <Route path="/admin/creator-program" element={<ProtectedRoute><AdminRoute><AdminCreatorProgram /></AdminRoute></ProtectedRoute>} />
+              <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
+              <Route path="/admin/rewards" element={<ProtectedRoute><AdminRoute><AdminRewards /></AdminRoute></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
