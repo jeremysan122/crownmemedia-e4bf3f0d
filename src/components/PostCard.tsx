@@ -39,6 +39,7 @@ import { rankBadgeLabel } from "@/lib/rankTitle";
 import ReportDialog from "./ReportDialog";
 import CommentsDrawer from "./CommentsDrawer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
 export interface FeedPost {
   id: string;

@@ -24,6 +24,7 @@ import ChallengeDialog from "@/components/battles/ChallengeDialog";
 import ReportDialog from "@/components/ReportDialog";
 import RoyalPassBadge from "@/components/store/RoyalPassBadge";
 import { useIsRoyalPassUser } from "@/hooks/useIsRoyalPassUser";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
