@@ -39,6 +39,7 @@ import { rankBadgeLabel } from "@/lib/rankTitle";
 import ReportDialog from "./ReportDialog";
 import CommentsDrawer from "./CommentsDrawer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
 export interface FeedPost {
   id: string;
@@ -583,6 +584,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1 min-w-0">
               <span className="font-semibold text-sm truncate">@{post.profile.username}</span>
+              {(post.profile as any).verified && <VerifiedBadge size={13} />}
               {post.profile.crowns_held > 0 && <Crown size={11} className="text-primary shrink-0" fill="currentColor" />}
               {isPassMember && <RoyalPassBadge />}
             </div>

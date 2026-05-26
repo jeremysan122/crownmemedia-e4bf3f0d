@@ -186,7 +186,7 @@ export default function Feed() {
   const buildQuery = useCallback((opts: { cursor?: { val: string | number; id: string } | null }) => {
     let q = supabase
       .from("posts")
-      .select("*, profile:profiles!posts_user_id_fkey(username, profile_photo_url, crowns_held, gender, hide_likes, hide_comments, hide_views)")
+      .select("*, profile:profiles!posts_user_id_fkey(username, profile_photo_url, crowns_held, gender, hide_likes, hide_comments, hide_views, verified)")
       .eq("is_removed", false)
       .order(orderColumn, { ascending: false })
       .order("id", { ascending: false })
@@ -307,7 +307,7 @@ export default function Feed() {
         // hydrate profile join
         const { data: prof } = await supabase
           .from("profiles")
-          .select("username, profile_photo_url, crowns_held, gender, hide_likes, hide_comments, hide_views")
+          .select("username, profile_photo_url, crowns_held, gender, hide_likes, hide_comments, hide_views, verified")
           .eq("id", n.user_id)
           .maybeSingle();
         const enriched = { ...n, profile: prof || { username: "—", profile_photo_url: null, crowns_held: 0 } } as FeedPost;

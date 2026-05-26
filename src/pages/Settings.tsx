@@ -3,7 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate, Link } from "react-router-dom";
-import { LogOut, Shield, Bell, ChevronRight, Store, MessageCircle, AtSign, Reply, Coins, Swords, Trophy, Smartphone, Volume2, Play, Crown, Edit3, Scale, Lock, Flag, Sun, Moon, Monitor, Gift, Ban, Eye, EyeOff, Users, Globe2, Archive, FileEdit, SlidersHorizontal, Filter, UserMinus, Download } from "lucide-react";
+import { LogOut, Shield, Bell, ChevronRight, Store, MessageCircle, AtSign, Reply, Coins, Swords, Trophy, Smartphone, Volume2, Play, Crown, Edit3, Scale, Lock, Flag, Sun, Moon, Monitor, Gift, Ban, Eye, EyeOff, Users, Globe2, Archive, FileEdit, SlidersHorizontal, Filter, UserMinus, Download, CheckCircle2 } from "lucide-react";
 import { downloadMyData } from "@/lib/downloadMyData";
 import { toast } from "sonner";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
@@ -17,6 +17,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useWebPush } from "@/hooks/useWebPush";
 
 export default function Settings() {
   useSeoMeta({ title: "Settings · CrownMe", noIndex: true });
@@ -25,6 +26,7 @@ export default function Settings() {
   const { prefs, update: updatePrefs } = useNotificationPrefs();
   const unread = useUnreadByType();
   const { theme, setTheme } = useTheme();
+  const { state: pushState, enable: enablePush, disable: disablePush } = useWebPush();
 
   const out = async () => { await signOut(); nav("/", { replace: true }); };
 
@@ -102,6 +104,56 @@ export default function Settings() {
           </div>
           <ChevronRight size={16} className="text-muted-foreground" />
         </Link>
+
+        <Link
+          to="/verification"
+          className="royal-card p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors"
+          aria-label="Apply for a verified badge"
+        >
+          <div className="w-10 h-10 rounded-full bg-sky-500/15 flex items-center justify-center">
+            <CheckCircle2 size={18} className="text-sky-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold flex items-center gap-1.5">
+              {(profile as any)?.verified ? "Verified" : "Get verified"}
+              {(profile as any)?.verified && <CheckCircle2 size={14} className="fill-sky-500 text-background" />}
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              {(profile as any)?.verified ? "Manage your verification" : "Standard (100k+ followers) or $1.99/mo fast-track"}
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-muted-foreground" />
+        </Link>
+
+        <section className="royal-card p-4 space-y-3">
+          <h2 className="font-display text-sm uppercase tracking-widest text-muted-foreground">Browser push</h2>
+          <p className="text-[11px] text-muted-foreground">
+            Get alerts even when the CrownMe tab is closed. Uses your device's notification system.
+          </p>
+          <div className="flex items-center gap-3">
+            <Smartphone size={18} className="text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold">
+                {pushState === "on" ? "Enabled on this device" :
+                 pushState === "denied" ? "Blocked by browser" :
+                 pushState === "unsupported" ? "Not supported in this browser" :
+                 "Off"}
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {pushState === "denied" ? "Enable notifications in your browser site settings, then refresh." : "Tap to toggle on this device."}
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant={pushState === "on" ? "outline" : "default"}
+              disabled={pushState === "loading" || pushState === "unsupported" || pushState === "denied"}
+              onClick={() => pushState === "on" ? disablePush() : enablePush()}
+              className="h-8"
+            >
+              {pushState === "on" ? "Disable" : "Enable"}
+            </Button>
+          </div>
+        </section>
 
         <section className="royal-card p-4 space-y-3">
           <div className="flex items-center justify-between">
