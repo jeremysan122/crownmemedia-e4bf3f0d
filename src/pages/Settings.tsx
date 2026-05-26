@@ -115,11 +115,11 @@ export default function Settings() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold flex items-center gap-1.5">
-              {profile?.verified ? "Verified" : "Get verified"}
-              {profile?.verified && <CheckCircle2 size={14} className="fill-sky-500 text-background" />}
+              {(profile as any)?.verified ? "Verified" : "Get verified"}
+              {(profile as any)?.verified && <CheckCircle2 size={14} className="fill-sky-500 text-background" />}
             </div>
             <div className="text-[11px] text-muted-foreground">
-              {profile?.verified ? "Manage your verification" : "Standard (100k+ followers) or $1.99/mo fast-track"}
+              {(profile as any)?.verified ? "Manage your verification" : "Standard (100k+ followers) or $1.99/mo fast-track"}
             </div>
           </div>
           <ChevronRight size={16} className="text-muted-foreground" />
