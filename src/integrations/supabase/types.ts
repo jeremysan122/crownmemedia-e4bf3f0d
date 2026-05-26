@@ -2055,6 +2055,9 @@ export type Database = {
           timezone: string | null
           updated_at: string
           username: string
+          verification_plan: string | null
+          verified: boolean
+          verified_at: string | null
           votes_given: number
           votes_received: number
           watermark_enabled: boolean
@@ -2118,6 +2121,9 @@ export type Database = {
           timezone?: string | null
           updated_at?: string
           username: string
+          verification_plan?: string | null
+          verified?: boolean
+          verified_at?: string | null
           votes_given?: number
           votes_received?: number
           watermark_enabled?: boolean
@@ -2181,6 +2187,9 @@ export type Database = {
           timezone?: string | null
           updated_at?: string
           username?: string
+          verification_plan?: string | null
+          verified?: boolean
+          verified_at?: string | null
           votes_given?: number
           votes_received?: number
           watermark_enabled?: boolean
@@ -2229,6 +2238,47 @@ export type Database = {
             foreignKeyName: "profiles_private_id_fkey"
             columns: ["id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_seen_at: string
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_seen_at?: string
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_seen_at?: string
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2814,6 +2864,96 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_requests: {
+        Row: {
+          brand_name: string | null
+          business_document_path: string | null
+          category: string
+          created_at: string
+          follower_count: number | null
+          id: string
+          id_document_path: string | null
+          legal_name: string
+          plan: Database["public"]["Enums"]["verification_plan_type"]
+          reason: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewer_id: string | null
+          selfie_path: string | null
+          social_links: Json
+          status: Database["public"]["Enums"]["verification_status"]
+          subscription_active: boolean
+          subscription_id: string | null
+          subscription_renews_at: string | null
+          updated_at: string
+          user_id: string
+          website_url: string | null
+        }
+        Insert: {
+          brand_name?: string | null
+          business_document_path?: string | null
+          category: string
+          created_at?: string
+          follower_count?: number | null
+          id?: string
+          id_document_path?: string | null
+          legal_name: string
+          plan: Database["public"]["Enums"]["verification_plan_type"]
+          reason: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          selfie_path?: string | null
+          social_links?: Json
+          status?: Database["public"]["Enums"]["verification_status"]
+          subscription_active?: boolean
+          subscription_id?: string | null
+          subscription_renews_at?: string | null
+          updated_at?: string
+          user_id: string
+          website_url?: string | null
+        }
+        Update: {
+          brand_name?: string | null
+          business_document_path?: string | null
+          category?: string
+          created_at?: string
+          follower_count?: number | null
+          id?: string
+          id_document_path?: string | null
+          legal_name?: string
+          plan?: Database["public"]["Enums"]["verification_plan_type"]
+          reason?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          selfie_path?: string | null
+          social_links?: Json
+          status?: Database["public"]["Enums"]["verification_status"]
+          subscription_active?: boolean
+          subscription_id?: string | null
+          subscription_renews_at?: string | null
+          updated_at?: string
+          user_id?: string
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_requests_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       votes: {
         Row: {
           created_at: string
@@ -2943,6 +3083,14 @@ export type Database = {
           _title: string
         }
         Returns: number
+      }
+      admin_decide_verification: {
+        Args: {
+          _decision: Database["public"]["Enums"]["verification_status"]
+          _notes: string
+          _request_id: string
+        }
+        Returns: undefined
       }
       admin_set_creator_reward: {
         Args: { _reward_id: string; _status: string }
@@ -3135,6 +3283,15 @@ export type Database = {
         Returns: undefined
       }
       request_account_deletion: { Args: never; Returns: Json }
+      save_push_subscription: {
+        Args: {
+          _auth: string
+          _endpoint: string
+          _p256dh: string
+          _user_agent: string
+        }
+        Returns: string
+      }
       send_royal_gift: {
         Args: {
           p_gift_id: string
@@ -3145,6 +3302,22 @@ export type Database = {
         Returns: Json
       }
       spin_daily_wheel: { Args: never; Returns: Json }
+      submit_verification_request: {
+        Args: {
+          _brand_name: string
+          _business_document_path: string
+          _category: string
+          _follower_count: number
+          _id_document_path: string
+          _legal_name: string
+          _plan: Database["public"]["Enums"]["verification_plan_type"]
+          _reason: string
+          _selfie_path: string
+          _social_links: Json
+          _website_url: string
+        }
+        Returns: string
+      }
       update_my_dob: { Args: { _dob: string }; Returns: undefined }
     }
     Enums: {
@@ -3217,6 +3390,13 @@ export type Database = {
         | "dismissed"
         | "action_taken"
         | "denied"
+      verification_plan_type: "standard" | "subscription"
+      verification_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "more_info_required"
+        | "revoked"
       vote_type: "crown" | "fire" | "diamond" | "dislike"
     }
     CompositeTypes: {
@@ -3419,6 +3599,14 @@ export const Constants = {
         "dismissed",
         "action_taken",
         "denied",
+      ],
+      verification_plan_type: ["standard", "subscription"],
+      verification_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "more_info_required",
+        "revoked",
       ],
       vote_type: ["crown", "fire", "diamond", "dislike"],
     },

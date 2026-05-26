@@ -53,6 +53,8 @@ const Shorts = lazy(() => import("./pages/Shorts"));
 const Rewards = lazy(() => import("./pages/Rewards"));
 const AdminRewards = lazy(() => import("./pages/AdminRewards"));
 const AdminBroadcast = lazy(() => import("./pages/AdminBroadcast"));
+const Verification = lazy(() => import("./pages/Verification"));
+const AdminVerification = lazy(() => import("./pages/AdminVerification"));
 
 // Lazy: admin (heavy, rarely used by regular users)
 const Admin = lazy(() => import("./pages/Admin"));
@@ -202,6 +204,8 @@ const App = () => (
               <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
               <Route path="/admin/rewards" element={<ProtectedRoute><AdminRoute><AdminRewards /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/broadcast" element={<ProtectedRoute><AdminRoute><AdminBroadcast /></AdminRoute></ProtectedRoute>} />
+              <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
+              <Route path="/admin/verification" element={<ProtectedRoute><AdminRoute><AdminVerification /></AdminRoute></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
