@@ -193,6 +193,57 @@ Deno.serve(async (req) => {
     });
   }
 
+  async function applyVerificationSubscription(sub: Stripe.Subscription, userIdHint?: string) {
+    const userId = userIdHint || (sub.metadata?.user_id as string | undefined);
+    if (!userId) {
+      console.warn(`[stripe-webhook] verification sub ${sub.id} missing user_id — skipping`);
+      return;
+    }
+    const isActive = sub.status === "active" || sub.status === "trialing";
+    const renewsAt = sub.current_period_end
+      ? new Date(sub.current_period_end * 1000).toISOString() : null;
+
+    // Upsert the verification_requests row for this subscriber so admins can still
+    // see it. We mark it approved on first active payment.
+    const { data: existing } = await supabase
+      .from("verification_requests")
+      .select("id, status")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase.from("verification_requests").update({
+        subscription_active: isActive,
+        subscription_id: sub.id,
+        subscription_renews_at: renewsAt,
+        status: isActive ? "approved" : existing.status,
+        updated_at: new Date().toISOString(),
+      }).eq("id", existing.id);
+    } else {
+      await supabase.from("verification_requests").insert({
+        user_id: userId,
+        plan: "subscription",
+        legal_name: "(via subscription)",
+        category: "subscription",
+        reason: "Auto-created via $1.99/mo subscription",
+        status: isActive ? "approved" : "pending",
+        subscription_active: isActive,
+        subscription_id: sub.id,
+        subscription_renews_at: renewsAt,
+      });
+    }
+
+    // Flip the badge on/off
+    await supabase.from("profiles").update({
+      verified: isActive,
+      verified_at: isActive ? new Date().toISOString() : null,
+      verification_plan: isActive ? "subscription" : null,
+    }).eq("id", userId);
+    console.log(`[stripe-webhook] verification user=${userId} status=${sub.status} active=${isActive}`);
+  }
+
   try {
     if (
       event.type === "customer.subscription.updated" ||
@@ -200,8 +251,11 @@ Deno.serve(async (req) => {
       event.type === "customer.subscription.created"
     ) {
       const sub = event.data.object as Stripe.Subscription;
-      if ((sub.metadata?.kind as string) === "royal_pass") {
+      const kind = sub.metadata?.kind as string | undefined;
+      if (kind === "royal_pass") {
         await upsertRoyalPassFromSubscription(sub);
+      } else if (kind === "verification") {
+        await applyVerificationSubscription(sub);
       }
     }
 
@@ -220,6 +274,17 @@ Deno.serve(async (req) => {
           headers: { "Content-Type": "application/json" },
         });
       }
+
+      // Verification subscription checkout
+      if (session.mode === "subscription" && session.metadata?.kind === "verification" && session.subscription) {
+        const subId = typeof session.subscription === "string" ? session.subscription : session.subscription.id;
+        const sub = await stripe.subscriptions.retrieve(subId);
+        await applyVerificationSubscription(sub, userId);
+        return new Response(JSON.stringify({ ok: true, verification: true }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
 
       let totalShekels = 0;
       const bundleLabels: string[] = [];
