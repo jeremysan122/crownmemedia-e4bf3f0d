@@ -134,7 +134,7 @@ export default function Shorts() {
     setItems((prev) => prev.map((p) => p.id === post.id ? { ...p, vote_count: p.vote_count + 1 } : p));
     const { error } = await supabase.from("votes").insert({
       post_id: post.id,
-      voter_id: user.id,
+      user_id: user.id,
       vote_type: "crown",
     });
     if (error) {
