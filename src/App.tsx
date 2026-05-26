@@ -19,6 +19,7 @@ import Feed from "./pages/Feed";
 import NotFound from "./pages/NotFound";
 import CrownStolenBanner from "./components/CrownStolenBanner";
 import PointerEventsGuard from "./components/PointerEventsGuard";
+import NotificationToaster from "./components/NotificationToaster";
 
 // Lazy: secondary user pages (load on demand, reduces TTI)
 const Upload = lazy(() => import("./pages/Upload"));
