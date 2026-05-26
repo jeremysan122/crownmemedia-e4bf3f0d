@@ -139,6 +139,7 @@ const App = () => (
 
               <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
               <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
+              <Route path="/shorts" element={<ProtectedRoute><Shorts /></ProtectedRoute>} />
               <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
               <Route path="/map" element={<ProtectedRoute><CrownMap /></ProtectedRoute>} />
               <Route path="/battles" element={<ProtectedRoute><Battles /></ProtectedRoute>} />
