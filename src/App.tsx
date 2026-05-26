@@ -53,6 +53,8 @@ const Shorts = lazy(() => import("./pages/Shorts"));
 const Rewards = lazy(() => import("./pages/Rewards"));
 const AdminRewards = lazy(() => import("./pages/AdminRewards"));
 const AdminBroadcast = lazy(() => import("./pages/AdminBroadcast"));
+const Verification = lazy(() => import("./pages/Verification"));
+const AdminVerification = lazy(() => import("./pages/AdminVerification"));
 
 // Lazy: admin (heavy, rarely used by regular users)
 const Admin = lazy(() => import("./pages/Admin"));
