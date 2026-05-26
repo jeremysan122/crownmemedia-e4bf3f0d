@@ -497,6 +497,7 @@ export default function Profile() {
           <div className="flex-1 lg:pb-2">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="font-display text-xl lg:text-3xl">@{prof.username}</h1>
+              {(prof as any).verified && <VerifiedBadge size={20} />}
               {prof.crowns_held > 0 && <Crown size={18} className="text-primary" fill="currentColor" />}
               {royalPassActive && <RoyalPassBadge showLabel />}
               <RoleBadges roles={roles} crownsHeld={prof.crowns_held} />
