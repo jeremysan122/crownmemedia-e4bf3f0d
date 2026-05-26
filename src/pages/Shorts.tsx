@@ -61,13 +61,19 @@ export default function Shorts() {
     const ids = Array.from(new Set(rows.map((r) => r.user_id)));
     const { data: profs } = await supabase
       .from("profiles")
-      .select("user_id,username,display_name,avatar_url")
-      .in("user_id", ids);
-    const map = new Map((profs ?? []).map((p) => [p.user_id, p]));
-    return rows.map((r) => ({
-      ...r,
-      profile: (map.get(r.user_id) as Short["profile"]) ?? null,
-    }));
+      .select("id,username,display_name,avatar_url")
+      .in("id", ids);
+    type ProfRow = { id: string; username: string | null; display_name: string | null; avatar_url: string | null };
+    const map = new Map<string, ProfRow>(((profs ?? []) as ProfRow[]).map((p) => [p.id, p]));
+    return rows.map((r) => {
+      const prof = map.get(r.user_id);
+      return {
+        ...r,
+        profile: prof
+          ? { username: prof.username, display_name: prof.display_name, avatar_url: prof.avatar_url }
+          : null,
+      };
+    });
   }, []);
 
   useEffect(() => {
