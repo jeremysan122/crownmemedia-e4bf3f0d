@@ -1,12 +1,12 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Swords, Map, Plus, User } from "lucide-react";
+import { Home, Swords, Plus, User, Clapperboard } from "lucide-react";
 import { useEffect } from "react";
 
 const items = [
   { to: "/feed", label: "Feed", icon: Home },
-  { to: "/battles", label: "Battles", icon: Swords },
+  { to: "/shorts", label: "Shorts", icon: Clapperboard },
   { to: "/upload", label: "Upload", icon: Plus, primary: true },
-  { to: "/map", label: "Crown Map", icon: Map },
+  { to: "/battles", label: "Battles", icon: Swords },
   { to: "/me", label: "Profile", icon: User },
 ];
 
