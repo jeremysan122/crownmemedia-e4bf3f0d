@@ -19,6 +19,7 @@ import Feed from "./pages/Feed";
 import NotFound from "./pages/NotFound";
 import CrownStolenBanner from "./components/CrownStolenBanner";
 import PointerEventsGuard from "./components/PointerEventsGuard";
+import NotificationToaster from "./components/NotificationToaster";
 
 // Lazy: secondary user pages (load on demand, reduces TTI)
 const Upload = lazy(() => import("./pages/Upload"));
@@ -51,6 +52,7 @@ const AdminCreatorProgram = lazy(() => import("./pages/AdminCreatorProgram"));
 const Shorts = lazy(() => import("./pages/Shorts"));
 const Rewards = lazy(() => import("./pages/Rewards"));
 const AdminRewards = lazy(() => import("./pages/AdminRewards"));
+const AdminBroadcast = lazy(() => import("./pages/AdminBroadcast"));
 
 // Lazy: admin (heavy, rarely used by regular users)
 const Admin = lazy(() => import("./pages/Admin"));
@@ -114,7 +116,9 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <CrownStolenBanner />
+          <CrownStolenBanner />
           <PointerEventsGuard />
+          <NotificationToaster />
           <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/" element={<Splash />} />
@@ -197,6 +201,7 @@ const App = () => (
               <Route path="/admin/creator-program" element={<ProtectedRoute><AdminRoute><AdminCreatorProgram /></AdminRoute></ProtectedRoute>} />
               <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
               <Route path="/admin/rewards" element={<ProtectedRoute><AdminRoute><AdminRewards /></AdminRoute></ProtectedRoute>} />
+              <Route path="/admin/broadcast" element={<ProtectedRoute><AdminRoute><AdminBroadcast /></AdminRoute></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

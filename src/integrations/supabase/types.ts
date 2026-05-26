@@ -2935,6 +2935,15 @@ export type Database = {
       }
     }
     Functions: {
+      admin_broadcast_notification: {
+        Args: {
+          _body: string
+          _link?: string
+          _only_active_days?: number
+          _title: string
+        }
+        Returns: number
+      }
       admin_set_creator_reward: {
         Args: { _reward_id: string; _status: string }
         Returns: {
