@@ -177,11 +177,10 @@ export default function RaceProgressBar({
 
     fetchLeader();
 
-    // One realtime channel per unique region+category combination, not per post.
-    // We reuse the same channel name so Supabase deduplicates subscriptions when
-    // multiple posts share the same scope (the UUID suffix is intentionally absent here).
+    // Channel name must be unique per subscriber instance — Supabase v2 throws
+    // "cannot add postgres_changes callbacks" when re-binding an already-subscribed channel.
     const ch = supabase
-      .channel(`race-leader-${effectiveScope}-${region}-${category}`)
+      .channel(`race-leader-${effectiveScope}-${region}-${category}-${postId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "crowns", filter: `region_type=eq.${effectiveScope}` },
