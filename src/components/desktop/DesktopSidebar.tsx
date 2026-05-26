@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Swords, Map, Plus, User, Trophy, Store, MessageCircle, Bell, Settings as SettingsIcon, Clapperboard } from "lucide-react";
+import { Home, Swords, Map, Plus, User, Trophy, Store, MessageCircle, Bell, Settings as SettingsIcon, Clapperboard, Gift } from "lucide-react";
 
 const items = [
   { to: "/feed", label: "Feed", icon: Home },
@@ -7,6 +7,7 @@ const items = [
   { to: "/battles", label: "Battles", icon: Swords },
   { to: "/map", label: "Crown Map", icon: Map },
   { to: "/leaderboard", label: "Leaderboards", icon: Trophy },
+  { to: "/rewards", label: "Daily Rewards", icon: Gift },
   { to: "/store", label: "Royal Store", icon: Store },
   { to: "/messages", label: "Messages", icon: MessageCircle },
   { to: "/notifications", label: "Notifications", icon: Bell },
