@@ -46,6 +46,8 @@ const ArchivedPosts = lazy(() => import("./pages/ArchivedPosts"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const PostPage = lazy(() => import("./pages/PostPage"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
+const CreatorProgram = lazy(() => import("./pages/CreatorProgram"));
+const AdminCreatorProgram = lazy(() => import("./pages/AdminCreatorProgram"));
 
 // Lazy: admin (heavy, rarely used by regular users)
 const Admin = lazy(() => import("./pages/Admin"));
@@ -187,6 +189,8 @@ const App = () => (
               <Route path="/invite" element={<ProtectedRoute><Invite /></ProtectedRoute>} />
               <Route path="/drafts" element={<ProtectedRoute><Drafts /></ProtectedRoute>} />
               <Route path="/archived" element={<ProtectedRoute><ArchivedPosts /></ProtectedRoute>} />
+              <Route path="/creator" element={<ProtectedRoute><CreatorProgram /></ProtectedRoute>} />
+              <Route path="/admin/creator-program" element={<ProtectedRoute><AdminRoute><AdminCreatorProgram /></AdminRoute></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
