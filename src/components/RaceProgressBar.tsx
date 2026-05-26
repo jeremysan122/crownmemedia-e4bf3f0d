@@ -180,7 +180,7 @@ export default function RaceProgressBar({
     // Channel name must be unique per subscriber instance — Supabase v2 throws
     // "cannot add postgres_changes callbacks" when re-binding an already-subscribed channel.
     const ch = supabase
-      .channel(`race-leader-${effectiveScope}-${region}-${category}-${postId}`)
+      .channel(`race-leader-${effectiveScope}-${region}-${category}-${postId}-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "crowns", filter: `region_type=eq.${effectiveScope}` },
