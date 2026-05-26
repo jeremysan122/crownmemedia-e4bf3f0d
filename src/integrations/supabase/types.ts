@@ -588,6 +588,180 @@ export type Database = {
         }
         Relationships: []
       }
+      creator_milestones: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          label: string
+          milestone_key: string
+          required_count: number
+          reward_type: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          label: string
+          milestone_key: string
+          required_count: number
+          reward_type: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          label?: string
+          milestone_key?: string
+          required_count?: number
+          reward_type?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      creator_programs: {
+        Row: {
+          application_note: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          referral_code: string | null
+          rejected_reason: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          application_note?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          referral_code?: string | null
+          rejected_reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          application_note?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          referral_code?: string | null
+          rejected_reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      creator_referrals: {
+        Row: {
+          active_qualified: boolean
+          active_qualified_at: string | null
+          created_at: string
+          creator_id: string
+          email_verified: boolean
+          first_battle_completed: boolean
+          first_post_completed: boolean
+          first_purchase_completed: boolean
+          first_vote_completed: boolean
+          fraud_flag: boolean
+          fraud_reason: string | null
+          id: string
+          referral_code: string | null
+          referred_user_id: string
+          revenue_generated: number
+          signup_completed: boolean
+          updated_at: string
+        }
+        Insert: {
+          active_qualified?: boolean
+          active_qualified_at?: string | null
+          created_at?: string
+          creator_id: string
+          email_verified?: boolean
+          first_battle_completed?: boolean
+          first_post_completed?: boolean
+          first_purchase_completed?: boolean
+          first_vote_completed?: boolean
+          fraud_flag?: boolean
+          fraud_reason?: string | null
+          id?: string
+          referral_code?: string | null
+          referred_user_id: string
+          revenue_generated?: number
+          signup_completed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          active_qualified?: boolean
+          active_qualified_at?: string | null
+          created_at?: string
+          creator_id?: string
+          email_verified?: boolean
+          first_battle_completed?: boolean
+          first_post_completed?: boolean
+          first_purchase_completed?: boolean
+          first_vote_completed?: boolean
+          fraud_flag?: boolean
+          fraud_reason?: string | null
+          id?: string
+          referral_code?: string | null
+          referred_user_id?: string
+          revenue_generated?: number
+          signup_completed?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      creator_rewards: {
+        Row: {
+          created_at: string
+          creator_id: string
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          metadata: Json
+          milestone_key: string
+          revoked_at: string | null
+          reward_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          metadata?: Json
+          milestone_key: string
+          revoked_at?: string | null
+          reward_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          metadata?: Json
+          milestone_key?: string
+          revoked_at?: string | null
+          reward_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       crowns: {
         Row: {
           active: boolean
@@ -2611,6 +2785,70 @@ export type Database = {
       }
     }
     Functions: {
+      admin_set_creator_reward: {
+        Args: { _reward_id: string; _status: string }
+        Returns: {
+          created_at: string
+          creator_id: string
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          metadata: Json
+          milestone_key: string
+          revoked_at: string | null
+          reward_type: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "creator_rewards"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_set_creator_status: {
+        Args: { _reason?: string; _status: string; _user_id: string }
+        Returns: {
+          application_note: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          referral_code: string | null
+          rejected_reason: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "creator_programs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      apply_to_creator_program: {
+        Args: { _note?: string }
+        Returns: {
+          application_note: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          referral_code: string | null
+          rejected_reason: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "creator_programs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       assert_security_invariants: { Args: never; Returns: undefined }
       bump_filter_streak: {
         Args: { _filter: string }
@@ -2645,6 +2883,11 @@ export type Database = {
         Returns: number
       }
       ensure_my_wallet: { Args: never; Returns: undefined }
+      evaluate_creator_milestones: {
+        Args: { _creator_id: string }
+        Returns: undefined
+      }
+      get_creator_dashboard: { Args: { _user_id?: string }; Returns: Json }
       get_my_profile_sensitive: {
         Args: never
         Returns: {

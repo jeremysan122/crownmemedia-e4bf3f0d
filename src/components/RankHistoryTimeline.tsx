@@ -38,7 +38,7 @@ export default function RankHistoryTimeline({ postId, scope, region, category }:
         .eq("post_id", postId)
         .eq("scope", scope)
         .eq("region", region)
-        .eq("category", category)
+        .eq("category", category as never)
         .order("captured_at", { ascending: true })
         .limit(48); // ~2 days hourly, capped by 14-day retention server-side
       if (!cancelled) setRows((data ?? []) as Snapshot[]);
