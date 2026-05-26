@@ -48,6 +48,7 @@ const PostPage = lazy(() => import("./pages/PostPage"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const CreatorProgram = lazy(() => import("./pages/CreatorProgram"));
 const AdminCreatorProgram = lazy(() => import("./pages/AdminCreatorProgram"));
+const Shorts = lazy(() => import("./pages/Shorts"));
 
 // Lazy: admin (heavy, rarely used by regular users)
 const Admin = lazy(() => import("./pages/Admin"));
