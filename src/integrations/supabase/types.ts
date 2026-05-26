@@ -185,6 +185,30 @@ export type Database = {
         }
         Relationships: []
       }
+      battle_tickets: {
+        Row: {
+          balance: number
+          total_earned: number
+          total_spent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          total_earned?: number
+          total_spent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          total_earned?: number
+          total_spent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       battle_votes: {
         Row: {
           battle_id: string
@@ -821,6 +845,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      daily_reward_claims: {
+        Row: {
+          claim_date: string
+          created_at: string
+          day_in_streak: number
+          id: string
+          shekels_awarded: number
+          user_id: string
+        }
+        Insert: {
+          claim_date: string
+          created_at?: string
+          day_in_streak: number
+          id?: string
+          shekels_awarded: number
+          user_id: string
+        }
+        Update: {
+          claim_date?: string
+          created_at?: string
+          day_in_streak?: number
+          id?: string
+          shekels_awarded?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      daily_streaks: {
+        Row: {
+          current_streak: number
+          last_claimed_date: string | null
+          last_spin_date: string | null
+          longest_streak: number
+          total_claims: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_streak?: number
+          last_claimed_date?: string | null
+          last_spin_date?: string | null
+          longest_streak?: number
+          total_claims?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_streak?: number
+          last_claimed_date?: string | null
+          last_spin_date?: string | null
+          longest_streak?: number
+          total_claims?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       email_send_log: {
         Row: {
@@ -2523,6 +2604,75 @@ export type Database = {
         }
         Relationships: []
       }
+      spin_wheel_prizes: {
+        Row: {
+          active: boolean
+          color_hex: string | null
+          created_at: string
+          id: string
+          label: string
+          prize_type: string
+          prize_value: number
+          sort_order: number
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          active?: boolean
+          color_hex?: string | null
+          created_at?: string
+          id?: string
+          label: string
+          prize_type: string
+          prize_value?: number
+          sort_order?: number
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          active?: boolean
+          color_hex?: string | null
+          created_at?: string
+          id?: string
+          label?: string
+          prize_type?: string
+          prize_value?: number
+          sort_order?: number
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: []
+      }
+      spin_wheel_spins: {
+        Row: {
+          created_at: string
+          id: string
+          prize_id: string | null
+          prize_type: string
+          prize_value: number
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          prize_id?: string | null
+          prize_type: string
+          prize_value: number
+          source?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          prize_id?: string | null
+          prize_type?: string
+          prize_value?: number
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       stripe_events: {
         Row: {
           id: string
@@ -2828,6 +2978,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_upsert_spin_prize: {
+        Args: {
+          _active: boolean
+          _color_hex: string
+          _id: string
+          _label: string
+          _prize_type: string
+          _prize_value: number
+          _sort_order: number
+          _weight: number
+        }
+        Returns: string
+      }
       apply_to_creator_program: {
         Args: { _note?: string }
         Returns: {
@@ -2870,6 +3033,7 @@ export type Database = {
       }
       can_view_posts_of: { Args: { _owner: string }; Returns: boolean }
       cancel_account_deletion: { Args: never; Returns: undefined }
+      claim_daily_reward: { Args: never; Returns: Json }
       comments_allowed_on: { Args: { _post: string }; Returns: boolean }
       confirm_my_age: { Args: { _dob: string }; Returns: undefined }
       deactivate_my_account: { Args: never; Returns: undefined }
@@ -2971,6 +3135,7 @@ export type Database = {
         }
         Returns: Json
       }
+      spin_daily_wheel: { Args: never; Returns: Json }
       update_my_dob: { Args: { _dob: string }; Returns: undefined }
     }
     Enums: {
