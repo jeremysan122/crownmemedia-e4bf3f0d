@@ -190,6 +190,28 @@ export default function Verification() {
             <p className="text-sm text-muted-foreground">Free, but requires 100k+ followers OR an established brand / public figure / journalist.</p>
           </label>
         </RadioGroup>
+        {plan === "subscription" && (
+          <Button
+            type="button"
+            variant="default"
+            className="w-full"
+            onClick={async () => {
+              try {
+                const { data, error } = await supabase.functions.invoke("create-verification-checkout", {
+                  body: { return_path: "/verification" },
+                });
+                if (error) throw error;
+                const url = (data as any)?.url;
+                if (!url) throw new Error("No checkout URL returned");
+                window.location.href = url;
+              } catch (e: any) {
+                toast.error(e?.message ?? "Could not start checkout");
+              }
+            }}
+          >
+            <Crown className="h-4 w-4 mr-2" /> Subscribe $1.99/mo & fast-track
+          </Button>
+        )}
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="space-y-2">
