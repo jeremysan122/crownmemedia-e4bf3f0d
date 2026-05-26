@@ -3,7 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate, Link } from "react-router-dom";
-import { LogOut, Shield, Bell, ChevronRight, Store, MessageCircle, AtSign, Reply, Coins, Swords, Trophy, Smartphone, Volume2, Play, Crown, Edit3, Scale, Lock, Flag, Sun, Moon, Monitor, Gift, Ban, Eye, EyeOff, Users, Globe2, Archive, FileEdit, SlidersHorizontal, Filter, UserMinus, Download } from "lucide-react";
+import { LogOut, Shield, Bell, ChevronRight, Store, MessageCircle, AtSign, Reply, Coins, Swords, Trophy, Smartphone, Volume2, Play, Crown, Edit3, Scale, Lock, Flag, Sun, Moon, Monitor, Gift, Ban, Eye, EyeOff, Users, Globe2, Archive, FileEdit, SlidersHorizontal, Filter, UserMinus, Download, CheckCircle2 } from "lucide-react";
 import { downloadMyData } from "@/lib/downloadMyData";
 import { toast } from "sonner";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
@@ -17,6 +17,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useWebPush } from "@/hooks/useWebPush";
 
 export default function Settings() {
   useSeoMeta({ title: "Settings · CrownMe", noIndex: true });
@@ -25,6 +26,7 @@ export default function Settings() {
   const { prefs, update: updatePrefs } = useNotificationPrefs();
   const unread = useUnreadByType();
   const { theme, setTheme } = useTheme();
+  const { state: pushState, enable: enablePush, disable: disablePush } = useWebPush();
 
   const out = async () => { await signOut(); nav("/", { replace: true }); };
 
