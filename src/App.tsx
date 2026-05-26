@@ -204,6 +204,8 @@ const App = () => (
               <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
               <Route path="/admin/rewards" element={<ProtectedRoute><AdminRoute><AdminRewards /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/broadcast" element={<ProtectedRoute><AdminRoute><AdminBroadcast /></AdminRoute></ProtectedRoute>} />
+              <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
+              <Route path="/admin/verification" element={<ProtectedRoute><AdminRoute><AdminVerification /></AdminRoute></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
