@@ -57,8 +57,7 @@ export default function Settings() {
       .then(({ data, error }) => {
         if (error) console.error("[Settings] privacy fetch failed:", error.message);
         else if (data) setPriv(data as PrivacyRow);
-      })
-      .catch((e) => console.error("[Settings] privacy fetch threw:", e));
+      }, (e) => console.error("[Settings] privacy fetch threw:", e));
   }, [profile?.id]);
 
   const updatePriv = async (patch: Partial<PrivacyRow>) => {
