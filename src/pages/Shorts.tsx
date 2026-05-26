@@ -18,7 +18,7 @@ type Short = {
   vote_count: number;
   comment_count: number;
   created_at: string;
-  profile: { username: string | null; display_name: string | null; avatar_url: string | null } | null;
+  profile: { username: string | null; avatar_url: string | null } | null;
 };
 
 const PAGE_SIZE = 12;
