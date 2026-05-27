@@ -91,6 +91,7 @@ export default function Profile() {
   const [editingPostData, setEditingPostData] = useState<{ caption: string; image_url: string; filter: any; edited_at?: string | null } | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [postMenuPosition, setPostMenuPosition] = useState<PostMenuPosition | null>(null);
   const [insightsPost, setInsightsPost] = useState<{ id: string; base: { crown_score: number; vote_count: number; comment_count: number; share_count: number; battle_wins: number; created_at: string } } | null>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
 
@@ -243,6 +244,27 @@ export default function Profile() {
     return () => { cancelled = true; };
   }, [targetUsername, user?.id]); // Fix #4: user?.id not user
 
+  useEffect(() => {
+    if (!openMenuId) return;
+    const close = () => {
+      setOpenMenuId(null);
+      setPostMenuPosition(null);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openMenuId]);
+
   // Cross-platform realtime: keep posts grid in sync with edits/deletes from anywhere.
   useEffect(() => {
     if (!prof?.id) return;
@@ -340,6 +362,16 @@ export default function Profile() {
       ...(data as any),
       profile: author || { username: "", profile_photo_url: null, crowns_held: 0 },
     });
+  };
+
+  const openPostMenu = (postId: string, button: HTMLButtonElement) => {
+    const rect = button.getBoundingClientRect();
+    const width = 192;
+    const gap = 8;
+    const x = Math.max(gap, Math.min(window.innerWidth - width - gap, rect.right - width));
+    const opensUp = rect.bottom + 256 > window.innerHeight && rect.top > 256;
+    setPostMenuPosition({ x, y: opensUp ? rect.top - gap : rect.bottom + gap, placement: opensUp ? "top" : "bottom" });
+    setOpenMenuId((current) => (current === postId ? null : postId));
   };
 
   const onBannerPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
