@@ -51,6 +51,7 @@ const CreatorProgram = lazy(() => import("./pages/CreatorProgram"));
 const AdminCreatorProgram = lazy(() => import("./pages/AdminCreatorProgram"));
 const Shorts = lazy(() => import("./pages/Shorts"));
 const Rewards = lazy(() => import("./pages/Rewards"));
+const RewardHistory = lazy(() => import("./pages/RewardHistory"));
 const AdminRewards = lazy(() => import("./pages/AdminRewards"));
 const AdminBroadcast = lazy(() => import("./pages/AdminBroadcast"));
 const Verification = lazy(() => import("./pages/Verification"));
@@ -202,6 +203,7 @@ const App = () => (
               <Route path="/creator" element={<ProtectedRoute><CreatorProgram /></ProtectedRoute>} />
               <Route path="/admin/creator-program" element={<ProtectedRoute><AdminRoute><AdminCreatorProgram /></AdminRoute></ProtectedRoute>} />
               <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
+              <Route path="/rewards/history" element={<ProtectedRoute><RewardHistory /></ProtectedRoute>} />
               <Route path="/admin/rewards" element={<ProtectedRoute><AdminRoute><AdminRewards /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/broadcast" element={<ProtectedRoute><AdminRoute><AdminBroadcast /></AdminRoute></ProtectedRoute>} />
               <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />

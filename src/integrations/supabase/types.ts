@@ -875,6 +875,7 @@ export type Database = {
       }
       daily_streaks: {
         Row: {
+          bonus_spins: number
           current_streak: number
           last_claimed_date: string | null
           last_spin_date: string | null
@@ -884,6 +885,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bonus_spins?: number
           current_streak?: number
           last_claimed_date?: string | null
           last_spin_date?: string | null
@@ -893,6 +895,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bonus_spins?: number
           current_streak?: number
           last_claimed_date?: string | null
           last_spin_date?: string | null
@@ -2663,6 +2666,7 @@ export type Database = {
           label: string
           prize_type: string
           prize_value: number
+          remaining_stock: number | null
           sort_order: number
           updated_at: string
           weight: number
@@ -2675,6 +2679,7 @@ export type Database = {
           label: string
           prize_type: string
           prize_value?: number
+          remaining_stock?: number | null
           sort_order?: number
           updated_at?: string
           weight?: number
@@ -2687,6 +2692,7 @@ export type Database = {
           label?: string
           prize_type?: string
           prize_value?: number
+          remaining_stock?: number | null
           sort_order?: number
           updated_at?: string
           weight?: number
@@ -3152,6 +3158,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      admin_set_prize_stock: {
+        Args: { _id: string; _stock: number }
+        Returns: undefined
       }
       admin_upsert_spin_prize: {
         Args: {
