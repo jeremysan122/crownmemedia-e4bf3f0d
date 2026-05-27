@@ -253,6 +253,12 @@ export default function Profile() {
     window.addEventListener("post:updated", onUpdated);
     window.addEventListener("post:deleted", onDeleted);
 
+    // Record a profile visit (rate-limited server-side to 1/30min per visitor)
+    if (user && prof.id && user.id !== prof.id) {
+      void supabase.rpc("record_profile_visit", { _profile_id: prof.id }).then(() => {}, () => {});
+    }
+
+
     const ch = supabase
       .channel(`profile-rt-${prof.id}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "posts", filter: `user_id=eq.${prof.id}` }, (payload) => {
