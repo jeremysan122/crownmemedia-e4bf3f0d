@@ -70,13 +70,9 @@ export default function Preferences() {
   useEffect(() => {
     if (!profile?.id) return;
     supabase
-      .from("profiles")
-      .select(
-        "locale, default_post_visibility, default_category, default_comments_enabled, watermark_enabled, autosave_to_camera_roll, who_can_tag, who_can_mention, who_can_dm, tag_review_required, reduce_motion, larger_text, high_contrast, captions_default_on, autoplay_cellular, quiet_hours_start, quiet_hours_end, timezone, push_likes, push_follows, push_comments, push_battles, default_battle_stake, auto_accept_battles_from_follows, default_race_scope"
-      )
-      .eq("id", profile.id)
+      .rpc("get_my_profile")
       .maybeSingle()
-      .then(({ data }) => data && setP(data as Prefs));
+      .then(({ data }) => data && setP(data as unknown as Prefs));
   }, [profile?.id]);
 
   const save = async (patch: Partial<Prefs>) => {

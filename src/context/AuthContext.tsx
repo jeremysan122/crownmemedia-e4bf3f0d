@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfileAndRoles = async (uid: string, email?: string | null) => {
     try {
-      const { data: prof } = await supabase.from("profiles").select("*").eq("id", uid).maybeSingle();
+      const { data: prof } = await supabase.rpc("get_my_profile").maybeSingle();
       setProfile(prof as Profile | null);
       const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", uid);
       const adminRoles = ["admin", "super_admin", "finance_admin", "security_admin", "content_admin", "support_admin"];
