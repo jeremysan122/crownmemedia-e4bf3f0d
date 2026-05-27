@@ -3251,6 +3251,7 @@ export type Database = {
         Returns: boolean
       }
       dm_pair_folder: { Args: { _a: string; _b: string }; Returns: string }
+      dm_typing_topic_allowed: { Args: { _topic: string }; Returns: boolean }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
