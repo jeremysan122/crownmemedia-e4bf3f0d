@@ -376,7 +376,10 @@ export default function CameraCapture({
       // Try native save via Capacitor if available at runtime (won't break web build).
       const cap = (globalThis as any).Capacitor;
       if (cap?.isNativePlatform?.()) {
-        const fs: any = await import(/* @vite-ignore */ ("@capacitor/" + "filesystem")).catch(() => null);
+        // Use Function-based dynamic import so Vite's dependency scanner ignores it
+        // (the package is only present in native builds).
+        const dynImport = new Function("s", "return import(s)") as (s: string) => Promise<unknown>;
+        const fs: any = await dynImport("@capacitor/" + "filesystem").catch(() => null);
         if (fs?.Filesystem) {
           const reader = new FileReader();
           const base64 = await new Promise<string>((resolve, reject) => {
