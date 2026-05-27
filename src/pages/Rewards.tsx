@@ -159,7 +159,7 @@ export default function Rewards() {
         bonus_spins: res.bonus_spins_remaining ?? prev.bonus_spins,
       } : prev);
       if (res.prize_type === "battle_tickets") await refreshTickets();
-      if (res.prize_type === "shekels") refreshWallet();
+      if (res.prize_type === "shekels") { refreshWallet(); window.dispatchEvent(new Event("wallet:refresh")); }
       toast.success(`You won: ${res.label}`);
     }, 4200);
   }
