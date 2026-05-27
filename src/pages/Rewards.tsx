@@ -220,11 +220,14 @@ export default function Rewards() {
           const path = `M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`;
           const mid = a0 + slice / 2;
 
-          const iconR = r * 0.78;
-          const ix = cx + iconR * Math.cos(mid);
-          const iy = cy + iconR * Math.sin(mid);
-          const lx = cx + labelR * Math.cos(mid);
-          const ly = cy + labelR * Math.sin(mid);
+          // Place icon and label both centered in the wedge, icon slightly above the label.
+          const cosM = Math.cos(mid), sinM = Math.sin(mid);
+          const iconOffset = -10;
+          const labelOffset = 8;
+          const ix = cx + (labelR + iconOffset) * cosM;
+          const iy = cy + (labelR + iconOffset) * sinM;
+          const lx = cx + (labelR + labelOffset) * cosM;
+          const ly = cy + (labelR + labelOffset) * sinM;
 
           let rotDeg = (mid * 180) / Math.PI;
           const flip = rotDeg > 90 && rotDeg < 270;
