@@ -17,10 +17,11 @@ interface ArchivedPost {
 }
 
 export default function ArchivedPosts() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const nav = useNavigate();
   const [posts, setPosts] = useState<ArchivedPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
 
   const load = async () => {
     if (!user?.id) return;
@@ -77,7 +78,7 @@ export default function ArchivedPosts() {
           <div className="royal-card p-10 text-center">
             <Archive size={28} className="mx-auto text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">Nothing archived.</p>
-            <Button variant="outline" size="sm" className="mt-3" onClick={() => nav("/me")}>Back to profile</Button>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => nav(profilePath)}>Back to profile</Button>
           </div>
         ) : (
           <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
