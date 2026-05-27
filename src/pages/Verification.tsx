@@ -139,6 +139,9 @@ export default function Verification() {
   if (request && (request.status === "pending" || request.status === "more_info_required")) {
     return (
       <div className="mx-auto max-w-2xl p-6 space-y-4">
+        <Button asChild variant="ghost" size="sm" className="-ml-2">
+          <Link to="/settings"><ArrowLeft className="h-4 w-4 mr-1" /> Back</Link>
+        </Button>
         <Card className="p-6 space-y-3">
           <Badge variant={request.status === "pending" ? "secondary" : "destructive"}>
             {request.status === "pending" ? "Under review" : "More info required"}
@@ -157,6 +160,9 @@ export default function Verification() {
 
   return (
     <div className="mx-auto max-w-2xl p-4 sm:p-6 space-y-6">
+      <Button asChild variant="ghost" size="sm" className="-ml-2">
+        <Link to="/settings"><ArrowLeft className="h-4 w-4 mr-1" /> Back</Link>
+      </Button>
       <header className="space-y-2">
         <div className="flex items-center gap-3">
           <ShieldCheck className="h-7 w-7 text-primary" />
