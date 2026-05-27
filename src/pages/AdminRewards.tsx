@@ -11,7 +11,7 @@ import { toast } from "sonner";
 type Prize = {
   id: string;
   label: string;
-  prize_type: "shekels" | "battle_tickets" | "royal_pass_days" | "nothing";
+  prize_type: "shekels" | "battle_tickets" | "royal_pass_days" | "profile_boost_hours" | "bonus_spin" | "nothing";
   prize_value: number;
   weight: number;
   color_hex: string | null;
