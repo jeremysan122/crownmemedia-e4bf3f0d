@@ -221,16 +221,19 @@ export default function Rewards() {
           const path = `M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`;
           const mid = a0 + slice / 2;
 
-          // Place icon and label both centered in the wedge, icon slightly above the label.
+          // Orient text tangentially (perpendicular to the spoke) so the label
+          // reads across the wedge — this is the orientation that actually
+          // matches `maxLabelWidth` (chord at labelR) and keeps icon + label
+          // visually centered inside each section.
           const cosM = Math.cos(mid), sinM = Math.sin(mid);
-          const iconOffset = -10;
-          const labelOffset = 8;
-          const ix = cx + (labelR + iconOffset) * cosM;
-          const iy = cy + (labelR + iconOffset) * sinM;
-          const lx = cx + (labelR + labelOffset) * cosM;
-          const ly = cy + (labelR + labelOffset) * sinM;
+          const iconRadialOffset = -12; // icon sits slightly closer to the hub
+          const labelRadialOffset = 10; // label sits slightly toward the rim
+          const ix = cx + (labelR + iconRadialOffset) * cosM;
+          const iy = cy + (labelR + iconRadialOffset) * sinM;
+          const lx = cx + (labelR + labelRadialOffset) * cosM;
+          const ly = cy + (labelR + labelRadialOffset) * sinM;
 
-          let rotDeg = (mid * 180) / Math.PI;
+          let rotDeg = (mid * 180) / Math.PI + 90;
           const flip = rotDeg > 90 && rotDeg < 270;
           const textRot = flip ? rotDeg + 180 : rotDeg;
 
