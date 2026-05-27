@@ -27,7 +27,7 @@ function fmtDate(iso: string) {
 export default function Insights() {
   useSeoMeta({ title: "Insights · CrownMe", noIndex: true });
   const { user } = useAuth();
-  const { isRoyalPass } = useIsRoyalPassUser();
+  const isRoyalPass = useIsRoyalPassUser(user?.id);
   const [verified, setVerified] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<7 | 30 | 90>(30);
