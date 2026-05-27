@@ -34,6 +34,7 @@ const EditProfile = lazy(() => import("./pages/EditProfile"));
 const Store = lazy(() => import("./pages/Store"));
 const PurchaseSuccess = lazy(() => import("./pages/PurchaseSuccess"));
 const Wallet = lazy(() => import("./pages/Wallet"));
+const Insights = lazy(() => import("./pages/Insights"));
 const RoyalPass = lazy(() => import("./pages/RoyalPass"));
 const MyReports = lazy(() => import("./pages/MyReports"));
 const BlockedAccounts = lazy(() => import("./pages/BlockedAccounts"));
@@ -161,6 +162,7 @@ const App = () => (
               <Route path="/store/success" element={<ProtectedRoute><PurchaseSuccess /></ProtectedRoute>} />
               <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
               <Route path="/royal-pass" element={<ProtectedRoute><RoyalPass /></ProtectedRoute>} />
+              <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><AdminRoute><Admin /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/bundles" element={<ProtectedRoute><AdminRoute><AdminBundles /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/moderation" element={<ProtectedRoute><AdminRoute><AdminModeration /></AdminRoute></ProtectedRoute>} />

@@ -515,6 +515,7 @@ export default function Profile() {
             {isMe ? (
               <>
                 <Button onClick={() => nav("/edit-profile")} variant="outline"><Edit3 size={14} className="mr-1.5" /> Edit Profile</Button>
+                <Button onClick={() => nav("/insights")} variant="outline" title="Insights"><BarChart3 size={14} className="mr-1.5" /> Insights</Button>
                 <Button onClick={() => setShareOpen(true)} variant="outline" size="icon" aria-label="Share profile"><Share2 size={16} /></Button>
                 <Button onClick={() => nav("/settings")} variant="outline" size="icon" aria-label="Settings"><SettingsIcon size={16} /></Button>
               </>
@@ -566,6 +567,7 @@ export default function Profile() {
           {isMe ? (
             <>
               <Button onClick={() => nav("/edit-profile")} variant="outline" className="flex-1"><Edit3 size={14} className="mr-1" /> Edit Profile</Button>
+              <Button onClick={() => nav("/insights")} variant="outline" size="icon" aria-label="Insights"><BarChart3 size={16} /></Button>
               <Button onClick={() => setShareOpen(true)} variant="outline" size="icon" aria-label="Share profile"><Share2 size={16} /></Button>
               <Button onClick={() => nav("/settings")} variant="outline" size="icon" aria-label="Settings"><SettingsIcon size={16} /></Button>
             </>
