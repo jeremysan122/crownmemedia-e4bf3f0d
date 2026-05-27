@@ -40,7 +40,6 @@ export default function Splash() {
             alt="CrownMe Media"
             width={512}
             height={512}
-            fetchPriority="high"
             decoding="async"
             className="relative w-full h-full object-contain drop-shadow-[0_0_30px_hsl(43_90%_55%/0.45)]"
           />
