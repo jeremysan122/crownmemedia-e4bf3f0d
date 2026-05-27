@@ -1,10 +1,11 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, Swords, Plus, User, Clapperboard } from "lucide-react";
 import { useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 const items = [
   { to: "/feed", label: "Feed", icon: Home },
-  { to: "/shorts", label: "Shorts", icon: Clapperboard },
+  { to: "/scrolls", label: "Scrolls", icon: Clapperboard },
   { to: "/upload", label: "Upload", icon: Plus, primary: true },
   { to: "/battles", label: "Battles", icon: Swords },
   { to: "/me", label: "Profile", icon: User },
@@ -28,7 +29,9 @@ export function getRememberedBottomTab(): string | null {
 
 export default function BottomNav() {
   const loc = useLocation();
+  const { profile } = useAuth();
   const hide = ["/", "/auth", "/age-gate", "/verify-age", "/onboarding"].includes(loc.pathname);
+  const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
 
   // Persist the active tab whenever the route matches one of the bottom-nav items.
   useEffect(() => {
@@ -43,16 +46,18 @@ export default function BottomNav() {
       className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-border/50 pb-[env(safe-area-inset-bottom,0)]"
     >
       <div className="mx-auto w-full max-w-md sm:max-w-lg flex items-end justify-between gap-0.5 px-2 pt-2 pb-2">
-        {items.map(({ to, label, icon: Icon, primary }) => (
+        {items.map(({ to, label, icon: Icon, primary }) => {
+          const href = to === "/me" ? profilePath : to;
+          return (
           <NavLink
             key={to}
-            to={to}
-            data-testid={`bottom-nav-${to.slice(1) || "root"}`}
+            to={href}
+            data-testid={`bottom-nav-${to === "/me" ? "profile" : to.slice(1) || "root"}`}
             className={({ isActive }) =>
               `flex flex-col items-center gap-1 px-1 py-1.5 rounded-xl transition-all flex-1 min-w-0 ${
                 primary
                   ? "bg-gradient-gold text-primary-foreground -mt-6 size-14 max-w-14 mx-auto justify-center gold-shadow !flex-initial"
-                  : isActive
+                  : isActive || (to === "/me" && loc.pathname.startsWith("/u/"))
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               }`
@@ -65,7 +70,8 @@ export default function BottomNav() {
               </span>
             )}
           </NavLink>
-        ))}
+          );
+        })}
       </div>
     </nav>
   );
