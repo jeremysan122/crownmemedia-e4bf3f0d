@@ -71,7 +71,7 @@ function isTab(t: string | null): t is Tab {
 }
 
 export default function Store() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   useSeoMeta({
     title: "Royal Store — CrownMe Media",
     description: "Send royal gifts, unlock boosts, and grab the Royal Pass to climb the CrownMe leaderboard faster.",
@@ -85,6 +85,7 @@ export default function Store() {
   const [pending, setPending] = useState<string | null>(null);
   const [receivedView, setReceivedView] = useState<"received" | "sent">("received");
   const pass = useRoyalPass();
+  const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
 
   // Sync tab to URL (so nav-links + back button work)
   useEffect(() => {
@@ -220,7 +221,7 @@ export default function Store() {
             <NavLinks
               links={[
                 { to: "/wallet", label: "Wallet & gift history" },
-                { to: "/me", label: "My profile" },
+                { to: profilePath, label: "My profile" },
               ]}
             />
           </div>
@@ -306,7 +307,7 @@ export default function Store() {
             <NavLinks
               links={[
                 { to: "/wallet", label: "Full wallet history" },
-                { to: "/me", label: "My profile" },
+                { to: profilePath, label: "My profile" },
               ]}
             />
           </div>
