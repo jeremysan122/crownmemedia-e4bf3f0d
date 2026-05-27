@@ -684,105 +684,19 @@ export default function Profile() {
                           <Crown size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
                         </div>
                         {isMe && (
-                          <DropdownMenu modal={false} open={openMenuId === p.id} onOpenChange={(o) => setOpenMenuId(o ? p.id : null)}>
-                            <DropdownMenuTrigger asChild>
-                              <button
-                                type="button"
-                                onPointerDown={(e) => { e.stopPropagation(); }}
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                                className="absolute top-1 right-1 z-20 glass rounded-full p-1 opacity-90 hover:opacity-100"
-                                aria-label="Post actions"
-                              >
-                                <MoreVertical size={12} />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem
-                                onSelect={async (e) => {
-                                  e.preventDefault();
-                                  setOpenMenuId(null);
-                                  const { data } = await supabase
-                                    .from("posts")
-                                    .select("caption, image_url, filter, edited_at")
-                                    .eq("id", p.id)
-                                    .maybeSingle();
-                                  if (!data) { toast.error("Could not load post"); return; }
-                                  setEditingPostData({
-                                    caption: (data as any).caption ?? "",
-                                    image_url: (data as any).image_url ?? p.image_url,
-                                    filter: (data as any).filter ?? null,
-                                     edited_at: (data as any).edited_at ?? null,
-                                  });
-                                  setEditingPostId(p.id);
-                                }}
-                              >
-                                <Edit3 size={12} className="mr-2" /> Edit post
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={async (e) => {
-                                  e.preventDefault();
-                                  setOpenMenuId(null);
-                                  const { data } = await supabase
-                                    .from("posts")
-                                    .select("crown_score, vote_count, comment_count, share_count, battle_wins, created_at")
-                                    .eq("id", p.id)
-                                    .maybeSingle();
-                                  if (!data) { toast.error("Could not load post"); return; }
-                                  setInsightsPost({ id: p.id, base: data as any });
-                                }}
-                              >
-                                <BarChart3 size={12} className="mr-2" /> Insights
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setOpenMenuId(null); nav("/store?tab=boosts"); }}>
-                                <Zap size={12} className="mr-2" /> Boost this post
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={async (e) => {
-                                  e.preventDefault();
-                                  setOpenMenuId(null);
-                                  if (!user) return;
-                                  const isPinned = !!p.pinned_at;
-                                  const next = isPinned ? null : new Date().toISOString();
-                                  const { error } = await supabase
-                                    .from("posts")
-                                    .update({ pinned_at: next } as any)
-                                    .eq("id", p.id)
-                                    .eq("user_id", user.id);
-                                  if (error) return toast.error(error.message);
-                                  setPosts((prev) => prev.map((pp) => pp.id === p.id ? { ...pp, pinned_at: next } : pp));
-                                  toast.success(next ? "Pinned to your profile" : "Unpinned");
-                                }}
-                              >
-                                {p.pinned_at
-                                  ? <><PinOff size={12} className="mr-2" /> Unpin from profile</>
-                                  : <><Pin size={12} className="mr-2" /> Pin to profile</>}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={async (e) => {
-                                  e.preventDefault();
-                                  setOpenMenuId(null);
-                                  if (!user) return;
-                                  const { error } = await supabase
-                                    .from("posts")
-                                    .update({ is_archived: true, archived_at: new Date().toISOString() } as any)
-                                    .eq("id", p.id)
-                                    .eq("user_id", user.id);
-                                  if (error) return toast.error(error.message);
-                                  setPosts((prev) => prev.filter((pp) => pp.id !== p.id));
-                                  toast.success("Post archived — find it in Settings → Archived");
-                                }}
-                              >
-                                <Archive size={12} className="mr-2" /> Archive
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onSelect={(e) => { e.preventDefault(); setOpenMenuId(null); setDeletingPostId(p.id); }}
-                              >
-                                <Trash2 size={12} className="mr-2" /> Delete post
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openPostMenu(p.id, e.currentTarget);
+                            }}
+                            className="absolute top-1 right-1 z-20 glass rounded-full p-1 opacity-90 hover:opacity-100"
+                            aria-label="Post actions"
+                            aria-expanded={openMenuId === p.id}
+                          >
+                            <MoreVertical size={12} />
+                          </button>
                         )}
                       </div>
                     ))}
