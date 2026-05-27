@@ -2001,6 +2001,27 @@ export type Database = {
           },
         ]
       }
+      profile_visits: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          visitor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          visitor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          visitor_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           auto_accept_battles_from_follows: boolean
@@ -3380,6 +3401,10 @@ export type Database = {
         }[]
       }
       recalc_post_score: { Args: { _post_id: string }; Returns: undefined }
+      record_profile_visit: {
+        Args: { _profile_id: string }
+        Returns: undefined
+      }
       redeem_invite_code: { Args: { _code: string }; Returns: Json }
       refresh_crowns_for_post: {
         Args: { _post_id: string }
