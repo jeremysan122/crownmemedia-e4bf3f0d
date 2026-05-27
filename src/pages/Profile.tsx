@@ -11,7 +11,6 @@ import EditPostDialog from "@/components/EditPostDialog";
 import PostInsightsDialog from "@/components/PostInsightsDialog";
 import CrownLoader from "@/components/CrownLoader";
 import ProfileLinks from "@/components/profile/ProfileLinks";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { formatScore, locationLabel } from "@/lib/crown";
 import { cssFor, isValidFilter } from "@/lib/filters";
 import { toast } from "sonner";
@@ -57,6 +56,8 @@ interface BattleRow {
   opponent_username: string | null;
   challenger_username: string | null;
 }
+
+type PostMenuPosition = { x: number; y: number; placement: "top" | "bottom" };
 
 export default function Profile() {
   const { username } = useParams();
