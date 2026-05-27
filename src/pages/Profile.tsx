@@ -255,7 +255,7 @@ export default function Profile() {
 
     // Record a profile visit (rate-limited server-side to 1/30min per visitor)
     if (user && prof.id && user.id !== prof.id) {
-      supabase.rpc("record_profile_visit", { _profile_id: prof.id }).catch(() => {});
+      void supabase.rpc("record_profile_visit", { _profile_id: prof.id }).then(() => {}, () => {});
     }
 
 
