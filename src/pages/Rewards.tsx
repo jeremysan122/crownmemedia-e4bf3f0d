@@ -8,7 +8,7 @@ import CrownLoader from "@/components/CrownLoader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CrownIcon } from "@/components/CrownIcon";
-import { Flame, Swords, Sparkles, ArrowLeft, History } from "lucide-react";
+import { Flame, Swords, Sparkles, ArrowLeft, History, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { haptic } from "@/lib/haptics";
 
