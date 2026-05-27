@@ -48,6 +48,8 @@ async function uploadDoc(userId: string, file: File, kind: string): Promise<stri
 
 export default function Verification() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const goBack = () => { if (window.history.length > 1) navigate(-1); else navigate("/settings"); };
   const [plan, setPlan] = useState<Plan>("subscription");
   const [legalName, setLegalName] = useState("");
   const [category, setCategory] = useState<Category>("creator");
