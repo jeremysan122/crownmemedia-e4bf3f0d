@@ -12,6 +12,7 @@ export default function DesktopHeader() {
   const { profile } = useAuth();
   const { wallet } = useWallet();
   const [searchOpen, setSearchOpen] = useState(false);
+  const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
 
   return (
     <header className="hidden lg:block sticky top-0 z-40 glass border-b border-border/50">
@@ -51,7 +52,7 @@ export default function DesktopHeader() {
           >
             <Plus size={16} strokeWidth={2.6} /> Post
           </button>
-          <Link to="/me" className="ml-1 size-10 rounded-full overflow-hidden ring-1 ring-border hover:ring-primary transition bg-muted shrink-0">
+          <Link to={profilePath} className="ml-1 size-10 rounded-full overflow-hidden ring-1 ring-border hover:ring-primary transition bg-muted shrink-0">
             {profile?.profile_photo_url ? (
               <img loading="lazy" src={profile.profile_photo_url} alt={profile.username} className="w-full h-full object-cover" />
             ) : (
