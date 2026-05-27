@@ -21,5 +21,9 @@ project_id = "bailrqskqpmzvsgivhvm"
     verify_jwt = false
   [functions.moderate-media]
     verify_jwt = true
+  [functions.web-push-public-key]
+    verify_jwt = false
+  [functions.send-web-push]
+    verify_jwt = false
   [functions.generate-alt-text]
     verify_jwt = true
