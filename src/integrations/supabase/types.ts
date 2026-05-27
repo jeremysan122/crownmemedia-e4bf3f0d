@@ -2067,6 +2067,7 @@ export type Database = {
           locale: string
           posts_visibility: string
           profile_photo_url: string | null
+          pronouns: string | null
           push_battles: boolean
           push_comments: boolean
           push_follows: boolean
@@ -2133,6 +2134,7 @@ export type Database = {
           locale?: string
           posts_visibility?: string
           profile_photo_url?: string | null
+          pronouns?: string | null
           push_battles?: boolean
           push_comments?: boolean
           push_follows?: boolean
@@ -2199,6 +2201,7 @@ export type Database = {
           locale?: string
           posts_visibility?: string
           profile_photo_url?: string | null
+          pronouns?: string | null
           push_battles?: boolean
           push_comments?: boolean
           push_follows?: boolean
@@ -3304,6 +3307,7 @@ export type Database = {
           locale: string
           posts_visibility: string
           profile_photo_url: string | null
+          pronouns: string | null
           push_battles: boolean
           push_comments: boolean
           push_follows: boolean
