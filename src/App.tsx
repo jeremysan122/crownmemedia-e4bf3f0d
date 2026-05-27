@@ -120,7 +120,6 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <CrownStolenBanner />
-          <CrownStolenBanner />
           <PointerEventsGuard />
           <NotificationToaster />
           <Suspense fallback={<RouteFallback />}>

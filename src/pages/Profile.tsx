@@ -133,7 +133,9 @@ export default function Profile() {
       if (cancelled) return;
       // Fix #5: surface load errors
       if (psErr) console.error("Failed to load posts:", psErr);
-      setPosts((ps as any) || []);
+      // Dedupe by id defensively to avoid duplicate keys / duplicated post-options menus
+      const uniquePosts = Array.from(new Map(((ps as any) || []).map((row: any) => [row.id, row])).values());
+      setPosts(uniquePosts as any);
       setCrowns((cs as any) || []);
       setRoles(((rs as any) || []).map((r: any) => r.role));
 
