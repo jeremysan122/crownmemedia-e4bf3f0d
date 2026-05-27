@@ -1,0 +1,1 @@
+GRANT SELECT (gender) ON public.profiles TO anon, authenticated;
