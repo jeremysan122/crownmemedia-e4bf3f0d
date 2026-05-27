@@ -702,7 +702,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
             onClick={() => setDetailOpen(true)}
             boost={!!filterBoost}
             boostType={filterBoost ?? undefined}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
           />
         ) : isMulti ? (
           <div
@@ -717,7 +717,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
                   filter={liveFilter}
                   boost={!!filterBoost && i === activeImage}
                   boostType={filterBoost ?? undefined}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-cover"
                 />
               </div>
             ))}
@@ -730,7 +730,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
             onClick={() => setDetailOpen(true)}
             boost={!!filterBoost}
             boostType={filterBoost ?? undefined}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
           />
         )}
         <div className="absolute top-3 left-3">
