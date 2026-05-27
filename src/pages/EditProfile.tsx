@@ -190,6 +190,8 @@ export default function EditProfile() {
       state,
       country,
       email: email && email !== user?.email ? email : "",
+      pronouns,
+      gender,
     });
 
     if (parsed.success) return {};
@@ -270,6 +272,8 @@ export default function EditProfile() {
             country: country.trim(),
             profile_photo_url: photoUrl,
             links: cleanedLinks,
+            pronouns: pronouns.trim() ? pronouns.trim().slice(0, 30) : null,
+            gender: gender || null,
           } as any,
           { onConflict: "id" },
         );
