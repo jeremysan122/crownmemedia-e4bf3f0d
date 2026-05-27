@@ -2753,6 +2753,30 @@ export type Database = {
         }
         Relationships: []
       }
+      streak_reminders_sent: {
+        Row: {
+          channel: string
+          created_at: string
+          id: string
+          sent_for_date: string
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          id?: string
+          sent_for_date: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: string
+          sent_for_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       stripe_events: {
         Row: {
           id: string

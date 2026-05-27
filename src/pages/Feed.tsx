@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import FeedRightRail from "@/components/desktop/FeedRightRail";
 import FeedRealtimeAlert from "@/components/FeedRealtimeAlert";
+import DailyRewardChip from "@/components/DailyRewardChip";
 import { Camera, Plus, Sparkles, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { CATEGORIES, CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
@@ -529,13 +530,16 @@ export default function Feed() {
               <WindowChip value="all" label="All" currentWindow={timeWindow} onWindow={setTimeWindow} />
             </div>
           )}
-          <Link
-            to={`/leaderboard?scope=${tab}`}
-            className="ml-auto inline-flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-muted-foreground hover:text-gold font-bold"
-          >
-            <Crown size={11} className="text-primary" fill="currentColor" />
-            {tab[0].toUpperCase() + tab.slice(1)} leaderboard →
-          </Link>
+          <div className="ml-auto flex items-center gap-2">
+            <DailyRewardChip />
+            <Link
+              to={`/leaderboard?scope=${tab}`}
+              className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-muted-foreground hover:text-gold font-bold"
+            >
+              <Crown size={11} className="text-primary" fill="currentColor" />
+              {tab[0].toUpperCase() + tab.slice(1)} leaderboard →
+            </Link>
+          </div>
         </div>
 
         {/* Category filter chip rail */}
