@@ -21,11 +21,12 @@ export default function AccountDangerZone() {
   useEffect(() => {
     if (!user?.id) return;
     supabase
-      .from("profiles")
-      .select("deactivated_at, deletion_requested_at")
-      .eq("id", user.id)
+      .rpc("get_my_profile")
       .maybeSingle()
-      .then(({ data }) => data && setState(data as any));
+      .then(({ data }) => data && setState({
+        deactivated_at: (data as any).deactivated_at ?? null,
+        deletion_requested_at: (data as any).deletion_requested_at ?? null,
+      }));
   }, [user?.id]);
 
   const isDeactivated = !!state?.deactivated_at;
@@ -36,12 +37,11 @@ export default function AccountDangerZone() {
 
   const refetch = async () => {
     if (!user?.id) return;
-    const { data } = await supabase
-      .from("profiles")
-      .select("deactivated_at, deletion_requested_at")
-      .eq("id", user.id)
-      .maybeSingle();
-    setState(data as any);
+    const { data } = await supabase.rpc("get_my_profile").maybeSingle();
+    setState(data ? {
+      deactivated_at: (data as any).deactivated_at ?? null,
+      deletion_requested_at: (data as any).deletion_requested_at ?? null,
+    } : null);
   };
 
   const onDeactivate = async () => {

@@ -30,16 +30,13 @@ export default function CommandCenterUsers() {
   const search = async () => {
     setLoading(true);
     const term = q.trim();
-    let query = supabase
-      .from("profiles")
-      .select("id, username, city, country, is_suspended, is_banned, banned_reason, followers_count, created_at")
-      .order("created_at", { ascending: false })
-      .limit(40);
-    if (term) query = query.ilike("username", `%${term}%`);
-    const { data } = await query;
-    setUsers(data ?? []);
-    if (data && data.length) {
-      const ids = data.map((u: any) => u.id);
+    const { data } = await supabase.rpc("admin_list_users", {
+      _query: term ? term : null,
+      _limit: 40,
+    });
+    setUsers((data as any) ?? []);
+    if (data && (data as any[]).length) {
+      const ids = (data as any[]).map((u: any) => u.id);
       const { data: rs } = await supabase.from("user_roles").select("user_id, role").in("user_id", ids);
       const map: Record<string, string[]> = {};
       (rs ?? []).forEach((r: any) => { (map[r.user_id] ||= []).push(r.role); });
