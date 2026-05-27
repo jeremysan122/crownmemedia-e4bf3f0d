@@ -19,7 +19,7 @@ type Prize = {
   sort_order: number;
 };
 
-const PRIZE_TYPES = ["shekels", "battle_tickets", "royal_pass_days", "nothing"] as const;
+const PRIZE_TYPES = ["shekels", "battle_tickets", "royal_pass_days", "profile_boost_hours", "bonus_spin", "nothing"] as const;
 
 const blankDraft = (): Prize => ({
   id: "",
