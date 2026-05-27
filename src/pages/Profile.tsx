@@ -110,7 +110,11 @@ export default function Profile() {
     if (!targetUsername) return;
     let cancelled = false;
     const load = async () => {
-      const { data: p, error: pErr } = await supabase.from("profiles").select("*").eq("username", targetUsername).maybeSingle();
+      const { data: p, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, is_suspended, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public")
+        .eq("username", targetUsername)
+        .maybeSingle();
       if (cancelled) return;
       if (pErr) { toast.error("Failed to load profile"); return; }
       if (!p) return;
