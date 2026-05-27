@@ -46,6 +46,9 @@ const emailSchema = z
   .email("Enter a valid email address")
   .max(254, "Email is too long");
 
+const GENDER_VALUES = ["male", "female", "non_binary", "prefer_not_to_say"] as const;
+type GenderValue = typeof GENDER_VALUES[number];
+
 const profileSchema = z.object({
   username: usernameSchema,
   first_name: z.string().trim().max(50, "First name too long"),
@@ -55,6 +58,8 @@ const profileSchema = z.object({
   state: z.string().trim().min(1, "State / region is required").max(80, "State too long"),
   country: z.string().trim().min(2, "Country is required").max(80, "Country too long"),
   email: z.union([z.literal(""), emailSchema]),
+  pronouns: z.string().trim().max(30, "Pronouns must be 30 characters or fewer"),
+  gender: z.union([z.literal(""), z.enum(GENDER_VALUES)]),
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;
@@ -74,6 +79,8 @@ export default function EditProfile() {
   const [email, setEmail] = useState("");
   const [emailPending, setEmailPending] = useState<string | null>(null);
   const [links, setLinks] = useState<{ label: string; url: string }[]>([]);
+  const [pronouns, setPronouns] = useState<string>("");
+  const [gender, setGender] = useState<GenderValue | "">("");
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -104,6 +111,9 @@ export default function EditProfile() {
     setCountry(profile.country || "");
     const existing = (profile as any).links;
     if (Array.isArray(existing)) setLinks(existing.slice(0, 3).map((l: any) => ({ label: l.label || "", url: l.url || "" })));
+    setPronouns(((profile as any).pronouns as string | null) || "");
+    const g = ((profile as any).gender as GenderValue | null) || "";
+    setGender(GENDER_VALUES.includes(g as GenderValue) ? (g as GenderValue) : "");
     // Hydrate email from the auth user. DOB is locked at signup and cannot
     // be changed here — it's a security/age-gate guarantee.
     if (user?.email) setEmail(user.email);
