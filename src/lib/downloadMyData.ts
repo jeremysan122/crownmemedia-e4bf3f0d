@@ -43,7 +43,7 @@ export async function downloadMyData(userId: string, username?: string | null): 
     ledger,
     wallet,
   ] = await Promise.all([
-    safeSelect(supabase.from("profiles").select("*").eq("id", userId) as any),
+    safeSelect(supabase.rpc("get_my_profile") as any),
     safeSelect(supabase.from("posts").select("*").eq("user_id", userId) as any),
     safeSelect(supabase.from("comments").select("*").eq("user_id", userId) as any),
     safeSelect(supabase.from("votes").select("*").eq("user_id", userId) as any),
