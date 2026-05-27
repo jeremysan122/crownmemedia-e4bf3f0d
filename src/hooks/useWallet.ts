@@ -50,6 +50,17 @@ export function useWallet() {
     refreshWallet();
   }, [refreshWallet]);
 
+  // Cross-component refresh: any code can dispatch
+  // `window.dispatchEvent(new Event("wallet:refresh"))` to force every
+  // mounted useWallet() instance to re-fetch — used after daily-reward
+  // claims, spin-wheel payouts, gift sends, etc. so the header pill stays
+  // in sync with whichever page triggered the change.
+  useEffect(() => {
+    const handler = () => { refreshWallet(); };
+    window.addEventListener("wallet:refresh", handler);
+    return () => window.removeEventListener("wallet:refresh", handler);
+  }, [refreshWallet]);
+
   // Realtime: refresh balance when wallet row updates, for example after Stripe webhook credits Shekels.
   useEffect(() => {
     if (!user) return;

@@ -49,7 +49,15 @@ async function uploadDoc(userId: string, file: File, kind: string): Promise<stri
 export default function Verification() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const goBack = () => { if (window.history.length > 1) navigate(-1); else navigate("/settings"); };
+  const goBack = () => {
+    // Only use history.back() if we actually came from within the app —
+    // otherwise (direct link / new tab) fall back to a safe destination.
+    const sameOriginRef = typeof document !== "undefined"
+      && document.referrer
+      && new URL(document.referrer).origin === window.location.origin;
+    if (sameOriginRef && window.history.length > 1) navigate(-1);
+    else navigate("/settings");
+  };
   const [plan, setPlan] = useState<Plan>("subscription");
   const [legalName, setLegalName] = useState("");
   const [category, setCategory] = useState<Category>("creator");
