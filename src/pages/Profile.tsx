@@ -983,6 +983,120 @@ export default function Profile() {
         </div>
       </div>
 
+      {openMenuId && postMenuPosition && createPortal((() => {
+        const menuPost = posts.find((p) => p.id === openMenuId);
+        if (!menuPost) return null;
+        const closeMenu = () => { setOpenMenuId(null); setPostMenuPosition(null); };
+        return (
+          <div
+            role="menu"
+            aria-label="Post actions"
+            className="fixed z-[70] w-48 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
+            style={{ left: postMenuPosition.x, top: postMenuPosition.y, transform: postMenuPosition.placement === "top" ? "translateY(-100%)" : undefined }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              className="relative flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+              onClick={async () => {
+                closeMenu();
+                const { data } = await supabase
+                  .from("posts")
+                  .select("caption, image_url, filter, edited_at")
+                  .eq("id", menuPost.id)
+                  .maybeSingle();
+                if (!data) { toast.error("Could not load post"); return; }
+                setEditingPostData({
+                  caption: (data as any).caption ?? "",
+                  image_url: (data as any).image_url ?? menuPost.image_url,
+                  filter: (data as any).filter ?? null,
+                  edited_at: (data as any).edited_at ?? null,
+                });
+                setEditingPostId(menuPost.id);
+              }}
+            >
+              <Edit3 size={12} className="mr-2" /> Edit post
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="relative flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+              onClick={async () => {
+                closeMenu();
+                const { data } = await supabase
+                  .from("posts")
+                  .select("crown_score, vote_count, comment_count, share_count, battle_wins, created_at")
+                  .eq("id", menuPost.id)
+                  .maybeSingle();
+                if (!data) { toast.error("Could not load post"); return; }
+                setInsightsPost({ id: menuPost.id, base: data as any });
+              }}
+            >
+              <BarChart3 size={12} className="mr-2" /> Insights
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="relative flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+              onClick={() => { closeMenu(); nav("/store?tab=boosts"); }}
+            >
+              <Zap size={12} className="mr-2" /> Boost this post
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="relative flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+              onClick={async () => {
+                closeMenu();
+                if (!user) return;
+                const next = menuPost.pinned_at ? null : new Date().toISOString();
+                const { error } = await supabase
+                  .from("posts")
+                  .update({ pinned_at: next } as any)
+                  .eq("id", menuPost.id)
+                  .eq("user_id", user.id);
+                if (error) return toast.error(error.message);
+                setPosts((prev) => prev.map((pp) => pp.id === menuPost.id ? { ...pp, pinned_at: next } : pp));
+                toast.success(next ? "Pinned to your profile" : "Unpinned");
+              }}
+            >
+              {menuPost.pinned_at
+                ? <><PinOff size={12} className="mr-2" /> Unpin from profile</>
+                : <><Pin size={12} className="mr-2" /> Pin to profile</>}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="relative flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+              onClick={async () => {
+                closeMenu();
+                if (!user) return;
+                const { error } = await supabase
+                  .from("posts")
+                  .update({ is_archived: true, archived_at: new Date().toISOString() } as any)
+                  .eq("id", menuPost.id)
+                  .eq("user_id", user.id);
+                if (error) return toast.error(error.message);
+                setPosts((prev) => prev.filter((pp) => pp.id !== menuPost.id));
+                toast.success("Post archived — find it in Settings → Archived");
+              }}
+            >
+              <Archive size={12} className="mr-2" /> Archive
+            </button>
+            <div className="-mx-1 my-1 h-px bg-muted" />
+            <button
+              type="button"
+              role="menuitem"
+              className="relative flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm text-destructive outline-none transition-colors hover:bg-accent focus:bg-accent focus:text-destructive"
+              onClick={() => { closeMenu(); setDeletingPostId(menuPost.id); }}
+            >
+              <Trash2 size={12} className="mr-2" /> Delete post
+            </button>
+          </div>
+        );
+      })(), document.body)}
+
       <PostDetailDialog post={openPost} onClose={() => setOpenPost(null)} />
 
       {insightsPost && (
