@@ -96,6 +96,10 @@ export default function Profile() {
   const targetUsername = isMe ? me?.username : username;
   const royalPassActive = useIsRoyalPassUser(prof?.id);
 
+  useEffect(() => {
+    if (!username && me?.username) nav(`/u/${me.username}`, { replace: true });
+  }, [username, me?.username, nav]);
+
   useSeoMeta({
     title: prof ? `@${prof.username} · CrownMe` : "Profile · CrownMe",
     description: prof
