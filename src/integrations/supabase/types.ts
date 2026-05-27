@@ -3319,6 +3319,10 @@ export type Database = {
         Returns: string
       }
       update_my_dob: { Args: { _dob: string }; Returns: undefined }
+      verify_web_push_trigger_secret: {
+        Args: { _secret: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
