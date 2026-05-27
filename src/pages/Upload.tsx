@@ -875,6 +875,13 @@ export default function Upload() {
     }
   };
 
+  // ────────── Hooks that must run on every render (declared before any early return) ──────────
+  const [isDragging, setIsDragging] = useState(false);
+  const dragDepth = useRef(0);
+  const [trimRange, setTrimRange] = useState<[number, number] | null>(null);
+  const [trimming, setTrimming] = useState(false);
+  const [trimProgress, setTrimProgress] = useState(0);
+
   // ────────── Render ──────────
   if (success) {
     return (
@@ -892,9 +899,6 @@ export default function Upload() {
   const canSubmit = !submitting && !validation;
   const previewSrc = mode === "video" ? video?.preview : photos[0]?.preview;
 
-  // Drag-and-drop state for the page-level drop zone
-  const [isDragging, setIsDragging] = useState(false);
-  const dragDepth = useRef(0);
 
   const onDragEnter = (e: React.DragEvent) => {
     if (!e.dataTransfer?.types?.includes("Files")) return;
@@ -975,10 +979,8 @@ export default function Upload() {
   }, [submitting, photos.length, video, success]);
 
 
-  // ─── Video trim state ───
-  const [trimRange, setTrimRange] = useState<[number, number] | null>(null);
-  const [trimming, setTrimming] = useState(false);
-  const [trimProgress, setTrimProgress] = useState(0);
+  // ─── Video trim state is declared above the early return ───
+
   // Reset trim range when the user swaps the video.
   useEffect(() => {
     if (video) setTrimRange([0, Math.min(MAX_VIDEO_MS, video.durationMs) / 1000]);
