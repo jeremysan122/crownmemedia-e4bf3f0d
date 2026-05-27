@@ -10,15 +10,38 @@ import { CrownIcon } from "@/components/CrownIcon";
 import { Flame, Swords, Sparkles, ArrowLeft, Gift } from "lucide-react";
 import { toast } from "sonner";
 
+type PrizeType = "shekels" | "battle_tickets" | "royal_pass_days" | "profile_boost_hours" | "bonus_spin" | "nothing";
 type Prize = {
   id: string;
   label: string;
-  prize_type: "shekels" | "battle_tickets" | "royal_pass_days" | "nothing";
+  prize_type: PrizeType;
   prize_value: number;
   weight: number;
   color_hex: string | null;
   sort_order: number;
 };
+
+const PRIZE_ICON: Record<PrizeType, string> = {
+  shekels: "💰",
+  battle_tickets: "⚔️",
+  royal_pass_days: "👑",
+  profile_boost_hours: "🚀",
+  bonus_spin: "✨",
+  nothing: "💤",
+};
+
+// Compact wheel labels — keep them short so they fit inside a wedge.
+function shortLabel(p: Prize): string {
+  switch (p.prize_type) {
+    case "battle_tickets":   return `${p.prize_value} TICKET${p.prize_value === 1 ? "" : "S"}`;
+    case "royal_pass_days":  return `PASS ${p.prize_value}d`;
+    case "profile_boost_hours": return `BOOST ${p.prize_value}h`;
+    case "bonus_spin":       return "BONUS SPIN";
+    case "shekels":          return `+${p.prize_value}`;
+    case "nothing":          return "TRY AGAIN";
+    default:                 return p.label.toUpperCase();
+  }
+}
 
 type Streak = {
   current_streak: number;
@@ -128,44 +151,102 @@ export default function Rewards() {
     }, 4200);
   }
 
-  // Memoized wheel slices SVG
+  // Memoized wheel slices SVG — themed royal wheel
   const wheel = useMemo(() => {
     if (prizes.length === 0) return null;
-    const size = 280;
-    const cx = size / 2, cy = size / 2, r = size / 2 - 4;
+    const size = 320;
+    const cx = size / 2, cy = size / 2;
+    const rOuter = size / 2 - 4;
+    const rInner = 26;
     const slice = (2 * Math.PI) / prizes.length;
     return (
       <svg ref={wheelRef} viewBox={`0 0 ${size} ${size}`} width={size} height={size}
            style={{ transform: `rotate(${rotation}deg)`, transition: spinning ? "transform 4s cubic-bezier(0.18,0.84,0.16,1)" : "none" }}
-           className="drop-shadow-[0_0_20px_hsl(43_90%_55%/0.3)]"
+           className="drop-shadow-[0_0_30px_hsl(43_90%_55%/0.45)]"
            aria-label="Spin wheel">
+        <defs>
+          <radialGradient id="wheel-rim" cx="50%" cy="50%" r="50%">
+            <stop offset="92%" stopColor="hsl(43 78% 55%)" />
+            <stop offset="100%" stopColor="hsl(38 65% 35%)" />
+          </radialGradient>
+          <radialGradient id="wheel-hub" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="hsl(43 95% 70%)" />
+            <stop offset="100%" stopColor="hsl(38 70% 35%)" />
+          </radialGradient>
+          {prizes.map((p) => (
+            <radialGradient key={`g-${p.id}`} id={`wedge-${p.id}`} cx="50%" cy="50%" r="80%">
+              <stop offset="0%" stopColor={p.color_hex ?? "#444"} stopOpacity="1" />
+              <stop offset="100%" stopColor={p.color_hex ?? "#444"} stopOpacity="0.78" />
+            </radialGradient>
+          ))}
+        </defs>
+
+        {/* Outer gold rim */}
+        <circle cx={cx} cy={cy} r={rOuter} fill="url(#wheel-rim)" />
+
         {prizes.map((p, i) => {
           const a0 = i * slice - Math.PI / 2;
           const a1 = a0 + slice;
+          const r = rOuter - 8;
           const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
           const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
           const large = slice > Math.PI ? 1 : 0;
           const path = `M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`;
           const mid = a0 + slice / 2;
-          const tx = cx + r * 0.62 * Math.cos(mid);
-          const ty = cy + r * 0.62 * Math.sin(mid);
-          const rotDeg = (mid * 180) / Math.PI + 90;
+
+          // Position icon further out, label slightly inside it; rotate radially.
+          const iconR = r * 0.74;
+          const labelR = r * 0.42;
+          const ix = cx + iconR * Math.cos(mid);
+          const iy = cy + iconR * Math.sin(mid);
+          const lx = cx + labelR * Math.cos(mid);
+          const ly = cy + labelR * Math.sin(mid);
+
+          // Rotate text so it reads outward (baseline along radius)
+          let rotDeg = (mid * 180) / Math.PI;
+          // Flip text on the bottom half so it stays upright
+          const flip = rotDeg > 90 && rotDeg < 270;
+          const textRot = flip ? rotDeg + 180 : rotDeg;
+
+          const label = shortLabel(p);
           return (
             <g key={p.id}>
-              <path d={path} fill={p.color_hex ?? "#444"} stroke="hsl(var(--background))" strokeWidth={2} />
-              <text x={tx} y={ty} transform={`rotate(${rotDeg} ${tx} ${ty})`}
-                    textAnchor="middle" dominantBaseline="middle"
-                    fill="#0a0a0a" fontSize={11} fontWeight={700}
-                    style={{ pointerEvents: "none" }}>
-                {p.label.length > 16 ? p.label.slice(0, 14) + "…" : p.label}
+              <path d={path} fill={`url(#wedge-${p.id})`} stroke="hsl(43 60% 22%)" strokeWidth={1.5} />
+              {/* Icon */}
+              <text
+                x={ix} y={iy}
+                transform={`rotate(${textRot} ${ix} ${iy})`}
+                textAnchor="middle" dominantBaseline="middle"
+                fontSize={18}
+                style={{ pointerEvents: "none" }}
+              >
+                {PRIZE_ICON[p.prize_type] ?? "🎁"}
+              </text>
+              {/* Label */}
+              <text
+                x={lx} y={ly}
+                transform={`rotate(${textRot} ${lx} ${ly})`}
+                textAnchor="middle" dominantBaseline="middle"
+                fill="#0a0a0a"
+                fontSize={10}
+                fontWeight={800}
+                letterSpacing="0.5"
+                style={{ pointerEvents: "none", fontFamily: "ui-sans-serif, system-ui" }}
+              >
+                {label}
               </text>
             </g>
           );
         })}
-        <circle cx={cx} cy={cy} r={18} fill="hsl(var(--background))" stroke="hsl(var(--primary))" strokeWidth={3} />
+
+        {/* Inner gold hub with crown */}
+        <circle cx={cx} cy={cy} r={rInner + 4} fill="hsl(43 60% 18%)" />
+        <circle cx={cx} cy={cy} r={rInner} fill="url(#wheel-hub)" stroke="hsl(43 90% 70%)" strokeWidth={1.5} />
+        <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fontSize={22} style={{ pointerEvents: "none" }}>👑</text>
       </svg>
     );
   }, [prizes, rotation, spinning]);
+
 
   if (authLoading || loading || !streak) return <CrownLoader label="Loading rewards…" />;
 
