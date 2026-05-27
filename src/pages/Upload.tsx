@@ -979,10 +979,8 @@ export default function Upload() {
   }, [submitting, photos.length, video, success]);
 
 
-  // ─── Video trim state ───
-  const [trimRange, setTrimRange] = useState<[number, number] | null>(null);
-  const [trimming, setTrimming] = useState(false);
-  const [trimProgress, setTrimProgress] = useState(0);
+  // ─── Video trim state is declared above the early return ───
+
   // Reset trim range when the user swaps the video.
   useEffect(() => {
     if (video) setTrimRange([0, Math.min(MAX_VIDEO_MS, video.durationMs) / 1000]);
