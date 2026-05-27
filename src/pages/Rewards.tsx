@@ -8,7 +8,7 @@ import CrownLoader from "@/components/CrownLoader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CrownIcon } from "@/components/CrownIcon";
-import { Flame, Swords, Sparkles, ArrowLeft, History } from "lucide-react";
+import { Flame, Swords, Sparkles, ArrowLeft, History, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { haptic } from "@/lib/haptics";
 
@@ -333,11 +333,14 @@ export default function Rewards() {
           <Button
             onClick={claim}
             disabled={claiming || claimedToday}
+            aria-busy={claiming}
             className="w-full mt-5 h-12 font-bold tracking-wide bg-gradient-gold text-primary-foreground gold-shadow disabled:opacity-60"
           >
-            {claimedToday
+            {claiming ? (
+              <span className="inline-flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> Claiming…</span>
+            ) : claimedToday
               ? `Claimed · next in ${Math.max(1, Math.floor(nextClaimMs / 3600000))}h ${Math.max(0, Math.floor((nextClaimMs % 3600000) / 60000))}m`
-              : claiming ? "Claiming…" : "Claim today's reward"}
+              : "Claim today's reward"}
           </Button>
         </Card>
 
@@ -389,9 +392,11 @@ export default function Rewards() {
           <Button
             onClick={spin}
             disabled={spinning || !canSpin || prizes.length === 0}
+            aria-busy={spinning}
             className="w-full mt-5 h-12 font-bold tracking-wide bg-gradient-gold text-primary-foreground gold-shadow disabled:opacity-60 relative overflow-hidden"
           >
-            <span className="relative z-10">
+            <span className="relative z-10 inline-flex items-center gap-2">
+              {spinning && <Loader2 className="size-4 animate-spin" />}
               {spinning ? "Spinning…" : !claimedToday ? "Locked — claim first" : !canSpin ? "Already spun today" : bonusSpins > 0 && spunToday ? `Use bonus spin (${bonusSpins})` : "Spin the wheel"}
             </span>
           </Button>
