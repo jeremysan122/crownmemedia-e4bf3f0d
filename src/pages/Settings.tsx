@@ -80,8 +80,8 @@ export default function Settings() {
           className="royal-card p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors"
           aria-label="Edit your profile"
         >
-          <div className="w-10 h-10 rounded-full bg-gradient-gold/20 flex items-center justify-center">
-            <Edit3 size={18} className="text-gold" />
+          <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+            <Edit3 size={18} className="text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold">Edit Profile</div>
@@ -95,12 +95,27 @@ export default function Settings() {
           className="royal-card p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors"
           aria-label="Invite friends and earn rewards"
         >
-          <div className="w-10 h-10 rounded-full bg-gradient-gold/20 flex items-center justify-center">
-            <Gift size={18} className="text-gold" />
+          <div className="w-10 h-10 rounded-full bg-emerald-500/15 flex items-center justify-center">
+            <Gift size={18} className="text-emerald-500" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold">Invite friends · Earn rewards</div>
             <div className="text-[11px] text-muted-foreground">+200 shekels for both, +30 Pass days when they upgrade</div>
+          </div>
+          <ChevronRight size={16} className="text-muted-foreground" />
+        </Link>
+
+        <Link
+          to="/rewards"
+          className="royal-card p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors lg:hidden"
+          aria-label="Daily rewards and royal spin wheel"
+        >
+          <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center">
+            <Gift size={18} className="text-amber-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold">Daily Rewards</div>
+            <div className="text-[11px] text-muted-foreground">Claim your daily shekels and spin the royal wheel</div>
           </div>
           <ChevronRight size={16} className="text-muted-foreground" />
         </Link>
@@ -124,6 +139,7 @@ export default function Settings() {
           </div>
           <ChevronRight size={16} className="text-muted-foreground" />
         </Link>
+
 
         <section className="royal-card p-4 space-y-3">
           <h2 className="font-display text-sm uppercase tracking-widest text-muted-foreground">Browser push</h2>
