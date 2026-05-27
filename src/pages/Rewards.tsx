@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useWallet } from "@/hooks/useWallet";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { Link } from "react-router-dom";
 import CrownLoader from "@/components/CrownLoader";
@@ -67,6 +68,7 @@ function todayUtc(): string { return new Date().toISOString().slice(0, 10); }
 
 export default function Rewards() {
   const { user, loading: authLoading } = useAuth();
+  const { refreshWallet } = useWallet();
   useSeoMeta({
     title: "Daily Rewards — CrownMe",
     description: "Claim your daily reward, build your streak, and spin the royal wheel for premium perks.",
@@ -119,9 +121,14 @@ export default function Rewards() {
     const { data, error } = await supabase.rpc("claim_daily_reward");
     setClaiming(false);
     if (error) { toast.error(error.message); return; }
-    const res = data as { ok: boolean; shekels_awarded?: number; current_streak?: number; longest_streak?: number; already_claimed?: boolean };
+    const res = data as { ok: boolean; shekels_awarded?: number; bonus?: number; current_streak?: number; longest_streak?: number; already_claimed?: boolean };
     if (res.already_claimed) toast.info("Already claimed today — come back tomorrow.");
-    else { haptic("success"); toast.success(`+${res.shekels_awarded} shekels · ${res.current_streak}-day streak 🔥`); }
+    else {
+      haptic("success");
+      const bonusTxt = res.bonus && res.bonus > 0 ? ` (+${res.bonus} bonus!)` : "";
+      toast.success(`+${res.shekels_awarded} shekels${bonusTxt} · ${res.current_streak}-day streak 🔥`);
+      refreshWallet();
+    }
     setStreak((prev) => prev ? { ...prev, current_streak: res.current_streak ?? prev.current_streak, longest_streak: res.longest_streak ?? prev.longest_streak, last_claimed_date: today } : prev);
   }
 
@@ -151,6 +158,7 @@ export default function Rewards() {
         bonus_spins: res.bonus_spins_remaining ?? prev.bonus_spins,
       } : prev);
       if (res.prize_type === "battle_tickets") await refreshTickets();
+      if (res.prize_type === "shekels") refreshWallet();
       toast.success(`You won: ${res.label}`);
     }, 4200);
   }
@@ -164,10 +172,12 @@ export default function Rewards() {
     const rInner = 28;
     const slice = (2 * Math.PI) / prizes.length;
 
-    // Estimate the safe chord at the label radius so text never overflows the wedge sides.
-    const labelR = (rOuter - 8) * 0.46;
+    // Center labels at the radial midpoint of each wedge so text and icon sit centered in their section.
+    const midR = (rInner + rOuter) / 2;
+    const labelR = midR;
     const sidePadding = 6;
     const maxLabelWidth = Math.max(40, 2 * labelR * Math.sin(slice / 2) - sidePadding);
+
 
     return (
       <svg viewBox={`0 0 ${size} ${size}`} width="100%" height="100%"
@@ -210,11 +220,14 @@ export default function Rewards() {
           const path = `M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`;
           const mid = a0 + slice / 2;
 
-          const iconR = r * 0.78;
-          const ix = cx + iconR * Math.cos(mid);
-          const iy = cy + iconR * Math.sin(mid);
-          const lx = cx + labelR * Math.cos(mid);
-          const ly = cy + labelR * Math.sin(mid);
+          // Place icon and label both centered in the wedge, icon slightly above the label.
+          const cosM = Math.cos(mid), sinM = Math.sin(mid);
+          const iconOffset = -10;
+          const labelOffset = 8;
+          const ix = cx + (labelR + iconOffset) * cosM;
+          const iy = cy + (labelR + iconOffset) * sinM;
+          const lx = cx + (labelR + labelOffset) * cosM;
+          const ly = cy + (labelR + labelOffset) * sinM;
 
           let rotDeg = (mid * 180) / Math.PI;
           const flip = rotDeg > 90 && rotDeg < 270;
@@ -303,15 +316,19 @@ export default function Rewards() {
             {Array.from({ length: 7 }).map((_, i) => {
               const day = i + 1;
               const reached = streak.current_streak >= day;
-              const reward = 50 + day * 10;
+              const isBonusDay = day === 7;
               return (
-                <div key={day} className={`relative rounded-lg border text-center py-2 transition ${reached ? "bg-primary/20 border-primary/60" : "bg-muted/30 border-border"}`}>
+                <div key={day} className={`relative rounded-lg border text-center py-2 transition ${reached ? "bg-primary/20 border-primary/60" : "bg-muted/30 border-border"} ${isBonusDay ? "ring-1 ring-amber-400/60" : ""}`}>
                   <div className="text-[10px] text-muted-foreground">Day {day}</div>
-                  <div className={`text-xs font-bold ${reached ? "text-primary" : "text-foreground/60"}`}>+{reward}</div>
+                  <div className={`text-xs font-bold ${reached ? "text-primary" : "text-foreground/60"}`}>
+                    {isBonusDay ? "+10 +🎁" : "+10"}
+                  </div>
                 </div>
               );
             })}
           </div>
+          <p className="text-[10px] text-muted-foreground mt-2 text-center">Every 7th consistent day grants a random bonus (50–200 shekels).</p>
+
 
           <Button
             onClick={claim}
