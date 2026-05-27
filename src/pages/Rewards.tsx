@@ -311,15 +311,19 @@ export default function Rewards() {
             {Array.from({ length: 7 }).map((_, i) => {
               const day = i + 1;
               const reached = streak.current_streak >= day;
-              const reward = 50 + day * 10;
+              const isBonusDay = day === 7;
               return (
-                <div key={day} className={`relative rounded-lg border text-center py-2 transition ${reached ? "bg-primary/20 border-primary/60" : "bg-muted/30 border-border"}`}>
+                <div key={day} className={`relative rounded-lg border text-center py-2 transition ${reached ? "bg-primary/20 border-primary/60" : "bg-muted/30 border-border"} ${isBonusDay ? "ring-1 ring-amber-400/60" : ""}`}>
                   <div className="text-[10px] text-muted-foreground">Day {day}</div>
-                  <div className={`text-xs font-bold ${reached ? "text-primary" : "text-foreground/60"}`}>+{reward}</div>
+                  <div className={`text-xs font-bold ${reached ? "text-primary" : "text-foreground/60"}`}>
+                    {isBonusDay ? "+10 +🎁" : "+10"}
+                  </div>
                 </div>
               );
             })}
           </div>
+          <p className="text-[10px] text-muted-foreground mt-2 text-center">Every 7th consistent day grants a random bonus (50–200 shekels).</p>
+
 
           <Button
             onClick={claim}
