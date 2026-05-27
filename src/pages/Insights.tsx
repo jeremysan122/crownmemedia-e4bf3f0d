@@ -94,7 +94,7 @@ export default function Insights() {
         supabase.from("posts").select("id, caption, category, created_at, vote_count, comment_count, share_count, crown_score").eq("user_id", user.id).eq("is_removed", false).order("crown_score", { ascending: false }).limit(200),
         supabase.from("follows").select("follower_id, profiles!follows_follower_id_fkey(city, country)").eq("following_id", user.id).limit(1000),
         supabase.from("gift_transactions").select("gift_name, receiver_earnings_shekels, created_at").eq("receiver_id", user.id).gte("created_at", since),
-        supabase.from("shekel_ledger").select("shikels_delta:shekels_delta").eq("user_id", user.id).eq("kind", "royal_pass_bonus").gte("created_at", since),
+        supabase.from("shekel_ledger").select("shekels_delta").eq("user_id", user.id).eq("kind", "royal_pass_bonus").gte("created_at", since),
       ]);
 
       if (cancelled) return;
@@ -153,7 +153,7 @@ export default function Insights() {
       setGiftsTotal(total);
       setGiftBreakdown([...giftMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value]) => ({ name, value: Math.round(value) })));
 
-      const rpTotal = (earningsRes.data || []).reduce((s: number, r: any) => s + Number(r.shikels_delta || 0), 0);
+      const rpTotal = (earningsRes.data || []).reduce((s: number, r: any) => s + Number(r.shekels_delta || 0), 0);
       setRoyalPassEarnings(rpTotal);
 
       setLoading(false);
