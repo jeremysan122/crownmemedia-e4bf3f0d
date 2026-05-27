@@ -3092,6 +3092,24 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_list_users: {
+        Args: { _limit?: number; _query?: string }
+        Returns: {
+          banned_at: string
+          banned_by: string
+          banned_reason: string
+          city: string
+          country: string
+          created_at: string
+          deactivated_at: string
+          deletion_requested_at: string
+          followers_count: number
+          id: string
+          is_banned: boolean
+          is_suspended: boolean
+          username: string
+        }[]
+      }
       admin_set_creator_reward: {
         Args: { _reward_id: string; _status: string }
         Returns: {
