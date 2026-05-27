@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Navigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/crown";
-import { Flag, MessageSquare, Image as ImageIcon, User, Activity, ScrollText, CheckSquare, Package, Crown as CrownIcon, Swords, Shield } from "lucide-react";
+import { Flag, MessageSquare, Image as ImageIcon, User, Activity, ScrollText, CheckSquare, Package, Crown as CrownIcon, Swords, Shield, BadgeCheck, Megaphone } from "lucide-react";
 import AdminSessionHint from "@/components/admin/AdminSessionHint";
 import CrownRankingsWidget from "@/components/admin/CrownRankingsWidget";
 
@@ -71,6 +71,8 @@ export default function Admin() {
           <AdminNav to="/admin/audit-log" icon={<ScrollText size={12} />} label="Audit Log" />
           <AdminNav to="/admin/verify" icon={<CheckSquare size={12} />} label="Verification" />
           <AdminNav to="/admin/voting-verify" icon={<CrownIcon size={12} />} label="Voting Verify" />
+          <AdminNav to="/admin/verification" icon={<BadgeCheck size={12} />} label="Blue Check Review" />
+          <AdminNav to="/admin/broadcast" icon={<Megaphone size={12} />} label="Broadcast" />
           <AdminNav to="/admin/bundles" icon={<Package size={12} />} label="Bundles" />
         </nav>
 
