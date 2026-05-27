@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import FeedRightRail from "@/components/desktop/FeedRightRail";
 import FeedRealtimeAlert from "@/components/FeedRealtimeAlert";
+import DailyRewardChip from "@/components/DailyRewardChip";
 import { Camera, Plus, Sparkles, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { CATEGORIES, CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
