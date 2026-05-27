@@ -3092,6 +3092,24 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_list_users: {
+        Args: { _limit?: number; _query?: string }
+        Returns: {
+          banned_at: string
+          banned_by: string
+          banned_reason: string
+          city: string
+          country: string
+          created_at: string
+          deactivated_at: string
+          deletion_requested_at: string
+          followers_count: number
+          id: string
+          is_banned: boolean
+          is_suspended: boolean
+          username: string
+        }[]
+      }
       admin_set_creator_reward: {
         Args: { _reward_id: string; _status: string }
         Returns: {
@@ -3209,6 +3227,81 @@ export type Database = {
         Returns: undefined
       }
       get_creator_dashboard: { Args: { _user_id?: string }; Returns: Json }
+      get_my_profile: {
+        Args: never
+        Returns: {
+          auto_accept_battles_from_follows: boolean
+          autoplay_cellular: boolean
+          autosave_to_camera_roll: boolean
+          avatar_position_y: number
+          banned_at: string | null
+          banned_by: string | null
+          banned_reason: string | null
+          banner_position_y: number
+          banner_url: string | null
+          battle_wins: number
+          bio: string | null
+          captions_default_on: boolean
+          city: string | null
+          country: string | null
+          created_at: string
+          crowns_held: number
+          crowns_total: number
+          deactivated_at: string | null
+          default_battle_stake: number
+          default_category: string | null
+          default_comments_enabled: boolean
+          default_post_visibility: string
+          default_race_scope: string
+          deletion_requested_at: string | null
+          first_name: string | null
+          followers_count: number
+          following_count: number
+          gender: Database["public"]["Enums"]["gender_type"] | null
+          hide_comments: boolean
+          hide_likes: boolean
+          hide_views: boolean
+          high_contrast: boolean
+          id: string
+          is_banned: boolean
+          is_private: boolean
+          is_suspended: boolean
+          larger_text: boolean
+          last_name: string | null
+          liked_posts_public: boolean
+          links: Json
+          locale: string
+          posts_visibility: string
+          profile_photo_url: string | null
+          push_battles: boolean
+          push_comments: boolean
+          push_follows: boolean
+          push_likes: boolean
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          reduce_motion: boolean
+          state: string | null
+          tag_review_required: boolean
+          timezone: string | null
+          updated_at: string
+          username: string
+          verification_plan: string | null
+          verified: boolean
+          verified_at: string | null
+          votes_given: number
+          votes_received: number
+          watermark_enabled: boolean
+          who_can_dm: string
+          who_can_mention: string
+          who_can_tag: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_my_profile_sensitive: {
         Args: never
         Returns: {
