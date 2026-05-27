@@ -650,12 +650,13 @@ export default function Profile() {
                           <Crown size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
                         </div>
                         {isMe && (
-                          <DropdownMenu open={openMenuId === p.id} onOpenChange={(o) => setOpenMenuId(o ? p.id : null)}>
+                          <DropdownMenu modal={false} open={openMenuId === p.id} onOpenChange={(o) => setOpenMenuId(o ? p.id : null)}>
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                onClick={(e) => e.stopPropagation()}
-                                className="absolute top-1 right-1 glass rounded-full p-1 opacity-90 hover:opacity-100"
+                                onPointerDown={(e) => { e.stopPropagation(); }}
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                className="absolute top-1 right-1 z-20 glass rounded-full p-1 opacity-90 hover:opacity-100"
                                 aria-label="Post actions"
                               >
                                 <MoreVertical size={12} />
