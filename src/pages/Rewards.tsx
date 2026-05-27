@@ -172,10 +172,12 @@ export default function Rewards() {
     const rInner = 28;
     const slice = (2 * Math.PI) / prizes.length;
 
-    // Estimate the safe chord at the label radius so text never overflows the wedge sides.
-    const labelR = (rOuter - 8) * 0.46;
+    // Center labels at the radial midpoint of each wedge so text and icon sit centered in their section.
+    const midR = (rInner + rOuter) / 2;
+    const labelR = midR;
     const sidePadding = 6;
     const maxLabelWidth = Math.max(40, 2 * labelR * Math.sin(slice / 2) - sidePadding);
+
 
     return (
       <svg viewBox={`0 0 ${size} ${size}`} width="100%" height="100%"
