@@ -1,23 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { walletStore, type WalletSnapshot } from "@/stores/walletStore";
 
-export interface WalletState {
-  shekelBalance: number;
-  totalEarned: number;
-  totalSpent: number;
-  loading: boolean;
-}
+export type WalletState = WalletSnapshot;
 
 export function useWallet() {
   const { user } = useAuth();
 
-  const [wallet, setWallet] = useState<WalletState>({
-    shekelBalance: 0,
-    totalEarned: 0,
-    totalSpent: 0,
-    loading: true,
-  });
+  const [wallet, setWallet] = useState<WalletState>(
+    () => walletStore.getSnapshot() ?? {
+      shekelBalance: 0,
+      totalEarned: 0,
+      totalSpent: 0,
+      loading: true,
+    },
+  );
 
   const refreshWallet = useCallback(async () => {
     if (!user) return;
@@ -29,20 +27,23 @@ export function useWallet() {
       .maybeSingle();
 
     if (data) {
-      setWallet({
+      const next: WalletState = {
         shekelBalance: Number(data.shekel_balance),
         totalEarned: Number(data.total_earned),
         totalSpent: Number(data.total_spent),
         loading: false,
-      });
+      };
+      walletStore.setSnapshot(next);
+      setWallet(next);
     } else {
       // Wallet is normally created by the signup trigger; this RPC safely ensures one exists.
       await supabase.rpc("ensure_my_wallet");
 
-      setWallet((w) => ({
-        ...w,
-        loading: false,
-      }));
+      setWallet((w) => {
+        const next = { ...w, loading: false };
+        walletStore.setSnapshot(next);
+        return next;
+      });
     }
   }, [user]);
 
@@ -50,15 +51,13 @@ export function useWallet() {
     refreshWallet();
   }, [refreshWallet]);
 
-  // Cross-component refresh: any code can dispatch
-  // `window.dispatchEvent(new Event("wallet:refresh"))` to force every
-  // mounted useWallet() instance to re-fetch — used after daily-reward
-  // claims, spin-wheel payouts, gift sends, etc. so the header pill stays
-  // in sync with whichever page triggered the change.
+  // Cross-component refresh: any code can call
+  // `walletStore.requestRefresh()` to force every mounted useWallet()
+  // instance to re-fetch — used after daily-reward claims, spin-wheel
+  // payouts, gift sends, etc. so the header pill stays in sync with
+  // whichever page triggered the change.
   useEffect(() => {
-    const handler = () => { refreshWallet(); };
-    window.addEventListener("wallet:refresh", handler);
-    return () => window.removeEventListener("wallet:refresh", handler);
+    return walletStore.subscribe(() => { refreshWallet(); });
   }, [refreshWallet]);
 
   // Realtime: refresh balance when wallet row updates, for example after Stripe webhook credits Shekels.
