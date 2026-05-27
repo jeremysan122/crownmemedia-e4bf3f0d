@@ -10,15 +10,38 @@ import { CrownIcon } from "@/components/CrownIcon";
 import { Flame, Swords, Sparkles, ArrowLeft, Gift } from "lucide-react";
 import { toast } from "sonner";
 
+type PrizeType = "shekels" | "battle_tickets" | "royal_pass_days" | "profile_boost_hours" | "bonus_spin" | "nothing";
 type Prize = {
   id: string;
   label: string;
-  prize_type: "shekels" | "battle_tickets" | "royal_pass_days" | "nothing";
+  prize_type: PrizeType;
   prize_value: number;
   weight: number;
   color_hex: string | null;
   sort_order: number;
 };
+
+const PRIZE_ICON: Record<PrizeType, string> = {
+  shekels: "💰",
+  battle_tickets: "⚔️",
+  royal_pass_days: "👑",
+  profile_boost_hours: "🚀",
+  bonus_spin: "✨",
+  nothing: "💤",
+};
+
+// Compact wheel labels — keep them short so they fit inside a wedge.
+function shortLabel(p: Prize): string {
+  switch (p.prize_type) {
+    case "battle_tickets":   return `${p.prize_value} TICKET${p.prize_value === 1 ? "" : "S"}`;
+    case "royal_pass_days":  return `PASS ${p.prize_value}d`;
+    case "profile_boost_hours": return `BOOST ${p.prize_value}h`;
+    case "bonus_spin":       return "BONUS SPIN";
+    case "shekels":          return `+${p.prize_value}`;
+    case "nothing":          return "TRY AGAIN";
+    default:                 return p.label.toUpperCase();
+  }
+}
 
 type Streak = {
   current_streak: number;
