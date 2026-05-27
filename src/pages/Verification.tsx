@@ -47,8 +47,9 @@ async function uploadDoc(userId: string, file: File, kind: string): Promise<stri
 }
 
 export default function Verification() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
   const goBack = () => {
     // Only use history.back() if we actually came from within the app —
     // otherwise (direct link / new tab) fall back to a safe destination.
@@ -138,7 +139,7 @@ export default function Verification() {
           <VerifiedBadge size={48} className="mx-auto" />
           <h1 className="text-2xl font-serif font-bold">You're verified</h1>
           <p className="text-muted-foreground">Your profile displays the verified badge across CrownMe.</p>
-          <Button asChild variant="outline"><Link to="/me">View profile</Link></Button>
+          <Button asChild variant="outline"><Link to={profilePath}>View profile</Link></Button>
         </Card>
       </div>
     );
