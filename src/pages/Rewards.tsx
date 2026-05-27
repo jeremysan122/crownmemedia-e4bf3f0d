@@ -392,9 +392,11 @@ export default function Rewards() {
           <Button
             onClick={spin}
             disabled={spinning || !canSpin || prizes.length === 0}
+            aria-busy={spinning}
             className="w-full mt-5 h-12 font-bold tracking-wide bg-gradient-gold text-primary-foreground gold-shadow disabled:opacity-60 relative overflow-hidden"
           >
-            <span className="relative z-10">
+            <span className="relative z-10 inline-flex items-center gap-2">
+              {spinning && <Loader2 className="size-4 animate-spin" />}
               {spinning ? "Spinning…" : !claimedToday ? "Locked — claim first" : !canSpin ? "Already spun today" : bonusSpins > 0 && spunToday ? `Use bonus spin (${bonusSpins})` : "Spin the wheel"}
             </span>
           </Button>
