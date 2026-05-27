@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Swords, Plus, User, Clapperboard, Gift } from "lucide-react";
+import { Home, Swords, Plus, User, Clapperboard } from "lucide-react";
 import { useEffect } from "react";
 
 const items = [
@@ -7,7 +7,6 @@ const items = [
   { to: "/shorts", label: "Shorts", icon: Clapperboard },
   { to: "/upload", label: "Upload", icon: Plus, primary: true },
   { to: "/battles", label: "Battles", icon: Swords },
-  { to: "/rewards", label: "Rewards", icon: Gift },
   { to: "/me", label: "Profile", icon: User },
 ];
 
