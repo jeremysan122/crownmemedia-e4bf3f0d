@@ -333,11 +333,14 @@ export default function Rewards() {
           <Button
             onClick={claim}
             disabled={claiming || claimedToday}
+            aria-busy={claiming}
             className="w-full mt-5 h-12 font-bold tracking-wide bg-gradient-gold text-primary-foreground gold-shadow disabled:opacity-60"
           >
-            {claimedToday
+            {claiming ? (
+              <span className="inline-flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> Claiming…</span>
+            ) : claimedToday
               ? `Claimed · next in ${Math.max(1, Math.floor(nextClaimMs / 3600000))}h ${Math.max(0, Math.floor((nextClaimMs % 3600000) / 60000))}m`
-              : claiming ? "Claiming…" : "Claim today's reward"}
+              : "Claim today's reward"}
           </Button>
         </Card>
 
