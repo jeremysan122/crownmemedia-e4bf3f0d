@@ -112,7 +112,7 @@ export default function Profile() {
     const load = async () => {
       const { data: p, error: pErr } = await supabase
         .from("profiles")
-        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, is_suspended, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public")
+        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, is_suspended, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public")
         .eq("username", targetUsername)
         .maybeSingle();
       if (cancelled) return;
@@ -515,6 +515,9 @@ export default function Profile() {
             </div>
             <p className="text-xs lg:text-sm text-muted-foreground">
               {locationLabel(prof)} · Member since {joinedLabel}
+              {(prof as any).pronouns && (
+                <> · <span className="text-foreground/80">{(prof as any).pronouns}</span></>
+              )}
             </p>
             {prof.bio && <p className="text-sm mt-1 max-w-xl">{prof.bio}</p>}
             <ProfileLinks links={(prof as any).links} />
