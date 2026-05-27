@@ -508,6 +508,42 @@ export default function EditProfile() {
 
           <div className="grid grid-cols-2 gap-2">
             <div>
+              <Label htmlFor="ep-pronouns">Pronouns</Label>
+              <Input
+                id="ep-pronouns"
+                value={pronouns}
+                onChange={(event) => { setPronouns(event.target.value); clearFieldError("pronouns"); }}
+                maxLength={30}
+                placeholder="she/her, he/him, they/them…"
+                className="bg-input mt-1"
+                aria-invalid={!!liveErrors.pronouns}
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">Shown next to your username on your profile.</p>
+              <FieldErr name="pronouns" />
+            </div>
+            <div>
+              <Label htmlFor="ep-gender">Gender</Label>
+              <select
+                id="ep-gender"
+                value={gender}
+                onChange={(event) => { setGender(event.target.value as GenderValue | ""); clearFieldError("gender"); }}
+                className="mt-1 w-full h-10 rounded-md border border-input bg-input px-3 text-sm"
+                aria-invalid={!!liveErrors.gender}
+              >
+                <option value="">Prefer not to say</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="non_binary">Non-binary</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+              <p className="text-[10px] text-muted-foreground mt-1">Used for King / Queen crown titles.</p>
+              <FieldErr name="gender" />
+            </div>
+          </div>
+
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
               <Label htmlFor="ep-city">City *</Label>
 
               <Input
