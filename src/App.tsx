@@ -50,7 +50,7 @@ const PostPage = lazy(() => import("./pages/PostPage"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const CreatorProgram = lazy(() => import("./pages/CreatorProgram"));
 const AdminCreatorProgram = lazy(() => import("./pages/AdminCreatorProgram"));
-const Shorts = lazy(() => import("./pages/Shorts"));
+const Scrolls = lazy(() => import("./pages/Shorts"));
 const Rewards = lazy(() => import("./pages/Rewards"));
 const RewardHistory = lazy(() => import("./pages/RewardHistory"));
 const AdminRewards = lazy(() => import("./pages/AdminRewards"));
@@ -149,7 +149,8 @@ const App = () => (
 
               <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
               <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
-              <Route path="/shorts" element={<ProtectedRoute><Shorts /></ProtectedRoute>} />
+              <Route path="/shorts" element={<ProtectedRoute><Scrolls /></ProtectedRoute>} />
+              <Route path="/scrolls" element={<ProtectedRoute><Scrolls /></ProtectedRoute>} />
               <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
               <Route path="/map" element={<ProtectedRoute><CrownMap /></ProtectedRoute>} />
               <Route path="/battles" element={<ProtectedRoute><Battles /></ProtectedRoute>} />

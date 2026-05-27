@@ -27,8 +27,8 @@ export default function Shorts() {
   const nav = useNavigate();
   const { user } = useAuth();
   useSeoMeta({
-    title: "Shorts — CrownMe",
-    description: "Swipe through short-form videos from the CrownMe community.",
+    title: "Scrolls — CrownMe",
+    description: "Scroll through quick royal videos from the CrownMe community.",
   });
 
   const [items, setItems] = useState<Short[]>([]);
@@ -53,7 +53,7 @@ export default function Shorts() {
     if (cursor) q = q.lt("created_at", cursor);
     const { data, error } = await q;
     if (error) {
-      toast.error("Couldn't load shorts");
+      toast.error("Couldn't load scrolls");
       return [] as Short[];
     }
     const rows = (data ?? []) as Omit<Short, "profile">[];
@@ -139,19 +139,19 @@ export default function Shorts() {
     });
     if (error) {
       setItems((prev) => prev.map((p) => p.id === post.id ? { ...p, vote_count: Math.max(0, p.vote_count - 1) } : p));
-      if (!/duplicate/i.test(error.message)) toast.error("Couldn't crown this short");
+      if (!/duplicate/i.test(error.message)) toast.error("Couldn't crown this scroll");
     }
   }
 
   async function share(post: Short) {
     const url = `${window.location.origin}/post/${post.id}`;
     if (navigator.share) {
-      try { await navigator.share({ url, title: "CrownMe Short" }); return; } catch { /* user cancelled */ }
+      try { await navigator.share({ url, title: "CrownMe Scroll" }); return; } catch { /* user cancelled */ }
     }
     try { await navigator.clipboard.writeText(url); toast.success("Link copied"); } catch { toast.error("Couldn't copy"); }
   }
 
-  if (loading) return <CrownLoader label="Loading shorts…" />;
+  if (loading) return <CrownLoader label="Loading scrolls…" />;
 
   return (
     <main className="fixed inset-0 bg-black text-white">
@@ -159,7 +159,7 @@ export default function Shorts() {
         <button onClick={() => nav(-1)} aria-label="Back" className="p-2 -ml-2 rounded-full hover:bg-white/10">
           <ArrowLeft className="size-5" />
         </button>
-        <h1 className="font-display text-lg tracking-widest">SHORTS</h1>
+        <h1 className="font-display text-lg tracking-widest">SCROLLS</h1>
         <button onClick={() => setMuted((m) => !m)} aria-label={muted ? "Unmute" : "Mute"} className="p-2 -mr-2 rounded-full hover:bg-white/10">
           {muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
         </button>
@@ -168,10 +168,10 @@ export default function Shorts() {
       {items.length === 0 ? (
         <div className="h-full flex flex-col items-center justify-center text-center px-6">
           <Heart className="size-12 text-primary mb-3" aria-hidden />
-          <p className="text-lg font-semibold mb-1">No shorts yet</p>
+          <p className="text-lg font-semibold mb-1">No scrolls yet</p>
           <p className="text-sm text-white/60 mb-6">Be the first to post a 30-second clip.</p>
           <Link to="/upload" className="px-5 h-11 inline-flex items-center rounded-full bg-gradient-gold text-primary-foreground font-bold">
-            Upload a short
+            Upload a scroll
           </Link>
         </div>
       ) : (
@@ -205,7 +205,7 @@ export default function Shorts() {
               <div className="absolute right-3 bottom-28 flex flex-col items-center gap-5">
                 <button
                   onClick={() => castCrown(p)}
-                  aria-label="Crown this short"
+                  aria-label="Crown this scroll"
                   className="flex flex-col items-center gap-1 group active:scale-95 transition"
                 >
                   <span className="size-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center group-hover:bg-primary/30">

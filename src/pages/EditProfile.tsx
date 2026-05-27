@@ -294,7 +294,7 @@ export default function EditProfile() {
       await refreshProfile();
 
       toast.success("Profile updated");
-      nav("/me");
+      nav(`/u/${username.trim().toLowerCase()}`);
     } catch (error) {
       if (uploadedAvatarPath) {
         await supabase.storage.from("avatars").remove([uploadedAvatarPath]).catch(() => {});
