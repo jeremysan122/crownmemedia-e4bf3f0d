@@ -123,6 +123,9 @@ export default function Verification() {
   if (verified) {
     return (
       <div className="mx-auto max-w-2xl p-6 space-y-4">
+        <Button asChild variant="ghost" size="sm" className="-ml-2">
+          <Link to="/settings"><ArrowLeft className="h-4 w-4 mr-1" /> Back</Link>
+        </Button>
         <Card className="p-6 text-center space-y-3">
           <VerifiedBadge size={48} className="mx-auto" />
           <h1 className="text-2xl font-serif font-bold">You're verified</h1>
