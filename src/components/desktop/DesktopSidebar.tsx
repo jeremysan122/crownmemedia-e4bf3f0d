@@ -1,9 +1,10 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, Swords, Map, Plus, User, Trophy, Store, MessageCircle, Bell, Settings as SettingsIcon, Clapperboard, Gift } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const items = [
   { to: "/feed", label: "Feed", icon: Home },
-  { to: "/shorts", label: "Shorts", icon: Clapperboard },
+  { to: "/scrolls", label: "Scrolls", icon: Clapperboard },
   { to: "/battles", label: "Battles", icon: Swords },
   { to: "/map", label: "Crown Map", icon: Map },
   { to: "/leaderboard", label: "Leaderboards", icon: Trophy },
@@ -21,7 +22,9 @@ interface DesktopSidebarProps {
 
 export default function DesktopSidebar({ onCompose }: DesktopSidebarProps) {
   const loc = useLocation();
+  const { profile } = useAuth();
   const handleCompose = onCompose ?? (() => { window.location.href = "/upload"; });
+  const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
   return (
     <aside className="hidden lg:flex sticky top-[68px] h-[calc(100vh-84px)] w-[260px] shrink-0 flex-col gap-1 pr-2 pt-9">
       <nav className="flex-1 flex flex-col gap-1">
@@ -30,7 +33,7 @@ export default function DesktopSidebar({ onCompose }: DesktopSidebarProps) {
           return (
             <NavLink
               key={to}
-              to={to}
+              to={to === "/me" ? profilePath : to}
               className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all border ${
                 active
                   ? "bg-gradient-to-r from-primary/15 to-transparent border-primary/40 text-primary shadow-[0_0_24px_-8px_hsl(43_95%_60%/0.6)]"
