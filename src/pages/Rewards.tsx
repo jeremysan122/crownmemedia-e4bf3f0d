@@ -121,9 +121,14 @@ export default function Rewards() {
     const { data, error } = await supabase.rpc("claim_daily_reward");
     setClaiming(false);
     if (error) { toast.error(error.message); return; }
-    const res = data as { ok: boolean; shekels_awarded?: number; current_streak?: number; longest_streak?: number; already_claimed?: boolean };
+    const res = data as { ok: boolean; shekels_awarded?: number; bonus?: number; current_streak?: number; longest_streak?: number; already_claimed?: boolean };
     if (res.already_claimed) toast.info("Already claimed today — come back tomorrow.");
-    else { haptic("success"); toast.success(`+${res.shekels_awarded} shekels · ${res.current_streak}-day streak 🔥`); }
+    else {
+      haptic("success");
+      const bonusTxt = res.bonus && res.bonus > 0 ? ` (+${res.bonus} bonus!)` : "";
+      toast.success(`+${res.shekels_awarded} shekels${bonusTxt} · ${res.current_streak}-day streak 🔥`);
+      refreshWallet();
+    }
     setStreak((prev) => prev ? { ...prev, current_streak: res.current_streak ?? prev.current_streak, longest_streak: res.longest_streak ?? prev.longest_streak, last_claimed_date: today } : prev);
   }
 
