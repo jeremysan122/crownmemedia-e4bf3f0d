@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ShieldCheck, Crown, Upload, Loader2, ArrowLeft } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 type Plan = "standard" | "subscription";
 type Category = "creator" | "brand" | "public_figure" | "business" | "journalist";
