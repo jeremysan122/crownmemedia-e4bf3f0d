@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +11,6 @@ import EditPostDialog from "@/components/EditPostDialog";
 import PostInsightsDialog from "@/components/PostInsightsDialog";
 import CrownLoader from "@/components/CrownLoader";
 import ProfileLinks from "@/components/profile/ProfileLinks";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { formatScore, locationLabel } from "@/lib/crown";
 import { cssFor, isValidFilter } from "@/lib/filters";
 import { toast } from "sonner";
@@ -57,6 +57,8 @@ interface BattleRow {
   challenger_username: string | null;
 }
 
+type PostMenuPosition = { x: number; y: number; placement: "top" | "bottom" };
+
 export default function Profile() {
   const { username } = useParams();
   const { user, profile: me } = useAuth();
@@ -89,6 +91,7 @@ export default function Profile() {
   const [editingPostData, setEditingPostData] = useState<{ caption: string; image_url: string; filter: any; edited_at?: string | null } | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [postMenuPosition, setPostMenuPosition] = useState<PostMenuPosition | null>(null);
   const [insightsPost, setInsightsPost] = useState<{ id: string; base: { crown_score: number; vote_count: number; comment_count: number; share_count: number; battle_wins: number; created_at: string } } | null>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
 
@@ -241,6 +244,27 @@ export default function Profile() {
     return () => { cancelled = true; };
   }, [targetUsername, user?.id]); // Fix #4: user?.id not user
 
+  useEffect(() => {
+    if (!openMenuId) return;
+    const close = () => {
+      setOpenMenuId(null);
+      setPostMenuPosition(null);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openMenuId]);
+
   // Cross-platform realtime: keep posts grid in sync with edits/deletes from anywhere.
   useEffect(() => {
     if (!prof?.id) return;
@@ -338,6 +362,16 @@ export default function Profile() {
       ...(data as any),
       profile: author || { username: "", profile_photo_url: null, crowns_held: 0 },
     });
+  };
+
+  const openPostMenu = (postId: string, button: HTMLButtonElement) => {
+    const rect = button.getBoundingClientRect();
+    const width = 192;
+    const gap = 8;
+    const x = Math.max(gap, Math.min(window.innerWidth - width - gap, rect.right - width));
+    const opensUp = rect.bottom + 256 > window.innerHeight && rect.top > 256;
+    setPostMenuPosition({ x, y: opensUp ? rect.top - gap : rect.bottom + gap, placement: opensUp ? "top" : "bottom" });
+    setOpenMenuId((current) => (current === postId ? null : postId));
   };
 
   const onBannerPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -650,105 +684,19 @@ export default function Profile() {
                           <Crown size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
                         </div>
                         {isMe && (
-                          <DropdownMenu modal={false} open={openMenuId === p.id} onOpenChange={(o) => setOpenMenuId(o ? p.id : null)}>
-                            <DropdownMenuTrigger asChild>
-                              <button
-                                type="button"
-                                onPointerDown={(e) => { e.stopPropagation(); }}
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                                className="absolute top-1 right-1 z-20 glass rounded-full p-1 opacity-90 hover:opacity-100"
-                                aria-label="Post actions"
-                              >
-                                <MoreVertical size={12} />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem
-                                onSelect={async (e) => {
-                                  e.preventDefault();
-                                  setOpenMenuId(null);
-                                  const { data } = await supabase
-                                    .from("posts")
-                                    .select("caption, image_url, filter, edited_at")
-                                    .eq("id", p.id)
-                                    .maybeSingle();
-                                  if (!data) { toast.error("Could not load post"); return; }
-                                  setEditingPostData({
-                                    caption: (data as any).caption ?? "",
-                                    image_url: (data as any).image_url ?? p.image_url,
-                                    filter: (data as any).filter ?? null,
-                                     edited_at: (data as any).edited_at ?? null,
-                                  });
-                                  setEditingPostId(p.id);
-                                }}
-                              >
-                                <Edit3 size={12} className="mr-2" /> Edit post
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={async (e) => {
-                                  e.preventDefault();
-                                  setOpenMenuId(null);
-                                  const { data } = await supabase
-                                    .from("posts")
-                                    .select("crown_score, vote_count, comment_count, share_count, battle_wins, created_at")
-                                    .eq("id", p.id)
-                                    .maybeSingle();
-                                  if (!data) { toast.error("Could not load post"); return; }
-                                  setInsightsPost({ id: p.id, base: data as any });
-                                }}
-                              >
-                                <BarChart3 size={12} className="mr-2" /> Insights
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setOpenMenuId(null); nav("/store?tab=boosts"); }}>
-                                <Zap size={12} className="mr-2" /> Boost this post
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={async (e) => {
-                                  e.preventDefault();
-                                  setOpenMenuId(null);
-                                  if (!user) return;
-                                  const isPinned = !!p.pinned_at;
-                                  const next = isPinned ? null : new Date().toISOString();
-                                  const { error } = await supabase
-                                    .from("posts")
-                                    .update({ pinned_at: next } as any)
-                                    .eq("id", p.id)
-                                    .eq("user_id", user.id);
-                                  if (error) return toast.error(error.message);
-                                  setPosts((prev) => prev.map((pp) => pp.id === p.id ? { ...pp, pinned_at: next } : pp));
-                                  toast.success(next ? "Pinned to your profile" : "Unpinned");
-                                }}
-                              >
-                                {p.pinned_at
-                                  ? <><PinOff size={12} className="mr-2" /> Unpin from profile</>
-                                  : <><Pin size={12} className="mr-2" /> Pin to profile</>}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={async (e) => {
-                                  e.preventDefault();
-                                  setOpenMenuId(null);
-                                  if (!user) return;
-                                  const { error } = await supabase
-                                    .from("posts")
-                                    .update({ is_archived: true, archived_at: new Date().toISOString() } as any)
-                                    .eq("id", p.id)
-                                    .eq("user_id", user.id);
-                                  if (error) return toast.error(error.message);
-                                  setPosts((prev) => prev.filter((pp) => pp.id !== p.id));
-                                  toast.success("Post archived — find it in Settings → Archived");
-                                }}
-                              >
-                                <Archive size={12} className="mr-2" /> Archive
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onSelect={(e) => { e.preventDefault(); setOpenMenuId(null); setDeletingPostId(p.id); }}
-                              >
-                                <Trash2 size={12} className="mr-2" /> Delete post
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openPostMenu(p.id, e.currentTarget);
+                            }}
+                            className="absolute top-1 right-1 z-20 glass rounded-full p-1 opacity-90 hover:opacity-100"
+                            aria-label="Post actions"
+                            aria-expanded={openMenuId === p.id}
+                          >
+                            <MoreVertical size={12} />
+                          </button>
                         )}
                       </div>
                     ))}
@@ -1034,6 +982,120 @@ export default function Profile() {
 
         </div>
       </div>
+
+      {openMenuId && postMenuPosition && createPortal((() => {
+        const menuPost = posts.find((p) => p.id === openMenuId);
+        if (!menuPost) return null;
+        const closeMenu = () => { setOpenMenuId(null); setPostMenuPosition(null); };
+        return (
+          <div
+            role="menu"
+            aria-label="Post actions"
+            className="fixed z-[70] w-48 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
+            style={{ left: postMenuPosition.x, top: postMenuPosition.y, transform: postMenuPosition.placement === "top" ? "translateY(-100%)" : undefined }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              className="relative flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+              onClick={async () => {
+                closeMenu();
+                const { data } = await supabase
+                  .from("posts")
+                  .select("caption, image_url, filter, edited_at")
+                  .eq("id", menuPost.id)
+                  .maybeSingle();
+                if (!data) { toast.error("Could not load post"); return; }
+                setEditingPostData({
+                  caption: (data as any).caption ?? "",
+                  image_url: (data as any).image_url ?? menuPost.image_url,
+                  filter: (data as any).filter ?? null,
+                  edited_at: (data as any).edited_at ?? null,
+                });
+                setEditingPostId(menuPost.id);
+              }}
+            >
+              <Edit3 size={12} className="mr-2" /> Edit post
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="relative flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+              onClick={async () => {
+                closeMenu();
+                const { data } = await supabase
+                  .from("posts")
+                  .select("crown_score, vote_count, comment_count, share_count, battle_wins, created_at")
+                  .eq("id", menuPost.id)
+                  .maybeSingle();
+                if (!data) { toast.error("Could not load post"); return; }
+                setInsightsPost({ id: menuPost.id, base: data as any });
+              }}
+            >
+              <BarChart3 size={12} className="mr-2" /> Insights
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="relative flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+              onClick={() => { closeMenu(); nav("/store?tab=boosts"); }}
+            >
+              <Zap size={12} className="mr-2" /> Boost this post
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="relative flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+              onClick={async () => {
+                closeMenu();
+                if (!user) return;
+                const next = menuPost.pinned_at ? null : new Date().toISOString();
+                const { error } = await supabase
+                  .from("posts")
+                  .update({ pinned_at: next } as any)
+                  .eq("id", menuPost.id)
+                  .eq("user_id", user.id);
+                if (error) return toast.error(error.message);
+                setPosts((prev) => prev.map((pp) => pp.id === menuPost.id ? { ...pp, pinned_at: next } : pp));
+                toast.success(next ? "Pinned to your profile" : "Unpinned");
+              }}
+            >
+              {menuPost.pinned_at
+                ? <><PinOff size={12} className="mr-2" /> Unpin from profile</>
+                : <><Pin size={12} className="mr-2" /> Pin to profile</>}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="relative flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+              onClick={async () => {
+                closeMenu();
+                if (!user) return;
+                const { error } = await supabase
+                  .from("posts")
+                  .update({ is_archived: true, archived_at: new Date().toISOString() } as any)
+                  .eq("id", menuPost.id)
+                  .eq("user_id", user.id);
+                if (error) return toast.error(error.message);
+                setPosts((prev) => prev.filter((pp) => pp.id !== menuPost.id));
+                toast.success("Post archived — find it in Settings → Archived");
+              }}
+            >
+              <Archive size={12} className="mr-2" /> Archive
+            </button>
+            <div className="-mx-1 my-1 h-px bg-muted" />
+            <button
+              type="button"
+              role="menuitem"
+              className="relative flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm text-destructive outline-none transition-colors hover:bg-accent focus:bg-accent focus:text-destructive"
+              onClick={() => { closeMenu(); setDeletingPostId(menuPost.id); }}
+            >
+              <Trash2 size={12} className="mr-2" /> Delete post
+            </button>
+          </div>
+        );
+      })(), document.body)}
 
       <PostDetailDialog post={openPost} onClose={() => setOpenPost(null)} />
 
