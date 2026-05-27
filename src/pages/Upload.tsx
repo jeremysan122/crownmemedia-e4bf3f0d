@@ -718,16 +718,22 @@ export default function Upload() {
         // after the check regardless of verdict.
         setUploadStage("Sampling video frames for safety check…");
         const frames = await sampleVideoFrames(video.file, 5);
-        const frameUrls: string[] = [];
         const framePaths: string[] = [];
         if (frames.length > 0) {
           try {
-            for (let fi = 0; fi < frames.length; fi++) {
-              const fp = `${user.id}/_scratch/frames_${submissionKeyRef.current}_${fi}.jpg`;
-              const r = await uploadWithProgress(fp, frames[fi], { contentType: "image/jpeg" });
-              framePaths.push(r.path);
-              frameUrls.push(r.publicUrl);
-            }
+            // Upload the 5 sampled frames in parallel — sequential uploads
+            // here used to add seconds of stall time on slow connections.
+            const uploaded = await runWithConcurrency(
+              frames,
+              async (frame, fi) => {
+                const fp = `${user.id}/_scratch/frames_${submissionKeyRef.current}_${fi}.jpg`;
+                const r = await uploadWithProgress(fp, frame, { contentType: "image/jpeg" });
+                return r;
+              },
+              5,
+            );
+            const frameUrls = uploaded.map((u) => u.publicUrl);
+            uploaded.forEach((u) => framePaths.push(u.path));
             setUploadStage("Checking content safety…");
             const { data: vVerdict, error: vModErr } = await supabase.functions.invoke("moderate-media", {
               body: { image_urls: frameUrls, kind: "video" },
