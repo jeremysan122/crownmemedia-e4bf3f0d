@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/hooks/useWallet";
+import { walletStore } from "@/stores/walletStore";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { Link } from "react-router-dom";
 import CrownLoader from "@/components/CrownLoader";
@@ -128,7 +129,7 @@ export default function Rewards() {
       const bonusTxt = res.bonus && res.bonus > 0 ? ` (+${res.bonus} bonus!)` : "";
       toast.success(`+${res.shekels_awarded} shekels${bonusTxt} · ${res.current_streak}-day streak 🔥`);
       refreshWallet();
-      window.dispatchEvent(new Event("wallet:refresh"));
+      walletStore.requestRefresh();
     }
     setStreak((prev) => prev ? { ...prev, current_streak: res.current_streak ?? prev.current_streak, longest_streak: res.longest_streak ?? prev.longest_streak, last_claimed_date: today } : prev);
   }
@@ -159,7 +160,7 @@ export default function Rewards() {
         bonus_spins: res.bonus_spins_remaining ?? prev.bonus_spins,
       } : prev);
       if (res.prize_type === "battle_tickets") await refreshTickets();
-      if (res.prize_type === "shekels") { refreshWallet(); window.dispatchEvent(new Event("wallet:refresh")); }
+      if (res.prize_type === "shekels") { refreshWallet(); walletStore.requestRefresh(); }
       toast.success(`You won: ${res.label}`);
     }, 4200);
   }
