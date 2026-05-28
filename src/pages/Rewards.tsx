@@ -69,7 +69,7 @@ function todayUtc(): string { return new Date().toISOString().slice(0, 10); }
 
 export default function Rewards() {
   const { user, loading: authLoading } = useAuth();
-  const { refreshWallet } = useWallet();
+  const { refreshWallet, applyDelta } = useWallet();
   useSeoMeta({
     title: "Daily Rewards — CrownMe",
     description: "Claim your daily reward, build your streak, and spin the royal wheel for premium perks.",
