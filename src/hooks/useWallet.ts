@@ -17,7 +17,7 @@ export function useWallet() {
     },
   );
 
-  const refreshWallet = useCallback(async () => {
+  const readWallet = useCallback(async () => {
     if (!user) return;
 
     const { data } = await supabase
@@ -25,6 +25,14 @@ export function useWallet() {
       .select("shekel_balance, total_earned, total_spent")
       .eq("user_id", user.id)
       .maybeSingle();
+
+    return data;
+  }, [user]);
+
+  const refreshWallet = useCallback(async () => {
+    if (!user) return;
+
+    let data = await readWallet();
 
     if (data) {
       const next: WalletState = {
@@ -39,13 +47,26 @@ export function useWallet() {
       // Wallet is normally created by the signup trigger; this RPC safely ensures one exists.
       await supabase.rpc("ensure_my_wallet");
 
+      data = await readWallet();
+      if (data) {
+        const next: WalletState = {
+          shekelBalance: Number(data.shekel_balance),
+          totalEarned: Number(data.total_earned),
+          totalSpent: Number(data.total_spent),
+          loading: false,
+        };
+        walletStore.setSnapshot(next);
+        setWallet(next);
+        return;
+      }
+
       setWallet((w) => {
         const next = { ...w, loading: false };
         walletStore.setSnapshot(next);
         return next;
       });
     }
-  }, [user]);
+  }, [user, readWallet]);
 
   useEffect(() => {
     refreshWallet();
@@ -91,11 +112,15 @@ export function useWallet() {
 
   // Optimistic local-only adjustment, used for instant feedback before server confirms.
   const applyDelta = useCallback((shekelDelta: number, spentDelta = 0) => {
-    setWallet((w) => ({
-      ...w,
-      shekelBalance: Math.max(0, w.shekelBalance + shekelDelta),
-      totalSpent: w.totalSpent + spentDelta,
-    }));
+    setWallet((w) => {
+      const next = {
+        ...w,
+        shekelBalance: Math.max(0, w.shekelBalance + shekelDelta),
+        totalSpent: w.totalSpent + spentDelta,
+      };
+      walletStore.setSnapshot(next);
+      return next;
+    });
   }, []);
 
   return {
