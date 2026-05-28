@@ -99,6 +99,7 @@ export default function Profile() {
   const isMe = !username || username === me?.username;
   const targetUsername = isMe ? me?.username : username;
   const royalPassActive = useIsRoyalPassUser(prof?.id);
+  const profileGlowActive = useActiveBoost(prof?.id, "profile_glow");
 
   useEffect(() => {
     if (!username && me?.username) nav(`/u/${me.username}`, { replace: true });
