@@ -3374,6 +3374,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: undefined
       }
+      has_active_boost: {
+        Args: { _boost_type: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -180,6 +180,31 @@
     border-radius: 9999px;
     animation: spin-slow 8s linear infinite;
   }
+
+  /* Profile Glow boost — pulsing aurora halo around the avatar wrapper. */
+  .profile-glow {
+    position: relative;
+    border-radius: 9999px;
+    box-shadow:
+      0 0 18px 2px hsl(43 95% 60% / 0.55),
+      0 0 40px 6px hsl(270 70% 55% / 0.35);
+    animation: profile-glow-pulse 2.8s ease-in-out infinite;
+  }
+  .profile-glow::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 9999px;
+    background: conic-gradient(from 0deg, hsl(43 95% 60% / 0.6), hsl(270 70% 55% / 0.45), hsl(200 90% 60% / 0.55), hsl(330 80% 60% / 0.5), hsl(43 95% 60% / 0.6));
+    filter: blur(8px);
+    z-index: -1;
+    animation: spin-slow 6s linear infinite;
+  }
+}
+
+@keyframes profile-glow-pulse {
+  0%, 100% { box-shadow: 0 0 18px 2px hsl(43 95% 60% / 0.45), 0 0 40px 6px hsl(270 70% 55% / 0.30); }
+  50%      { box-shadow: 0 0 26px 4px hsl(43 95% 65% / 0.75), 0 0 60px 10px hsl(270 75% 60% / 0.55); }
 }
 
 @layer utilities {

@@ -24,6 +24,7 @@ import ChallengeDialog from "@/components/battles/ChallengeDialog";
 import ReportDialog from "@/components/ReportDialog";
 import RoyalPassBadge from "@/components/store/RoyalPassBadge";
 import { useIsRoyalPassUser } from "@/hooks/useIsRoyalPassUser";
+import { useActiveBoost } from "@/hooks/useActiveBoost";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -98,6 +99,7 @@ export default function Profile() {
   const isMe = !username || username === me?.username;
   const targetUsername = isMe ? me?.username : username;
   const royalPassActive = useIsRoyalPassUser(prof?.id);
+  const profileGlowActive = useActiveBoost(prof?.id, "profile_glow");
 
   useEffect(() => {
     if (!username && me?.username) nav(`/u/${me.username}`, { replace: true });
@@ -533,7 +535,7 @@ export default function Profile() {
 
       <div className="px-4 lg:px-6 py-4 lg:relative">
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-          <div className={`self-start w-fit ${prof.crowns_held > 0 ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${royalPassActive ? "ring-2 ring-gold rounded-full p-0.5" : ""}`}>
+          <div className={`self-start w-fit ${prof.crowns_held > 0 ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${royalPassActive ? "ring-2 ring-gold rounded-full p-0.5" : ""} ${profileGlowActive ? "profile-glow" : ""}`}>
             <div className="size-20 lg:size-32 rounded-full overflow-hidden bg-muted ring-2 ring-border relative">
               {prof.profile_photo_url && (
                 <img

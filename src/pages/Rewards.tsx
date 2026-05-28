@@ -69,7 +69,7 @@ function todayUtc(): string { return new Date().toISOString().slice(0, 10); }
 
 export default function Rewards() {
   const { user, loading: authLoading } = useAuth();
-  const { refreshWallet } = useWallet();
+  const { refreshWallet, applyDelta } = useWallet();
   useSeoMeta({
     title: "Daily Rewards — CrownMe",
     description: "Claim your daily reward, build your streak, and spin the royal wheel for premium perks.",
@@ -128,7 +128,10 @@ export default function Rewards() {
       haptic("success");
       const bonusTxt = res.bonus && res.bonus > 0 ? ` (+${res.bonus} bonus!)` : "";
       toast.success(`+${res.shekels_awarded} shekels${bonusTxt} · ${res.current_streak}-day streak 🔥`);
-      refreshWallet();
+      // Optimistic instant bump so the header pill reflects the new balance immediately,
+      // then a server refresh confirms the authoritative number.
+      if (res.shekels_awarded) applyDelta(res.shekels_awarded);
+      await refreshWallet();
       walletStore.requestRefresh();
     }
     setStreak((prev) => prev ? { ...prev, current_streak: res.current_streak ?? prev.current_streak, longest_streak: res.longest_streak ?? prev.longest_streak, last_claimed_date: today } : prev);
@@ -160,7 +163,11 @@ export default function Rewards() {
         bonus_spins: res.bonus_spins_remaining ?? prev.bonus_spins,
       } : prev);
       if (res.prize_type === "battle_tickets") await refreshTickets();
-      if (res.prize_type === "shekels") { refreshWallet(); walletStore.requestRefresh(); }
+      if (res.prize_type === "shekels") {
+        if (res.prize_value) applyDelta(res.prize_value);
+        await refreshWallet();
+        walletStore.requestRefresh();
+      }
       toast.success(`You won: ${res.label}`);
     }, 4200);
   }
