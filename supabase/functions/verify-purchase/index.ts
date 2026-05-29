@@ -161,6 +161,7 @@ Deno.serve(async (req) => {
       .from("shekel_ledger")
       .select("id, kind, shekels_delta, usd_amount, label, created_at")
       .eq("stripe_session_id", session_id)
+      .eq("user_id", userId)
       .order("created_at", { ascending: true });
 
     return new Response(JSON.stringify({
