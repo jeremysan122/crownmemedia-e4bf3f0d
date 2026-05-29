@@ -50,20 +50,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Already credited?
-    const { data: existing } = await admin
-      .from("shekel_ledger")
-      .select("id, kind, shekels_delta, usd_amount, label, created_at")
-      .eq("stripe_session_id", session_id)
-      .order("created_at", { ascending: true });
-    if (existing && existing.length > 0) {
-      return new Response(JSON.stringify({
-        status: "already_credited",
-        ledger: existing,
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // Pull session from Stripe and check ownership
+    // Pull session from Stripe and check ownership FIRST, before any DB lookup,
+    // so we never leak another user's ledger entries to a caller who only knows
+    // their session_id.
     const session = await stripe.checkout.sessions.retrieve(session_id, {
       expand: ["line_items"],
     });
@@ -71,6 +60,20 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Not your session" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Already credited? Scoped to the authenticated user as defence-in-depth.
+    const { data: existing } = await admin
+      .from("shekel_ledger")
+      .select("id, kind, shekels_delta, usd_amount, label, created_at")
+      .eq("stripe_session_id", session_id)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+    if (existing && existing.length > 0) {
+      return new Response(JSON.stringify({
+        status: "already_credited",
+        ledger: existing,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     if (session.payment_status !== "paid") {
       return new Response(JSON.stringify({
@@ -158,6 +161,7 @@ Deno.serve(async (req) => {
       .from("shekel_ledger")
       .select("id, kind, shekels_delta, usd_amount, label, created_at")
       .eq("stripe_session_id", session_id)
+      .eq("user_id", userId)
       .order("created_at", { ascending: true });
 
     return new Response(JSON.stringify({
