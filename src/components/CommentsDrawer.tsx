@@ -1,4 +1,4 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Flag, Send, Flame } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Props {
   postId: string | null;
