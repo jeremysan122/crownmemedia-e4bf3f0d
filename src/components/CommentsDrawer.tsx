@@ -234,8 +234,22 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
 
 
         <div className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 overflow-y-auto space-y-3 px-4 py-3">
-            {comments.length === 0 && (
+          <div className="flex-1 overflow-y-auto space-y-3 px-4 py-3" data-testid="comments-list">
+            {initialLoading && comments.length === 0 && (
+              <div className="space-y-3" data-testid="comments-loading">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex gap-2 animate-pulse">
+                    <div className="size-8 rounded-full bg-muted shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-24 bg-muted rounded" />
+                      <div className="h-10 bg-muted/60 rounded-2xl" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!initialLoading && comments.length === 0 && (
               <p className="text-center text-sm text-muted-foreground">
                 Be the first to comment
               </p>
