@@ -190,6 +190,48 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
       new CustomEvent("crownme:comment-added", { detail: { postId } }),
     );
 
+    // Additive React Query invalidation — safety net so any cached query
+    // touching this post or one of the known surfaces refetches. Uses a
+    // predicate so it matches today's keys *and* any keys added later
+    // without forcing a registry of literal key strings here.
+    const SURFACE_KEYS = new Set([
+      "comments",
+      "comment-count",
+      "post",
+      "posts",
+      "feed",
+      "feed-posts",
+      "profile",
+      "profile-posts",
+      "profile-stats",
+      "shorts",
+      "shorts-posts",
+      "scrolls",
+      "post-detail",
+      "post-page",
+      "leaderboard",
+      "leaderboard-posts",
+      "battles",
+      "battle-posts",
+    ]);
+    try {
+      queryClient.invalidateQueries({
+        predicate: (q) => {
+          const key = q.queryKey;
+          if (!Array.isArray(key)) return false;
+          // Match if any segment references this postId …
+          if (key.some((seg) => seg === postId)) return true;
+          // … or any known post/comment surface.
+          return key.some(
+            (seg) => typeof seg === "string" && SURFACE_KEYS.has(seg),
+          );
+        },
+      });
+    } catch {
+      /* react-query not mounted in some test contexts — safe to ignore */
+    }
+
+
     // Reconcile with server (replaces optimistic row with real one).
     const { data } = await supabase
       .from("comments")
