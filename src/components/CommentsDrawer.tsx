@@ -36,6 +36,7 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
   const [fireCounts, setFireCounts] = useState<Record<string, number>>({});
   const [myFires, setMyFires] = useState<Set<string>>(new Set());
 
@@ -60,9 +61,13 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
   }, [user]);
 
   useEffect(() => {
-    if (!postId) return;
+    if (!postId) {
+      setComments([]);
+      return;
+    }
 
     let cancelled = false;
+    setInitialLoading(true);
 
     supabase
       .from("comments")
@@ -75,6 +80,7 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
         const rows = (data as any) || [];
         setComments(rows);
         loadReactions(rows.map((c: CommentRow) => c.id));
+        setInitialLoading(false);
       });
 
     return () => {
@@ -133,11 +139,29 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
   };
 
   const send = async () => {
-    if (!user || !postId || !text.trim()) return;
-
-    setLoading(true);
+    if (!postId || !text.trim()) return;
+    if (!user) {
+      toast.error("Sign in to comment");
+      return;
+    }
 
     const body = text.trim().slice(0, 500);
+
+    // Optimistic insert — show comment immediately, roll back on error.
+    const optimisticId = `optimistic-${Date.now()}`;
+    const optimisticRow: CommentRow = {
+      id: optimisticId,
+      body,
+      created_at: new Date().toISOString(),
+      user_id: user.id,
+      profile: {
+        username: (user.user_metadata as any)?.username || "you",
+        profile_photo_url: (user.user_metadata as any)?.profile_photo_url || null,
+      },
+    };
+    setComments((prev) => [optimisticRow, ...prev]);
+    setText("");
+    setLoading(true);
 
     const { error } = await supabase.from("comments").insert({
       post_id: postId,
@@ -147,7 +171,13 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
 
     setLoading(false);
 
-    if (error) return toast.error(error.message);
+    if (error) {
+      // Roll back optimistic row and restore typed text so user can retry.
+      setComments((prev) => prev.filter((c) => c.id !== optimisticId));
+      setText(body);
+      toast.error(error.message || "Could not post comment");
+      return;
+    }
 
     trackEvent("comment_posted", {
       postId,
@@ -158,8 +188,7 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
       new CustomEvent("crownme:comment-added", { detail: { postId } }),
     );
 
-    setText("");
-
+    // Reconcile with server (replaces optimistic row with real one).
     const { data } = await supabase
       .from("comments")
       .select("id, body, created_at, user_id, profile:profiles!comments_user_id_fkey(username, profile_photo_url)")
@@ -205,8 +234,22 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
 
 
         <div className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 overflow-y-auto space-y-3 px-4 py-3">
-            {comments.length === 0 && (
+          <div className="flex-1 overflow-y-auto space-y-3 px-4 py-3" data-testid="comments-list">
+            {initialLoading && comments.length === 0 && (
+              <div className="space-y-3" data-testid="comments-loading">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex gap-2 animate-pulse">
+                    <div className="size-8 rounded-full bg-muted shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-24 bg-muted rounded" />
+                      <div className="h-10 bg-muted/60 rounded-2xl" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!initialLoading && comments.length === 0 && (
               <p className="text-center text-sm text-muted-foreground">
                 Be the first to comment
               </p>
@@ -264,23 +307,36 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
             })}
           </div>
 
-          <div className="shrink-0 p-3 bg-card border-t border-border flex gap-2 pb-[calc(env(safe-area-inset-bottom,0)+0.75rem)]">
-            <Input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Add a comment..."
-              className="bg-input"
-              maxLength={500}
-            />
-
-            <Button
-              onClick={send}
-              disabled={loading || !text.trim()}
-              className="bg-gradient-gold text-primary-foreground"
+          {!user ? (
+            <div className="shrink-0 p-3 bg-card border-t border-border text-center pb-[calc(env(safe-area-inset-bottom,0)+0.75rem)]">
+              <p className="text-sm text-muted-foreground">
+                <a href="/auth" className="text-gold font-semibold underline">Sign in</a> to join the conversation.
+              </p>
+            </div>
+          ) : (
+            <form
+              onSubmit={(e) => { e.preventDefault(); send(); }}
+              className="shrink-0 p-3 bg-card border-t border-border flex gap-2 pb-[calc(env(safe-area-inset-bottom,0)+0.75rem)]"
             >
-              <Send size={16} />
-            </Button>
-          </div>
+              <Input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Add a comment..."
+                className="bg-input"
+                maxLength={500}
+                aria-label="Add a comment"
+              />
+
+              <Button
+                type="submit"
+                disabled={loading || !text.trim()}
+                className="bg-gradient-gold text-primary-foreground"
+                aria-label="Send comment"
+              >
+                <Send size={16} />
+              </Button>
+            </form>
+          )}
         </div>
       </SheetContent>
     </Sheet>
