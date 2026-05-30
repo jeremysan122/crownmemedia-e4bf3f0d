@@ -868,7 +868,16 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         </div>
         <div className="flex items-center gap-0.5">
           <button
-            onClick={() => (isMobile ? setCommentsDrawerOpen(true) : setDetailOpen(true))}
+            onClick={() => {
+              // Mobile + tablet (<1024px) always use the universal popup
+              // comments overlay so users never leave the current screen.
+              if (isBelowDesktop) {
+                if (onCommentClick) onCommentClick(post.id);
+                else setCommentsDrawerOpen(true);
+              } else {
+                setDetailOpen(true);
+              }
+            }}
             className="flex items-center gap-1 px-1.5 py-1.5 text-muted-foreground hover:text-foreground"
           >
             <MessageCircle size={16} />
