@@ -254,6 +254,10 @@ export default function Shorts() {
           )}
         </div>
       )}
+
+      {/* Comments overlay — Scrolls users never leave the feed to read/post comments. */}
+      <CommentsDrawer postId={commentsPostId} onClose={() => setCommentsPostId(null)} />
     </main>
   );
 }
+
