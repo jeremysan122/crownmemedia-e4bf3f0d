@@ -35,6 +35,17 @@ export default function Shorts() {
   const [endReached, setEndReached] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
+  // Desktop ≥1024px → right-side comments panel; below → bottom slide-up sheet.
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches,
+  );
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
   const containerRef = useRef<HTMLDivElement | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const loadingMoreRef = useRef(false);
@@ -256,7 +267,12 @@ export default function Shorts() {
       )}
 
       {/* Comments overlay — Scrolls users never leave the feed to read/post comments. */}
-      <CommentsDrawer postId={commentsPostId} onClose={() => setCommentsPostId(null)} />
+      <CommentsDrawer
+        postId={commentsPostId}
+        onClose={() => setCommentsPostId(null)}
+        variant={isDesktop ? "side" : "sheet"}
+      />
+
     </main>
   );
 }

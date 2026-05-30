@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { FILTERS, FilterId, cssFor } from "@/lib/filters";
 import FilterOverlay from "@/components/FilterOverlay";
 
+export type CameraRatio = "9:16" | "4:5" | "1:1";
+
 interface Props {
   open: boolean;
   /** Initial mode; user can switch inside the camera. */
@@ -25,11 +27,29 @@ interface Props {
   maxMs?: number;
   /** Initial filter; user can change live. */
   initialFilter?: FilterId;
+  /**
+   * Initial output aspect ratio. User can switch inside the camera.
+   * - "9:16" → 1080×1920 (Scrolls/Shorts)
+   * - "4:5"  → 1080×1350 (feed portrait)
+   * - "1:1"  → 1080×1080 (square)
+   */
+  initialRatio?: CameraRatio;
   onCancel: () => void;
   onCapture: (file: File, kind: "photo" | "video") => void;
 }
 
 const MAX_VIDEO_MS = 30_000; // hard cap
+
+/**
+ * Returns the target output canvas size for a given social aspect ratio.
+ * Width is normalised to 1080px so capture quality is consistent across modes.
+ */
+const RATIO_DIMS: Record<CameraRatio, { w: number; h: number }> = {
+  "9:16": { w: 1080, h: 1920 },
+  "4:5": { w: 1080, h: 1350 },
+  "1:1": { w: 1080, h: 1080 },
+};
+
 
 /**
  * Full-featured in-app camera (Instagram/TikTok-class).
@@ -54,9 +74,11 @@ export default function CameraCapture({
   mode: initialMode,
   maxMs = MAX_VIDEO_MS,
   initialFilter = "none",
+  initialRatio = "1:1",
   onCancel,
   onCapture,
 }: Props) {
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -70,7 +92,9 @@ export default function CameraCapture({
   const [mode, setMode] = useState<"photo" | "video">(initialMode);
   const [facing, setFacing] = useState<"user" | "environment">("environment");
   const [filter, setFilter] = useState<FilterId>(initialFilter);
+  const [ratio, setRatio] = useState<CameraRatio>(initialRatio);
   const [recording, setRecording] = useState(false);
+
   const [elapsed, setElapsed] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<{ blob: Blob; kind: "photo" | "video" } | null>(null);
@@ -88,6 +112,8 @@ export default function CameraCapture({
 
   useEffect(() => { setMode(initialMode); }, [initialMode]);
   useEffect(() => { setFilter(initialFilter); }, [initialFilter]);
+  useEffect(() => { setRatio(initialRatio); }, [initialRatio]);
+
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -229,34 +255,46 @@ export default function CameraCapture({
 
   // ─────────────── Canvas pipeline (filter bake) ───────────────
   /**
-   * Paints one video frame onto a SQUARE offscreen canvas with the chosen filter.
-   * The square output (1080x1080) matches the post frame's aspect-square layout
-   * so captured media always fills the post card with no letterboxing.
-   * The source video is center-cropped using cover-fit math.
+   * Paints one video frame onto an offscreen canvas sized to the chosen
+   * social aspect ratio (9:16 / 4:5 / 1:1). The source video is
+   * center-cropped using cover-fit math so the preview exactly matches
+   * the final output — no letterboxing, no stretching, no sideways video.
    */
-  const SQUARE = 1080;
   const paintFrame = (canvas: HTMLCanvasElement, video: HTMLVideoElement, currentFilter: FilterId, t: number) => {
-    const vw = video.videoWidth || SQUARE;
-    const vh = video.videoHeight || SQUARE;
-    if (canvas.width !== SQUARE) canvas.width = SQUARE;
-    if (canvas.height !== SQUARE) canvas.height = SQUARE;
+    const { w: outW, h: outH } = RATIO_DIMS[ratio];
+    const vw = video.videoWidth || outW;
+    const vh = video.videoHeight || outH;
+    if (canvas.width !== outW) canvas.width = outW;
+    if (canvas.height !== outH) canvas.height = outH;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Center-crop source to a square (object-cover behavior)
-    const side = Math.min(vw, vh);
-    const sx = (vw - side) / 2;
-    const sy = (vh - side) / 2;
+    // Cover-fit: pick the largest source rect with target aspect that fits in (vw,vh).
+    const targetAspect = outW / outH;
+    const srcAspect = vw / vh;
+    let sw: number, sh: number;
+    if (srcAspect > targetAspect) {
+      // Source is wider than target → crop sides
+      sh = vh;
+      sw = vh * targetAspect;
+    } else {
+      // Source is taller/narrower → crop top/bottom
+      sw = vw;
+      sh = vw / targetAspect;
+    }
+    const sx = (vw - sw) / 2;
+    const sy = (vh - sh) / 2;
 
     ctx.save();
     ctx.filter = cssFor(currentFilter) || "none";
     if (facing === "user") {
-      ctx.translate(SQUARE, 0);
+      ctx.translate(outW, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(video, sx, sy, side, side, 0, 0, SQUARE, SQUARE);
+    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH);
     ctx.restore();
-    paintAnimatedOverlay(ctx, SQUARE, SQUARE, currentFilter, t);
+    paintAnimatedOverlay(ctx, outW, outH, currentFilter, t);
+
   };
 
   const paintAnimatedOverlay = (
@@ -462,29 +500,40 @@ export default function CameraCapture({
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {previewUrl ? (
-          previewBlob?.kind === "video" ? (
-            <video src={previewUrl} controls playsInline className="max-h-full max-w-full" />
+        {/* Aspect-ratio frame — preview matches the exact crop that will be captured. */}
+        <div
+          className="relative bg-black overflow-hidden max-h-full max-w-full"
+          style={{
+            aspectRatio: ratio.replace(":", " / "),
+            height: ratio === "9:16" ? "100%" : undefined,
+            width: ratio === "9:16" ? undefined : "100%",
+            maxWidth: "100%",
+            maxHeight: "100%",
+          }}
+        >
+          {previewUrl ? (
+            previewBlob?.kind === "video" ? (
+              <video src={previewUrl} controls playsInline className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <img loading="lazy" src={previewUrl} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+            )
           ) : (
-            <img loading="lazy" src={previewUrl} alt="Preview" className="max-h-full max-w-full" />
-          )
-        ) : (
-          <>
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              className={`max-h-full max-w-full ${facing === "user" ? "scale-x-[-1]" : ""}`}
-              style={{ filter: filteredCss }}
-            />
-            {/* Animated overlay preview (FX filters) */}
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="relative w-full h-full">
+            <>
+              <video
+                ref={videoRef}
+                playsInline
+                muted
+                className={`absolute inset-0 w-full h-full object-cover ${facing === "user" ? "scale-x-[-1]" : ""}`}
+                style={{ filter: filteredCss }}
+              />
+              {/* Animated overlay preview (FX filters) */}
+              <div className="pointer-events-none absolute inset-0">
                 <FilterOverlay filter={filter} />
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
+
 
         {/* Grid overlay */}
         {showGrid && !previewUrl && (
@@ -559,25 +608,47 @@ export default function CameraCapture({
       {/* Bottom controls */}
       <footer className="px-6 pt-3 pb-6 flex flex-col items-center gap-3">
         {!previewUrl && (
-          <div className="flex items-center gap-1 p-1 rounded-full bg-white/10 text-[11px] font-bold uppercase tracking-widest">
-            <button
-              type="button"
-              onClick={() => !recording && setMode("photo")}
-              disabled={recording}
-              className={`px-3 py-1 rounded-full flex items-center gap-1.5 ${mode === "photo" ? "bg-white text-black" : "text-white/80"}`}
-            >
-              <ImageIcon size={12} /> Photo
-            </button>
-            <button
-              type="button"
-              onClick={() => !recording && setMode("video")}
-              disabled={recording}
-              className={`px-3 py-1 rounded-full flex items-center gap-1.5 ${mode === "video" ? "bg-white text-black" : "text-white/80"}`}
-            >
-              <VideoIcon size={12} /> Video · 30s
-            </button>
-          </div>
+          <>
+            {/* Aspect-ratio selector — drives both preview crop and exported dimensions. */}
+            <div className="flex items-center gap-1 p-1 rounded-full bg-white/10 text-[11px] font-bold uppercase tracking-widest">
+              {(["9:16", "4:5", "1:1"] as CameraRatio[]).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => !recording && setRatio(r)}
+                  disabled={recording}
+                  aria-pressed={ratio === r}
+                  aria-label={
+                    r === "9:16" ? "Scroll 9:16" : r === "4:5" ? "Feed 4:5" : "Square 1:1"
+                  }
+                  className={`px-3 py-1 rounded-full ${ratio === r ? "bg-white text-black" : "text-white/80"}`}
+                >
+                  {r === "9:16" ? "Scroll · 9:16" : r === "4:5" ? "Feed · 4:5" : "Square · 1:1"}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1 p-1 rounded-full bg-white/10 text-[11px] font-bold uppercase tracking-widest">
+              <button
+                type="button"
+                onClick={() => !recording && setMode("photo")}
+                disabled={recording}
+                className={`px-3 py-1 rounded-full flex items-center gap-1.5 ${mode === "photo" ? "bg-white text-black" : "text-white/80"}`}
+              >
+                <ImageIcon size={12} /> Photo
+              </button>
+              <button
+                type="button"
+                onClick={() => !recording && setMode("video")}
+                disabled={recording}
+                className={`px-3 py-1 rounded-full flex items-center gap-1.5 ${mode === "video" ? "bg-white text-black" : "text-white/80"}`}
+              >
+                <VideoIcon size={12} /> Video · 30s
+              </button>
+            </div>
+          </>
         )}
+
 
         <div className="flex items-center justify-center gap-6 w-full">
           {previewUrl ? (
