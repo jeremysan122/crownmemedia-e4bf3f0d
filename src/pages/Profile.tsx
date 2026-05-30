@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useSeoMeta, buildProfileOgImage } from "@/hooks/useSeoMeta";
 import PostDetailDialog from "@/components/PostDetailDialog";
 import type { FeedPost } from "@/components/PostCard";
+import { fetchPostById } from "@/lib/postQuery";
 import UserListDialog from "@/components/profile/UserListDialog";
 import ShareProfileDialog from "@/components/profile/ShareProfileDialog";
 import RoleBadges from "@/components/profile/RoleBadges";
@@ -348,22 +349,14 @@ export default function Profile() {
     }
   };
 
+  // Load the FULL canonical post row so the detail dialog matches the feed
+  // exactly. Profile thumbnails only carry a few columns — using them as-is
+  // would render the dialog with missing media/filter/edits and look like a
+  // different post. See src/lib/postQuery.ts.
   const openPostDetail = async (postId: string) => {
-    const { data } = await supabase
-      .from("posts")
-      .select("id, user_id, image_url, image_urls, caption, category, city, state, country, crown_score, vote_count, comment_count, share_count, created_at")
-      .eq("id", postId)
-      .maybeSingle();
-    if (!data) return;
-    const { data: author } = await supabase
-      .from("profiles")
-      .select("username, profile_photo_url, crowns_held, gender, hide_likes, hide_comments, hide_views")
-      .eq("id", (data as any).user_id)
-      .maybeSingle();
-    setOpenPost({
-      ...(data as any),
-      profile: author || { username: "", profile_photo_url: null, crowns_held: 0 },
-    });
+    const full = await fetchPostById(postId);
+    if (!full) return;
+    setOpenPost(full);
   };
 
   const openPostMenu = (postId: string, button: HTMLButtonElement) => {

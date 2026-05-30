@@ -697,7 +697,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
-        className="p-0 gap-0 max-w-[100vw] w-full h-[100svh] md:w-[min(94vw,760px)] md:max-w-[760px] md:h-auto md:max-h-[94vh] md:rounded-2xl md:my-3 lg:w-[min(96vw,1280px)] lg:max-w-[1280px] lg:h-auto lg:aspect-[16/10] lg:max-h-[86vh] lg:rounded-2xl bg-card border-border overflow-hidden flex flex-col lg:flex-row [&>button]:hidden overscroll-contain"
+        className="p-0 gap-0 max-w-[100vw] w-full h-[100svh] md:w-[min(96vw,1280px)] md:max-w-[1280px] md:h-auto md:aspect-[16/10] md:max-h-[90vh] md:rounded-2xl md:my-3 bg-card border-border overflow-hidden flex flex-col md:flex-row [&>button]:hidden overscroll-contain"
       >
         <VisuallyHidden>
           <DialogTitle>Post details</DialogTitle>
@@ -722,7 +722,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
         {/* Image side */}
         <div
-          className="relative w-full aspect-square shrink-0 md:aspect-auto md:h-[52vh] md:max-h-[52vh] lg:w-auto lg:aspect-auto lg:h-full lg:flex-1 lg:basis-[66%] lg:shrink flex items-center justify-center min-h-0 overflow-hidden bg-card"
+          className="relative w-full aspect-square shrink-0 md:aspect-auto md:w-auto md:h-full md:flex-1 md:basis-[60%] md:shrink flex items-center justify-center min-h-0 overflow-hidden bg-card"
           onDoubleClick={() => !myVotes.has("crown") && onVote("crown")}
           {...doubleTapHandlers}
         >
@@ -755,7 +755,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                       mediaType="video"
                       filter={postFilter}
                       alt={post.caption || "Video post"}
-                      className="w-full h-full object-contain md:object-contain lg:object-cover"
+                      className="w-full h-full object-contain md:object-cover"
                       boost={!!filterBoost}
                       boostType={filterBoost ?? undefined}
                     />
@@ -771,7 +771,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                           src={src}
                           alt={post.alt_texts?.[i] || (post.caption ? `${post.caption} (${i + 1}/${images.length})` : `Photo ${i + 1}`)}
                           filter={postFilter}
-                          className="w-full h-full object-contain md:object-contain lg:object-cover"
+                          className="w-full h-full object-contain md:object-cover"
                           boost={!!filterBoost && i === activeImage}
                           boostType={filterBoost ?? undefined}
                         />
@@ -783,7 +783,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                     src={images[0]}
                     alt={post.alt_texts?.[0] || post.caption || "Post"}
                     filter={postFilter}
-                    className="w-full h-full object-contain md:object-contain lg:object-cover"
+                    className="w-full h-full object-contain md:object-cover"
                     boost={!!filterBoost}
                     boostType={filterBoost ?? undefined}
                   />
@@ -844,7 +844,10 @@ export default function PostDetailDialog({ post, onClose }: Props) {
         </div>
 
         {/* Side panel */}
-        <div className="flex flex-col flex-1 lg:basis-[34%] min-h-0 lg:min-w-0 border-t lg:border-t-0 lg:border-l border-border">
+        <div className="flex flex-col flex-1 md:basis-[40%] min-h-0 md:min-w-0 border-t md:border-t-0 md:border-l border-border">
+          {/* Posts must use the canonical post ID and shared PostDetailDialog.
+              Profile and feed must display the same database row — load via
+              fetchPostById() from src/lib/postQuery.ts. */}
           {/* Header */}
           <header className="flex items-center justify-between gap-2 p-3 border-b border-border">
             <Link to={`/u/${post.profile.username}`} onClick={onClose} className="flex items-center gap-2.5 min-w-0 flex-1">

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppShell from "@/components/AppShell";
 import PostCard, { type FeedPost } from "@/components/PostCard";
+import { fetchPostById } from "@/lib/postQuery";
 import CrownLoader from "@/components/CrownLoader";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -33,24 +34,10 @@ export default function PostPage() {
     if (!id) { setNotFound(true); setLoading(false); return; }
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from("posts")
-        .select(`
-          id, user_id, image_url, image_urls, caption, category,
-          city, state, country, crown_score, vote_count, comment_count,
-          share_count, battle_wins, created_at, edited_at, pinned_at,
-          scheduled_for, parent_post_id, repost_caption, tagged_user_ids,
-          media_type, video_url, video_poster_url, filter, alt_texts,
-          profile:profiles!posts_user_id_fkey(
-            username, profile_photo_url, crowns_held, gender,
-            hide_likes, hide_comments, hide_views
-          )
-        `)
-        .eq("id", id)
-        .maybeSingle();
+      const full = await fetchPostById(id);
       if (cancelled) return;
-      if (error || !data) { setNotFound(true); }
-      else { setPost(data as unknown as FeedPost); }
+      if (!full) setNotFound(true);
+      else setPost(full);
       setLoading(false);
     })();
     return () => { cancelled = true; };
