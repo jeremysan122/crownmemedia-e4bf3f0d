@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useSeoMeta, buildProfileOgImage } from "@/hooks/useSeoMeta";
 import PostDetailDialog from "@/components/PostDetailDialog";
 import type { FeedPost } from "@/components/PostCard";
+import { fetchPostById } from "@/lib/postQuery";
 import UserListDialog from "@/components/profile/UserListDialog";
 import ShareProfileDialog from "@/components/profile/ShareProfileDialog";
 import RoleBadges from "@/components/profile/RoleBadges";
