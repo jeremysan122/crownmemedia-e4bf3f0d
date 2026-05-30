@@ -4,7 +4,21 @@ let installed = false;
 const recent = new Map<string, number>();
 const DEDUPE_MS = 30_000;
 
+// Errors we never want to log or treat as fatal — these are normal app
+// lifecycle events (e.g. logged-out users have no refresh token).
+const BENIGN_PATTERNS = [
+  /refresh_token_not_found/i,
+  /Invalid Refresh Token/i,
+  /AuthSessionMissingError/i,
+  /Auth session missing/i,
+];
+
+function isBenign(message: string): boolean {
+  return BENIGN_PATTERNS.some((re) => re.test(message));
+}
+
 async function report(message: string, stack?: string, context?: Record<string, unknown>) {
+  if (isBenign(message)) return;
   try {
     const key = `${message}::${(stack || "").slice(0, 200)}`;
     const now = Date.now();
