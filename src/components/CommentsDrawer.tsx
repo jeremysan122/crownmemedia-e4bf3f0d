@@ -31,7 +31,7 @@ interface CommentRow {
   profile: { username: string; profile_photo_url: string | null } | null;
 }
 
-export default function CommentsDrawer({ postId, onClose }: Props) {
+export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: Props) {
   const { user } = useAuth();
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [text, setText] = useState("");
