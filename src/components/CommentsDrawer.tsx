@@ -34,6 +34,7 @@ interface CommentRow {
 
 export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: Props) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
