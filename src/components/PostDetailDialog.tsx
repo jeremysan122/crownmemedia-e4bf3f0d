@@ -987,9 +987,24 @@ export default function PostDetailDialog({ post, onClose }: Props) {
               </div>
             )}
 
-            {thread.length === 0 && (
+            {!isBelowDesktop && thread.length === 0 && (
               <p className="text-center text-sm text-muted-foreground py-6">Be the first to comment</p>
             )}
+
+            {isBelowDesktop && (
+              <button
+                type="button"
+                onClick={() => setCommentsOverlayOpen(true)}
+                className="w-full text-center text-sm text-primary font-semibold py-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
+              >
+                {counts.comments > 0
+                  ? `View ${counts.comments} comment${counts.comments === 1 ? "" : "s"}`
+                  : "Add a comment"}
+              </button>
+            )}
+
+            {!isBelowDesktop && (<>
+
 
             {thread.map(({ comment, replies }) => {
               const REPLY_PAGE = 3;
