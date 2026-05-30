@@ -208,16 +208,18 @@ export default function Shorts() {
                   </span>
                   <span className="text-xs font-semibold tabular-nums">{p.vote_count}</span>
                 </button>
-                <Link
-                  to={`/post/${p.id}#comments`}
+                <button
+                  type="button"
+                  onClick={() => setCommentsPostId(p.id)}
                   aria-label="Comments"
-                  className="flex flex-col items-center gap-1"
+                  className="flex flex-col items-center gap-1 active:scale-95 transition"
                 >
                   <span className="size-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
                     <MessageCircle className="size-6" />
                   </span>
                   <span className="text-xs font-semibold tabular-nums">{p.comment_count}</span>
-                </Link>
+                </button>
+
                 <button
                   onClick={() => share(p)}
                   aria-label="Share"
