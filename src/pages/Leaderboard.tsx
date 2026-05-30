@@ -12,6 +12,7 @@ import { rankBadgeLabel } from "@/lib/rankTitle";
 import { canSeeLikes } from "@/lib/privacyVisibility";
 import HiddenCountLock from "@/components/HiddenCountLock";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
+import { POST_SELECT } from "@/lib/postQuery";
 
 type Scope = "nearby" | "city" | "state" | "country" | "global" | "following";
 
@@ -83,9 +84,8 @@ export default function Leaderboard() {
       setLoading(true);
       let q = supabase
         .from("posts")
-        .select(
-          "id, user_id, image_url, city, state, country, category, crown_score, vote_count, profile:profiles!posts_user_id_fkey(username, profile_photo_url, crowns_held, gender, hide_likes)",
-        )
+        // Canonical post shape — see src/lib/postQuery.ts
+        .select(POST_SELECT)
         .eq("is_removed", false)
         .eq("category", category)
         .order("crown_score", { ascending: false })
