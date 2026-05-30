@@ -117,15 +117,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setNeedsOnboarding(false);
       }
     });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadProfileAndRoles(session.user.id, session.user.email);
-        setTimeout(() => { redeemPendingInvite().catch(() => {}); }, 250);
-      }
-      setLoading(false);
-    });
+    // Missing refresh token is normal for logged-out users. Do not treat it as
+    // a fatal runtime error. We swallow auth errors here and fall through to
+    // the logged-out state; only unexpected failures get logged.
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          const msg = error.message || "";
+          const benign = /refresh_token_not_found|Invalid Refresh Token|Auth session missing/i.test(msg);
+          if (!benign) console.error("[AuthContext] getSession failed:", error);
+          // Clear any stale local auth state so the SDK stops retrying.
+          supabase.auth.signOut({ scope: "local" }).catch(() => {});
+        }
+        setSession(session ?? null);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          loadProfileAndRoles(session.user.id, session.user.email);
+          setTimeout(() => { redeemPendingInvite().catch(() => {}); }, 250);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        // Network/unknown — fail open as logged out.
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+      });
     return () => sub.subscription.unsubscribe();
   }, []);
 
