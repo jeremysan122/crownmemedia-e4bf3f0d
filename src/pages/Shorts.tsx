@@ -34,9 +34,11 @@ export default function Shorts() {
   const [muted, setMuted] = useState(true);
   const [endReached, setEndReached] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const loadingMoreRef = useRef(false);
+
 
   const loadPage = useCallback(async (cursor?: string) => {
     const rows = await fetchShortsPage({ limit: PAGE_SIZE, beforeCreatedAt: cursor });
