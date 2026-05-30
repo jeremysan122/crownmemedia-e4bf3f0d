@@ -74,9 +74,11 @@ export default function CameraCapture({
   mode: initialMode,
   maxMs = MAX_VIDEO_MS,
   initialFilter = "none",
+  initialRatio = "1:1",
   onCancel,
   onCapture,
 }: Props) {
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
