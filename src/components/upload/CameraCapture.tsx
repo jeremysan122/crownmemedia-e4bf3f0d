@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { FILTERS, FilterId, cssFor } from "@/lib/filters";
 import FilterOverlay from "@/components/FilterOverlay";
 
+export type CameraRatio = "9:16" | "4:5" | "1:1";
+
 interface Props {
   open: boolean;
   /** Initial mode; user can switch inside the camera. */
@@ -25,11 +27,29 @@ interface Props {
   maxMs?: number;
   /** Initial filter; user can change live. */
   initialFilter?: FilterId;
+  /**
+   * Initial output aspect ratio. User can switch inside the camera.
+   * - "9:16" → 1080×1920 (Scrolls/Shorts)
+   * - "4:5"  → 1080×1350 (feed portrait)
+   * - "1:1"  → 1080×1080 (square)
+   */
+  initialRatio?: CameraRatio;
   onCancel: () => void;
   onCapture: (file: File, kind: "photo" | "video") => void;
 }
 
 const MAX_VIDEO_MS = 30_000; // hard cap
+
+/**
+ * Returns the target output canvas size for a given social aspect ratio.
+ * Width is normalised to 1080px so capture quality is consistent across modes.
+ */
+const RATIO_DIMS: Record<CameraRatio, { w: number; h: number }> = {
+  "9:16": { w: 1080, h: 1920 },
+  "4:5": { w: 1080, h: 1350 },
+  "1:1": { w: 1080, h: 1080 },
+};
+
 
 /**
  * Full-featured in-app camera (Instagram/TikTok-class).
