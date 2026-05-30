@@ -608,25 +608,47 @@ export default function CameraCapture({
       {/* Bottom controls */}
       <footer className="px-6 pt-3 pb-6 flex flex-col items-center gap-3">
         {!previewUrl && (
-          <div className="flex items-center gap-1 p-1 rounded-full bg-white/10 text-[11px] font-bold uppercase tracking-widest">
-            <button
-              type="button"
-              onClick={() => !recording && setMode("photo")}
-              disabled={recording}
-              className={`px-3 py-1 rounded-full flex items-center gap-1.5 ${mode === "photo" ? "bg-white text-black" : "text-white/80"}`}
-            >
-              <ImageIcon size={12} /> Photo
-            </button>
-            <button
-              type="button"
-              onClick={() => !recording && setMode("video")}
-              disabled={recording}
-              className={`px-3 py-1 rounded-full flex items-center gap-1.5 ${mode === "video" ? "bg-white text-black" : "text-white/80"}`}
-            >
-              <VideoIcon size={12} /> Video · 30s
-            </button>
-          </div>
+          <>
+            {/* Aspect-ratio selector — drives both preview crop and exported dimensions. */}
+            <div className="flex items-center gap-1 p-1 rounded-full bg-white/10 text-[11px] font-bold uppercase tracking-widest">
+              {(["9:16", "4:5", "1:1"] as CameraRatio[]).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => !recording && setRatio(r)}
+                  disabled={recording}
+                  aria-pressed={ratio === r}
+                  aria-label={
+                    r === "9:16" ? "Scroll 9:16" : r === "4:5" ? "Feed 4:5" : "Square 1:1"
+                  }
+                  className={`px-3 py-1 rounded-full ${ratio === r ? "bg-white text-black" : "text-white/80"}`}
+                >
+                  {r === "9:16" ? "Scroll · 9:16" : r === "4:5" ? "Feed · 4:5" : "Square · 1:1"}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1 p-1 rounded-full bg-white/10 text-[11px] font-bold uppercase tracking-widest">
+              <button
+                type="button"
+                onClick={() => !recording && setMode("photo")}
+                disabled={recording}
+                className={`px-3 py-1 rounded-full flex items-center gap-1.5 ${mode === "photo" ? "bg-white text-black" : "text-white/80"}`}
+              >
+                <ImageIcon size={12} /> Photo
+              </button>
+              <button
+                type="button"
+                onClick={() => !recording && setMode("video")}
+                disabled={recording}
+                className={`px-3 py-1 rounded-full flex items-center gap-1.5 ${mode === "video" ? "bg-white text-black" : "text-white/80"}`}
+              >
+                <VideoIcon size={12} /> Video · 30s
+              </button>
+            </div>
+          </>
         )}
+
 
         <div className="flex items-center justify-center gap-6 w-full">
           {previewUrl ? (
