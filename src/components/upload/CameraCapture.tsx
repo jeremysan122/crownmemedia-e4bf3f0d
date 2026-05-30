@@ -92,7 +92,9 @@ export default function CameraCapture({
   const [mode, setMode] = useState<"photo" | "video">(initialMode);
   const [facing, setFacing] = useState<"user" | "environment">("environment");
   const [filter, setFilter] = useState<FilterId>(initialFilter);
+  const [ratio, setRatio] = useState<CameraRatio>(initialRatio);
   const [recording, setRecording] = useState(false);
+
   const [elapsed, setElapsed] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<{ blob: Blob; kind: "photo" | "video" } | null>(null);
