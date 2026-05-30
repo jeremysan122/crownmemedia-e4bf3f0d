@@ -13,8 +13,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "fs";
 import path from "path";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import React from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const makeClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const render: typeof rtlRender = (ui: any, opts?: any) =>
+  rtlRender(
+    <QueryClientProvider client={makeClient()}>{ui}</QueryClientProvider>,
+    opts,
+  );
 
 const read = (p: string) => readFileSync(path.resolve(__dirname, "../../../", p), "utf8");
 
