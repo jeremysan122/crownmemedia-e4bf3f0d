@@ -1101,6 +1101,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
               <span className="font-semibold text-foreground">{CATEGORY_LABEL[post.category]}</span>
             </div>
 
+            {!isBelowDesktop && (<>
             {/* Reply context */}
             {replyTo && (
               <div className="px-3 pt-1 pb-1 flex items-center gap-2 text-[11px] text-muted-foreground border-t border-border bg-muted/30">
