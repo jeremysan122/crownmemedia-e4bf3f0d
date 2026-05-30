@@ -1,4 +1,4 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Flag, Send, Flame } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Props {
   postId: string | null;
@@ -33,6 +34,7 @@ interface CommentRow {
 
 export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: Props) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -188,6 +190,48 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
       new CustomEvent("crownme:comment-added", { detail: { postId } }),
     );
 
+    // Additive React Query invalidation — safety net so any cached query
+    // touching this post or one of the known surfaces refetches. Uses a
+    // predicate so it matches today's keys *and* any keys added later
+    // without forcing a registry of literal key strings here.
+    const SURFACE_KEYS = new Set([
+      "comments",
+      "comment-count",
+      "post",
+      "posts",
+      "feed",
+      "feed-posts",
+      "profile",
+      "profile-posts",
+      "profile-stats",
+      "shorts",
+      "shorts-posts",
+      "scrolls",
+      "post-detail",
+      "post-page",
+      "leaderboard",
+      "leaderboard-posts",
+      "battles",
+      "battle-posts",
+    ]);
+    try {
+      queryClient.invalidateQueries({
+        predicate: (q) => {
+          const key = q.queryKey;
+          if (!Array.isArray(key)) return false;
+          // Match if any segment references this postId …
+          if (key.some((seg) => seg === postId)) return true;
+          // … or any known post/comment surface.
+          return key.some(
+            (seg) => typeof seg === "string" && SURFACE_KEYS.has(seg),
+          );
+        },
+      });
+    } catch {
+      /* react-query not mounted in some test contexts — safe to ignore */
+    }
+
+
     // Reconcile with server (replaces optimistic row with real one).
     const { data } = await supabase
       .from("comments")
@@ -230,6 +274,9 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
           <SheetTitle className="font-display text-gold">
             Comments{comments.length > 0 ? ` · ${comments.length}` : ""}
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            Read and add comments for this post.
+          </SheetDescription>
         </SheetHeader>
 
 
