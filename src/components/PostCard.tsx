@@ -147,6 +147,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   const [reportOpen, setReportOpen] = useState(false);
   const [commentsDrawerOpen, setCommentsDrawerOpen] = useState(false);
   const isMobile = useIsMobile();
+  const isBelowDesktop = useIsBelowDesktop();
   const [hidden, setHidden] = useState(false);
   const [liveCaption, setLiveCaption] = useState(post.caption);
   const [liveCover, setLiveCover] = useState(post.image_url);
