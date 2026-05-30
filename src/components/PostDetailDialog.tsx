@@ -32,6 +32,8 @@ import { useAnimatedNumber } from "@/hooks/useAnimatedNumber";
 import { checkCommentRate, recordComment, validateComment } from "@/lib/commentSafety";
 import { useCountdown } from "@/hooks/useCountdown";
 import { AlertCircle, Clock } from "lucide-react";
+import CommentsDrawer from "./CommentsDrawer";
+import { useIsBelowDesktop } from "@/hooks/use-below-desktop";
 
 const draftKey = (postId: string, replyToId: string | null) =>
   `crownme:draft:${postId}:${replyToId ?? "root"}`;
@@ -72,6 +74,8 @@ const COMMENT_COLUMNS = "id, body, created_at, edited_at, user_id, parent_id, me
 export default function PostDetailDialog({ post, onClose }: Props) {
   const { user } = useAuth();
   const open = !!post;
+  const isBelowDesktop = useIsBelowDesktop();
+  const [commentsOverlayOpen, setCommentsOverlayOpen] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [myVotes, setMyVotes] = useState<Set<VoteType>>(new Set());
   const [counts, setCounts] = useState({ crown: 0, fire: 0, diamond: 0, dislike: 0, total: 0, score: 0, comments: 0 });
@@ -983,9 +987,24 @@ export default function PostDetailDialog({ post, onClose }: Props) {
               </div>
             )}
 
-            {thread.length === 0 && (
+            {!isBelowDesktop && thread.length === 0 && (
               <p className="text-center text-sm text-muted-foreground py-6">Be the first to comment</p>
             )}
+
+            {isBelowDesktop && (
+              <button
+                type="button"
+                onClick={() => setCommentsOverlayOpen(true)}
+                className="w-full text-center text-sm text-primary font-semibold py-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
+              >
+                {counts.comments > 0
+                  ? `View ${counts.comments} comment${counts.comments === 1 ? "" : "s"}`
+                  : "Add a comment"}
+              </button>
+            )}
+
+            {!isBelowDesktop && (<>
+
 
             {thread.map(({ comment, replies }) => {
               const REPLY_PAGE = 3;
@@ -1029,6 +1048,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 </div>
               );
             })}
+            </>)}
           </div>
 
           {/* Actions */}
@@ -1048,8 +1068,10 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
               <div className="flex items-center gap-1 shrink-0">
                 <button
+                  type="button"
+                  onClick={() => isBelowDesktop && setCommentsOverlayOpen(true)}
                   aria-label="Comments"
-                  className="flex items-center gap-1 px-2 min-h-[44px] min-w-[44px] justify-center text-muted-foreground touch-manipulation"
+                  className="flex items-center gap-1 px-2 min-h-[44px] min-w-[44px] justify-center text-muted-foreground touch-manipulation hover:text-foreground"
                 >
                   <MessageCircle size={18} />
                   <span className="text-xs tabular-nums">{counts.comments}</span>
@@ -1079,6 +1101,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
               <span className="font-semibold text-foreground">{CATEGORY_LABEL[post.category]}</span>
             </div>
 
+            {!isBelowDesktop && (<>
             {/* Reply context */}
             {replyTo && (
               <div className="px-3 pt-1 pb-1 flex items-center gap-2 text-[11px] text-muted-foreground border-t border-border bg-muted/30">
@@ -1156,6 +1179,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 </div>
               )}
             </div>
+            </>)}
           </div>
         </div>
 
@@ -1191,6 +1215,13 @@ export default function PostDetailDialog({ post, onClose }: Props) {
         }}
         commentId={reportCommentId ?? undefined}
         postId={post?.id}
+      />
+
+      {/* Universal mobile/tablet comments popup. Same component used in Feed,
+          Profile, Scrolls/Shorts so commenting feels identical everywhere. */}
+      <CommentsDrawer
+        postId={commentsOverlayOpen && post ? post.id : null}
+        onClose={() => setCommentsOverlayOpen(false)}
       />
     </Dialog>
   );
