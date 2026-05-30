@@ -256,7 +256,12 @@ export default function Shorts() {
       )}
 
       {/* Comments overlay — Scrolls users never leave the feed to read/post comments. */}
-      <CommentsDrawer postId={commentsPostId} onClose={() => setCommentsPostId(null)} />
+      <CommentsDrawer
+        postId={commentsPostId}
+        onClose={() => setCommentsPostId(null)}
+        variant={isDesktop ? "side" : "sheet"}
+      />
+
     </main>
   );
 }
