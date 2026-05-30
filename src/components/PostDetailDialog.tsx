@@ -722,7 +722,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
         {/* Image side */}
         <div
-          className="relative w-full aspect-square shrink-0 md:aspect-auto md:h-[52vh] md:max-h-[52vh] lg:w-auto lg:aspect-auto lg:h-full lg:flex-1 lg:basis-[66%] lg:shrink flex items-center justify-center min-h-0 overflow-hidden bg-card"
+          className="relative w-full aspect-square shrink-0 md:aspect-auto md:w-auto md:h-full md:flex-1 md:basis-[60%] md:shrink flex items-center justify-center min-h-0 overflow-hidden bg-card"
           onDoubleClick={() => !myVotes.has("crown") && onVote("crown")}
           {...doubleTapHandlers}
         >
