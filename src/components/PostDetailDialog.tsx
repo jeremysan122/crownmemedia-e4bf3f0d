@@ -1048,6 +1048,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 </div>
               );
             })}
+            </>)}
           </div>
 
           {/* Actions */}
