@@ -307,23 +307,36 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
             })}
           </div>
 
-          <div className="shrink-0 p-3 bg-card border-t border-border flex gap-2 pb-[calc(env(safe-area-inset-bottom,0)+0.75rem)]">
-            <Input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Add a comment..."
-              className="bg-input"
-              maxLength={500}
-            />
-
-            <Button
-              onClick={send}
-              disabled={loading || !text.trim()}
-              className="bg-gradient-gold text-primary-foreground"
+          {!user ? (
+            <div className="shrink-0 p-3 bg-card border-t border-border text-center pb-[calc(env(safe-area-inset-bottom,0)+0.75rem)]">
+              <p className="text-sm text-muted-foreground">
+                <a href="/auth" className="text-gold font-semibold underline">Sign in</a> to join the conversation.
+              </p>
+            </div>
+          ) : (
+            <form
+              onSubmit={(e) => { e.preventDefault(); send(); }}
+              className="shrink-0 p-3 bg-card border-t border-border flex gap-2 pb-[calc(env(safe-area-inset-bottom,0)+0.75rem)]"
             >
-              <Send size={16} />
-            </Button>
-          </div>
+              <Input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Add a comment..."
+                className="bg-input"
+                maxLength={500}
+                aria-label="Add a comment"
+              />
+
+              <Button
+                type="submit"
+                disabled={loading || !text.trim()}
+                className="bg-gradient-gold text-primary-foreground"
+                aria-label="Send comment"
+              >
+                <Send size={16} />
+              </Button>
+            </form>
+          )}
         </div>
       </SheetContent>
     </Sheet>
