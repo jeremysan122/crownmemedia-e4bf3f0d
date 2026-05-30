@@ -139,11 +139,29 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
   };
 
   const send = async () => {
-    if (!user || !postId || !text.trim()) return;
-
-    setLoading(true);
+    if (!postId || !text.trim()) return;
+    if (!user) {
+      toast.error("Sign in to comment");
+      return;
+    }
 
     const body = text.trim().slice(0, 500);
+
+    // Optimistic insert — show comment immediately, roll back on error.
+    const optimisticId = `optimistic-${Date.now()}`;
+    const optimisticRow: CommentRow = {
+      id: optimisticId,
+      body,
+      created_at: new Date().toISOString(),
+      user_id: user.id,
+      profile: {
+        username: (user.user_metadata as any)?.username || "you",
+        profile_photo_url: (user.user_metadata as any)?.profile_photo_url || null,
+      },
+    };
+    setComments((prev) => [optimisticRow, ...prev]);
+    setText("");
+    setLoading(true);
 
     const { error } = await supabase.from("comments").insert({
       post_id: postId,
@@ -153,7 +171,13 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
 
     setLoading(false);
 
-    if (error) return toast.error(error.message);
+    if (error) {
+      // Roll back optimistic row and restore typed text so user can retry.
+      setComments((prev) => prev.filter((c) => c.id !== optimisticId));
+      setText(body);
+      toast.error(error.message || "Could not post comment");
+      return;
+    }
 
     trackEvent("comment_posted", {
       postId,
@@ -164,8 +188,7 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
       new CustomEvent("crownme:comment-added", { detail: { postId } }),
     );
 
-    setText("");
-
+    // Reconcile with server (replaces optimistic row with real one).
     const { data } = await supabase
       .from("comments")
       .select("id, body, created_at, user_id, profile:profiles!comments_user_id_fkey(username, profile_photo_url)")
