@@ -74,6 +74,8 @@ const COMMENT_COLUMNS = "id, body, created_at, edited_at, user_id, parent_id, me
 export default function PostDetailDialog({ post, onClose }: Props) {
   const { user } = useAuth();
   const open = !!post;
+  const isBelowDesktop = useIsBelowDesktop();
+  const [commentsOverlayOpen, setCommentsOverlayOpen] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [myVotes, setMyVotes] = useState<Set<VoteType>>(new Set());
   const [counts, setCounts] = useState({ crown: 0, fire: 0, diamond: 0, dislike: 0, total: 0, score: 0, comments: 0 });
