@@ -18,11 +18,8 @@ import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const makeClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
-const render: typeof rtlRender = (ui: any, opts?: any) =>
-  rtlRender(
-    <QueryClientProvider client={makeClient()}>{ui}</QueryClientProvider>,
-    opts,
-  );
+const render = (ui: React.ReactElement) =>
+  rtlRender(<QueryClientProvider client={makeClient()}>{ui}</QueryClientProvider>);
 
 const read = (p: string) => readFileSync(path.resolve(__dirname, "../../../", p), "utf8");
 
