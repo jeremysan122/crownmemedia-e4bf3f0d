@@ -61,9 +61,13 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
   }, [user]);
 
   useEffect(() => {
-    if (!postId) return;
+    if (!postId) {
+      setComments([]);
+      return;
+    }
 
     let cancelled = false;
+    setInitialLoading(true);
 
     supabase
       .from("comments")
@@ -76,6 +80,7 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
         const rows = (data as any) || [];
         setComments(rows);
         loadReactions(rows.map((c: CommentRow) => c.id));
+        setInitialLoading(false);
       });
 
     return () => {
