@@ -118,17 +118,19 @@ export default function PayoutPanel() {
     (async () => { setLoading(true); await reload(); setLoading(false); })();
   }, [user, reload]);
 
-  // Realtime: refresh on payout status updates
+  // Polling fallback. payouts is no longer in the Realtime publication
+  // (financial CDC events could leak across users via crafted topics).
   useEffect(() => {
     if (!user) return;
-    const uid = user.id;
-    const ch = supabase
-      .channel(`payouts-${uid}-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "payouts", filter: `user_id=eq.${uid}` }, () => {
-        void reload();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    const onFocus = () => { void reload(); };
+    const interval = window.setInterval(() => { void reload(); }, 30_000);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, [user, reload]);
 
   const lockedShekels = useMemo(
