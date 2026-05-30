@@ -274,6 +274,9 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
           <SheetTitle className="font-display text-gold">
             Comments{comments.length > 0 ? ` · ${comments.length}` : ""}
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            Read and add comments for this post.
+          </SheetDescription>
         </SheetHeader>
 
 
