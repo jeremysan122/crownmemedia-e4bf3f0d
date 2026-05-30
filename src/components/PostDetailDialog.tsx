@@ -1068,8 +1068,10 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
               <div className="flex items-center gap-1 shrink-0">
                 <button
+                  type="button"
+                  onClick={() => isBelowDesktop && setCommentsOverlayOpen(true)}
                   aria-label="Comments"
-                  className="flex items-center gap-1 px-2 min-h-[44px] min-w-[44px] justify-center text-muted-foreground touch-manipulation"
+                  className="flex items-center gap-1 px-2 min-h-[44px] min-w-[44px] justify-center text-muted-foreground touch-manipulation hover:text-foreground"
                 >
                   <MessageCircle size={18} />
                   <span className="text-xs tabular-nums">{counts.comments}</span>
