@@ -184,15 +184,25 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
     toast.success("Reported. Moderators will review.");
   };
 
+  const isSide = variant === "side";
+
   return (
     <Sheet open={!!postId} onOpenChange={(o) => !o && onClose()}>
       <SheetContent
-        side="bottom"
-        className="h-[85dvh] max-h-[85dvh] bg-card border-border rounded-t-2xl flex flex-col p-0"
+        side={isSide ? "right" : "bottom"}
+        className={cn(
+          "bg-card border-border flex flex-col p-0",
+          isSide
+            ? "h-[100dvh] w-full sm:max-w-[440px] sm:w-[440px] border-l rounded-none"
+            : "h-[85dvh] max-h-[85dvh] rounded-t-2xl",
+        )}
       >
         <SheetHeader className="px-4 pt-4 pb-2 shrink-0">
-          <SheetTitle className="font-display text-gold">Comments</SheetTitle>
+          <SheetTitle className="font-display text-gold">
+            Comments{comments.length > 0 ? ` · ${comments.length}` : ""}
+          </SheetTitle>
         </SheetHeader>
+
 
         <div className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 overflow-y-auto space-y-3 px-4 py-3">
