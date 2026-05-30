@@ -36,6 +36,7 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
   const [fireCounts, setFireCounts] = useState<Record<string, number>>({});
   const [myFires, setMyFires] = useState<Set<string>>(new Set());
 
