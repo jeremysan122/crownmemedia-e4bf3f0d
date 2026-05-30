@@ -95,7 +95,7 @@ export default function CommandCenterFinance() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, statusFilter, search]);
-  const rt = { status: "polling" as const, retryIn: 0 };
+  const rt = { status: "live" as const, retryIn: 0 };
 
   const onFreeze = async (id: string) => {
     if (!roles.canFreezePayouts) { toast.error("Not authorized"); return; }
