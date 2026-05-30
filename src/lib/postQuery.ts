@@ -1,15 +1,14 @@
 // ============================================================================
 // Canonical post query.
 //
-// IMPORTANT: Posts must use ONE canonical post row across CrownMe (feed,
-// profile grid, post detail dialog, post page, leaderboard cards). Do NOT
-// create separate feed/profile copies or alternate select shapes that omit
-// fields the shared `PostCard` / `PostDetailDialog` components rely on —
-// when a field is missing, those components silently render the old/empty
-// version and the post looks "different" between pages.
+// IMPORTANT: All post display surfaces must use this canonical post query.
+// Do not create separate feed/profile/leaderboard/shorts post SELECT shapes —
+// when a field is missing from a surface-specific select, shared components
+// (PostCard / PostDetailDialog) silently render the old/empty version and the
+// post looks "different" between pages.
 //
-// If you need a new field on the post detail view, add it here so every
-// surface picks it up at once.
+// If you need a new field on any post surface, add it here so every surface
+// picks it up at once.
 // ============================================================================
 import { supabase } from "@/integrations/supabase/client";
 import type { FeedPost } from "@/components/PostCard";
@@ -19,7 +18,7 @@ export const POST_SELECT = `
   city, state, country, crown_score, vote_count, comment_count,
   share_count, battle_wins, created_at, edited_at, pinned_at,
   scheduled_for, parent_post_id, repost_caption, tagged_user_ids,
-  media_type, video_url, video_poster_url, filter, alt_texts,
+  media_type, video_url, video_poster_url, duration_ms, filter, alt_texts,
   profile:profiles!posts_user_id_fkey(
     username, profile_photo_url, crowns_held, gender,
     hide_likes, hide_comments, hide_views, verified
@@ -34,4 +33,24 @@ export async function fetchPostById(id: string): Promise<FeedPost | null> {
     .maybeSingle();
   if (error || !data) return null;
   return data as unknown as FeedPost;
+}
+
+/**
+ * Shorts (video) feed — uses the canonical POST_SELECT so the same row shape
+ * powers the Shorts player, the feed, and the post detail dialog.
+ */
+export async function fetchShortsPage(opts: { limit: number; beforeCreatedAt?: string }) {
+  let q = supabase
+    .from("posts")
+    .select(POST_SELECT)
+    .eq("media_type", "video")
+    .eq("is_removed", false)
+    .eq("is_archived", false)
+    .not("video_url", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(opts.limit);
+  if (opts.beforeCreatedAt) q = q.lt("created_at", opts.beforeCreatedAt);
+  const { data, error } = await q;
+  if (error) return [] as FeedPost[];
+  return (data ?? []) as unknown as FeedPost[];
 }
