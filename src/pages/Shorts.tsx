@@ -9,6 +9,8 @@ import { CrownIcon } from "@/components/CrownIcon";
 import { toast } from "sonner";
 import { fetchShortsPage } from "@/lib/postQuery";
 import type { FeedPost } from "@/components/PostCard";
+import CommentsDrawer from "@/components/CommentsDrawer";
+
 
 // Shorts uses the canonical post row shape (see src/lib/postQuery.ts) so the
 // same post displays identically in the feed, profile, and post detail.
@@ -32,9 +34,11 @@ export default function Shorts() {
   const [muted, setMuted] = useState(true);
   const [endReached, setEndReached] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const loadingMoreRef = useRef(false);
+
 
   const loadPage = useCallback(async (cursor?: string) => {
     const rows = await fetchShortsPage({ limit: PAGE_SIZE, beforeCreatedAt: cursor });
@@ -96,6 +100,29 @@ export default function Shorts() {
   useEffect(() => {
     videoRefs.current.forEach((v) => { if (v) v.muted = muted; });
   }, [muted]);
+
+  // Pause the active video while the comments overlay is open; resume on close.
+  useEffect(() => {
+    const vid = videoRefs.current[activeIdx];
+    if (!vid) return;
+    if (commentsPostId) {
+      vid.pause();
+    } else {
+      vid.play().catch(() => { /* autoplay may be blocked */ });
+    }
+  }, [commentsPostId, activeIdx]);
+
+  // Keep comment counts in sync when a comment is added anywhere in the app.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ postId: string }>).detail;
+      if (!detail?.postId) return;
+      setItems((prev) => prev.map((p) => p.id === detail.postId ? { ...p, comment_count: p.comment_count + 1 } : p));
+    };
+    window.addEventListener("crownme:comment-added", handler as EventListener);
+    return () => window.removeEventListener("crownme:comment-added", handler as EventListener);
+  }, []);
+
 
   async function castCrown(post: Short) {
     if (!user) { nav("/auth?mode=login"); return; }
@@ -181,16 +208,18 @@ export default function Shorts() {
                   </span>
                   <span className="text-xs font-semibold tabular-nums">{p.vote_count}</span>
                 </button>
-                <Link
-                  to={`/post/${p.id}#comments`}
+                <button
+                  type="button"
+                  onClick={() => setCommentsPostId(p.id)}
                   aria-label="Comments"
-                  className="flex flex-col items-center gap-1"
+                  className="flex flex-col items-center gap-1 active:scale-95 transition"
                 >
                   <span className="size-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
                     <MessageCircle className="size-6" />
                   </span>
                   <span className="text-xs font-semibold tabular-nums">{p.comment_count}</span>
-                </Link>
+                </button>
+
                 <button
                   onClick={() => share(p)}
                   aria-label="Share"
@@ -225,6 +254,10 @@ export default function Shorts() {
           )}
         </div>
       )}
+
+      {/* Comments overlay — Scrolls users never leave the feed to read/post comments. */}
+      <CommentsDrawer postId={commentsPostId} onClose={() => setCommentsPostId(null)} />
     </main>
   );
 }
+
