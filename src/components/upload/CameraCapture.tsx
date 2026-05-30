@@ -255,34 +255,46 @@ export default function CameraCapture({
 
   // ─────────────── Canvas pipeline (filter bake) ───────────────
   /**
-   * Paints one video frame onto a SQUARE offscreen canvas with the chosen filter.
-   * The square output (1080x1080) matches the post frame's aspect-square layout
-   * so captured media always fills the post card with no letterboxing.
-   * The source video is center-cropped using cover-fit math.
+   * Paints one video frame onto an offscreen canvas sized to the chosen
+   * social aspect ratio (9:16 / 4:5 / 1:1). The source video is
+   * center-cropped using cover-fit math so the preview exactly matches
+   * the final output — no letterboxing, no stretching, no sideways video.
    */
-  const SQUARE = 1080;
   const paintFrame = (canvas: HTMLCanvasElement, video: HTMLVideoElement, currentFilter: FilterId, t: number) => {
-    const vw = video.videoWidth || SQUARE;
-    const vh = video.videoHeight || SQUARE;
-    if (canvas.width !== SQUARE) canvas.width = SQUARE;
-    if (canvas.height !== SQUARE) canvas.height = SQUARE;
+    const { w: outW, h: outH } = RATIO_DIMS[ratio];
+    const vw = video.videoWidth || outW;
+    const vh = video.videoHeight || outH;
+    if (canvas.width !== outW) canvas.width = outW;
+    if (canvas.height !== outH) canvas.height = outH;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Center-crop source to a square (object-cover behavior)
-    const side = Math.min(vw, vh);
-    const sx = (vw - side) / 2;
-    const sy = (vh - side) / 2;
+    // Cover-fit: pick the largest source rect with target aspect that fits in (vw,vh).
+    const targetAspect = outW / outH;
+    const srcAspect = vw / vh;
+    let sw: number, sh: number;
+    if (srcAspect > targetAspect) {
+      // Source is wider than target → crop sides
+      sh = vh;
+      sw = vh * targetAspect;
+    } else {
+      // Source is taller/narrower → crop top/bottom
+      sw = vw;
+      sh = vw / targetAspect;
+    }
+    const sx = (vw - sw) / 2;
+    const sy = (vh - sh) / 2;
 
     ctx.save();
     ctx.filter = cssFor(currentFilter) || "none";
     if (facing === "user") {
-      ctx.translate(SQUARE, 0);
+      ctx.translate(outW, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(video, sx, sy, side, side, 0, 0, SQUARE, SQUARE);
+    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH);
     ctx.restore();
-    paintAnimatedOverlay(ctx, SQUARE, SQUARE, currentFilter, t);
+    paintAnimatedOverlay(ctx, outW, outH, currentFilter, t);
+
   };
 
   const paintAnimatedOverlay = (
