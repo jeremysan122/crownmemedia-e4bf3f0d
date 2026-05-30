@@ -1179,6 +1179,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 </div>
               )}
             </div>
+            </>)}
           </div>
         </div>
 
