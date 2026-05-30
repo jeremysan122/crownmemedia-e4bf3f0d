@@ -500,29 +500,40 @@ export default function CameraCapture({
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {previewUrl ? (
-          previewBlob?.kind === "video" ? (
-            <video src={previewUrl} controls playsInline className="max-h-full max-w-full" />
+        {/* Aspect-ratio frame — preview matches the exact crop that will be captured. */}
+        <div
+          className="relative bg-black overflow-hidden max-h-full max-w-full"
+          style={{
+            aspectRatio: ratio.replace(":", " / "),
+            height: ratio === "9:16" ? "100%" : undefined,
+            width: ratio === "9:16" ? undefined : "100%",
+            maxWidth: "100%",
+            maxHeight: "100%",
+          }}
+        >
+          {previewUrl ? (
+            previewBlob?.kind === "video" ? (
+              <video src={previewUrl} controls playsInline className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <img loading="lazy" src={previewUrl} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+            )
           ) : (
-            <img loading="lazy" src={previewUrl} alt="Preview" className="max-h-full max-w-full" />
-          )
-        ) : (
-          <>
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              className={`max-h-full max-w-full ${facing === "user" ? "scale-x-[-1]" : ""}`}
-              style={{ filter: filteredCss }}
-            />
-            {/* Animated overlay preview (FX filters) */}
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="relative w-full h-full">
+            <>
+              <video
+                ref={videoRef}
+                playsInline
+                muted
+                className={`absolute inset-0 w-full h-full object-cover ${facing === "user" ? "scale-x-[-1]" : ""}`}
+                style={{ filter: filteredCss }}
+              />
+              {/* Animated overlay preview (FX filters) */}
+              <div className="pointer-events-none absolute inset-0">
                 <FilterOverlay filter={filter} />
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
+
 
         {/* Grid overlay */}
         {showGrid && !previewUrl && (
