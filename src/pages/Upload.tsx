@@ -1625,9 +1625,13 @@ export default function Upload() {
         open={cameraOpen !== null}
         mode={cameraOpen ?? "photo"}
         initialFilter={filter}
+        // Default to 9:16 when entering camera from the Scroll/Short (video) CTA,
+        // 4:5 when entering from the feed photo CTA. Users can still switch inside.
+        initialRatio={cameraOpen === "video" ? "9:16" : "4:5"}
         onCancel={() => setCameraOpen(null)}
         onCapture={onCameraCapture}
       />
+
 
       <CropEditor
         open={pendingCrop !== null}
