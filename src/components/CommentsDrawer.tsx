@@ -13,7 +13,15 @@ import { cn } from "@/lib/utils";
 interface Props {
   postId: string | null;
   onClose: () => void;
+  /**
+   * Layout variant.
+   * - "sheet" (default): bottom slide-up — mobile/tablet.
+   * - "side": right-docked panel — desktop / wide screens (≥1024px). Used by
+   *   Scrolls/Shorts so the user never leaves the current video to comment.
+   */
+  variant?: "sheet" | "side";
 }
+
 
 interface CommentRow {
   id: string;
