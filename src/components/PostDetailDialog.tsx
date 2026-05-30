@@ -32,6 +32,8 @@ import { useAnimatedNumber } from "@/hooks/useAnimatedNumber";
 import { checkCommentRate, recordComment, validateComment } from "@/lib/commentSafety";
 import { useCountdown } from "@/hooks/useCountdown";
 import { AlertCircle, Clock } from "lucide-react";
+import CommentsDrawer from "./CommentsDrawer";
+import { useIsBelowDesktop } from "@/hooks/use-below-desktop";
 
 const draftKey = (postId: string, replyToId: string | null) =>
   `crownme:draft:${postId}:${replyToId ?? "root"}`;
