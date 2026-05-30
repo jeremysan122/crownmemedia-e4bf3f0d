@@ -81,32 +81,19 @@ export function useWallet() {
     return walletStore.subscribe(() => { refreshWallet(); });
   }, [refreshWallet]);
 
-  // Realtime: refresh balance when wallet row updates, for example after Stripe webhook credits Shekels.
+  // Polling fallback. wallets is no longer in the Realtime publication
+  // (to prevent CDC leaks across users), so refresh on focus + every 30s.
   useEffect(() => {
     if (!user) return;
-
-    const uid = user.id;
-    const channel = supabase.channel(`wallet-${uid}-${Math.random().toString(36).slice(2)}`);
-
-    channel
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "wallets",
-          filter: `user_id=eq.${uid}`,
-        },
-        () => {
-          refreshWallet();
-        },
-      )
-      .subscribe();
-
+    const onFocus = () => refreshWallet();
+    const interval = window.setInterval(refreshWallet, 30_000);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
     return () => {
-      supabase.removeChannel(channel);
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
     };
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 

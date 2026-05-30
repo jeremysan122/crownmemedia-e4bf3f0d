@@ -79,39 +79,23 @@ export default function CommandCenterFinance() {
   useEffect(() => { loadStats(); }, []);
   useEffect(() => { loadPayouts(); /* eslint-disable-next-line */ }, [page, statusFilter, search]);
 
-  // Surgical realtime: respect filters/search/page; never duplicate rows
-  const rt = useRealtimeStatus("cc-finance-rt", (ch) =>
-    ch
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "payouts" }, (p: any) => {
-        const row = p.new as Payout;
-        if (page !== 0) return; // new rows only land on first page
-        if (!matches(row)) return;
-        setPayouts(prev => prev.find(r => r.id === row.id) ? prev : [row, ...prev].slice(0, PAGE));
-      })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "payouts" }, (p: any) => {
-        const row = p.new as Payout;
-        setPayouts(prev => {
-          const idx = prev.findIndex(r => r.id === row.id);
-          const stillMatches = matches(row);
-          if (idx >= 0 && !stillMatches) return prev.filter(r => r.id !== row.id);
-          if (idx >= 0) { const next = prev.slice(); next[idx] = { ...next[idx], ...row }; return next; }
-          if (page === 0 && stillMatches) return [row, ...prev].slice(0, PAGE);
-          return prev;
-        });
-      })
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "payouts" }, (p: any) => {
-        const id = (p.old as any).id;
-        setPayouts(prev => prev.filter(r => r.id !== id));
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "shekel_ledger" }, (p: any) => {
-        const row = p.new as any;
-        setRecentLedger(prev => prev.find(r => r.id === row.id) ? prev : [row, ...prev].slice(0, 15));
-        if (row.usd_amount) {
-          const today = new Date(); today.setHours(0,0,0,0);
-          if (new Date(row.created_at) >= today) setLedgerToday(v => v + Number(row.usd_amount));
-        }
-      })
-  , [page, statusFilter, search]);
+  // Polling fallback. payouts + shekel_ledger were removed from the Realtime
+  // publication (financial CDC events could leak across users via crafted topics).
+  // Admin Finance refreshes every 15s while mounted and on window focus.
+  useEffect(() => {
+    const tick = () => { void loadStats(); void loadPayouts(); };
+    const interval = window.setInterval(tick, 15_000);
+    const onFocus = () => tick();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, statusFilter, search]);
+  const rt = { status: "live" as const, retryIn: 0 };
 
   const onFreeze = async (id: string) => {
     if (!roles.canFreezePayouts) { toast.error("Not authorized"); return; }
