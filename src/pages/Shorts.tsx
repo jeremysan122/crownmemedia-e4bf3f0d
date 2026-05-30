@@ -101,6 +101,29 @@ export default function Shorts() {
     videoRefs.current.forEach((v) => { if (v) v.muted = muted; });
   }, [muted]);
 
+  // Pause the active video while the comments overlay is open; resume on close.
+  useEffect(() => {
+    const vid = videoRefs.current[activeIdx];
+    if (!vid) return;
+    if (commentsPostId) {
+      vid.pause();
+    } else {
+      vid.play().catch(() => { /* autoplay may be blocked */ });
+    }
+  }, [commentsPostId, activeIdx]);
+
+  // Keep comment counts in sync when a comment is added anywhere in the app.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ postId: string }>).detail;
+      if (!detail?.postId) return;
+      setItems((prev) => prev.map((p) => p.id === detail.postId ? { ...p, comment_count: p.comment_count + 1 } : p));
+    };
+    window.addEventListener("crownme:comment-added", handler as EventListener);
+    return () => window.removeEventListener("crownme:comment-added", handler as EventListener);
+  }, []);
+
+
   async function castCrown(post: Short) {
     if (!user) { nav("/auth?mode=login"); return; }
     setItems((prev) => prev.map((p) => p.id === post.id ? { ...p, vote_count: p.vote_count + 1 } : p));
