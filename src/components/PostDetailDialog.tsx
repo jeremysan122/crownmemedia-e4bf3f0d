@@ -697,7 +697,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
-        className="p-0 gap-0 max-w-[100vw] w-full h-[100svh] md:w-[min(94vw,760px)] md:max-w-[760px] md:h-auto md:max-h-[94vh] md:rounded-2xl md:my-3 lg:w-[min(96vw,1280px)] lg:max-w-[1280px] lg:h-auto lg:aspect-[16/10] lg:max-h-[86vh] lg:rounded-2xl bg-card border-border overflow-hidden flex flex-col lg:flex-row [&>button]:hidden overscroll-contain"
+        className="p-0 gap-0 max-w-[100vw] w-full h-[100svh] md:w-[min(96vw,1280px)] md:max-w-[1280px] md:h-auto md:aspect-[16/10] md:max-h-[90vh] md:rounded-2xl md:my-3 bg-card border-border overflow-hidden flex flex-col md:flex-row [&>button]:hidden overscroll-contain"
       >
         <VisuallyHidden>
           <DialogTitle>Post details</DialogTitle>
