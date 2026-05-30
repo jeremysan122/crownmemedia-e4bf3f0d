@@ -7,18 +7,14 @@ import CrownLoader from "@/components/CrownLoader";
 import { ArrowLeft, MessageCircle, Share2, Volume2, VolumeX, Heart } from "lucide-react";
 import { CrownIcon } from "@/components/CrownIcon";
 import { toast } from "sonner";
+import { fetchShortsPage } from "@/lib/postQuery";
+import type { FeedPost } from "@/components/PostCard";
 
-type Short = {
-  id: string;
-  user_id: string;
-  caption: string | null;
+// Shorts uses the canonical post row shape (see src/lib/postQuery.ts) so the
+// same post displays identically in the feed, profile, and post detail.
+type Short = FeedPost & {
   video_url: string;
-  video_poster_url: string | null;
-  duration_ms: number | null;
-  vote_count: number;
-  comment_count: number;
-  created_at: string;
-  profile: { username: string | null; avatar_url: string | null } | null;
+  duration_ms?: number | null;
 };
 
 const PAGE_SIZE = 12;
@@ -41,38 +37,10 @@ export default function Shorts() {
   const loadingMoreRef = useRef(false);
 
   const loadPage = useCallback(async (cursor?: string) => {
-    let q = supabase
-      .from("posts")
-      .select("id,user_id,caption,video_url,video_poster_url,duration_ms,vote_count,comment_count,created_at")
-      .eq("media_type", "video")
-      .eq("is_removed", false)
-      .eq("is_archived", false)
-      .not("video_url", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(PAGE_SIZE);
-    if (cursor) q = q.lt("created_at", cursor);
-    const { data, error } = await q;
-    if (error) {
-      toast.error("Couldn't load scrolls");
-      return [] as Short[];
-    }
-    const rows = (data ?? []) as Omit<Short, "profile">[];
-    if (rows.length === 0) return [];
-    const ids = Array.from(new Set(rows.map((r) => r.user_id)));
-    const { data: profs } = await supabase
-      .from("profiles")
-      .select("id,username,avatar_url")
-      .in("id", ids);
-    type ProfRow = { id: string; username: string | null; avatar_url: string | null };
-    const map = new Map<string, ProfRow>(((profs ?? []) as unknown as ProfRow[]).map((p) => [p.id, p]));
-    return rows.map((r) => {
-      const prof = map.get(r.user_id);
-      return {
-        ...r,
-        profile: prof ? { username: prof.username, avatar_url: prof.avatar_url } : null,
-      };
-    });
+    const rows = await fetchShortsPage({ limit: PAGE_SIZE, beforeCreatedAt: cursor });
+    return rows.filter((r) => !!r.video_url) as Short[];
   }, []);
+
 
   useEffect(() => {
     (async () => {
