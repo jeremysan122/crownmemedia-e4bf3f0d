@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppShell from "@/components/AppShell";
 import PostCard, { type FeedPost } from "@/components/PostCard";
+import { fetchPostById } from "@/lib/postQuery";
 import CrownLoader from "@/components/CrownLoader";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
