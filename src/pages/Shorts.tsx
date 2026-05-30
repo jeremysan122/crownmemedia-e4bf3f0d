@@ -9,6 +9,8 @@ import { CrownIcon } from "@/components/CrownIcon";
 import { toast } from "sonner";
 import { fetchShortsPage } from "@/lib/postQuery";
 import type { FeedPost } from "@/components/PostCard";
+import CommentsDrawer from "@/components/CommentsDrawer";
+
 
 // Shorts uses the canonical post row shape (see src/lib/postQuery.ts) so the
 // same post displays identically in the feed, profile, and post detail.
