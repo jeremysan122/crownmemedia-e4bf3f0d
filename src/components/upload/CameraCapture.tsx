@@ -111,7 +111,9 @@ export default function CameraCapture({
   const cap = Math.min(maxMs, MAX_VIDEO_MS);
 
   useEffect(() => { setMode(initialMode); }, [initialMode]);
+  useEffect(() => { setFilter(initialFilter); }, [initialFilter]);
   useEffect(() => { setRatio(initialRatio); }, [initialRatio]);
+
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
