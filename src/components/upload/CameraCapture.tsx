@@ -180,7 +180,9 @@ export default function CameraCapture({
     setPreviewUrl(null);
     setPreviewBlob(null);
     setElapsed(0);
+    setRatio(initialRatio);
     startStream();
+
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
       if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
