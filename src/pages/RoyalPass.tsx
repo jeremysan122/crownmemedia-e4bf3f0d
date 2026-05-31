@@ -78,6 +78,32 @@ export default function RoyalPassSettings() {
     ? new Date(pass.currentPeriodEnd).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })
     : null;
 
+  const loadDaily = useCallback(async () => {
+    if (!pass.active) { setDaily(null); return; }
+    const { data } = await (supabase as any).rpc("royal_pass_daily_boost_status");
+    setDaily((data as DailyStatus) ?? { eligible: false });
+  }, [pass.active]);
+
+  useEffect(() => { loadDaily(); }, [loadDaily]);
+
+  const claimDaily = async (postId: string) => {
+    setPickerOpen(false);
+    setWorking("claim");
+    try {
+      const { data, error } = await (supabase as any).rpc("claim_daily_royal_boost", { p_post_id: postId });
+      if (error) throw error;
+      const errMsg = (data as { error?: string })?.error;
+      if (errMsg) throw new Error(errMsg);
+      toast.success("Daily Royal Boost claimed — 1.5× score for 24h");
+      await loadDaily();
+    } catch (e) {
+      toast.error((e as Error).message || "Could not claim daily boost");
+    } finally {
+      setWorking(null);
+    }
+  };
+
+
   return (
     <AppShell title="ROYAL PASS">
       <div className="px-4 py-4 max-w-2xl mx-auto space-y-5">
