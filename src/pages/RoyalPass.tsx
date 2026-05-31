@@ -204,6 +204,7 @@ export default function RoyalPassSettings() {
               )}
             </div>
 
+            <div className="royal-card p-4 space-y-2">
 
               <Button onClick={openPortal} disabled={working !== null} className="w-full bg-gradient-gold text-primary-foreground">
                 {working === "portal" ? <Loader2 size={14} className="animate-spin mr-2" /> : <ExternalLink size={14} className="mr-2" />}
