@@ -220,7 +220,7 @@ export default function GlobalSearchDialog({ open, onOpenChange }: Props) {
                 {posts.map((p) => (
                   <button
                     key={p.id}
-                    onClick={() => go(`/feed?post=${p.id}`)}
+                    onClick={() => go(`/post/${p.id}`)}
                     className="aspect-square bg-muted rounded-md overflow-hidden"
                   >
                     <img loading="lazy" src={p.image_url} alt="" className="w-full h-full object-cover" />
