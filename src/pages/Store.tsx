@@ -455,6 +455,17 @@ export default function Store() {
           </div>
         )}
       </div>
+      <BoostPostPicker
+        open={!!pickerBundle}
+        userId={user?.id}
+        boostLabel={pickerBundle?.label ?? ""}
+        onClose={() => setPickerBundle(null)}
+        onPick={(postId) => {
+          const b = pickerBundle;
+          setPickerBundle(null);
+          if (b) startCheckout(b, postId);
+        }}
+      />
     </AppShell>
   );
 }
