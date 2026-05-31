@@ -489,6 +489,7 @@ export type Database = {
           mention_user_ids: string[]
           parent_id: string | null
           post_id: string
+          reply_count: number
           user_id: string
         }
         Insert: {
@@ -500,6 +501,7 @@ export type Database = {
           mention_user_ids?: string[]
           parent_id?: string | null
           post_id: string
+          reply_count?: number
           user_id: string
         }
         Update: {
@@ -511,6 +513,7 @@ export type Database = {
           mention_user_ids?: string[]
           parent_id?: string | null
           post_id?: string
+          reply_count?: number
           user_id?: string
         }
         Relationships: [
@@ -3398,6 +3401,8 @@ export type Database = {
         Args: { _post_id: string; _user_id: string }
         Returns: boolean
       }
+      mark_all_messages_read: { Args: never; Returns: number }
+      mark_all_notifications_read: { Args: never; Returns: number }
       move_to_dlq: {
         Args: {
           dlq_name: string
