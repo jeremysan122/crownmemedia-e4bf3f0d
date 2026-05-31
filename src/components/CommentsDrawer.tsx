@@ -276,9 +276,9 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
       return;
     }
 
-    trackEvent(parentId ? "comment_reply_posted" : "comment_posted", {
+    trackEvent("comment_posted", {
       postId,
-      metadata: { length: body.length, parentId: parentId || undefined },
+      metadata: { length: body.length, isReply: !!parentId, parentId: parentId || undefined },
     });
 
     window.dispatchEvent(
