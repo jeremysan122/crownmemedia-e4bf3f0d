@@ -128,8 +128,19 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (boost) {
         const expires = new Date(Date.now() + boost.duration_hours * 3600_000).toISOString();
+        const POST_TARGETED = new Set(["royal_boost", "vote_boost", "crown_spotlight", "crown_shield"]);
+        const metaPostId = (session.metadata?.target_post_id as string | undefined) || null;
+        let postIdToWrite: string | null = null;
+        if (POST_TARGETED.has(boost.boost_type) && metaPostId) {
+          const { data: ownerPost } = await admin
+            .from("posts").select("id, user_id, is_removed")
+            .eq("id", metaPostId).maybeSingle();
+          if (ownerPost && !ownerPost.is_removed && ownerPost.user_id === userId) {
+            postIdToWrite = ownerPost.id;
+          }
+        }
         const { data: b } = await admin.from("boosts")
-          .insert({ user_id: userId, boost_type: boost.boost_type, active: true, expires_at: expires })
+          .insert({ user_id: userId, post_id: postIdToWrite, boost_type: boost.boost_type, active: true, expires_at: expires })
           .select("id").single();
         await admin.from("shekel_ledger").insert({
           user_id: userId,
