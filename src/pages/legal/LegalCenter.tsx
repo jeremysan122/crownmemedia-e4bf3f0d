@@ -78,7 +78,7 @@ export default function LegalCenter() {
         </section>
 
         <section className="royal-card divide-y divide-border">
-          {docs.map(({ to, label, desc, Icon }) => (
+          {docs.map(({ to, label, desc, Icon, version, updated }) => (
             <Link
               key={to}
               to={to}
@@ -91,6 +91,9 @@ export default function LegalCenter() {
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold">{label}</div>
                 <div className="text-[11px] text-muted-foreground">{desc}</div>
+                <div className="text-[10px] text-muted-foreground/80 mt-0.5">
+                  v{version} · Updated {updated}
+                </div>
               </div>
               <ChevronRight size={16} className="text-muted-foreground shrink-0" />
             </Link>
@@ -98,7 +101,8 @@ export default function LegalCenter() {
         </section>
 
         <p className="text-[10px] text-muted-foreground text-center mt-6 pb-4">
-          © {new Date().getFullYear()} CrownMe Media · CrownMe Media is an 18+ social platform.
+          © {new Date().getFullYear()} CrownMe Media · CrownMe Media is an 18+ social platform.<br />
+          Drafted by the product team; final attorney review recommended before any public revision.
         </p>
       </div>
     </AppShell>
