@@ -317,7 +317,7 @@ export default function AdminModeration() {
             <div className="text-[10px] text-muted-foreground">
               By @{r.reporter?.username ?? r.reporter_id.slice(0, 8)}
               {r.post_id && (
-                <> · <Link to={`/feed?post=${r.post_id}`} className="text-primary hover:underline">post {r.post_id.slice(0, 6)}</Link></>
+                <> · <Link to={`/post/${r.post_id}`} className="text-primary hover:underline">post {r.post_id.slice(0, 6)}</Link></>
               )}
             </div>
             <EvidenceLinks paths={r.evidence_paths} />

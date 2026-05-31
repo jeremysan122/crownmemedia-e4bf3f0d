@@ -126,7 +126,7 @@ export default function Admin() {
                 {r.post_id && (
                   <div>
                     Post:{" "}
-                    <Link to={`/feed?post=${r.post_id}`} className="text-primary hover:underline">
+                    <Link to={`/post/${r.post_id}`} className="text-primary hover:underline">
                       {r.post_id.slice(0, 8)}
                     </Link>
                   </div>

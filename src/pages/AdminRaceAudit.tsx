@@ -178,7 +178,7 @@ export default function AdminRaceAudit() {
               <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary">
                 Post · {CATEGORY_LABEL[post.category as keyof typeof CATEGORY_LABEL] ?? post.category}
               </span>
-              <Link to={`/feed?post=${post.id}`} className="text-[11px] text-primary hover:underline">View in feed →</Link>
+              <Link to={`/post/${post.id}`} className="text-[11px] text-primary hover:underline">View in feed →</Link>
             </div>
             <div className="text-sm font-semibold truncate">{post.caption || "(no caption)"}</div>
             <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">

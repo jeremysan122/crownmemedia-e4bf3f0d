@@ -36,7 +36,7 @@ function targetFor(n: any): string | null {
   const p = n.payload || {};
   if (p.battle_id) return `/battles?b=${p.battle_id}`;
   if (n.type === "follow" && p.follower_id) return `/u/${p.follower_id}`;
-  if (p.post_id) return `/feed?post=${p.post_id}`;
+  if (p.post_id) return `/post/${p.post_id}`;
   return null;
 }
 
