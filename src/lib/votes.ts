@@ -66,5 +66,6 @@ export async function toggleVote(
     return null;
   }
   trackEvent("vote_cast", { postId, metadata: { vote_type: voteType } });
+  playVoteFx(voteType);
   return voteType;
 }
