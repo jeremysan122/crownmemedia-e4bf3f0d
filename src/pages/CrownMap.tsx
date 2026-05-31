@@ -1404,9 +1404,11 @@ function MapView({
       const key = `${p.r.region_type}:${p.r.region_name}`;
       const marker = markersRef.current[i];
       if (!marker) return;
-      const el = marker.getElement();
+      // The visible button is the wrapper's first child (see marker render above).
+      const visual = marker.getElement().firstElementChild as HTMLElement | null;
+      if (!visual) return;
       if (flashKeys[key]) {
-        el.animate(
+        visual.animate(
           [
             { boxShadow: "0 0 0 0 hsl(45 95% 55% / 0.9)" },
             { boxShadow: "0 0 0 22px hsl(45 95% 55% / 0)" },
@@ -1415,6 +1417,7 @@ function MapView({
         );
       }
     });
+
   }, [flashKeys, points]);
 
   // Heat overlay: register a real Mapbox heatmap layer driven by crown_score.
