@@ -43,11 +43,11 @@ const ICON_MAP: Record<string, typeof Zap> = {
 };
 
 const DESC_MAP: Record<string, string> = {
-  royal_boost: "1.5× Crown Score for 24h",
-  vote_boost: "Top of feed for voters",
-  crown_spotlight: "Featured profile placement",
-  profile_glow: "Cosmetic royal aura",
-  crown_shield: "Protect crown for 12h",
+  royal_boost: "1.5× Crown Score on a chosen post for 24h",
+  vote_boost: "Featured in the Spotlight strip for voters",
+  crown_spotlight: "Top placement in the Royal Spotlight strip",
+  profile_glow: "Cosmetic royal aura on your profile",
+  crown_shield: "Crown can't be displaced from chosen post",
 };
 
 interface BoostBundle {
