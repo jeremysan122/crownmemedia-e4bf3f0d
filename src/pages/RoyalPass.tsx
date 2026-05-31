@@ -168,7 +168,43 @@ export default function RoyalPassSettings() {
               </dl>
             </div>
 
-            <div className="royal-card p-4 space-y-2">
+            <div className="royal-card p-5 space-y-3 relative overflow-hidden">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-gold/15 text-gold flex items-center justify-center">
+                  <Zap size={18} />
+                </div>
+                <div className="flex-1">
+                  <div className="font-display text-base text-gold leading-none">Daily Royal Boost</div>
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    1.5× Crown Score for 24h on a post you choose. One claim per day.
+                  </div>
+                </div>
+              </div>
+
+              {daily?.claimed_today ? (
+                <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 flex items-center gap-2">
+                  <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
+                  <span>
+                    Claimed today
+                    {daily.expires_at
+                      ? ` · active until ${new Date(daily.expires_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`
+                      : ""}
+                    . Come back tomorrow for your next boost.
+                  </span>
+                </div>
+              ) : (
+                <Button
+                  onClick={() => setPickerOpen(true)}
+                  disabled={working !== null}
+                  className="w-full bg-gradient-gold text-primary-foreground"
+                >
+                  {working === "claim" ? <Loader2 size={14} className="animate-spin mr-2" /> : <Zap size={14} className="mr-2" />}
+                  Claim today's Royal Boost
+                </Button>
+              )}
+            </div>
+
+
               <Button onClick={openPortal} disabled={working !== null} className="w-full bg-gradient-gold text-primary-foreground">
                 {working === "portal" ? <Loader2 size={14} className="animate-spin mr-2" /> : <ExternalLink size={14} className="mr-2" />}
                 Manage billing in Stripe
