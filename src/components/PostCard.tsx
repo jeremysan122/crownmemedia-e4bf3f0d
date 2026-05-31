@@ -14,7 +14,7 @@ import GiftPanel from "./gifts/GiftPanel";
 import GiftAnimationOverlay from "./gifts/GiftAnimationOverlay";
 import type { RoyalGift } from "@/types/gifts";
 import { findGift } from "@/lib/gifts";
-import { fxGiftSend, fxVote } from "@/lib/giftFx";
+import { fxGiftSend, fxVote, fxBrokenCrown } from "@/lib/giftFx";
 import PostDetailDialog from "./PostDetailDialog";
 import CrownScoreBreakdown from "./CrownScoreBreakdown";
 import VoteBurst from "./VoteBurst";
