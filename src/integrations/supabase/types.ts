@@ -412,6 +412,7 @@ export type Database = {
           expires_at: string | null
           id: string
           post_id: string | null
+          source: string | null
           started_at: string
           user_id: string
         }
@@ -421,6 +422,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           post_id?: string | null
+          source?: string | null
           started_at?: string
           user_id: string
         }
@@ -430,6 +432,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           post_id?: string | null
+          source?: string | null
           started_at?: string
           user_id?: string
         }
@@ -3282,6 +3285,7 @@ export type Database = {
       can_view_posts_of: { Args: { _owner: string }; Returns: boolean }
       cancel_account_deletion: { Args: never; Returns: undefined }
       claim_daily_reward: { Args: never; Returns: Json }
+      claim_daily_royal_boost: { Args: { p_post_id: string }; Returns: Json }
       comments_allowed_on: { Args: { _post: string }; Returns: boolean }
       confirm_my_age: { Args: { _dob: string }; Returns: undefined }
       deactivate_my_account: { Args: never; Returns: undefined }
@@ -3462,6 +3466,7 @@ export type Database = {
         Returns: undefined
       }
       request_account_deletion: { Args: never; Returns: Json }
+      royal_pass_daily_boost_status: { Args: never; Returns: Json }
       save_push_subscription: {
         Args: {
           _auth: string
