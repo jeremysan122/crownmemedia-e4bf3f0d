@@ -252,6 +252,14 @@ export default function RoyalPassSettings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <BoostPostPicker
+        open={pickerOpen}
+        userId={user?.id}
+        boostLabel="Daily Royal Boost (1.5× for 24h)"
+        onClose={() => setPickerOpen(false)}
+        onPick={(id) => claimDaily(id)}
+      />
     </AppShell>
   );
 }
