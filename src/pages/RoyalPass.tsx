@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -9,18 +9,22 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
-import { Crown, Loader2, ExternalLink, Receipt, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { Crown, Loader2, ExternalLink, Receipt, RefreshCw, ShieldCheck, X, Zap } from "lucide-react";
 import { toast } from "sonner";
+import BoostPostPicker from "@/components/store/BoostPostPicker";
 
 interface PlanInfo { name: string; usd: number; interval: string }
+interface DailyStatus { eligible: boolean; claimed_today?: boolean; post_id?: string | null; expires_at?: string | null }
 
 export default function RoyalPassSettings() {
   const { user } = useAuth();
   const nav = useNavigate();
   const pass = useRoyalPass();
   const [plan, setPlan] = useState<PlanInfo | null>(null);
-  const [working, setWorking] = useState<"portal" | "cancel" | "resume" | null>(null);
+  const [working, setWorking] = useState<"portal" | "cancel" | "resume" | "claim" | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [daily, setDaily] = useState<DailyStatus | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     if (!pass.planId) { setPlan(null); return; }
@@ -73,6 +77,32 @@ export default function RoyalPassSettings() {
   const renews = pass.currentPeriodEnd
     ? new Date(pass.currentPeriodEnd).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })
     : null;
+
+  const loadDaily = useCallback(async () => {
+    if (!pass.active) { setDaily(null); return; }
+    const { data } = await (supabase as any).rpc("royal_pass_daily_boost_status");
+    setDaily((data as DailyStatus) ?? { eligible: false });
+  }, [pass.active]);
+
+  useEffect(() => { loadDaily(); }, [loadDaily]);
+
+  const claimDaily = async (postId: string) => {
+    setPickerOpen(false);
+    setWorking("claim");
+    try {
+      const { data, error } = await (supabase as any).rpc("claim_daily_royal_boost", { p_post_id: postId });
+      if (error) throw error;
+      const errMsg = (data as { error?: string })?.error;
+      if (errMsg) throw new Error(errMsg);
+      toast.success("Daily Royal Boost claimed — 1.5× score for 24h");
+      await loadDaily();
+    } catch (e) {
+      toast.error((e as Error).message || "Could not claim daily boost");
+    } finally {
+      setWorking(null);
+    }
+  };
+
 
   return (
     <AppShell title="ROYAL PASS">
@@ -138,7 +168,44 @@ export default function RoyalPassSettings() {
               </dl>
             </div>
 
+            <div className="royal-card p-5 space-y-3 relative overflow-hidden">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-gold/15 text-gold flex items-center justify-center">
+                  <Zap size={18} />
+                </div>
+                <div className="flex-1">
+                  <div className="font-display text-base text-gold leading-none">Daily Royal Boost</div>
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    1.5× Crown Score for 24h on a post you choose. One claim per day.
+                  </div>
+                </div>
+              </div>
+
+              {daily?.claimed_today ? (
+                <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 flex items-center gap-2">
+                  <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
+                  <span>
+                    Claimed today
+                    {daily.expires_at
+                      ? ` · active until ${new Date(daily.expires_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`
+                      : ""}
+                    . Come back tomorrow for your next boost.
+                  </span>
+                </div>
+              ) : (
+                <Button
+                  onClick={() => setPickerOpen(true)}
+                  disabled={working !== null}
+                  className="w-full bg-gradient-gold text-primary-foreground"
+                >
+                  {working === "claim" ? <Loader2 size={14} className="animate-spin mr-2" /> : <Zap size={14} className="mr-2" />}
+                  Claim today's Royal Boost
+                </Button>
+              )}
+            </div>
+
             <div className="royal-card p-4 space-y-2">
+
               <Button onClick={openPortal} disabled={working !== null} className="w-full bg-gradient-gold text-primary-foreground">
                 {working === "portal" ? <Loader2 size={14} className="animate-spin mr-2" /> : <ExternalLink size={14} className="mr-2" />}
                 Manage billing in Stripe
@@ -185,6 +252,14 @@ export default function RoyalPassSettings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <BoostPostPicker
+        open={pickerOpen}
+        userId={user?.id}
+        boostLabel="Daily Royal Boost (1.5× for 24h)"
+        onClose={() => setPickerOpen(false)}
+        onPick={(id) => claimDaily(id)}
+      />
     </AppShell>
   );
 }
