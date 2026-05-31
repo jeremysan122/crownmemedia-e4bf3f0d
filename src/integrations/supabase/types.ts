@@ -1878,6 +1878,7 @@ export type Database = {
           country: string | null
           created_at: string
           crown_score: number
+          crown_shield_until: string | null
           duration_ms: number | null
           edited_at: string | null
           filter: string | null
@@ -1896,8 +1897,10 @@ export type Database = {
           photo_filter: string | null
           pinned_at: string | null
           repost_caption: string | null
+          royal_boost_until: string | null
           scheduled_for: string | null
           share_count: number
+          spotlight_until: string | null
           state: string | null
           submission_key: string | null
           tagged_user_ids: string[]
@@ -1905,6 +1908,7 @@ export type Database = {
           video_filter: string | null
           video_poster_url: string | null
           video_url: string | null
+          vote_boost_until: string | null
           vote_count: number
         }
         Insert: {
@@ -1918,6 +1922,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           crown_score?: number
+          crown_shield_until?: string | null
           duration_ms?: number | null
           edited_at?: string | null
           filter?: string | null
@@ -1936,8 +1941,10 @@ export type Database = {
           photo_filter?: string | null
           pinned_at?: string | null
           repost_caption?: string | null
+          royal_boost_until?: string | null
           scheduled_for?: string | null
           share_count?: number
+          spotlight_until?: string | null
           state?: string | null
           submission_key?: string | null
           tagged_user_ids?: string[]
@@ -1945,6 +1952,7 @@ export type Database = {
           video_filter?: string | null
           video_poster_url?: string | null
           video_url?: string | null
+          vote_boost_until?: string | null
           vote_count?: number
         }
         Update: {
@@ -1958,6 +1966,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           crown_score?: number
+          crown_shield_until?: string | null
           duration_ms?: number | null
           edited_at?: string | null
           filter?: string | null
@@ -1976,8 +1985,10 @@ export type Database = {
           photo_filter?: string | null
           pinned_at?: string | null
           repost_caption?: string | null
+          royal_boost_until?: string | null
           scheduled_for?: string | null
           share_count?: number
+          spotlight_until?: string | null
           state?: string | null
           submission_key?: string | null
           tagged_user_ids?: string[]
@@ -1985,6 +1996,7 @@ export type Database = {
           video_filter?: string | null
           video_poster_url?: string | null
           video_url?: string | null
+          vote_boost_until?: string | null
           vote_count?: number
         }
         Relationships: [
@@ -3422,6 +3434,7 @@ export type Database = {
           p_boost_type: string
           p_cost_shekels?: number
           p_duration_hours?: number
+          p_post_id?: string
         }
         Returns: Json
       }
