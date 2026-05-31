@@ -168,13 +168,58 @@ export default function Verification() {
   return (
     <div className="mx-auto max-w-2xl p-4 sm:p-6 space-y-6">
       <Button variant="ghost" size="sm" className="-ml-2" onClick={goBack}><ArrowLeft className="h-4 w-4 mr-1" /> Back</Button>
-      <header className="space-y-2">
+      <header className="space-y-3">
         <div className="flex items-center gap-3">
           <ShieldCheck className="h-7 w-7 text-primary" />
           <h1 className="text-2xl font-serif font-bold">Get Verified</h1>
         </div>
-        <p className="text-muted-foreground">Verified accounts get a blue checkmark next to their username — a public mark of authenticity.</p>
+        <p className="text-muted-foreground">
+          The blue checkmark is a public mark of authenticity on CrownMe. It tells the community
+          that this account represents the real person, brand, or organization it claims to be.
+        </p>
       </header>
+
+      {/* Eligibility */}
+      <Card className="p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold uppercase tracking-wide">Eligibility</h2>
+        </div>
+        <ul className="text-sm text-muted-foreground space-y-1.5">
+          <li>• Account must be <span className="text-foreground">authentic</span> — represents a real person, brand, or registered business.</li>
+          <li>• Account must be <span className="text-foreground">unique</span> — only one verified account per person or entity (language-specific accounts excepted).</li>
+          <li>• Account must be <span className="text-foreground">complete</span> — public profile, bio, profile photo, and recent activity.</li>
+          <li>• Account must be <span className="text-foreground">notable</span> — featured in multiple news sources, OR 100k+ external followers, OR a recognized brand / public figure / journalist.</li>
+          <li>• Account must follow the <Link to="/legal/community-guidelines" className="text-primary hover:underline">Community Guidelines</Link> and <Link to="/legal/terms" className="text-primary hover:underline">Terms of Service</Link>.</li>
+        </ul>
+      </Card>
+
+      {/* How it works */}
+      <Card className="p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold uppercase tracking-wide">How it works</h2>
+        </div>
+        <ol className="text-sm text-muted-foreground space-y-2">
+          <li className="flex gap-3"><span className="text-primary font-bold">1.</span> Choose your plan and submit your details, ID, and a live selfie.</li>
+          <li className="flex gap-3"><span className="text-primary font-bold">2.</span> Our Trust & Safety team reviews your request within 3–7 business days.</li>
+          <li className="flex gap-3"><span className="text-primary font-bold">3.</span> If approved, the blue checkmark appears next to your username everywhere on CrownMe.</li>
+          <li className="flex gap-3"><span className="text-primary font-bold">4.</span> You'll be notified by in-app notification and email of the decision.</li>
+        </ol>
+      </Card>
+
+      {/* Trust & privacy */}
+      <Card className="p-5 space-y-3 bg-muted/30">
+        <div className="flex items-center gap-2">
+          <Lock className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold uppercase tracking-wide">Your documents are protected</h2>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-3 text-xs text-muted-foreground">
+          <div className="flex items-start gap-2"><FileText className="h-4 w-4 mt-0.5 text-primary shrink-0" /><span>Stored in an encrypted, access-restricted bucket — never public.</span></div>
+          <div className="flex items-start gap-2"><Eye className="h-4 w-4 mt-0.5 text-primary shrink-0" /><span>Visible only to authorized Trust & Safety reviewers.</span></div>
+          <div className="flex items-start gap-2"><ShieldCheck className="h-4 w-4 mt-0.5 text-primary shrink-0" /><span>Deleted after review per our <Link to="/legal/privacy" className="text-primary hover:underline">Privacy Policy</Link>.</span></div>
+        </div>
+      </Card>
 
       {request && request.status === "rejected" && (
         <Card className="p-4 border-destructive/40 bg-destructive/5">
