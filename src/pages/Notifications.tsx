@@ -123,7 +123,13 @@ export default function Notifications() {
   const markAllRead = async () => {
     if (!user?.id) return;
     setList((l) => l.map((n) => ({ ...n, read: true })));
-    await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
+    const { error } = await supabase.rpc("mark_all_notifications_read");
+    if (error) {
+      toast.error("Could not mark all as read");
+      refresh();
+    } else {
+      toast.success("All notifications marked as read");
+    }
   };
 
   const clearAll = async () => {
