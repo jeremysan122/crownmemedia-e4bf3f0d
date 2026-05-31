@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { CATEGORIES, CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
 import { CATEGORY_ICON } from "@/lib/categoryIcons";
 import { FILTERS, FilterId } from "@/lib/filters";
+import SpotlightStrip from "@/components/feed/SpotlightStrip";
 
 type Tab = "nearby" | "city" | "state" | "global" | "following";
 type CatFilter = "all" | CrownCategory;
@@ -628,6 +629,7 @@ export default function Feed() {
         )}
 
         <div className="px-3 lg:px-0 pt-1">
+          <div className="pb-3"><SpotlightStrip /></div>
           {loading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (

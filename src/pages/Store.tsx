@@ -29,6 +29,10 @@ import RoyalPassCard from "@/components/store/RoyalPassCard";
 import RoyalPassBadge from "@/components/store/RoyalPassBadge";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
+import BoostPostPicker from "@/components/store/BoostPostPicker";
+
+const POST_TARGETED_BOOSTS = new Set(["royal_boost", "vote_boost", "crown_spotlight", "crown_shield"]);
+
 
 const ICON_MAP: Record<string, typeof Zap> = {
   royal_boost: Zap,
@@ -39,11 +43,11 @@ const ICON_MAP: Record<string, typeof Zap> = {
 };
 
 const DESC_MAP: Record<string, string> = {
-  royal_boost: "1.5× Crown Score for 24h",
-  vote_boost: "Top of feed for voters",
-  crown_spotlight: "Featured profile placement",
-  profile_glow: "Cosmetic royal aura",
-  crown_shield: "Protect crown for 12h",
+  royal_boost: "1.5× Crown Score on a chosen post for 24h",
+  vote_boost: "Featured in the Spotlight strip for voters",
+  crown_spotlight: "Top placement in the Royal Spotlight strip",
+  profile_glow: "Cosmetic royal aura on your profile",
+  crown_shield: "Crown can't be displaced from chosen post",
 };
 
 interface BoostBundle {
@@ -139,12 +143,18 @@ export default function Store() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const buy = async (b: BoostBundle) => {
+  const [pickerBundle, setPickerBundle] = useState<BoostBundle | null>(null);
+
+  const startCheckout = async (b: BoostBundle, postId?: string) => {
     if (!user) return;
     setPending(b.id);
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { price_id: b.stripe_price_id, return_path: "/store/success" },
+        body: {
+          price_id: b.stripe_price_id,
+          return_path: "/store/success",
+          ...(postId ? { target_post_id: postId } : {}),
+        },
       });
       if (error) throw error;
       const url = (data as { url?: string })?.url;
@@ -156,6 +166,16 @@ export default function Store() {
       setPending(null);
     }
   };
+
+  const buy = (b: BoostBundle) => {
+    if (!user) return;
+    if (POST_TARGETED_BOOSTS.has(b.boost_type)) {
+      setPickerBundle(b);
+      return;
+    }
+    startCheckout(b);
+  };
+
 
   const boostsByType = useMemo(
     () =>
@@ -435,6 +455,17 @@ export default function Store() {
           </div>
         )}
       </div>
+      <BoostPostPicker
+        open={!!pickerBundle}
+        userId={user?.id}
+        boostLabel={pickerBundle?.label ?? ""}
+        onClose={() => setPickerBundle(null)}
+        onPick={(postId) => {
+          const b = pickerBundle;
+          setPickerBundle(null);
+          if (b) startCheckout(b, postId);
+        }}
+      />
     </AppShell>
   );
 }
