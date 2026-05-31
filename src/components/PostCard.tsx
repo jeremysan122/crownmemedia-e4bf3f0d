@@ -14,7 +14,7 @@ import GiftPanel from "./gifts/GiftPanel";
 import GiftAnimationOverlay from "./gifts/GiftAnimationOverlay";
 import type { RoyalGift } from "@/types/gifts";
 import { findGift } from "@/lib/gifts";
-import { fxGiftSend, fxVote } from "@/lib/giftFx";
+import { fxGiftSend, fxVote, fxBrokenCrown } from "@/lib/giftFx";
 import PostDetailDialog from "./PostDetailDialog";
 import CrownScoreBreakdown from "./CrownScoreBreakdown";
 import VoteBurst from "./VoteBurst";
@@ -517,7 +517,11 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
     burstTimerRef.current = setTimeout(() => setBurst(null), 500);
     if (!had) {
-      if (t !== "dislike") fxVote(t); // celebratory chime — skip for dislike
+      if (t === "dislike") {
+        fxBrokenCrown(); // cracked-crown thud for Broken Crown / dislike
+      } else {
+        fxVote(t); // celebratory chime
+      }
       setOverlayBurst({
         type: t,
         delta: t === "dislike" ? "" : `+${VOTE_WEIGHT[t]}`,

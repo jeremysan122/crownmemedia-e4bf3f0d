@@ -2,7 +2,7 @@ import LegalShell, { H2, H3, P, UL } from "@/components/legal/LegalShell";
 
 export default function PrivacyPolicy() {
   return (
-    <LegalShell title="Privacy Policy" effectiveDate="May 2, 2026" pdfSlug="crownme-privacy">
+    <LegalShell title="Privacy Policy" effectiveDate="May 2, 2026" lastUpdated="May 30, 2026" pdfSlug="crownme-privacy">
       <P>
         This Privacy Policy explains how CrownMe Media,
         ("CrownMe Media," "we," "us"), collects, uses, shares, and protects information about

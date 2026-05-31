@@ -998,9 +998,29 @@ function Inbox({ threads, unreadByThread, userId, reload, setThreads, loadMore, 
                 <Button size="sm" variant="outline" className="h-8 px-2 text-xs" onClick={exitSelect}>Done</Button>
               </>
             ) : (
-              <Button size="sm" variant="outline" className="h-8 px-2 text-xs" onClick={() => setSelectMode(true)} disabled={!threads.length}>
-                <CheckSquare size={14} className="mr-1" /> Select
-              </Button>
+              <>
+                {totalUnread > 0 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-2 text-xs"
+                    onClick={async () => {
+                      const { error } = await supabase.rpc("mark_all_messages_read");
+                      if (error) {
+                        toast({ title: "Couldn't mark all read", description: error.message, variant: "destructive" });
+                      } else {
+                        toast({ title: "All messages marked as read" });
+                        await reload();
+                      }
+                    }}
+                  >
+                    <MailOpen size={14} className="mr-1" /> Mark all read
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" className="h-8 px-2 text-xs" onClick={() => setSelectMode(true)} disabled={!threads.length}>
+                  <CheckSquare size={14} className="mr-1" /> Select
+                </Button>
+              </>
             )}
           </div>
         </div>

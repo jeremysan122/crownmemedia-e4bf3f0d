@@ -7,6 +7,10 @@ import { useSeoMeta } from "@/hooks/useSeoMeta";
 interface Props {
   title: string;
   effectiveDate: string;
+  /** Document version (defaults to "1.0"). Bump on substantive changes. */
+  version?: string;
+  /** Last updated date (defaults to effectiveDate when unchanged). */
+  lastUpdated?: string;
   shellTitle?: string;
   /** If set, shows a "Download PDF" button linking to /legal/{pdfSlug}.pdf */
   pdfSlug?: string;
@@ -17,10 +21,24 @@ interface Props {
 
 /**
  * Shared layout for every long-form legal/policy page.
- * Provides consistent typography, back nav, "last updated" header,
+ * Provides consistent typography, back nav, version + dates header,
  * and a footer link back to the Legal Center.
+ *
+ * NOTE — Internal: policy text drafted by the product team. Final
+ * attorney review is recommended before public launch and on any
+ * substantive change. Bump `version` and `lastUpdated` together.
  */
-export default function LegalShell({ title, effectiveDate, shellTitle, pdfSlug, seoDescription, children }: Props) {
+export default function LegalShell({
+  title,
+  effectiveDate,
+  version = "1.0",
+  lastUpdated,
+  shellTitle,
+  pdfSlug,
+  seoDescription,
+  children,
+}: Props) {
+  const updated = lastUpdated ?? effectiveDate;
   const nav = useNavigate();
   useSeoMeta({
     title: `${title} — CrownMe Media`,
@@ -46,8 +64,17 @@ export default function LegalShell({ title, effectiveDate, shellTitle, pdfSlug, 
             <span className="text-[10px] uppercase tracking-widest font-semibold">Legal Document</span>
           </div>
           <h1 className="font-display text-3xl text-gold">{title}</h1>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            Effective: {effectiveDate} · Contact: <a className="underline text-primary" href="mailto:support@crownmemedia.com">support@crownmemedia.com</a>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 px-2 py-0.5 font-semibold text-foreground/80">
+              Version {version}
+            </span>
+            <span><strong className="text-foreground/80">Effective:</strong> {effectiveDate}</span>
+            <span><strong className="text-foreground/80">Last Updated:</strong> {updated}</span>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-2">
+            Published by <strong>CrownMe Media</strong> · Contact:{" "}
+            <a className="underline text-primary" href="mailto:legal@crownmemedia.com">legal@crownmemedia.com</a>
+            {" "}· <a className="underline text-primary" href="mailto:support@crownmemedia.com">support@crownmemedia.com</a>
           </p>
           {pdfSlug && (
             <div className="flex flex-wrap gap-2 mt-3 print:hidden">

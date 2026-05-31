@@ -111,6 +111,27 @@ export function fxVote(kind: "crown" | "fire" | "diamond") {
   vibrate(14);
 }
 
+/**
+ * Broken Crown / Dislike — short cracked-crown / soft metal-break thud.
+ * Throttled to once per 250 ms so rapid taps don't stack into noise.
+ * Fails silently when audio is muted, blocked, or unavailable.
+ */
+let _lastBrokenCrownAt = 0;
+export function fxBrokenCrown() {
+  const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
+  if (now - _lastBrokenCrownAt < 250) return;
+  _lastBrokenCrownAt = now;
+  try {
+    // Low royal "thud" with a downward sweep — feels like a crown hitting marble.
+    tone({ freq: 360, duration: 0.18, type: "triangle", gain: 0.14, sweepTo: 110 });
+    // Brief metallic high-pass crack layered on top — gold/glass shimmer.
+    noiseBurst(0.12, 0.06, 2200, 0.02);
+    // Tiny low rumble tail.
+    tone({ freq: 90, duration: 0.22, type: "sine", gain: 0.08 }, 0.04);
+  } catch { /* never crash a vote because audio failed */ }
+  vibrate(18);
+}
+
 /** Pre-send "preview" tap on a gift card — light per tier. */
 export function fxGiftPreview(tier: GiftCategory) {
   if (tier === "low") tone({ freq: 880, duration: 0.08, type: "triangle", gain: 0.10 });
