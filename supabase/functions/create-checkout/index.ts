@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     const userId = userData.user.id;
     const userEmail = userData.user.email ?? undefined;
 
-    const { price_id, return_path } = await req.json();
+    const { price_id, return_path, target_post_id } = await req.json();
     if (!price_id || typeof price_id !== "string" || !price_id.startsWith("price_") || price_id.length > 255) {
       return new Response(JSON.stringify({ error: "price_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -42,10 +42,26 @@ Deno.serve(async (req) => {
     // Validate the price_id corresponds to an active bundle (uses user's auth → RLS applies)
     const [{ data: validBundle }, { data: validBoost }] = await Promise.all([
       supabase.from("shekel_bundles").select("id").eq("stripe_price_id", price_id).eq("active", true).maybeSingle(),
-      supabase.from("boost_bundles").select("id").eq("stripe_price_id", price_id).eq("active", true).maybeSingle(),
+      supabase.from("boost_bundles").select("id, boost_type").eq("stripe_price_id", price_id).eq("active", true).maybeSingle(),
     ]);
     if (!validBundle && !validBoost) {
       return new Response(JSON.stringify({ error: "Invalid product" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Post-targeted boosts require a post the user owns
+    const POST_TARGETED = new Set(["royal_boost", "vote_boost", "crown_spotlight", "crown_shield"]);
+    let validatedPostId: string | null = null;
+    if (validBoost && POST_TARGETED.has((validBoost as { boost_type: string }).boost_type)) {
+      if (!target_post_id || typeof target_post_id !== "string") {
+        return new Response(JSON.stringify({ error: "Select a post to boost" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: post } = await supabase
+        .from("posts").select("id, user_id, is_removed")
+        .eq("id", target_post_id).maybeSingle();
+      if (!post || (post as { is_removed: boolean }).is_removed || (post as { user_id: string }).user_id !== userId) {
+        return new Response(JSON.stringify({ error: "You can only boost your own posts" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      validatedPostId = (post as { id: string }).id;
     }
 
     const successBase = safeReturnUrl(req, return_path ?? "/store/success", "/store/success");
@@ -55,7 +71,10 @@ Deno.serve(async (req) => {
       mode: "payment",
       line_items: [{ price: price_id, quantity: 1 }],
       customer_email: userEmail,
-      metadata: { user_id: userId },
+      metadata: {
+        user_id: userId,
+        ...(validatedPostId ? { target_post_id: validatedPostId } : {}),
+      },
       success_url: `${successBase}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${cancelBase}?purchase=cancelled`,
     });
