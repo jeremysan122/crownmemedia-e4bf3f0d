@@ -1316,6 +1316,12 @@ function MapView({
       const size = Math.round(14 + intensity * 26);
       const bookmarked = isBookmarked(p.r.region_type, p.r.region_name, category);
 
+      // Wrapper element is what Mapbox positions via `transform: translate(...)`.
+      // The inner button owns visual transforms (scale on hover) so we never
+      // clobber Mapbox's positional transform — that was the hover-drift bug.
+      const wrap = document.createElement("div");
+      wrap.style.cssText = "width:0;height:0;will-change:transform;";
+
       const el = document.createElement("button");
       el.type = "button";
       el.setAttribute(
@@ -1323,6 +1329,7 @@ function MapView({
         `${p.r.region_name}, ${p.r.region_type}, held by @${p.r.profile?.username ?? "unknown"}, score ${formatScore(p.r.crown_score)}`,
       );
       el.style.cssText = `
+        position:absolute;left:50%;top:50%;
         width:${size}px;height:${size}px;border-radius:9999px;cursor:pointer;
         background:${mine ? "hsl(45 95% 55%)" : "hsl(45 90% 60%)"};
         border:2px solid rgba(0,0,0,0.6);
@@ -1330,16 +1337,18 @@ function MapView({
         opacity:${p.approximate ? 0.7 : 0.95};
         display:flex;align-items:center;justify-content:center;color:#1a1208;
         font-weight:800;font-size:${Math.max(10, Math.round(size * 0.42))}px;
+        transform:translate(-50%, -50%);
         transition:transform .15s ease;
+        transform-origin:center;
       `;
       el.textContent = "♛";
       if (bookmarked) {
         const dot = document.createElement("span");
         dot.style.cssText =
           "position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:9999px;background:hsl(45 95% 55%);border:1.5px solid #000;";
-        el.style.position = "relative";
         el.appendChild(dot);
       }
+      wrap.appendChild(el);
 
       const navTarget =
         markerMode === "posts" && p.r.post_id
@@ -1368,11 +1377,11 @@ function MapView({
       `;
 
       el.addEventListener("mouseenter", () => {
-        el.style.transform = "scale(1.15)";
+        el.style.transform = "translate(-50%, -50%) scale(1.15)";
         popup.setLngLat([p.coord[1], p.coord[0]]).setHTML(popupHtml).addTo(map);
       });
       el.addEventListener("mouseleave", () => {
-        el.style.transform = "scale(1)";
+        el.style.transform = "translate(-50%, -50%) scale(1)";
         popup.remove();
       });
       el.addEventListener("click", (ev) => {
@@ -1380,7 +1389,7 @@ function MapView({
         navigate(navTarget);
       });
 
-      const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+      const marker = new mapboxgl.Marker({ element: wrap, anchor: "center" })
         .setLngLat([p.coord[1], p.coord[0]])
         .addTo(map);
       markersRef.current.push(marker);
@@ -1395,9 +1404,11 @@ function MapView({
       const key = `${p.r.region_type}:${p.r.region_name}`;
       const marker = markersRef.current[i];
       if (!marker) return;
-      const el = marker.getElement();
+      // The visible button is the wrapper's first child (see marker render above).
+      const visual = marker.getElement().firstElementChild as HTMLElement | null;
+      if (!visual) return;
       if (flashKeys[key]) {
-        el.animate(
+        visual.animate(
           [
             { boxShadow: "0 0 0 0 hsl(45 95% 55% / 0.9)" },
             { boxShadow: "0 0 0 22px hsl(45 95% 55% / 0)" },
@@ -1406,6 +1417,7 @@ function MapView({
         );
       }
     });
+
   }, [flashKeys, points]);
 
   // Heat overlay: register a real Mapbox heatmap layer driven by crown_score.
