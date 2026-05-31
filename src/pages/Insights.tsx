@@ -419,7 +419,7 @@ export default function Insights() {
                     <tr key={p.id} className="border-b border-border/40 hover:bg-muted/30">
                       <td className="py-2 pl-1 text-gold font-display">{idx + 1}</td>
                       <td className="max-w-[200px] truncate">
-                        <Link to={`/feed?post=${p.id}`} className="hover:text-primary">
+                        <Link to={`/post/${p.id}`} className="hover:text-primary">
                           {p.caption || "Untitled"}
                         </Link>
                       </td>

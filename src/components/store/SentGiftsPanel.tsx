@@ -152,7 +152,7 @@ export default function SentGiftsPanel() {
                 </p>
                 {r.post_id && (
                   <Link
-                    to={`/feed?post=${r.post_id}`}
+                    to={`/post/${r.post_id}`}
                     className="text-[10px] text-gold underline"
                   >
                     view post

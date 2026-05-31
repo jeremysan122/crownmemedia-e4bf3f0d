@@ -145,7 +145,7 @@ export default function GiftDetailDialog({ tx, sender, open, onOpenChange }: Pro
           <div className="flex gap-2 pt-1">
             {tx.post_id && (
               <Link
-                to={`/feed?post=${tx.post_id}`}
+                to={`/post/${tx.post_id}`}
                 onClick={() => onOpenChange(false)}
                 className="flex-1 h-9 rounded-full bg-muted/40 border border-border text-xs font-bold uppercase tracking-wider flex items-center justify-center hover:bg-muted/60"
               >
