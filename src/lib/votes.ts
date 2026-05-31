@@ -1,8 +1,20 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
+import { fxBrokenCrown, fxVote } from "@/lib/giftFx";
 
 export type VoteType = "crown" | "fire" | "diamond" | "dislike";
+
+/**
+ * Centralized FX for accepted vote actions. Called once we know the row was
+ * accepted (insert/swap path) so muted/blocked/rate-limited votes stay silent.
+ * Broken Crown / dislike → cracked-crown thud. Other tiers → premium chime.
+ * Throttling lives inside giftFx so rapid taps don't stack.
+ */
+function playVoteFx(voteType: VoteType) {
+  if (voteType === "dislike") fxBrokenCrown();
+  else fxVote(voteType);
+}
 
 /**
  * Enforces "one reaction per user per post". Selecting a different reaction
