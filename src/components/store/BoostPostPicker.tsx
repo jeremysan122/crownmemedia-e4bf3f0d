@@ -30,7 +30,7 @@ export default function BoostPostPicker({ open, userId, boostLabel, onClose, onP
     (async () => {
       const { data } = await supabase
         .from("posts")
-        .select("id, caption, media_url, media_type, created_at")
+        .select("id, caption, created_at")
         .eq("user_id", userId)
         .eq("is_removed", false)
         .order("created_at", { ascending: false })
@@ -67,8 +67,8 @@ export default function BoostPostPicker({ open, userId, boostLabel, onClose, onP
                     onClick={() => setSelected(p.id)}
                     className={`relative aspect-square rounded-lg overflow-hidden border-2 transition ${isSel ? "border-gold ring-2 ring-gold/40" : "border-border/40 hover:border-gold/40"}`}
                   >
-                    {p.media_url ? (
-                      <img src={p.media_url} alt={p.caption ?? "post"} className="w-full h-full object-cover" loading="lazy" />
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.caption ?? "post"} className="w-full h-full object-cover" loading="lazy" />
                     ) : (
                       <div className="w-full h-full bg-muted flex items-center justify-center">
                         <ImageIcon size={20} className="text-muted-foreground" />
