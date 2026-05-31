@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -9,18 +9,22 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
-import { Crown, Loader2, ExternalLink, Receipt, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { Crown, Loader2, ExternalLink, Receipt, RefreshCw, ShieldCheck, X, Zap } from "lucide-react";
 import { toast } from "sonner";
+import BoostPostPicker from "@/components/store/BoostPostPicker";
 
 interface PlanInfo { name: string; usd: number; interval: string }
+interface DailyStatus { eligible: boolean; claimed_today?: boolean; post_id?: string | null; expires_at?: string | null }
 
 export default function RoyalPassSettings() {
   const { user } = useAuth();
   const nav = useNavigate();
   const pass = useRoyalPass();
   const [plan, setPlan] = useState<PlanInfo | null>(null);
-  const [working, setWorking] = useState<"portal" | "cancel" | "resume" | null>(null);
+  const [working, setWorking] = useState<"portal" | "cancel" | "resume" | "claim" | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [daily, setDaily] = useState<DailyStatus | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     if (!pass.planId) { setPlan(null); return; }
