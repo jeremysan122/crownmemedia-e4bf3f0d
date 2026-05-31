@@ -6,8 +6,7 @@ import { Loader2, Image as ImageIcon, Check } from "lucide-react";
 interface MyPost {
   id: string;
   caption: string | null;
-  media_url: string | null;
-  media_type: string | null;
+  image_url: string | null;
   created_at: string;
 }
 
