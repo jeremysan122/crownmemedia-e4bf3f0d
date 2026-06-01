@@ -533,15 +533,9 @@ export default function Feed() {
           )}
           <div className="ml-auto flex items-center gap-2">
             <DailyRewardChip />
-            <Link
-              to={`/leaderboard?scope=${tab}`}
-              className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-muted-foreground hover:text-gold font-bold"
-            >
-              <Crown size={11} className="text-primary" fill="currentColor" />
-              {tab[0].toUpperCase() + tab.slice(1)} leaderboard →
-            </Link>
           </div>
         </div>
+
 
         {/* Category filter chip rail */}
         <div className="px-3 lg:px-0 pt-3">
