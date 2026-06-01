@@ -142,18 +142,133 @@ export default function Verification() {
   }
 
   if (verified) {
+    const planLabel = verificationPlan === "subscription"
+      ? "Subscription ($1.99/mo)"
+      : verificationPlan === "standard"
+      ? "Standard (free notability)"
+      : "Standard";
+    const categoryLabel = verificationCategory
+      ? CATEGORY_LABEL[verificationCategory as Category] ?? verificationCategory
+      : "—";
+    const verifiedDate = verifiedAt ? new Date(verifiedAt).toLocaleDateString() : "—";
+
     return (
-      <div className="mx-auto max-w-2xl p-6 space-y-4">
+      <div className="mx-auto max-w-2xl p-4 sm:p-6 space-y-5">
         <Button variant="ghost" size="sm" className="-ml-2" onClick={goBack}><ArrowLeft className="h-4 w-4 mr-1" /> Back</Button>
-        <Card className="p-6 text-center space-y-3">
+
+        {/* Hero */}
+        <Card className="p-6 text-center space-y-3 bg-gradient-to-b from-primary/10 to-transparent border-primary/30">
           <VerifiedBadge size={48} className="mx-auto" />
           <h1 className="text-2xl font-serif font-bold">You're verified</h1>
-          <p className="text-muted-foreground">Your profile displays the verified badge across CrownMe.</p>
-          <Button asChild variant="outline"><Link to={profilePath}>View profile</Link></Button>
+          <p className="text-muted-foreground text-sm">
+            Your profile displays the blue checkmark next to your username everywhere on CrownMe.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            <Badge variant="secondary" className="bg-primary/15 text-primary">Active</Badge>
+            <Badge variant="outline">{planLabel}</Badge>
+          </div>
+        </Card>
+
+        {/* Status details */}
+        <Card className="p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold uppercase tracking-wide">Verification details</h2>
+          </div>
+          <dl className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt className="text-xs text-muted-foreground uppercase tracking-wide">Status</dt>
+              <dd className="font-medium mt-0.5">Verified</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground uppercase tracking-wide">Plan</dt>
+              <dd className="font-medium mt-0.5">{planLabel}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground uppercase tracking-wide">Category</dt>
+              <dd className="font-medium mt-0.5">{categoryLabel}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground uppercase tracking-wide">Verified on</dt>
+              <dd className="font-medium mt-0.5">{verifiedDate}</dd>
+            </div>
+          </dl>
+        </Card>
+
+        {/* Subscription management — only if paid plan */}
+        {verificationPlan === "subscription" && (
+          <Card className="p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Crown className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold uppercase tracking-wide">Manage subscription</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Update your payment method, view receipts, or cancel anytime. Your badge stays active until the end of the current billing period.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const { data, error } = await supabase.functions.invoke("royal-pass-portal", { body: { return_path: "/verification" } });
+                    if (error) throw error;
+                    const url = (data as any)?.url;
+                    if (!url) throw new Error("Could not open the billing portal");
+                    window.location.href = url;
+                  } catch (e: any) {
+                    toast.error(e?.message ?? "Could not open billing portal");
+                  }
+                }}
+              >
+                Open billing portal
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Actions */}
+        <Card className="p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold uppercase tracking-wide">Manage your verification</h2>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-2">
+            <Button asChild variant="outline" className="justify-start">
+              <Link to={profilePath}><Eye className="h-4 w-4 mr-2" /> View your profile</Link>
+            </Button>
+            <Button asChild variant="outline" className="justify-start">
+              <Link to="/edit-profile"><Upload className="h-4 w-4 mr-2" /> Update profile info</Link>
+            </Button>
+            <Button asChild variant="outline" className="justify-start">
+              <Link to="/legal/community-guidelines"><ShieldCheck className="h-4 w-4 mr-2" /> Verification rules</Link>
+            </Button>
+            <Button asChild variant="outline" className="justify-start">
+              <a href="mailto:support@crownmemedia.com?subject=Verification%20support"><MessageCircle className="h-4 w-4 mr-2" /> Contact support</a>
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground pt-1">
+            Need to re-submit documents or appeal a status change? Email{" "}
+            <a className="text-primary hover:underline" href="mailto:support@crownmemedia.com">support@crownmemedia.com</a> — we respond within 3 business days.
+          </p>
+        </Card>
+
+        {/* Badge preview */}
+        <Card className="p-5 space-y-3 bg-muted/30">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold uppercase tracking-wide">Badge preview</h2>
+          </div>
+          <div className="flex items-center gap-2 text-base">
+            <span className="font-semibold">@{(user as any)?.user_metadata?.username ?? "you"}</span>
+            <VerifiedBadge size={16} />
+          </div>
+          <p className="text-xs text-muted-foreground">This is exactly how your name will appear across the app.</p>
         </Card>
       </div>
     );
   }
+
 
   if (request && (request.status === "pending" || request.status === "more_info_required")) {
     return (
