@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CATEGORY_LABEL, locationLabel } from "@/lib/crown";
 import { FeedPost } from "./PostCard";
 import { trackEvent } from "@/lib/analytics";
+import { withCacheBust } from "@/lib/cacheBust";
 
 interface ShareProps {
   open: boolean;
@@ -15,18 +16,6 @@ interface ShareProps {
   post: FeedPost;
 }
 
-/** Append/replace a `v=` query param so CDN/browser caches don't serve a stale image. */
-function withCacheBust(url: string, version: string | number | null | undefined): string {
-  if (!url) return url;
-  const v = version ? String(version) : Date.now().toString();
-  try {
-    const u = new URL(url, window.location.origin);
-    u.searchParams.set("v", v);
-    return u.toString();
-  } catch {
-    return `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(v)}`;
-  }
-}
 
 export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProps) {
   // Always render against the freshest server copy so edits to the image,

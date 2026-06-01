@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { formatScore, locationLabel } from "@/lib/crown";
 import { toPng } from "html-to-image";
 import { supabase } from "@/integrations/supabase/client";
+import { withCacheBust } from "@/lib/cacheBust";
 
 interface Profile {
   id?: string;
@@ -31,17 +32,6 @@ interface Props {
   roles?: string[];
 }
 
-function withCacheBust(url: string | null, version?: string | null): string | null {
-  if (!url) return url;
-  const v = version || Date.now().toString();
-  try {
-    const u = new URL(url, window.location.origin);
-    u.searchParams.set("v", v);
-    return u.toString();
-  } catch {
-    return `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(v)}`;
-  }
-}
 
 /** Wait for every <img> inside the node to finish loading so html-to-image
  * doesn't capture before the avatar / banner has actually painted. */
