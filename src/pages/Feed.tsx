@@ -544,6 +544,7 @@ export default function Feed() {
             <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Crown Category</span>
           </div>
           <div
+            data-testid="crown-category-carousel"
             className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0"
             style={{ touchAction: "pan-x", overscrollBehaviorY: "contain", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch" }}
           >
