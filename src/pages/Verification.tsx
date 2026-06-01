@@ -73,18 +73,28 @@ export default function Verification() {
   const [request, setRequest] = useState<Request | null>(null);
   const [verified, setVerified] = useState(false);
 
+  const [verifiedAt, setVerifiedAt] = useState<string | null>(null);
+  const [verificationCategory, setVerificationCategory] = useState<string | null>(null);
+  const [verificationPlan, setVerificationPlan] = useState<Plan | null>(null);
+
   useEffect(() => {
     if (!user) return;
     (async () => {
       const [{ data: prof }, { data: req }] = await Promise.all([
-        supabase.from("profiles").select("verified").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("verified, verified_at, username").eq("id", user.id).maybeSingle(),
         supabase.from("verification_requests").select("*").eq("user_id", user.id)
           .order("created_at", { ascending: false }).limit(1).maybeSingle(),
       ]);
       setVerified(!!prof?.verified);
+      setVerifiedAt((prof as any)?.verified_at ?? null);
       setRequest(req as Request | null);
+      if (req) {
+        setVerificationCategory((req as Request).category);
+        setVerificationPlan((req as Request).plan);
+      }
     })();
   }, [user]);
+
 
   const submit = async () => {
     if (!user) return;
