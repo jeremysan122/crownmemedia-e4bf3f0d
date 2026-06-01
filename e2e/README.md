@@ -71,3 +71,28 @@ itself on `http://localhost:8080`.
 The seeded user/post are reused across runs by design. To remove them
 entirely, delete the auth user with email `e2e_share_test@crownme.test`
 from Lovable Cloud → Users; the profile and post cascade.
+
+---
+
+## Test files
+
+| Spec | What it guards against |
+| --- | --- |
+| `share-card.spec.ts` | Visual baseline drift on post + profile share cards (pixel diff w/ threshold). |
+| `share-card-lifecycle.spec.ts` | Edited post showing stale image; deleted post still generating a share card; profile avatar update not flowing into the card. Uses service-role mutations on the namespaced `e2e_share_test` fixture only. |
+| `crown-categories-mobile.spec.ts` | iPhone-emulated swipe on Crown Categories — CSS pull-to-refresh guards, horizontal scroll without vertical page drift, no chip jitter, feed still scrolls vertically. |
+| `manage-verification.spec.ts` | Manage Verification renders working controls (rules link, mailto support, edit profile, billing portal on `subscription`) for every plan; fails if any visible action becomes a dead button. |
+
+## CI
+
+`.github/workflows/ci.yml` blocks merges on:
+
+1. `bun run build` (TypeScript)
+2. `bun run lint`
+3. `bun run test` (vitest unit suite)
+4. `bunx playwright test` (all specs above; requires `SUPABASE_SERVICE_ROLE_KEY` in repo secrets for the lifecycle + verification specs — they `test.skip` cleanly without it)
+
+A separate optional `browserstack-ios` job runs only when both
+`BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` repo secrets exist —
+otherwise the Playwright `mobile-safari` (WebKit) project is the canonical
+mobile signal.
