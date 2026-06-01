@@ -543,7 +543,11 @@ export default function Feed() {
             <Sparkles size={12} className="text-primary" />
             <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Crown Category</span>
           </div>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0">
+          <div
+            className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0"
+            style={{ touchAction: "pan-x", overscrollBehaviorY: "contain", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch" }}
+          >
+
             <button
               onClick={() => setCatFilter("all")}
               className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border transition ${
