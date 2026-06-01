@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Map, Plus, User, Clapperboard, Trophy, MapPin } from "lucide-react";
+import { Home, Plus, User, Clapperboard, Trophy, MapPin, Swords } from "lucide-react";
 import { useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -8,9 +8,11 @@ const items = [
   { to: "/scrolls", label: "Scrolls", icon: Clapperboard },
   { to: "/map", label: "Map", icon: MapPin },
   { to: "/upload", label: "Upload", icon: Plus, primary: true },
+  { to: "/battles", label: "Battles", icon: Swords },
   { to: "/leaderboard", label: "Ranks", icon: Trophy },
   { to: "/me", label: "Profile", icon: User },
 ];
+
 
 export const LAST_TAB_KEY = "crownme.lastBottomTab.v1";
 
