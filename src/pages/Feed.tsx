@@ -586,7 +586,11 @@ export default function Feed() {
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Trending Filters</span>
               <span className="text-[10px] text-muted-foreground/70 normal-case tracking-normal font-normal">in this feed</span>
             </div>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0">
+            <div
+              className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0"
+              style={{ touchAction: "pan-x", overscrollBehaviorY: "contain", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch" }}
+            >
+
               {trendingFilters.map(([id, count], idx) => {
                 const def = FILTERS.find((f) => f.id === id);
                 if (!def) return null;
