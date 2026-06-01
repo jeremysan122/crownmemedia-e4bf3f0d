@@ -17,12 +17,16 @@ import { test, expect, Page } from "@playwright/test";
  * broken layout, stale image after edit) without false positives from
  * font rendering or 1px shadow drift.
  *
- * Configure a fixture post + profile via env so the test is reproducible:
- *   E2E_POST_ID=<uuid>  E2E_PROFILE_USERNAME=<handle>
+ * Fixture resolution: the global setup (e2e/global-setup.ts) either reuses
+ * E2E_POST_ID / E2E_PROFILE_USERNAME from your env, reuses a cached seed
+ * from e2e/.seed.json, or live-seeds a namespaced test post via the
+ * Supabase service-role key. If none of those are available it fails fast
+ * with an actionable message — no silent skips.
  */
 
 const POST_ID = process.env.E2E_POST_ID;
 const PROFILE_USERNAME = process.env.E2E_PROFILE_USERNAME;
+
 
 async function freezeForCapture(page: Page) {
   // Freeze randomness / time-based variance that would otherwise fight the
