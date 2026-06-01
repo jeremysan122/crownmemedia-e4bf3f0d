@@ -124,7 +124,7 @@
 
 @layer base {
   * { @apply border-border; }
-  html, body, #root { @apply h-full; }
+  html, body, #root { @apply h-full; overscroll-behavior-y: contain; }
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
