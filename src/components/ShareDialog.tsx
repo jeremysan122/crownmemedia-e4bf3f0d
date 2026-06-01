@@ -31,15 +31,18 @@ export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProp
     let cancelled = false;
     (async () => {
       setLoadingFresh(true);
-      const { data, error } = await supabase
+      const { data, error, status } = await supabase
         .from("posts")
-        .select("id, image_url, caption, category, share_count, updated_at, user_id, city, state, country")
+        .select("id, image_url, caption, category, share_count, edited_at, user_id, city, state, country")
         .eq("id", initialPost.id)
         .maybeSingle();
       if (cancelled) return;
-      if (error || !data) {
+      // Only treat as deleted when the row is genuinely missing (200 + null).
+      // Any other error (network/RLS/schema) should NOT nuke the share card —
+      // we already have the post from props and can render against that.
+      if (!error && !data && status === 200) {
         setDeleted(true);
-      } else {
+      } else if (data) {
         setPost((prev) => ({ ...prev, ...(data as Partial<FeedPost>) } as FeedPost));
       }
       setLoadingFresh(false);
@@ -49,7 +52,7 @@ export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProp
 
   const url = `${window.location.origin}/p/${post.id}`;
   const text = `Competing for King/Queen of ${post.city || "Global"} on CrownMe — ${CATEGORY_LABEL[post.category]}`;
-  const previewImg = withCacheBust(post.image_url, (post as any).updated_at);
+  const previewImg = withCacheBust(post.image_url, (post as any).edited_at);
 
   const incrementShare = async (channel: string) => {
     await supabase.from("posts").update({ share_count: (post.share_count || 0) + 1 }).eq("id", post.id);
