@@ -533,15 +533,9 @@ export default function Feed() {
           )}
           <div className="ml-auto flex items-center gap-2">
             <DailyRewardChip />
-            <Link
-              to={`/leaderboard?scope=${tab}`}
-              className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-muted-foreground hover:text-gold font-bold"
-            >
-              <Crown size={11} className="text-primary" fill="currentColor" />
-              {tab[0].toUpperCase() + tab.slice(1)} leaderboard →
-            </Link>
           </div>
         </div>
+
 
         {/* Category filter chip rail */}
         <div className="px-3 lg:px-0 pt-3">
@@ -549,7 +543,11 @@ export default function Feed() {
             <Sparkles size={12} className="text-primary" />
             <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Crown Category</span>
           </div>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0">
+          <div
+            className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0"
+            style={{ touchAction: "pan-x", overscrollBehaviorY: "contain", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch" }}
+          >
+
             <button
               onClick={() => setCatFilter("all")}
               className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border transition ${
@@ -588,7 +586,11 @@ export default function Feed() {
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Trending Filters</span>
               <span className="text-[10px] text-muted-foreground/70 normal-case tracking-normal font-normal">in this feed</span>
             </div>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0">
+            <div
+              className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0"
+              style={{ touchAction: "pan-x", overscrollBehaviorY: "contain", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch" }}
+            >
+
               {trendingFilters.map(([id, count], idx) => {
                 const def = FILTERS.find((f) => f.id === id);
                 if (!def) return null;
