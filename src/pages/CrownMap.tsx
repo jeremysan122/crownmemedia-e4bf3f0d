@@ -116,6 +116,7 @@ function useOnline() {
 
 export default function CrownMap() {
   const { user } = useAuth();
+  useEffect(() => { trackUsage("crown_map_opened"); }, []);
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const stored = useMemo(loadPrefs, []);
