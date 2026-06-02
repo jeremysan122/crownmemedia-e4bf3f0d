@@ -74,6 +74,7 @@ const CommandCenterSecurity = lazy(() => import("./pages/admin/CommandCenterSecu
 const CommandCenterFinance = lazy(() => import("./pages/admin/CommandCenterFinance"));
 const CommandCenterStripeHealth = lazy(() => import("./pages/admin/CommandCenterStripeHealth"));
 const CommandCenterDbHealth = lazy(() => import("./pages/admin/CommandCenterDbHealth"));
+const CommandCenterCloudSpend = lazy(() => import("./pages/admin/CommandCenterCloudSpend"));
 const CommandCenterUsers = lazy(() => import("./pages/admin/CommandCenterUsers"));
 const CommandCenterContent = lazy(() => import("./pages/admin/CommandCenterContent"));
 const CommandCenterBroadcasts = lazy(() => import("./pages/admin/CommandCenterBroadcasts"));
