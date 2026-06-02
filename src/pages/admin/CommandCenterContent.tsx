@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionCard, EmptyState, PillBadge } from "@/components/admin/cc/CommandCenterUI";
 import { Button } from "@/components/ui/button";
@@ -7,27 +7,68 @@ import { toast } from "sonner";
 
 const RATINGS = ["safe", "suggestive", "mature", "explicit"] as const;
 const STATUSES = ["pending", "approved", "flagged", "removed"] as const;
+type Post = {
+  id: string;
+  user_id: string;
+  caption: string | null;
+  is_sensitive: boolean;
+  sensitive_reason: string | null;
+  content_rating: string;
+  moderation_status: string;
+  created_at: string;
+};
+type AuditRow = {
+  id: string;
+  actor_id: string;
+  action: string;
+  target_id: string | null;
+  details: any;
+  created_at: string;
+};
 
 export default function CommandCenterContent() {
   const [queue, setQueue] = useState<any[]>([]);
   const [takedowns, setTakedowns] = useState<any[]>([]);
-  const [sensitive, setSensitive] = useState<any[]>([]);
+  const [sensitive, setSensitive] = useState<Post[]>([]);
+  const [reviewQueue, setReviewQueue] = useState<Post[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [history, setHistory] = useState<Record<string, AuditRow[]>>({});
 
   const load = async () => {
-    const [q, t, s] = await Promise.all([
-      supabase.from("moderation_queue").select("*").eq("status","pending").order("priority", { ascending: false }).order("created_at", { ascending: false }).limit(50),
-      supabase.from("content_takedowns").select("*").order("created_at", { ascending: false }).limit(30),
+    const sb = supabase as any;
+    const [q, t, s, r] = await Promise.all([
       supabase
+        .from("moderation_queue")
+        .select("*")
+        .eq("status", "pending")
+        .order("priority", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("content_takedowns")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(30),
+      sb
         .from("posts")
         .select("id,user_id,caption,is_sensitive,sensitive_reason,content_rating,moderation_status,created_at")
         .or("is_sensitive.eq.true,moderation_status.neq.approved,content_rating.neq.safe")
+        .eq("is_removed", false)
+        .order("created_at", { ascending: false })
+        .limit(60),
+      sb
+        .from("posts")
+        .select("id,user_id,caption,is_sensitive,sensitive_reason,content_rating,moderation_status,created_at")
+        .or("moderation_status.eq.flagged,moderation_status.eq.pending,content_rating.eq.explicit")
         .eq("is_removed", false)
         .order("created_at", { ascending: false })
         .limit(40),
     ]);
     setQueue(q.data ?? []);
     setTakedowns(t.data ?? []);
-    setSensitive(s.data ?? []);
+    setSensitive((s.data ?? []) as Post[]);
+    setReviewQueue((r.data ?? []) as Post[]);
   };
 
   useEffect(() => {
@@ -37,9 +78,30 @@ export default function CommandCenterContent() {
       .on("postgres_changes", { event: "*", schema: "public", table: "moderation_queue" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "content_takedowns" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "admin_audit_log" }, () => {
+        if (expanded) loadHistory(expanded);
+      })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const loadHistory = async (postId: string) => {
+    const { data } = await supabase
+      .from("admin_audit_log")
+      .select("id,actor_id,action,target_id,details,created_at")
+      .eq("target_type", "post")
+      .eq("target_id", postId)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    setHistory((h) => ({ ...h, [postId]: (data ?? []) as AuditRow[] }));
+  };
+
+  const toggleExpand = async (id: string) => {
+    if (expanded === id) { setExpanded(null); return; }
+    setExpanded(id);
+    if (!history[id]) await loadHistory(id);
+  };
 
   const act = async (item: any, action: "remove" | "dismiss") => {
     try {
@@ -55,10 +117,111 @@ export default function CommandCenterContent() {
 
   const updatePost = async (id: string, patch: Record<string, any>) => {
     const { error } = await (supabase as any).from("posts").update(patch).eq("id", id);
+    if (error) { toast.error(error.message); return false; }
+    return true;
+  };
+
+  const bulk = async (patch: Record<string, any>, label: string) => {
+    if (selected.size === 0) { toast.message("Select posts first"); return; }
+    const ids = Array.from(selected);
+    const { error } = await (supabase as any).from("posts").update(patch).in("id", ids);
     if (error) { toast.error(error.message); return; }
-    toast.success("Updated");
+    toast.success(`${label} (${ids.length})`);
+    setSelected(new Set());
     load();
   };
+
+  const toggleSel = (id: string) => {
+    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+
+  const renderPostRow = (p: Post, withCheckbox = false) => (
+    <li key={p.id} className="py-2 space-y-1.5">
+      <div className="flex items-start gap-2 flex-wrap">
+        {withCheckbox ? (
+          <input
+            type="checkbox"
+            className="mt-1 accent-primary"
+            checked={selected.has(p.id)}
+            onChange={() => toggleSel(p.id)}
+          />
+        ) : null}
+        {p.is_sensitive ? <PillBadge tone="warn">sensitive</PillBadge> : null}
+        <PillBadge tone={p.content_rating === "explicit" ? "bad" : p.content_rating === "mature" ? "warn" : "default"}>
+          {p.content_rating}
+        </PillBadge>
+        <PillBadge tone={p.moderation_status === "removed" ? "bad" : p.moderation_status === "flagged" || p.moderation_status === "pending" ? "warn" : "good"}>
+          {p.moderation_status}
+        </PillBadge>
+        <span className="text-[10px] text-muted-foreground font-mono truncate flex-1">{p.id.slice(0, 12)}…</span>
+        <button
+          type="button"
+          onClick={() => toggleExpand(p.id)}
+          className="text-[10px] text-muted-foreground underline-offset-2 hover:underline"
+        >
+          {expanded === p.id ? "Hide history" : "History"}
+        </button>
+      </div>
+      {p.caption ? <div className="text-xs line-clamp-2">{p.caption}</div> : null}
+      {p.sensitive_reason ? <div className="text-[10px] text-muted-foreground">Reason: {p.sensitive_reason}</div> : null}
+      <div className="flex gap-1.5 flex-wrap">
+        <select
+          className="h-7 rounded border border-border/60 bg-card/60 text-[10px] px-1"
+          value={p.content_rating}
+          onChange={async (e) => { if (await updatePost(p.id, { content_rating: e.target.value })) load(); }}
+        >
+          {RATINGS.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <select
+          className="h-7 rounded border border-border/60 bg-card/60 text-[10px] px-1"
+          value={p.moderation_status}
+          onChange={async (e) => { if (await updatePost(p.id, { moderation_status: e.target.value })) load(); }}
+        >
+          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <Button
+          size="sm" variant="outline" className="h-7 text-[10px]"
+          onClick={async () => { if (await updatePost(p.id, { moderation_status: "approved" })) { toast.success("Approved"); load(); } }}
+        >Approve</Button>
+        <Button
+          size="sm" variant="destructive" className="h-7 text-[10px]"
+          onClick={async () => { if (await updatePost(p.id, { moderation_status: "removed" })) { toast.success("Removed"); load(); } }}
+        >Remove</Button>
+        <Button
+          size="sm" variant="outline" className="h-7 text-[10px]"
+          onClick={async () => { if (await updatePost(p.id, { is_sensitive: !p.is_sensitive })) load(); }}
+        >{p.is_sensitive ? "Unmark sensitive" : "Mark sensitive"}</Button>
+      </div>
+      {expanded === p.id ? (
+        <div className="mt-1 rounded border border-border/40 bg-card/40 p-2 space-y-1">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Audit timeline</div>
+          {(history[p.id] ?? []).length === 0 ? (
+            <div className="text-[10px] text-muted-foreground">No moderation history yet.</div>
+          ) : (
+            <ul className="space-y-1">
+              {(history[p.id] ?? []).map((h) => (
+                <li key={h.id} className="text-[10px] font-mono">
+                  <span className="text-muted-foreground">{new Date(h.created_at).toLocaleString()}</span>{" "}
+                  <span>· actor {h.actor_id.slice(0, 8)} ·</span>{" "}
+                  {Object.entries(h.details?.changes ?? {}).map(([field, v]: [string, any]) => (
+                    <span key={field} className="mr-2">
+                      {field}: <span className="text-rose-400">{String(v?.old)}</span> →{" "}
+                      <span className="text-emerald-400">{String(v?.new)}</span>
+                    </span>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
+    </li>
+  );
+
+  const allReviewSelected = useMemo(
+    () => reviewQueue.length > 0 && reviewQueue.every((p) => selected.has(p.id)),
+    [reviewQueue, selected],
+  );
 
   return (
     <div className="space-y-3">
@@ -84,6 +247,47 @@ export default function CommandCenterContent() {
         )}
       </SectionCard>
 
+      <SectionCard
+        title={`Review Queue · Flagged / Explicit (${reviewQueue.length})`}
+        action={
+          <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={allReviewSelected}
+              onChange={(e) => {
+                setSelected((s) => {
+                  const n = new Set(s);
+                  if (e.target.checked) reviewQueue.forEach((p) => n.add(p.id));
+                  else reviewQueue.forEach((p) => n.delete(p.id));
+                  return n;
+                });
+              }}
+            />
+            select all
+          </label>
+        }
+      >
+        {selected.size > 0 ? (
+          <div className="flex flex-wrap gap-1.5 pb-2 border-b border-border/40">
+            <span className="text-[10px] text-muted-foreground self-center">{selected.size} selected:</span>
+            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => bulk({ moderation_status: "approved" }, "Approved")}>Approve</Button>
+            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => bulk({ moderation_status: "flagged" }, "Flagged")}>Flag</Button>
+            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => bulk({ moderation_status: "approved", is_sensitive: false }, "Unflagged")}>Unflag</Button>
+            <Button size="sm" variant="destructive" className="h-7 text-[10px]" onClick={() => bulk({ moderation_status: "removed" }, "Removed")}>Remove</Button>
+            <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setSelected(new Set())}>Clear</Button>
+          </div>
+        ) : null}
+        {reviewQueue.length === 0 ? <EmptyState message="No posts need review." /> : (
+          <ul className="divide-y divide-border/40">{reviewQueue.map((p) => renderPostRow(p, true))}</ul>
+        )}
+      </SectionCard>
+
+      <SectionCard title={`Sensitive / Non-approved Posts (${sensitive.length})`}>
+        {sensitive.length === 0 ? <EmptyState message="No sensitive or flagged posts." /> : (
+          <ul className="divide-y divide-border/40">{sensitive.map((p) => renderPostRow(p, false))}</ul>
+        )}
+      </SectionCard>
+
       <SectionCard title="Recent Takedowns">
         {takedowns.length === 0 ? <EmptyState message="No takedowns recorded." /> : (
           <ul className="divide-y divide-border/40 text-xs">
@@ -93,44 +297,6 @@ export default function CommandCenterContent() {
                 <span className="flex-1 truncate">{t.reason}</span>
                 {t.reversed_at ? <PillBadge tone="warn">reversed</PillBadge> : <PillBadge tone="bad">active</PillBadge>}
                 <span className="text-[10px] text-muted-foreground">{new Date(t.created_at).toLocaleDateString()}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </SectionCard>
-
-      <SectionCard title={`Sensitive / Flagged Posts (${sensitive.length})`}>
-        {sensitive.length === 0 ? <EmptyState message="No sensitive or flagged posts." /> : (
-          <ul className="divide-y divide-border/40">
-            {sensitive.map((p) => (
-              <li key={p.id} className="py-2 space-y-1.5">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {p.is_sensitive ? <PillBadge tone="warn">sensitive</PillBadge> : null}
-                  <PillBadge tone={p.content_rating === "explicit" ? "bad" : p.content_rating === "mature" ? "warn" : "default"}>{p.content_rating}</PillBadge>
-                  <PillBadge tone={p.moderation_status === "removed" ? "bad" : p.moderation_status === "flagged" ? "warn" : p.moderation_status === "pending" ? "warn" : "good"}>{p.moderation_status}</PillBadge>
-                  <span className="text-[10px] text-muted-foreground font-mono truncate flex-1">{p.id.slice(0, 12)}…</span>
-                </div>
-                {p.caption ? <div className="text-xs line-clamp-2">{p.caption}</div> : null}
-                {p.sensitive_reason ? <div className="text-[10px] text-muted-foreground">Reason: {p.sensitive_reason}</div> : null}
-                <div className="flex gap-1.5 flex-wrap">
-                  <select
-                    className="h-7 rounded border border-border/60 bg-card/60 text-[10px] px-1"
-                    value={p.content_rating}
-                    onChange={(e) => updatePost(p.id, { content_rating: e.target.value })}
-                  >
-                    {RATINGS.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                  <select
-                    className="h-7 rounded border border-border/60 bg-card/60 text-[10px] px-1"
-                    value={p.moderation_status}
-                    onChange={(e) => updatePost(p.id, { moderation_status: e.target.value })}
-                  >
-                    {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                  <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => updatePost(p.id, { is_sensitive: !p.is_sensitive })}>
-                    {p.is_sensitive ? "Unmark sensitive" : "Mark sensitive"}
-                  </Button>
-                </div>
               </li>
             ))}
           </ul>
