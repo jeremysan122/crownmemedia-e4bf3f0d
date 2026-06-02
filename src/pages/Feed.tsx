@@ -126,6 +126,8 @@ export default function Feed() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tagFilter = (searchParams.get("tag") || "").toLowerCase().trim();
 
+  useEffect(() => { trackUsage("feed_opened"); }, []);
+
   useEffect(() => {
     if (tagFilter) {
       try { localStorage.setItem(TAG_FILTER_KEY, tagFilter); } catch { /* noop */ }
