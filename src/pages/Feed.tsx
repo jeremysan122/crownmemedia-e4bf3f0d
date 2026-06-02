@@ -402,6 +402,10 @@ export default function Feed() {
     const onMove = (e: TouchEvent) => {
       if (!active) return;
       const dy = e.touches[0].clientY - startY;
+      const dx = Math.abs(e.touches[0].clientX - startX);
+      // If the user is clearly swiping horizontally (e.g. category carousel),
+      // bail out of the pull gesture entirely.
+      if (dx > 12 && dx > Math.abs(dy)) { active = false; pullDistRef.current = 0; setPullDist(0); return; }
       if (dy > 0) {
         const d = Math.min(90, dy * 0.5);
         pullDistRef.current = d;
