@@ -297,6 +297,7 @@ export default function Feed() {
   // REALTIME — UPDATE/DELETE patch + INSERT queue for "new posts" pill.
   const matchesCurrentFilters = useCallback((p: any): boolean => {
     if (!p || p.is_removed) return false;
+    if (isFilteredOut(p, feedFilters)) return false;
     if (catFilter !== "all" && p.category !== catFilter) return false;
     if (tagFilter && !(Array.isArray(p.hashtags) && p.hashtags.includes(tagFilter))) return false;
     if (sinceIso && p.created_at && p.created_at < sinceIso) return false;
@@ -307,7 +308,7 @@ export default function Feed() {
       if (!followingIds || !followingIds.includes(p.user_id)) return false;
     }
     return true;
-  }, [catFilter, tagFilter, sinceIso, tab, profile?.city, profile?.state, followingIds]);
+  }, [catFilter, tagFilter, sinceIso, tab, profile?.city, profile?.state, followingIds, feedFilters]);
 
   useEffect(() => {
     const onUpdated = (e: Event) => {
