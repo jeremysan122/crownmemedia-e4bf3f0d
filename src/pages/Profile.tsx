@@ -18,6 +18,8 @@ import { useSeoMeta, buildProfileOgImage } from "@/hooks/useSeoMeta";
 import { trackUsage } from "@/lib/usageTrack";
 import PostDetailDialog from "@/components/PostDetailDialog";
 import type { FeedPost } from "@/components/PostCard";
+import SensitiveThumb from "@/components/SensitiveThumb";
+import { useFeedFilters } from "@/hooks/useFeedFilters";
 import { fetchPostById } from "@/lib/postQuery";
 import UserListDialog from "@/components/profile/UserListDialog";
 import ShareProfileDialog from "@/components/profile/ShareProfileDialog";
