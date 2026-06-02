@@ -46,11 +46,11 @@ export default function CommandCenterContent() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
   const [history, setHistory] = useState<Record<string, AuditRow[]>>({});
-
-  const load = async () => {
-    const sb = supabase as any;
-    const [q, t, s, r] = await Promise.all([
-      supabase
+  const [confirmKind, setConfirmKind] = useState<BulkKind | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ kind: BulkKind; done: number; total: number } | null>(null);
+  const [recentlyChanged, setRecentlyChanged] = useState<Map<string, number>>(new Map());
+  const expandedRef = useRef<string | null>(null);
+  expandedRef.current = expanded;
         .from("moderation_queue")
         .select("*")
         .eq("status", "pending")
