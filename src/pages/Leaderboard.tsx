@@ -14,6 +14,8 @@ import HiddenCountLock from "@/components/HiddenCountLock";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { POST_SELECT } from "@/lib/postQuery";
 import { trackUsage } from "@/lib/usageTrack";
+import SensitiveThumb from "@/components/SensitiveThumb";
+import { useFeedFilters } from "@/hooks/useFeedFilters";
 
 type Scope = "nearby" | "city" | "state" | "country" | "global" | "following";
 
@@ -25,6 +27,7 @@ interface Row {
   category: CrownCategory;
   crown_score: number;
   vote_count: number;
+  is_sensitive?: boolean | null;
   profile: { username: string; profile_photo_url: string | null; crowns_held: number; gender: import("@/lib/rankTitle").GenderValue; hide_likes?: boolean | null };
 }
 
@@ -40,6 +43,8 @@ const SCOPE_META: Record<Scope, { label: string; icon: typeof Crown; needsRegion
 export default function Leaderboard() {
   const { profile, user } = useAuth();
   useEffect(() => { trackUsage("leaderboard_opened"); }, []);
+  const { sensitiveMode } = useFeedFilters();
+  const shouldBlurRow = (p: Row) => !!p.is_sensitive && p.user_id !== user?.id && sensitiveMode !== "show";
   useSeoMeta({
     title: "Leaderboard — CrownMe Media",
     description: "See who holds the crown. CrownMe city, country, and global photo competition rankings, updated live.",
@@ -261,6 +266,7 @@ export default function Leaderboard() {
                     <Link to={`/u/${p.profile.username}`}>
                       <div className="aspect-square relative">
                         <img loading="lazy" src={p.image_url} alt={`${label} of ${headerLabel}`} className="w-full h-full object-cover" />
+                        <SensitiveThumb blurred={shouldBlurRow(p)} />
                         <div className={`absolute inset-x-0 top-0 bg-gradient-to-b ${color} text-white text-center text-xs font-bold py-1 tracking-widest overflow-hidden`}>
                           <span key={label} className="inline-block animate-fade-in">{label}</span>
                         </div>
