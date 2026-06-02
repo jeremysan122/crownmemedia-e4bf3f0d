@@ -27,24 +27,34 @@ export default function CommandCenterAudit() {
   const [actor, setActor] = useState("");
   const [action, setAction] = useState("");
   const [targetType, setTargetType] = useState("");
+  const [targetId, setTargetId] = useState("");
+  const [modField, setModField] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
-  const load = async (resetPage = false) => {
-    const p = resetPage ? 0 : page;
-    let q = supabase
-      .from("admin_audit_log")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .range(p * PAGE, p * PAGE + PAGE);
-    if (actor.trim()) q = q.ilike("actor_email", `%${actor.trim()}%`);
-    if (action.trim()) q = q.ilike("action", `%${action.trim()}%`);
-    if (targetType.trim()) q = q.ilike("target_type", `%${targetType.trim()}%`);
-    if (from) q = q.gte("created_at", new Date(from).toISOString());
+  const applyFilters = (qb: any) => {
+    if (actor.trim()) qb = qb.ilike("actor_email", `%${actor.trim()}%`);
+    if (action.trim()) qb = qb.ilike("action", `%${action.trim()}%`);
+    if (targetType.trim()) qb = qb.ilike("target_type", `%${targetType.trim()}%`);
+    if (targetId.trim()) qb = qb.ilike("target_id", `%${targetId.trim()}%`);
+    if (modField.trim()) qb = qb.not(`details->changes->${modField.trim()}`, "is", null);
+    if (from) qb = qb.gte("created_at", new Date(from).toISOString());
     if (to) {
       const end = new Date(to); end.setHours(23, 59, 59, 999);
-      q = q.lte("created_at", end.toISOString());
+      qb = qb.lte("created_at", end.toISOString());
     }
+    return qb;
+  };
+
+  const load = async (resetPage = false) => {
+    const p = resetPage ? 0 : page;
+    const q = applyFilters(
+      supabase
+        .from("admin_audit_log")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .range(p * PAGE, p * PAGE + PAGE),
+    );
     const { data } = await q;
     const items = (data ?? []) as AuditRow[];
     setHasMore(items.length > PAGE);
@@ -52,21 +62,15 @@ export default function CommandCenterAudit() {
     if (resetPage) setPage(0);
   };
 
-  useEffect(() => { load(true); /* eslint-disable-next-line */ }, [actor, action, targetType, from, to]);
+  useEffect(() => { load(true); /* eslint-disable-next-line */ }, [actor, action, targetType, targetId, modField, from, to]);
   useEffect(() => { load(false); /* eslint-disable-next-line */ }, [page]);
 
-  const clearFilters = () => { setActor(""); setAction(""); setTargetType(""); setFrom(""); setTo(""); };
+  const clearFilters = () => { setActor(""); setAction(""); setTargetType(""); setTargetId(""); setModField(""); setFrom(""); setTo(""); };
 
   const fetchAllForExport = async (): Promise<AuditRow[]> => {
-    let q = supabase.from("admin_audit_log").select("*").order("created_at", { ascending: false }).limit(5000);
-    if (actor.trim()) q = q.ilike("actor_email", `%${actor.trim()}%`);
-    if (action.trim()) q = q.ilike("action", `%${action.trim()}%`);
-    if (targetType.trim()) q = q.ilike("target_type", `%${targetType.trim()}%`);
-    if (from) q = q.gte("created_at", new Date(from).toISOString());
-    if (to) {
-      const end = new Date(to); end.setHours(23, 59, 59, 999);
-      q = q.lte("created_at", end.toISOString());
-    }
+    const q = applyFilters(
+      supabase.from("admin_audit_log").select("*").order("created_at", { ascending: false }).limit(5000),
+    );
     const { data } = await q;
     return (data ?? []) as AuditRow[];
   };
