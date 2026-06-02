@@ -32,6 +32,10 @@ export default function PostPage() {
   });
 
   useEffect(() => {
+    if (id) trackUsage("post_page_opened", id);
+  }, [id]);
+
+  useEffect(() => {
     if (!id) { setNotFound(true); setLoading(false); return; }
     let cancelled = false;
     (async () => {
