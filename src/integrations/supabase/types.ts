@@ -2147,6 +2147,7 @@ export type Database = {
           image_urls: string[]
           is_archived: boolean
           is_removed: boolean
+          is_sensitive: boolean
           media_height: number | null
           media_origin: string | null
           media_type: string
@@ -2157,6 +2158,7 @@ export type Database = {
           repost_caption: string | null
           royal_boost_until: string | null
           scheduled_for: string | null
+          sensitive_reason: string | null
           share_count: number
           spotlight_until: string | null
           state: string | null
@@ -2191,6 +2193,7 @@ export type Database = {
           image_urls?: string[]
           is_archived?: boolean
           is_removed?: boolean
+          is_sensitive?: boolean
           media_height?: number | null
           media_origin?: string | null
           media_type?: string
@@ -2201,6 +2204,7 @@ export type Database = {
           repost_caption?: string | null
           royal_boost_until?: string | null
           scheduled_for?: string | null
+          sensitive_reason?: string | null
           share_count?: number
           spotlight_until?: string | null
           state?: string | null
@@ -2235,6 +2239,7 @@ export type Database = {
           image_urls?: string[]
           is_archived?: boolean
           is_removed?: boolean
+          is_sensitive?: boolean
           media_height?: number | null
           media_origin?: string | null
           media_type?: string
@@ -2245,6 +2250,7 @@ export type Database = {
           repost_caption?: string | null
           royal_boost_until?: string | null
           scheduled_for?: string | null
+          sensitive_reason?: string | null
           share_count?: number
           spotlight_until?: string | null
           state?: string | null
@@ -2348,6 +2354,7 @@ export type Database = {
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           reduce_motion: boolean
+          sensitive_content_mode: string
           state: string | null
           tag_review_required: boolean
           timezone: string | null
@@ -2415,6 +2422,7 @@ export type Database = {
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           reduce_motion?: boolean
+          sensitive_content_mode?: string
           state?: string | null
           tag_review_required?: boolean
           timezone?: string | null
@@ -2482,6 +2490,7 @@ export type Database = {
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           reduce_motion?: boolean
+          sensitive_content_mode?: string
           state?: string | null
           tag_review_required?: boolean
           timezone?: string | null
@@ -3619,6 +3628,7 @@ export type Database = {
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           reduce_motion: boolean
+          sensitive_content_mode: string
           state: string | null
           tag_review_required: boolean
           timezone: string | null

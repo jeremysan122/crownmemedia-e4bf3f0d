@@ -46,6 +46,7 @@ type Prefs = {
   default_battle_stake: number;
   auto_accept_battles_from_follows: boolean;
   default_race_scope: "global" | "country" | "city";
+  sensitive_content_mode: "blur" | "show" | "hide";
 };
 
 const LANGUAGES = [
@@ -221,6 +222,16 @@ export default function Preferences() {
             </div>
             <ChevronRight size={16} className="text-muted-foreground" />
           </Link>
+          <Row title="Sensitive content" hint="How posts marked as sensitive are shown to you.">
+            <Select value={p.sensitive_content_mode ?? "blur"} onValueChange={(v) => save({ sensitive_content_mode: v as Prefs["sensitive_content_mode"] })}>
+              <SelectTrigger className="w-32 h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="blur">Blur</SelectItem>
+                <SelectItem value="show">Show</SelectItem>
+                <SelectItem value="hide">Hide</SelectItem>
+              </SelectContent>
+            </Select>
+          </Row>
         </Section>
 
         {/* Accessibility */}

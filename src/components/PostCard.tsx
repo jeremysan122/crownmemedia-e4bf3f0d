@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Crown, Flame, Gem, Gift, MessageCircle, Share2, MapPin, MoreHorizontal, Pencil, Flag, Ban, Sparkles, Trash2, Archive, Bookmark, Pin, PinOff, Zap, BarChart3, Repeat2, Clock, } from "lucide-react";
+import { Crown, Flame, Gem, Gift, MessageCircle, Share2, MapPin, MoreHorizontal, Pencil, Flag, Ban, Sparkles, Trash2, Archive, Bookmark, Pin, PinOff, Zap, BarChart3, Repeat2, Clock, Eye, EyeOff, } from "lucide-react";
 import { BrokenCrown } from "@/components/icons/BrokenCrown";
 import { canSeeLikes, canSeeComments } from "@/lib/privacyVisibility";
 import HiddenCountLock from "./HiddenCountLock";
@@ -79,6 +79,8 @@ export interface FeedPost {
     hide_views?: boolean | null;
   };
   rank?: number | null;
+  is_sensitive?: boolean | null;
+  sensitive_reason?: string | null;
 }
 
 // ── Module-level VoteBtn ────────────────────────────────────────────────────
@@ -121,7 +123,11 @@ const VoteBtn = memo(function VoteBtn({ type, icon: Icon, color, active, burst, 
 });
 
 function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (id: string) => void }) {
-  const { user } = useAuth();
+  const { user, profile: viewerProfile } = useAuth();
+  const sensitiveMode = (((viewerProfile as any)?.sensitive_content_mode as "blur" | "show" | "hide") || "blur");
+  const isOwnPost = user?.id === post.user_id;
+  const shouldBlurSensitive = !!post.is_sensitive && sensitiveMode === "blur" && !isOwnPost;
+  const [sensitiveRevealed, setSensitiveRevealed] = useState(false);
   const isPassMember = useIsRoyalPassUser(post.user_id);
   const [myVotes, setMyVotes] = useState<Set<VoteType>>(new Set());
   const [counts, setCounts] = useState({
@@ -810,6 +816,36 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
               <span aria-hidden="true">{FILTER_BY_ID[liveFilter]?.label ?? liveFilter}</span>
             </div>
           </div>
+        )}
+        {shouldBlurSensitive && !sensitiveRevealed && (
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2.5 bg-background/55 backdrop-blur-2xl p-4 text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1.5 text-foreground">
+              <EyeOff size={16} className="text-gold" />
+              <span className="font-display text-xs uppercase tracking-widest">Content warning</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground max-w-[260px]">
+              {post.sensitive_reason?.trim()
+                ? post.sensitive_reason
+                : "The author marked this post as sensitive."}
+            </p>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setSensitiveRevealed(true); }}
+              className="inline-flex items-center gap-1.5 rounded-full bg-gold/90 hover:bg-gold text-background px-3 py-1.5 text-[11px] font-semibold active:scale-95 transition"
+            >
+              <Eye size={12} /> View post
+            </button>
+          </div>
+        )}
+        {shouldBlurSensitive && sensitiveRevealed && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setSensitiveRevealed(false); }}
+            className="absolute bottom-3 right-3 z-30 inline-flex items-center gap-1 rounded-full bg-background/70 backdrop-blur px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+            aria-label="Re-blur sensitive content"
+          >
+            <EyeOff size={11} /> Hide
+          </button>
         )}
       </div>
 
