@@ -178,6 +178,9 @@ export default function CrownMap() {
   // Bookmarks
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(() => loadBookmarks());
   useEffect(() => { saveBookmarks(bookmarks); }, [bookmarks]);
+  // Collapsible side-panel sections so the map gets room on narrower screens.
+  const [bookmarksOpen, setBookmarksOpen] = useState(true);
+  const [hotMoversOpen, setHotMoversOpen] = useState(true);
   const isBookmarked = useCallback(
     (rt: Row["region_type"], rn: string, cat: CrownCategory) =>
       bookmarks.some((b) => b.region_type === rt && b.region_name === rn && b.category === cat),
@@ -789,26 +792,39 @@ export default function CrownMap() {
     <aside className="space-y-4" aria-label="Bookmarks and hot movers">
       {/* Bookmarks */}
       <div className="royal-card p-3.5">
-        <div className="flex items-center justify-between mb-2">
+        <button
+          type="button"
+          onClick={() => setBookmarksOpen((v) => !v)}
+          aria-expanded={bookmarksOpen}
+          aria-controls="side-bookmarks-body"
+          className="w-full flex items-center justify-between mb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+        >
           <h3 className="font-display text-sm tracking-widest text-gold flex items-center gap-1.5">
             <BookmarkCheck size={13} aria-hidden /> Bookmarks
           </h3>
-          <span className="text-[10px] text-muted-foreground tabular-nums">{bookmarks.length}</span>
-        </div>
-        {bookmarks.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            Bookmark a region from the map or list to jump back fast.
-          </p>
-        ) : (
-          <div className="space-y-1">
-            {bookmarksForCat.slice(0, 5).map((b) => (
-              <BookmarkRow key={`bm-${b.category}-${b.region_type}-${b.region_name}`} bm={b} active onJump={() => navigate(`/leaderboard?scope=${b.region_type}&region=${encodeURIComponent(b.region_name)}&category=${b.category}`)} onRemove={() => toggleBookmark(b.region_type, b.region_name, b.category)} />
-            ))}
-            {bookmarksOther.slice(0, 3).map((b) => (
-              <BookmarkRow key={`bmo-${b.category}-${b.region_type}-${b.region_name}`} bm={b} onJump={() => { setCategory(b.category); navigate(`/leaderboard?scope=${b.region_type}&region=${encodeURIComponent(b.region_name)}&category=${b.category}`); }} onRemove={() => toggleBookmark(b.region_type, b.region_name, b.category)} />
-            ))}
-            {bookmarks.length > 8 && (
-              <p className="text-[10px] text-muted-foreground pt-1">+{bookmarks.length - 8} more saved</p>
+          <span className="flex items-center gap-2 text-[10px] text-muted-foreground tabular-nums">
+            {bookmarks.length}
+            <ChevronDown size={12} className={`transition-transform ${bookmarksOpen ? "" : "-rotate-90"}`} aria-hidden />
+          </span>
+        </button>
+        {bookmarksOpen && (
+          <div id="side-bookmarks-body">
+            {bookmarks.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Bookmark a region from the map or list to jump back fast.
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {bookmarksForCat.slice(0, 5).map((b) => (
+                  <BookmarkRow key={`bm-${b.category}-${b.region_type}-${b.region_name}`} bm={b} active onJump={() => navigate(`/leaderboard?scope=${b.region_type}&region=${encodeURIComponent(b.region_name)}&category=${b.category}`)} onRemove={() => toggleBookmark(b.region_type, b.region_name, b.category)} />
+                ))}
+                {bookmarksOther.slice(0, 3).map((b) => (
+                  <BookmarkRow key={`bmo-${b.category}-${b.region_type}-${b.region_name}`} bm={b} onJump={() => { setCategory(b.category); navigate(`/leaderboard?scope=${b.region_type}&region=${encodeURIComponent(b.region_name)}&category=${b.category}`); }} onRemove={() => toggleBookmark(b.region_type, b.region_name, b.category)} />
+                ))}
+                {bookmarks.length > 8 && (
+                  <p className="text-[10px] text-muted-foreground pt-1">+{bookmarks.length - 8} more saved</p>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -816,39 +832,52 @@ export default function CrownMap() {
 
       {/* Hot movers */}
       <div className="royal-card p-3.5">
-        <div className="flex items-center justify-between mb-2">
+        <button
+          type="button"
+          onClick={() => setHotMoversOpen((v) => !v)}
+          aria-expanded={hotMoversOpen}
+          aria-controls="side-hotmovers-body"
+          className="w-full flex items-center justify-between mb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+        >
           <h3 className="font-display text-sm tracking-widest text-gold flex items-center gap-1.5">
             <TrendingUp size={13} aria-hidden /> Hot Movers
           </h3>
-          <span className="text-[10px] text-muted-foreground">last 10 min</span>
-        </div>
-        {hotMovers.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No recent movement. Watch this space — we'll surface regions whose crown score shifts in realtime.</p>
-        ) : (
-          <ul className="space-y-1.5" aria-live="polite">
-            {hotMovers.map((m) => {
-              const up = m.delta > 0;
-              return (
-                <li key={`mv-${m.region_type}-${m.region_name}`}>
-                  <Link
-                    to={`/leaderboard?scope=${m.region_type}&region=${encodeURIComponent(m.region_name)}&category=${category}`}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary/40 transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
-                  >
-                    <span className={`text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded ${up ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}`}>
-                      {up ? "▲" : "▼"} {Math.abs(m.delta).toFixed(0)}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{m.region_name}</p>
-                      <p className="text-[10px] text-muted-foreground capitalize truncate">
-                        {m.region_type}{m.username ? ` · @${m.username}` : ""}
-                      </p>
-                    </div>
-                    <span className="text-[10px] text-gold tabular-nums">{formatScore(m.lastScore)}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <span className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            last 10 min
+            <ChevronDown size={12} className={`transition-transform ${hotMoversOpen ? "" : "-rotate-90"}`} aria-hidden />
+          </span>
+        </button>
+        {hotMoversOpen && (
+          <div id="side-hotmovers-body">
+            {hotMovers.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No recent movement. Watch this space — we'll surface regions whose crown score shifts in realtime.</p>
+            ) : (
+              <ul className="space-y-1.5" aria-live="polite">
+                {hotMovers.map((m) => {
+                  const up = m.delta > 0;
+                  return (
+                    <li key={`mv-${m.region_type}-${m.region_name}`}>
+                      <Link
+                        to={`/leaderboard?scope=${m.region_type}&region=${encodeURIComponent(m.region_name)}&category=${category}`}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary/40 transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+                      >
+                        <span className={`text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded ${up ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}`}>
+                          {up ? "▲" : "▼"} {Math.abs(m.delta).toFixed(0)}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{m.region_name}</p>
+                          <p className="text-[10px] text-muted-foreground capitalize truncate">
+                            {m.region_type}{m.username ? ` · @${m.username}` : ""}
+                          </p>
+                        </div>
+                        <span className="text-[10px] text-gold tabular-nums">{formatScore(m.lastScore)}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         )}
       </div>
     </aside>
@@ -1242,6 +1271,9 @@ function MapView({
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
   const [markerMode, setMarkerMode] = useState<"posts" | "users">("posts");
+  // Surface a friendly error UI when Mapbox rejects requests (401/403),
+  // which usually means an expired/invalid token or a restricted account.
+  const [mapAuthError, setMapAuthError] = useState(false);
 
   const points = useMemo(
     () =>
@@ -1270,6 +1302,14 @@ function MapView({
     });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
     map.scrollZoom.disable();
+    // Detect Mapbox auth/quota rejections (401/403) on tile/style requests and
+    // swap in a friendly error UI instead of leaving a blank globe.
+    map.on("error", (e: any) => {
+      const status = e?.error?.status ?? e?.status;
+      if (status === 401 || status === 403) {
+        setMapAuthError(true);
+      }
+    });
     map.on("style.load", () => {
       try {
         map.setFog({
@@ -1487,6 +1527,28 @@ function MapView({
       <div className="royal-card p-6 text-sm text-muted-foreground">
         <p className="font-display text-base text-foreground mb-1">Map unavailable</p>
         <p>The Mapbox token isn't configured. An admin can add it in Lovable Cloud secrets as <code className="text-gold">MAPBOX_PUBLIC_TOKEN</code>.</p>
+      </div>
+    );
+  }
+  if (mapAuthError) {
+    return (
+      <div className="royal-card p-6 text-sm text-muted-foreground space-y-3 animate-fade-in">
+        <div className="flex items-center gap-2">
+          <MapPin size={16} className="text-gold" aria-hidden />
+          <p className="font-display text-base text-foreground">The world map is taking a breather</p>
+        </div>
+        <p>
+          We can't reach the map service right now (the tile provider returned a permission error).
+          Your crowns and regions are safe — you can switch to the list view to keep exploring.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => { setMapAuthError(false); window.location.reload(); }}>
+            Try again
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => navigate("/map?view=list")}>
+            Open list view
+          </Button>
+        </div>
       </div>
     );
   }
