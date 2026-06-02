@@ -73,6 +73,7 @@ export default function Notifications() {
   };
 
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => { trackUsage("notifications_opened"); }, []);
 
   // Realtime: new notifications stream in, deduped by id.
   useEffect(() => {
