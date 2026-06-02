@@ -326,13 +326,24 @@ export default function CommandCenterContent() {
         }
       >
         {selected.size > 0 ? (
-          <div className="flex flex-wrap gap-1.5 pb-2 border-b border-border/40">
+          <div className="flex flex-wrap items-center gap-1.5 pb-2 border-b border-border/40">
             <span className="text-[10px] text-muted-foreground self-center">{selected.size} selected:</span>
-            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => bulk({ moderation_status: "approved" }, "Approved")}>Approve</Button>
-            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => bulk({ moderation_status: "flagged" }, "Flagged")}>Flag</Button>
-            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => bulk({ moderation_status: "approved", is_sensitive: false }, "Unflagged")}>Unflag</Button>
-            <Button size="sm" variant="destructive" className="h-7 text-[10px]" onClick={() => bulk({ moderation_status: "removed" }, "Removed")}>Remove</Button>
-            <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setSelected(new Set())}>Clear</Button>
+            <Button size="sm" variant="outline" className="h-7 text-[10px]" disabled={!!bulkProgress} onClick={() => requestBulk("approve")}>Approve</Button>
+            <Button size="sm" variant="outline" className="h-7 text-[10px]" disabled={!!bulkProgress} onClick={() => requestBulk("flag")}>Flag</Button>
+            <Button size="sm" variant="outline" className="h-7 text-[10px]" disabled={!!bulkProgress} onClick={() => requestBulk("unflag")}>Unflag</Button>
+            <Button size="sm" variant="destructive" className="h-7 text-[10px]" disabled={!!bulkProgress} onClick={() => requestBulk("remove")}>Remove</Button>
+            <Button size="sm" variant="ghost" className="h-7 text-[10px]" disabled={!!bulkProgress} onClick={() => setSelected(new Set())}>Clear</Button>
+            {bulkProgress ? (
+              <div className="flex items-center gap-2 ml-auto text-[10px] text-muted-foreground">
+                <span>{BULK_DEFS[bulkProgress.kind].label}… {bulkProgress.done}/{bulkProgress.total}</span>
+                <div className="w-24 h-1.5 rounded bg-muted overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${Math.round((bulkProgress.done / Math.max(1, bulkProgress.total)) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
         {reviewQueue.length === 0 ? <EmptyState message="No posts need review." /> : (
