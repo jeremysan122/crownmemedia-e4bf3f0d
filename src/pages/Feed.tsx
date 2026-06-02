@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
+import { trackUsage } from "@/lib/usageTrack";
 import FeedRightRail from "@/components/desktop/FeedRightRail";
 import FeedRealtimeAlert from "@/components/FeedRealtimeAlert";
 import DailyRewardChip from "@/components/DailyRewardChip";
