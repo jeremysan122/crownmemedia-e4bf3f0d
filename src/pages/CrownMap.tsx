@@ -178,6 +178,9 @@ export default function CrownMap() {
   // Bookmarks
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(() => loadBookmarks());
   useEffect(() => { saveBookmarks(bookmarks); }, [bookmarks]);
+  // Collapsible side-panel sections so the map gets room on narrower screens.
+  const [bookmarksOpen, setBookmarksOpen] = useState(true);
+  const [hotMoversOpen, setHotMoversOpen] = useState(true);
   const isBookmarked = useCallback(
     (rt: Row["region_type"], rn: string, cat: CrownCategory) =>
       bookmarks.some((b) => b.region_type === rt && b.region_name === rn && b.category === cat),
