@@ -210,6 +210,29 @@ export default function Feed() {
   // results AND realtime INSERTs).
   const feedFilters = useFeedFilters();
 
+  // Restore saved scrollY once posts for the current filter signature have
+  // rendered. We only do this once per mount-per-signature so manual scrolls
+  // afterward aren't yanked back.
+  const restoredFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (loading) return;
+    if (posts.length === 0) return;
+    if (restoredFor.current === scrollKey) return;
+    let saved: number | null = null;
+    try {
+      const v = sessionStorage.getItem(scrollKey);
+      saved = v ? parseInt(v, 10) : null;
+    } catch { /* noop */ }
+    restoredFor.current = scrollKey;
+    if (saved && saved > 0) {
+      // Defer to next frame so PostCards have a chance to lay out before scroll.
+      window.requestAnimationFrame(() => {
+        try { window.scrollTo(0, saved!); } catch { /* noop */ }
+      });
+    }
+  }, [loading, posts.length, scrollKey]);
+
+
   // Pre-fetch following ids so the "Following" tab + INSERT filter both work.
   useEffect(() => {
     if (!user) { setFollowingIds(null); return; }
