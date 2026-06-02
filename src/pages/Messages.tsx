@@ -130,6 +130,7 @@ export default function Messages() {
   useSeoMeta({ title: "Messages · CrownMe", noIndex: true });
   const { otherId } = useParams();
   const { user } = useAuth();
+  useEffect(() => { trackUsage("dm_opened", otherId ?? "inbox"); }, [otherId]);
   const [threads, setThreads] = useState<any[]>([]);
   const [messages, setMessages] = useState<Msg[]>([]);
   const messagesRef = useRef<Msg[]>([]);
