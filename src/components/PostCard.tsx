@@ -79,6 +79,8 @@ export interface FeedPost {
     hide_views?: boolean | null;
   };
   rank?: number | null;
+  is_sensitive?: boolean | null;
+  sensitive_reason?: string | null;
 }
 
 // ── Module-level VoteBtn ────────────────────────────────────────────────────
