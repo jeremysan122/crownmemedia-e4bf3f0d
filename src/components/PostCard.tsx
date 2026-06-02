@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Crown, Flame, Gem, Gift, MessageCircle, Share2, MapPin, MoreHorizontal, Pencil, Flag, Ban, Sparkles, Trash2, Archive, Bookmark, Pin, PinOff, Zap, BarChart3, Repeat2, Clock, } from "lucide-react";
+import { Crown, Flame, Gem, Gift, MessageCircle, Share2, MapPin, MoreHorizontal, Pencil, Flag, Ban, Sparkles, Trash2, Archive, Bookmark, Pin, PinOff, Zap, BarChart3, Repeat2, Clock, Eye, EyeOff, } from "lucide-react";
 import { BrokenCrown } from "@/components/icons/BrokenCrown";
 import { canSeeLikes, canSeeComments } from "@/lib/privacyVisibility";
 import HiddenCountLock from "./HiddenCountLock";
