@@ -52,10 +52,10 @@ export function useFeedFilters(): FeedFilterLists {
  */
 export function isFilteredOut(
   post: { user_id?: string | null; caption?: string | null; hashtags?: string[] | null; is_sensitive?: boolean | null },
-  filters: Pick<FeedFilterLists, "blockedIds" | "mutedWords" | "sensitiveMode">,
+  filters: { blockedIds: Set<string>; mutedWords: string[]; sensitiveMode?: SensitiveMode },
 ): boolean {
   if (post.user_id && filters.blockedIds.has(post.user_id)) return true;
-  if (filters.sensitiveMode === "hide" && post.is_sensitive) return true;
+  if ((filters.sensitiveMode ?? "blur") === "hide" && post.is_sensitive) return true;
   if (filters.mutedWords.length > 0) {
     const hay = `${post.caption ?? ""} ${(post.hashtags ?? []).join(" ")}`.toLowerCase();
     for (const w of filters.mutedWords) {
