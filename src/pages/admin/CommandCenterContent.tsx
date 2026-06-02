@@ -94,12 +94,27 @@ export default function CommandCenterContent() {
       .channel("cc-content")
       .on("postgres_changes", { event: "*", schema: "public", table: "moderation_queue" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "content_takedowns" }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, (payload: any) => {
+        const id = (payload?.new ?? payload?.old)?.id;
+        if (id) {
+          setRecentlyChanged((m) => { const n = new Map(m); n.set(id, Date.now()); return n; });
+        }
+        load();
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "admin_audit_log" }, () => {
-        if (expanded) loadHistory(expanded);
+        if (expandedRef.current) loadHistory(expandedRef.current);
       })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    const tick = window.setInterval(() => {
+      setRecentlyChanged((m) => {
+        const cutoff = Date.now() - 10_000;
+        let changed = false;
+        const n = new Map(m);
+        for (const [k, t] of n) if (t < cutoff) { n.delete(k); changed = true; }
+        return changed ? n : m;
+      });
+    }, 2000);
+    return () => { supabase.removeChannel(ch); window.clearInterval(tick); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
