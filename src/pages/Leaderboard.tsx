@@ -13,6 +13,7 @@ import { canSeeLikes } from "@/lib/privacyVisibility";
 import HiddenCountLock from "@/components/HiddenCountLock";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { POST_SELECT } from "@/lib/postQuery";
+import { trackUsage } from "@/lib/usageTrack";
 
 type Scope = "nearby" | "city" | "state" | "country" | "global" | "following";
 
