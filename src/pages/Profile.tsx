@@ -140,7 +140,7 @@ export default function Profile() {
       const pid = (p as any).id;
 
       const [{ data: ps, error: psErr }, { data: cs }, { data: rs }] = await Promise.all([
-        supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at").eq("user_id", pid).eq("is_removed", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
+        supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at, is_sensitive").eq("user_id", pid).eq("is_removed", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
         supabase.from("crowns").select("id, title, region_name, active, category").eq("user_id", pid).order("started_at", { ascending: false }).limit(40),
         supabase.from("user_roles").select("role").eq("user_id", pid),
       ]);
@@ -183,7 +183,7 @@ export default function Profile() {
       if (likedIds.length) {
         const { data: lp } = await supabase
           .from("posts")
-          .select("id, image_url, crown_score")
+          .select("id, image_url, crown_score, is_sensitive")
           .in("id", likedIds)
           .eq("is_removed", false);
         if (!cancelled) setLiked((lp as any) || []);
@@ -205,7 +205,7 @@ export default function Profile() {
         if (bmIds.length) {
           const { data: sp } = await supabase
             .from("posts")
-            .select("id, image_url, crown_score")
+            .select("id, image_url, crown_score, is_sensitive")
             .in("id", bmIds)
             .eq("is_removed", false);
           if (!cancelled) setSaved((sp as any) || []);
