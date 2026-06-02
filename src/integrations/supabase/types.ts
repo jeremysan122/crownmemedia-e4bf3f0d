@@ -2133,6 +2133,7 @@ export type Database = {
           category: Database["public"]["Enums"]["crown_category"]
           city: string | null
           comment_count: number
+          content_rating: Database["public"]["Enums"]["content_rating"]
           country: string | null
           created_at: string
           crown_score: number
@@ -2152,6 +2153,10 @@ export type Database = {
           media_origin: string | null
           media_type: string
           media_width: number | null
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_notes: string | null
+          moderation_status: Database["public"]["Enums"]["moderation_status"]
           parent_post_id: string | null
           photo_filter: string | null
           pinned_at: string | null
@@ -2179,6 +2184,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["crown_category"]
           city?: string | null
           comment_count?: number
+          content_rating?: Database["public"]["Enums"]["content_rating"]
           country?: string | null
           created_at?: string
           crown_score?: number
@@ -2198,6 +2204,10 @@ export type Database = {
           media_origin?: string | null
           media_type?: string
           media_width?: number | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_status?: Database["public"]["Enums"]["moderation_status"]
           parent_post_id?: string | null
           photo_filter?: string | null
           pinned_at?: string | null
@@ -2225,6 +2235,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["crown_category"]
           city?: string | null
           comment_count?: number
+          content_rating?: Database["public"]["Enums"]["content_rating"]
           country?: string | null
           created_at?: string
           crown_score?: number
@@ -2244,6 +2255,10 @@ export type Database = {
           media_origin?: string | null
           media_type?: string
           media_width?: number | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_notes?: string | null
+          moderation_status?: Database["public"]["Enums"]["moderation_status"]
           parent_post_id?: string | null
           photo_filter?: string | null
           pinned_at?: string | null
@@ -3800,6 +3815,7 @@ export type Database = {
         | "crown_spotlight"
         | "profile_glow"
         | "crown_shield"
+      content_rating: "safe" | "suggestive" | "mature" | "explicit"
       crown_category:
         | "overall"
         | "best_style"
@@ -3830,6 +3846,7 @@ export type Database = {
         | "best_throwback"
         | "rising_star"
       gender_type: "male" | "female" | "non_binary" | "prefer_not_to_say"
+      moderation_status: "pending" | "approved" | "flagged" | "removed"
       notification_type:
         | "vote"
         | "comment"
@@ -4007,6 +4024,7 @@ export const Constants = {
         "profile_glow",
         "crown_shield",
       ],
+      content_rating: ["safe", "suggestive", "mature", "explicit"],
       crown_category: [
         "overall",
         "best_style",
@@ -4038,6 +4056,7 @@ export const Constants = {
         "rising_star",
       ],
       gender_type: ["male", "female", "non_binary", "prefer_not_to_say"],
+      moderation_status: ["pending", "approved", "flagged", "removed"],
       notification_type: [
         "vote",
         "comment",
