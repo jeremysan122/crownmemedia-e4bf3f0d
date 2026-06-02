@@ -93,6 +93,8 @@ export default function Upload() {
   const [filter, setFilter] = useState<FilterId>("none");
   const [scheduledFor, setScheduledFor] = useState<string>("");
   const [tagged, setTagged] = useState<TaggedProfile[]>([]);
+  const [isSensitive, setIsSensitive] = useState(false);
+  const [sensitiveReason, setSensitiveReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [cameraOpen, setCameraOpen] = useState<null | Mode>(null);
@@ -805,6 +807,8 @@ export default function Upload() {
         scheduled_for: scheduledFor ? new Date(scheduledFor).toISOString() : null,
         tagged_user_ids: tagged.map((t) => t.id),
         media_origin: mode === "photo" ? (photos[0]?.origin ?? "gallery") : (video?.origin ?? "gallery"),
+        is_sensitive: isSensitive,
+        sensitive_reason: isSensitive ? (sensitiveReason.trim().slice(0, 120) || null) : null,
       } as any);
       if (error) {
         // 23505 = unique_violation on (user_id, submission_key) → already posted.
@@ -1503,6 +1507,27 @@ export default function Upload() {
             label="They'll be notified and shown on the post"
           />
         </div>
+
+        {/* Sensitive content */}
+        <div className="rounded-xl border border-border bg-card/40 p-3 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-bold uppercase tracking-widest text-foreground">Mark as sensitive</div>
+              <div className="text-[11px] text-muted-foreground">Viewers will see a content warning and can choose to view.</div>
+            </div>
+            <Switch checked={isSensitive} onCheckedChange={setIsSensitive} />
+          </div>
+          {isSensitive && (
+            <Input
+              value={sensitiveReason}
+              onChange={(e) => setSensitiveReason(e.target.value.slice(0, 120))}
+              placeholder="Reason (optional, e.g. graphic content)"
+              className="bg-input h-9 text-xs"
+              maxLength={120}
+            />
+          )}
+        </div>
+
 
         {/* Schedule */}
         <div className="rounded-xl border border-border bg-card/40 p-3 space-y-2">
