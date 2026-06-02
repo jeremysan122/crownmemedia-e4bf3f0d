@@ -11,6 +11,8 @@ import { fetchShortsPage } from "@/lib/postQuery";
 import type { FeedPost } from "@/components/PostCard";
 import { trackUsage } from "@/lib/usageTrack";
 import CommentsDrawer from "@/components/CommentsDrawer";
+import { useFeedFilters } from "@/hooks/useFeedFilters";
+import { EyeOff, Eye } from "lucide-react";
 
 
 // Shorts uses the canonical post row shape (see src/lib/postQuery.ts) so the
