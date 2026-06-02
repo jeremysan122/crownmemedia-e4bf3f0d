@@ -20,6 +20,13 @@ type UsageEvent =
   | "share_card_previewed"
   | "share_card_downloaded"
   | "dm_opened"
+  | "dm_sent"
+  | "notifications_opened"
+  | "post_page_opened"
+  | "share_dialog_opened"
+  | "vote_attempted"
+  | "vote_success"
+  | "vote_failed"
   | "verification_page_opened";
 
 const fired = new Set<string>();
