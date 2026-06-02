@@ -658,6 +658,7 @@ export default function Feed() {
           <div className="sticky top-12 z-30 flex justify-center pt-2 pointer-events-none">
             <button
               onClick={showNewPosts}
+              aria-live="polite"
               className="pointer-events-auto inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-gold text-primary-foreground text-xs font-bold gold-shadow shadow-lg animate-fade-in"
             >
               <ArrowUp size={14} />
@@ -665,50 +666,56 @@ export default function Feed() {
             </button>
           </div>
         )}
+        <span className="sr-only" aria-live="polite" aria-atomic="true">
+          {newPosts.length > 0 ? `${newPosts.length} new ${newPosts.length === 1 ? "post" : "posts"} available` : ""}
+        </span>
 
         <div className="px-3 lg:px-0 pt-1">
           <div className="pb-3"><SpotlightStrip /></div>
           {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="royal-card overflow-hidden">
-                  <div className="flex items-center gap-3 p-3">
-                    <div className="size-10 rounded-full bg-muted animate-pulse" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3 w-32 rounded bg-muted animate-pulse" />
-                      <div className="h-2 w-20 rounded bg-muted/60 animate-pulse" />
-                    </div>
-                  </div>
-                  <div className="aspect-square bg-muted animate-pulse" />
-                  <div className="p-3 space-y-2">
-                    <div className="h-3 w-3/4 rounded bg-muted animate-pulse" />
-                    <div className="h-3 w-1/2 rounded bg-muted/60 animate-pulse" />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <FeedSkeleton count={4} />
+          ) : loadError ? (
+            <FeedErrorState
+              onRetry={() => {
+                // Bumping followingIds reference would refetch, but the simplest
+                // trigger is to toggle through the loader path by clearing error
+                // and re-running the same effect via a no-op tab set.
+                setLoadError(null);
+                setTab((t) => t);
+              }}
+              onGoGlobal={tab !== "global" ? () => { setTab("global"); setCatFilter("all"); } : undefined}
+              message={loadError}
+            />
           ) : orderedPosts.length === 0 ? (
-            <div className="royal-card p-10 text-center mt-8">
-              <p className="font-display text-gold text-lg mb-2">The throne awaits</p>
-              <p className="text-sm text-muted-foreground mb-5">
-                {tab === "following"
-                  ? "Follow some royals to fill this realm with their moments."
-                  : catFilter !== "all"
-                    ? `No posts yet in ${CATEGORY_LABEL[catFilter as CrownCategory]}. Be the first to claim it.`
-                    : tab === "city" || tab === "nearby"
-                      ? `No posts yet in ${profile?.city || "your city"}. Be the first to claim it.`
-                      : tab === "state"
-                        ? `No posts yet in ${profile?.state || "your state"}.`
-                        : "No posts yet in this realm. Be the first to claim it."}
-              </p>
-              <Link to="/upload" className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gradient-gold text-primary-foreground font-bold text-sm">
-                <Plus size={16} /> Crown a Post
-              </Link>
-            </div>
+            <FeedEmptyState
+              tab={tab}
+              catFilter={catFilter}
+              tagFilter={tagFilter}
+              city={profile?.city}
+              state={profile?.state}
+              hasAnyFilter={catFilter !== "all" || !!tagFilter || tab !== "global"}
+              onClearFilters={() => {
+                setCatFilter("all");
+                if (tagFilter) {
+                  const next = new URLSearchParams(searchParams);
+                  next.delete("tag");
+                  try { localStorage.removeItem(TAG_FILTER_KEY); } catch { /* noop */ }
+                  setSearchParams(next, { replace: true });
+                }
+              }}
+              onGoGlobal={() => { setTab("global"); }}
+            />
           ) : (
             <>
               {rankedPosts.map((p) => (
-                <PostCard key={p.id} post={p} onCommentClick={setOpenComment} />
+                <FeedPostCard
+                  key={p.id}
+                  post={p}
+                  onCommentClick={setOpenComment}
+                  feature="Feed"
+                  tab={tab}
+                  category={p.category ?? null}
+                />
               ))}
               <div ref={sentinelRef} className="h-12 flex items-center justify-center">
                 {loadingMore && (
