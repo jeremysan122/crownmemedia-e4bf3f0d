@@ -1271,6 +1271,9 @@ function MapView({
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
   const [markerMode, setMarkerMode] = useState<"posts" | "users">("posts");
+  // Surface a friendly error UI when Mapbox rejects requests (401/403),
+  // which usually means an expired/invalid token or a restricted account.
+  const [mapAuthError, setMapAuthError] = useState(false);
 
   const points = useMemo(
     () =>
