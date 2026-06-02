@@ -513,6 +513,14 @@ export default function Messages() {
       return;
     }
     const saved = data as Msg;
+    // Privacy: never tracks message body. Only flags whether an attachment was
+    // included and its byte size for bandwidth attribution.
+    trackUsageEvent("dm_sent", {
+      metadata: {
+        has_attachment: !!uploaded,
+        attachment_bytes: uploaded?.size ?? 0,
+      },
+    });
     setMessages((prev) => {
       const withoutTemp = prev.filter((m) => m.id !== tempId);
       if (withoutTemp.find((m) => m.id === saved.id)) return withoutTemp;
