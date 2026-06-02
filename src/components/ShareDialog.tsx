@@ -10,6 +10,8 @@ import { trackEvent } from "@/lib/analytics";
 import { trackUsage, trackUsageEvent } from "@/lib/usageTrack";
 import { resolvePostShareImage, usePostShareData } from "@/lib/postShare";
 import { useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useFeedFilters } from "@/hooks/useFeedFilters";
 
 interface ShareProps {
   open: boolean;
@@ -23,10 +25,19 @@ export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProp
   // The hook NEVER sets `deleted` for transient errors — only when the DB
   // confirms the row is missing or is_removed = true.
   const { post, loading: loadingFresh, deleted, refreshError } = usePostShareData(initialPost, open);
+  const { user } = useAuth();
+  const { sensitiveMode } = useFeedFilters();
 
   const url = `${window.location.origin}/p/${post.id}`;
   const text = `Competing for King/Queen of ${post.city || "Global"} on CrownMe — ${CATEGORY_LABEL[post.category]}`;
-  const previewImg = resolvePostShareImage(post);
+  // Share cards never expose sensitive media when the viewer's own preference
+  // says blur/hide, when eligibility isn't confirmed, and never for
+  // removed/banned posts. Author always sees their own.
+  const previewImg = resolvePostShareImage(post, {
+    userId: user?.id ?? null,
+    mode: sensitiveMode,
+    ageConfirmed: !!user, // 18+ confirmation is required at signup on CrownMe
+  });
 
   useEffect(() => {
     if (!open) return;
