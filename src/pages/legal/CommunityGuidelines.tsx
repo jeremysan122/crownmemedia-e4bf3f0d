@@ -53,6 +53,16 @@ export default function CommunityGuidelines() {
         <li>Block and report aggressive or abusive senders — we review every report.</li>
       </UL>
 
+      <H2>5A. Sensitive Content Labels</H2>
+      <P>
+        Posts may carry a sensitive label and a content rating (<em>safe</em>,{" "}
+        <em>suggestive</em>, <em>mature</em>, <em>explicit</em>). You must label honestly,
+        respect viewers' Content Filter preferences, and accept that moderators can change
+        labels and that those changes cannot be reversed by the author. Full rules,
+        including what is gated, blurred, hidden, or removed, are in the{" "}
+        <a className="underline text-primary" href="/sensitive-content">Sensitive Content Policy</a>.
+      </P>
+
       <H2>6. Reporting</H2>
       <P>
         Use the Report button on any post, comment, message, or profile. Provide details
