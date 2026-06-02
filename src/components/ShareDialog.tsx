@@ -7,7 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { CATEGORY_LABEL, locationLabel } from "@/lib/crown";
 import { FeedPost } from "./PostCard";
 import { trackEvent } from "@/lib/analytics";
+import { trackUsage, trackUsageEvent } from "@/lib/usageTrack";
 import { resolvePostShareImage, usePostShareData } from "@/lib/postShare";
+import { useEffect } from "react";
 
 interface ShareProps {
   open: boolean;
@@ -26,9 +28,18 @@ export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProp
   const text = `Competing for King/Queen of ${post.city || "Global"} on CrownMe — ${CATEGORY_LABEL[post.category]}`;
   const previewImg = resolvePostShareImage(post);
 
+  useEffect(() => {
+    if (!open) return;
+    trackUsage("share_dialog_opened", post.id);
+    if (previewImg && !deleted) trackUsage("share_card_previewed", post.id);
+  }, [open, post.id, previewImg, deleted]);
+
   const incrementShare = async (channel: string) => {
     await supabase.from("posts").update({ share_count: (post.share_count || 0) + 1 }).eq("id", post.id);
     trackEvent("post_shared", { postId: post.id, category: post.category, metadata: { channel } });
+    // Treat any outbound share as a "download" of the share card for cost
+    // attribution (card image is fetched/rendered when the user shares).
+    trackUsageEvent("share_card_downloaded", { postId: post.id, metadata: { channel } });
   };
 
   const copy = async () => {

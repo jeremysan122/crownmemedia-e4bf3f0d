@@ -20,6 +20,13 @@ type UsageEvent =
   | "share_card_previewed"
   | "share_card_downloaded"
   | "dm_opened"
+  | "dm_sent"
+  | "notifications_opened"
+  | "post_page_opened"
+  | "share_dialog_opened"
+  | "vote_attempted"
+  | "vote_success"
+  | "vote_failed"
   | "verification_page_opened";
 
 const fired = new Set<string>();
@@ -40,10 +47,33 @@ function schedule(cb: () => void) {
  * @param payload Extra metadata; kept minimal and privacy-safe.
  */
 export function trackUsage(event: UsageEvent, key = "default", payload: TrackPayload = {}): void {
-  const sig = `${event}:${key}`;
-  if (fired.has(sig)) return;
-  fired.add(sig);
-  schedule(() => {
-    void trackEvent(event, payload);
-  });
+  try {
+    const sig = `${event}:${key}`;
+    if (fired.has(sig)) return;
+    fired.add(sig);
+    schedule(() => {
+      void trackEvent(event, payload);
+    });
+  } catch {
+    // Tracking must never break the UX
+  }
+}
+
+/**
+ * Fire a repeatable usage event (e.g. votes, DM sends). Not deduped — every
+ * call results in one analytics row. Scheduled idle so it doesn't block UI.
+ */
+export function trackUsageEvent(event: UsageEvent, payload: TrackPayload = {}): void {
+  try {
+    schedule(() => {
+      void trackEvent(event, payload);
+    });
+  } catch {
+    // Tracking must never break the UX
+  }
+}
+
+/** Test-only: reset the per-session dedupe set. */
+export function __resetUsageTrackForTests(): void {
+  fired.clear();
 }

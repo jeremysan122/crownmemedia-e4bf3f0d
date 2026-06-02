@@ -15,6 +15,7 @@ import { formatScore, locationLabel } from "@/lib/crown";
 import { cssFor, isValidFilter } from "@/lib/filters";
 import { toast } from "sonner";
 import { useSeoMeta, buildProfileOgImage } from "@/hooks/useSeoMeta";
+import { trackUsage } from "@/lib/usageTrack";
 import PostDetailDialog from "@/components/PostDetailDialog";
 import type { FeedPost } from "@/components/PostCard";
 import { fetchPostById } from "@/lib/postQuery";
@@ -105,6 +106,11 @@ export default function Profile() {
   useEffect(() => {
     if (!username && me?.username) nav(`/u/${me.username}`, { replace: true });
   }, [username, me?.username, nav]);
+
+  useEffect(() => {
+    const key = isMe ? "self" : (targetUsername ?? "other");
+    trackUsage("profile_opened", key);
+  }, [isMe, targetUsername]);
 
   useSeoMeta({
     title: prof ? `@${prof.username} · CrownMe` : "Profile · CrownMe",

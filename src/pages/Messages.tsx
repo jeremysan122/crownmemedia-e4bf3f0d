@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
+import { trackUsage, trackUsageEvent } from "@/lib/usageTrack";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
@@ -129,6 +130,7 @@ export default function Messages() {
   useSeoMeta({ title: "Messages · CrownMe", noIndex: true });
   const { otherId } = useParams();
   const { user } = useAuth();
+  useEffect(() => { trackUsage("dm_opened", otherId ?? "inbox"); }, [otherId]);
   const [threads, setThreads] = useState<any[]>([]);
   const [messages, setMessages] = useState<Msg[]>([]);
   const messagesRef = useRef<Msg[]>([]);
@@ -511,6 +513,14 @@ export default function Messages() {
       return;
     }
     const saved = data as Msg;
+    // Privacy: never tracks message body. Only flags whether an attachment was
+    // included and its byte size for bandwidth attribution.
+    trackUsageEvent("dm_sent", {
+      metadata: {
+        has_attachment: !!uploaded,
+        attachment_bytes: uploaded?.size ?? 0,
+      },
+    });
     setMessages((prev) => {
       const withoutTemp = prev.filter((m) => m.id !== tempId);
       if (withoutTemp.find((m) => m.id === saved.id)) return withoutTemp;

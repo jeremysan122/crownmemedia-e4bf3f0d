@@ -8,6 +8,7 @@ import CrownLoader from "@/components/CrownLoader";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useSeoMeta, buildPostOgImage } from "@/hooks/useSeoMeta";
+import { trackUsage } from "@/lib/usageTrack";
 
 export default function PostPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +30,10 @@ export default function PostPage() {
     image: buildPostOgImage(post?.id, post?.image_url ?? undefined),
     type: "article",
   });
+
+  useEffect(() => {
+    if (id) trackUsage("post_page_opened", id);
+  }, [id]);
 
   useEffect(() => {
     if (!id) { setNotFound(true); setLoading(false); return; }

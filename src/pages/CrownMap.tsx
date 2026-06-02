@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useMapboxToken } from "@/hooks/useMapboxToken";
+import { trackUsage } from "@/lib/usageTrack";
 
 type Scope = "all" | "global" | "country" | "state" | "city";
 type View = "list" | "map";
@@ -115,6 +116,7 @@ function useOnline() {
 
 export default function CrownMap() {
   const { user } = useAuth();
+  useEffect(() => { trackUsage("crown_map_opened"); }, []);
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const stored = useMemo(loadPrefs, []);

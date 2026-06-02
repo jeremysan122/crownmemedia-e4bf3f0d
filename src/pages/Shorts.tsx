@@ -9,6 +9,7 @@ import { CrownIcon } from "@/components/CrownIcon";
 import { toast } from "sonner";
 import { fetchShortsPage } from "@/lib/postQuery";
 import type { FeedPost } from "@/components/PostCard";
+import { trackUsage } from "@/lib/usageTrack";
 import CommentsDrawer from "@/components/CommentsDrawer";
 
 
@@ -66,6 +67,8 @@ export default function Shorts() {
       setLoading(false);
     })();
   }, [loadPage]);
+
+  useEffect(() => { trackUsage("scrolls_opened"); }, []);
 
   const loadMore = useCallback(async () => {
     if (loadingMoreRef.current || endReached || items.length === 0) return;

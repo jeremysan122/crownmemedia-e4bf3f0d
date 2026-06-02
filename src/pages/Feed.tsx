@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
+import { trackUsage } from "@/lib/usageTrack";
 import FeedRightRail from "@/components/desktop/FeedRightRail";
 import FeedRealtimeAlert from "@/components/FeedRealtimeAlert";
 import DailyRewardChip from "@/components/DailyRewardChip";
@@ -124,6 +125,8 @@ export default function Feed() {
   const { profile, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const tagFilter = (searchParams.get("tag") || "").toLowerCase().trim();
+
+  useEffect(() => { trackUsage("feed_opened"); }, []);
 
   useEffect(() => {
     if (tagFilter) {

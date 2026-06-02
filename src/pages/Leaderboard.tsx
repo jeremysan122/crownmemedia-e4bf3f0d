@@ -13,6 +13,7 @@ import { canSeeLikes } from "@/lib/privacyVisibility";
 import HiddenCountLock from "@/components/HiddenCountLock";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { POST_SELECT } from "@/lib/postQuery";
+import { trackUsage } from "@/lib/usageTrack";
 
 type Scope = "nearby" | "city" | "state" | "country" | "global" | "following";
 
@@ -38,6 +39,7 @@ const SCOPE_META: Record<Scope, { label: string; icon: typeof Crown; needsRegion
 
 export default function Leaderboard() {
   const { profile, user } = useAuth();
+  useEffect(() => { trackUsage("leaderboard_opened"); }, []);
   useSeoMeta({
     title: "Leaderboard — CrownMe Media",
     description: "See who holds the crown. CrownMe city, country, and global photo competition rankings, updated live.",
