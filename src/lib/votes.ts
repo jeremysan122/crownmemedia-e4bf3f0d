@@ -27,6 +27,7 @@ export async function toggleVote(
   userId: string,
   voteType: VoteType
 ): Promise<VoteType | null> {
+  trackUsageEvent("vote_attempted", { postId, metadata: { vote_type: voteType } });
   const { data: existing } = await supabase
     .from("votes")
     .select("id, vote_type")
@@ -38,10 +39,12 @@ export async function toggleVote(
   if (existing && existing.vote_type === voteType) {
     const { error } = await supabase.from("votes").delete().eq("id", existing.id);
     if (error) {
+      trackUsageEvent("vote_failed", { postId, metadata: { vote_type: voteType, reason: "delete_error" } });
       toast.error(error.message);
       return voteType;
     }
     trackEvent("vote_removed", { postId, metadata: { vote_type: voteType } });
+    trackUsageEvent("vote_success", { postId, metadata: { vote_type: voteType, action: "removed" } });
     return null;
   }
 
@@ -49,6 +52,7 @@ export async function toggleVote(
   if (existing) {
     const { error: delErr } = await supabase.from("votes").delete().eq("id", existing.id);
     if (delErr) {
+      trackUsageEvent("vote_failed", { postId, metadata: { vote_type: voteType, reason: "swap_delete_error" } });
       toast.error(delErr.message);
       return existing.vote_type as VoteType;
     }
@@ -63,10 +67,12 @@ export async function toggleVote(
     const msg = /rate limit|too fast/i.test(error.message)
       ? "You're reacting too fast — slow down a moment"
       : error.message;
+    trackUsageEvent("vote_failed", { postId, metadata: { vote_type: voteType, reason: /rate limit|too fast/i.test(error.message) ? "rate_limited" : "insert_error" } });
     toast.error(msg);
     return null;
   }
   trackEvent("vote_cast", { postId, metadata: { vote_type: voteType } });
+  trackUsageEvent("vote_success", { postId, metadata: { vote_type: voteType, action: existing ? "swapped" : "cast" } });
   playVoteFx(voteType);
   return voteType;
 }
