@@ -77,3 +77,38 @@ describe("share card freshness contract", () => {
     expect(isPostDeleted(null, { rowMissing: true })).toBe(true);
   });
 });
+
+describe("share card sensitive-content protection", () => {
+  const sensitive: PostShareLike = { ...basePost, is_sensitive: true };
+  const viewerBlur = { userId: "u-viewer", mode: "blur" as const, ageConfirmed: true };
+  const viewerShow = { userId: "u-viewer", mode: "show" as const, ageConfirmed: true };
+  const viewerHide = { userId: "u-viewer", mode: "hide" as const, ageConfirmed: true };
+  const viewerUnconfirmed = { userId: "u-viewer", mode: "show" as const, ageConfirmed: false };
+  const author = { userId: "u-author", mode: "blur" as const, ageConfirmed: true };
+
+  it("returns null for sensitive posts when viewer pref is blur", () => {
+    expect(resolvePostShareImage(sensitive, viewerBlur)).toBeNull();
+  });
+  it("returns null for sensitive posts when viewer pref is hide", () => {
+    expect(resolvePostShareImage(sensitive, viewerHide)).toBeNull();
+  });
+  it("returns the image for sensitive posts when viewer pref is show and confirmed", () => {
+    expect(resolvePostShareImage(sensitive, viewerShow)).not.toBeNull();
+  });
+  it("returns null when viewer chose show but eligibility is unconfirmed", () => {
+    expect(resolvePostShareImage(sensitive, viewerUnconfirmed)).toBeNull();
+  });
+  it("returns the image for the author on their own sensitive post", () => {
+    const ownPost = { ...sensitive, user_id: "u-author" };
+    expect(resolvePostShareImage(ownPost, author)).not.toBeNull();
+  });
+  it("never exposes media for removed posts regardless of sensitivity / viewer", () => {
+    const removed = { ...sensitive, is_removed: true };
+    expect(resolvePostShareImage(removed, viewerShow)).toBeNull();
+  });
+  it("share token differs when is_sensitive flips, so cached cards invalidate", () => {
+    const before = getPostShareVersion(basePost);
+    const after = getPostShareVersion({ ...basePost, is_sensitive: true });
+    expect(before).not.toBe(after);
+  });
+});
