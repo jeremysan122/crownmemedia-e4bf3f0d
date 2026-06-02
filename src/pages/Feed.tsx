@@ -272,14 +272,15 @@ export default function Feed() {
     if (tab === "following" && followingIds && followingIds.length) q = q.in("user_id", followingIds);
     const { data, error } = await q;
     if (error) { setLoadingMore(false); return; }
-    const rows = (data as any[]) || [];
+    const rawRows = (data as any[]) || [];
+    const rows = rawRows.filter((r) => !isFilteredOut(r, feedFilters));
     setPosts((prev) => {
       const seen = new Set(prev.map((p) => p.id));
       return [...prev, ...rows.filter((r) => !seen.has(r.id))] as FeedPost[];
     });
-    setHasMore(rows.length >= PAGE_SIZE);
+    setHasMore(rawRows.length >= PAGE_SIZE);
     setLoadingMore(false);
-  }, [posts, loading, loadingMore, hasMore, orderColumn, buildQuery, tab, followingIds]);
+  }, [posts, loading, loadingMore, hasMore, orderColumn, buildQuery, tab, followingIds, feedFilters]);
 
   // IntersectionObserver sentinel
   const sentinelRef = useRef<HTMLDivElement | null>(null);
