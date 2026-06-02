@@ -107,6 +107,11 @@ export default function Profile() {
     if (!username && me?.username) nav(`/u/${me.username}`, { replace: true });
   }, [username, me?.username, nav]);
 
+  useEffect(() => {
+    const key = isMe ? "self" : (targetUsername ?? "other");
+    trackUsage("profile_opened", key);
+  }, [isMe, targetUsername]);
+
   useSeoMeta({
     title: prof ? `@${prof.username} · CrownMe` : "Profile · CrownMe",
     description: prof
