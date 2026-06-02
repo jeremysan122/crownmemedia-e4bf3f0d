@@ -371,6 +371,39 @@ export default function CommandCenterContent() {
           </ul>
         )}
       </SectionCard>
+
+      <AlertDialog open={!!confirmKind} onOpenChange={(o) => { if (!o && !bulkProgress) setConfirmKind(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmKind ? `${BULK_DEFS[confirmKind].label} ${selected.size} post${selected.size === 1 ? "" : "s"}?` : ""}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmKind ? BULK_DEFS[confirmKind].description : ""}
+              {confirmKind === "remove" ? " This cannot be self-served by users — only mods can reverse it." : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {bulkProgress ? (
+            <div className="space-y-1.5">
+              <div className="text-xs text-muted-foreground">Processing {bulkProgress.done}/{bulkProgress.total}…</div>
+              <div className="w-full h-1.5 rounded bg-muted overflow-hidden">
+                <div className="h-full bg-primary transition-all"
+                     style={{ width: `${Math.round((bulkProgress.done / Math.max(1, bulkProgress.total)) * 100)}%` }} />
+              </div>
+            </div>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!bulkProgress}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!!bulkProgress}
+              className={confirmKind && BULK_DEFS[confirmKind].destructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+              onClick={(e) => { e.preventDefault(); if (confirmKind) runBulk(confirmKind); }}
+            >
+              {confirmKind ? (bulkProgress ? "Working…" : `Confirm ${BULK_DEFS[confirmKind].verb}`) : "Confirm"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
