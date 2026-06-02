@@ -1302,6 +1302,14 @@ function MapView({
     });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
     map.scrollZoom.disable();
+    // Detect Mapbox auth/quota rejections (401/403) on tile/style requests and
+    // swap in a friendly error UI instead of leaving a blank globe.
+    map.on("error", (e: any) => {
+      const status = e?.error?.status ?? e?.status;
+      if (status === 401 || status === 403) {
+        setMapAuthError(true);
+      }
+    });
     map.on("style.load", () => {
       try {
         map.setFog({
