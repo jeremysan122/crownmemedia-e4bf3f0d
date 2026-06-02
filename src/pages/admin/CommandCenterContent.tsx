@@ -203,6 +203,7 @@ export default function CommandCenterContent() {
             onChange={() => toggleSel(p.id)}
           />
         ) : null}
+        {recentlyChanged.has(p.id) ? <PillBadge tone="good">NEW</PillBadge> : null}
         {p.is_sensitive ? <PillBadge tone="warn">sensitive</PillBadge> : null}
         <PillBadge tone={p.content_rating === "explicit" ? "bad" : p.content_rating === "mature" ? "warn" : "default"}>
           {p.content_rating}
