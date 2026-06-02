@@ -11,6 +11,8 @@ import { fetchShortsPage } from "@/lib/postQuery";
 import type { FeedPost } from "@/components/PostCard";
 import { trackUsage } from "@/lib/usageTrack";
 import CommentsDrawer from "@/components/CommentsDrawer";
+import { useFeedFilters } from "@/hooks/useFeedFilters";
+import { EyeOff, Eye } from "lucide-react";
 
 
 // Shorts uses the canonical post row shape (see src/lib/postQuery.ts) so the
@@ -25,6 +27,7 @@ const PAGE_SIZE = 12;
 export default function Shorts() {
   const nav = useNavigate();
   const { user } = useAuth();
+  const { sensitiveMode } = useFeedFilters();
   useSeoMeta({
     title: "Scrolls — CrownMe",
     description: "Scroll through quick royal videos from the CrownMe community.",
@@ -36,6 +39,7 @@ export default function Shorts() {
   const [endReached, setEndReached] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
   // Desktop ≥1024px → right-side comments panel; below → bottom slide-up sheet.
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches,
@@ -52,10 +56,25 @@ export default function Shorts() {
   const loadingMoreRef = useRef(false);
 
 
+  // Helper: is this scroll currently hidden behind a content warning?
+  // Authors always see their own. Hide mode filters at load time.
+  const isBlurred = useCallback((p: Short) => {
+    if (!p.is_sensitive) return false;
+    if (user?.id && p.user_id === user.id) return false;
+    if (sensitiveMode === "show") return false;
+    return !revealed.has(p.id);
+  }, [revealed, sensitiveMode, user?.id]);
+
   const loadPage = useCallback(async (cursor?: string) => {
     const rows = await fetchShortsPage({ limit: PAGE_SIZE, beforeCreatedAt: cursor });
-    return rows.filter((r) => !!r.video_url) as Short[];
-  }, []);
+    return rows.filter((r) => {
+      if (!r.video_url) return false;
+      // Viewer chose to hide sensitive content — drop it from the queue entirely
+      // (except for the author's own scrolls).
+      if (sensitiveMode === "hide" && r.is_sensitive && r.user_id !== user?.id) return false;
+      return true;
+    }) as Short[];
+  }, [sensitiveMode, user?.id]);
 
 
   useEffect(() => {
@@ -97,7 +116,12 @@ export default function Shorts() {
           if (e.isIntersecting && e.intersectionRatio > 0.65) {
             setActiveIdx(idx);
             vid.muted = muted;
-            vid.play().catch(() => { /* Autoplay blocked by browser policy */ });
+            // Never autoplay sensitive content that hasn't been revealed yet.
+            if (!isBlurred(items[idx])) {
+              vid.play().catch(() => { /* Autoplay blocked by browser policy */ });
+            } else {
+              vid.pause();
+            }
             if (idx >= items.length - 3) loadMore();
           } else {
             vid.pause();
@@ -109,7 +133,7 @@ export default function Shorts() {
     const slides = root.querySelectorAll<HTMLElement>("[data-short-slide]");
     slides.forEach((s) => io.observe(s));
     return () => io.disconnect();
-  }, [items, muted, loadMore]);
+  }, [items, muted, loadMore, isBlurred]);
 
   useEffect(() => {
     videoRefs.current.forEach((v) => { if (v) v.muted = muted; });
@@ -204,12 +228,40 @@ export default function Shorts() {
                 muted={muted}
                 preload={Math.abs(idx - activeIdx) <= 1 ? "auto" : "metadata"}
                 onClick={(e) => {
+                  if (isBlurred(p)) return;
                   const v = e.currentTarget;
                   if (v.paused) v.play().catch(() => {});
                   else v.pause();
                 }}
-                className="h-full w-full object-contain bg-black"
+                className={`h-full w-full object-contain bg-black transition-[filter] ${isBlurred(p) ? "blur-2xl scale-105" : ""}`}
               />
+
+              {isBlurred(p) && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/60 backdrop-blur-sm p-6 text-center">
+                  <div className="flex items-center gap-2 text-white">
+                    <EyeOff size={18} className="text-gold" />
+                    <span className="font-display text-sm uppercase tracking-widest">Content warning</span>
+                  </div>
+                  <p className="text-xs text-white/70 max-w-[260px]">
+                    {p.sensitive_reason?.trim()
+                      ? p.sensitive_reason
+                      : "The author marked this scroll as sensitive."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRevealed((s) => { const n = new Set(s); n.add(p.id); return n; });
+                      // Resume playback once revealed if this is the active slide.
+                      const vid = videoRefs.current[idx];
+                      if (vid && idx === activeIdx) vid.play().catch(() => {});
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-gold/90 hover:bg-gold text-background px-3 py-1.5 text-xs font-semibold active:scale-95 transition"
+                  >
+                    <Eye size={14} /> View post
+                  </button>
+                </div>
+              )}
 
               <div className="absolute right-3 bottom-28 flex flex-col items-center gap-5">
                 <button

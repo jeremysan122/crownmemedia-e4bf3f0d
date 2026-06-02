@@ -18,6 +18,8 @@ import { useSeoMeta, buildProfileOgImage } from "@/hooks/useSeoMeta";
 import { trackUsage } from "@/lib/usageTrack";
 import PostDetailDialog from "@/components/PostDetailDialog";
 import type { FeedPost } from "@/components/PostCard";
+import SensitiveThumb from "@/components/SensitiveThumb";
+import { useFeedFilters } from "@/hooks/useFeedFilters";
 import { fetchPostById } from "@/lib/postQuery";
 import UserListDialog from "@/components/profile/UserListDialog";
 import ShareProfileDialog from "@/components/profile/ShareProfileDialog";
@@ -68,10 +70,10 @@ export default function Profile() {
   const nav = useNavigate();
   const [prof, setProf] = useState<ProfileFull | null>(null);
   const [crownVoteTotal, setCrownVoteTotal] = useState<number>(0);
-  const [posts, setPosts] = useState<{ id: string; image_url: string; crown_score: number; filter: string | null; pinned_at?: string | null }[]>([]);
+  const [posts, setPosts] = useState<{ id: string; image_url: string; crown_score: number; filter: string | null; pinned_at?: string | null; is_sensitive?: boolean | null }[]>([]);
   const [crowns, setCrowns] = useState<{ id: string; title: string; region_name: string; active: boolean; category: string }[]>([]);
-  const [liked, setLiked] = useState<{ id: string; image_url: string; crown_score: number }[]>([]);
-  const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number }[]>([]);
+  const [liked, setLiked] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null }[]>([]);
+  const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null }[]>([]);
   const [battles, setBattles] = useState<BattleRow[]>([]);
   const [following, setFollowing] = useState(false);
   const [openPost, setOpenPost] = useState<FeedPost | null>(null);
@@ -102,6 +104,11 @@ export default function Profile() {
   const targetUsername = isMe ? me?.username : username;
   const royalPassActive = useIsRoyalPassUser(prof?.id);
   const profileGlowActive = useActiveBoost(prof?.id, "profile_glow");
+  const { sensitiveMode } = useFeedFilters();
+  // Blur thumbnails for non-own profiles unless the viewer chose "show".
+  // Author always sees their own posts in clear.
+  const shouldBlurThumb = (p: { is_sensitive?: boolean | null }) =>
+    !!p.is_sensitive && !isMe && sensitiveMode !== "show";
 
   useEffect(() => {
     if (!username && me?.username) nav(`/u/${me.username}`, { replace: true });
@@ -138,7 +145,7 @@ export default function Profile() {
       const pid = (p as any).id;
 
       const [{ data: ps, error: psErr }, { data: cs }, { data: rs }] = await Promise.all([
-        supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at").eq("user_id", pid).eq("is_removed", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
+        supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at, is_sensitive").eq("user_id", pid).eq("is_removed", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
         supabase.from("crowns").select("id, title, region_name, active, category").eq("user_id", pid).order("started_at", { ascending: false }).limit(40),
         supabase.from("user_roles").select("role").eq("user_id", pid),
       ]);
@@ -181,7 +188,7 @@ export default function Profile() {
       if (likedIds.length) {
         const { data: lp } = await supabase
           .from("posts")
-          .select("id, image_url, crown_score")
+          .select("id, image_url, crown_score, is_sensitive")
           .in("id", likedIds)
           .eq("is_removed", false);
         if (!cancelled) setLiked((lp as any) || []);
@@ -203,7 +210,7 @@ export default function Profile() {
         if (bmIds.length) {
           const { data: sp } = await supabase
             .from("posts")
-            .select("id, image_url, crown_score")
+            .select("id, image_url, crown_score, is_sensitive")
             .in("id", bmIds)
             .eq("is_removed", false);
           if (!cancelled) setSaved((sp as any) || []);
@@ -680,6 +687,7 @@ export default function Profile() {
                             style={isValidFilter(p.filter) && p.filter && p.filter !== "none" ? { filter: cssFor(p.filter as any) } : undefined}
                             alt=""
                           />
+                          <SensitiveThumb blurred={shouldBlurThumb(p)} />
                         </button>
                         <div className="absolute bottom-1 right-1 glass px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1 pointer-events-none">
                           <Crown size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
@@ -901,6 +909,7 @@ export default function Profile() {
                         aria-label="Open post"
                       >
                         <img loading="lazy" src={p.image_url} className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]" alt="" />
+                        <SensitiveThumb blurred={shouldBlurThumb(p)} />
                         <div className="absolute bottom-1 right-1 glass px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1">
                           <Heart size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
                         </div>
@@ -934,6 +943,7 @@ export default function Profile() {
                           aria-label="Open post"
                         >
                           <img loading="lazy" src={p.image_url} className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]" alt="" />
+                          <SensitiveThumb blurred={shouldBlurThumb(p)} />
                           <div className="absolute bottom-1 right-1 glass px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1">
                             <Bookmark size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
                           </div>
