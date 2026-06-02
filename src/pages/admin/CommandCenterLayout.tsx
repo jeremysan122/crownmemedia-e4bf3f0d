@@ -15,6 +15,7 @@ import {
   Stethoscope,
   Bug,
   ToggleRight,
+  HeartPulse,
 } from "lucide-react";
 
 const NAV: Array<{ to: string; label: string; icon: ReactNode }> = [
@@ -23,6 +24,7 @@ const NAV: Array<{ to: string; label: string; icon: ReactNode }> = [
   { to: "/admin/command-center/security", label: "Security", icon: <ShieldAlert size={14} /> },
   { to: "/admin/command-center/finance", label: "Finance", icon: <DollarSign size={14} /> },
   { to: "/admin/command-center/stripe-health", label: "Stripe Health", icon: <Stethoscope size={14} /> },
+  { to: "/admin/command-center/db-health", label: "DB Health", icon: <HeartPulse size={14} /> },
   { to: "/admin/command-center/error-logs", label: "Error Logs", icon: <Bug size={14} /> },
   { to: "/admin/command-center/feature-flags", label: "Feature Flags", icon: <ToggleRight size={14} /> },
   { to: "/admin/command-center/users", label: "Users", icon: <Users size={14} /> },

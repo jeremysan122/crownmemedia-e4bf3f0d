@@ -912,6 +912,57 @@ export type Database = {
         }
         Relationships: []
       }
+      db_health_snapshots: {
+        Row: {
+          captured_at: string
+          commits: number
+          commits_delta: number
+          connections_active: number
+          connections_max: number
+          db_size_bytes: number
+          deadlocks: number
+          deadlocks_delta: number
+          id: string
+          metadata: Json
+          rollback_rate: number
+          rollbacks: number
+          rollbacks_delta: number
+          wal_size_bytes: number
+        }
+        Insert: {
+          captured_at?: string
+          commits?: number
+          commits_delta?: number
+          connections_active?: number
+          connections_max?: number
+          db_size_bytes?: number
+          deadlocks?: number
+          deadlocks_delta?: number
+          id?: string
+          metadata?: Json
+          rollback_rate?: number
+          rollbacks?: number
+          rollbacks_delta?: number
+          wal_size_bytes?: number
+        }
+        Update: {
+          captured_at?: string
+          commits?: number
+          commits_delta?: number
+          connections_active?: number
+          connections_max?: number
+          db_size_bytes?: number
+          deadlocks?: number
+          deadlocks_delta?: number
+          id?: string
+          metadata?: Json
+          rollback_rate?: number
+          rollbacks?: number
+          rollbacks_delta?: number
+          wal_size_bytes?: number
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -3284,6 +3335,7 @@ export type Database = {
       }
       can_view_posts_of: { Args: { _owner: string }; Returns: boolean }
       cancel_account_deletion: { Args: never; Returns: undefined }
+      capture_db_health_snapshot: { Args: never; Returns: string }
       claim_daily_reward: { Args: never; Returns: Json }
       claim_daily_royal_boost: { Args: { p_post_id: string }; Returns: Json }
       comments_allowed_on: { Args: { _post: string }; Returns: boolean }
@@ -3305,6 +3357,7 @@ export type Database = {
         Returns: undefined
       }
       get_creator_dashboard: { Args: { _user_id?: string }; Returns: Json }
+      get_db_vitals: { Args: never; Returns: Json }
       get_my_profile: {
         Args: never
         Returns: {

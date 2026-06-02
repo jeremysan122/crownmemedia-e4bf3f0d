@@ -73,6 +73,7 @@ const CommandCenterRealtime = lazy(() => import("./pages/admin/CommandCenterReal
 const CommandCenterSecurity = lazy(() => import("./pages/admin/CommandCenterSecurity"));
 const CommandCenterFinance = lazy(() => import("./pages/admin/CommandCenterFinance"));
 const CommandCenterStripeHealth = lazy(() => import("./pages/admin/CommandCenterStripeHealth"));
+const CommandCenterDbHealth = lazy(() => import("./pages/admin/CommandCenterDbHealth"));
 const CommandCenterUsers = lazy(() => import("./pages/admin/CommandCenterUsers"));
 const CommandCenterContent = lazy(() => import("./pages/admin/CommandCenterContent"));
 const CommandCenterBroadcasts = lazy(() => import("./pages/admin/CommandCenterBroadcasts"));
@@ -177,6 +178,7 @@ const App = () => (
                 <Route path="security" element={<CommandCenterSecurity />} />
                 <Route path="finance" element={<CommandCenterFinance />} />
                 <Route path="stripe-health" element={<CommandCenterStripeHealth />} />
+                <Route path="db-health" element={<CommandCenterDbHealth />} />
                 <Route path="users" element={<CommandCenterUsers />} />
                 <Route path="content" element={<CommandCenterContent />} />
                 <Route path="reports" element={<CommandCenterReports />} />
