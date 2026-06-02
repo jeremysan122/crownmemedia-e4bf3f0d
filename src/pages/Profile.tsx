@@ -104,6 +104,11 @@ export default function Profile() {
   const targetUsername = isMe ? me?.username : username;
   const royalPassActive = useIsRoyalPassUser(prof?.id);
   const profileGlowActive = useActiveBoost(prof?.id, "profile_glow");
+  const { sensitiveMode } = useFeedFilters();
+  // Blur thumbnails for non-own profiles unless the viewer chose "show".
+  // Author always sees their own posts in clear.
+  const shouldBlurThumb = (p: { is_sensitive?: boolean | null }) =>
+    !!p.is_sensitive && !isMe && sensitiveMode !== "show";
 
   useEffect(() => {
     if (!username && me?.username) nav(`/u/${me.username}`, { replace: true });
