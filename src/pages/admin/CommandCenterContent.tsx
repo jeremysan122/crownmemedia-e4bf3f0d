@@ -54,7 +54,7 @@ export default function CommandCenterContent() {
   };
 
   const updatePost = async (id: string, patch: Record<string, any>) => {
-    const { error } = await supabase.from("posts").update(patch).eq("id", id);
+    const { error } = await (supabase as any).from("posts").update(patch).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Updated");
     load();
@@ -93,6 +93,44 @@ export default function CommandCenterContent() {
                 <span className="flex-1 truncate">{t.reason}</span>
                 {t.reversed_at ? <PillBadge tone="warn">reversed</PillBadge> : <PillBadge tone="bad">active</PillBadge>}
                 <span className="text-[10px] text-muted-foreground">{new Date(t.created_at).toLocaleDateString()}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </SectionCard>
+
+      <SectionCard title={`Sensitive / Flagged Posts (${sensitive.length})`}>
+        {sensitive.length === 0 ? <EmptyState message="No sensitive or flagged posts." /> : (
+          <ul className="divide-y divide-border/40">
+            {sensitive.map((p) => (
+              <li key={p.id} className="py-2 space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {p.is_sensitive ? <PillBadge tone="warn">sensitive</PillBadge> : null}
+                  <PillBadge tone={p.content_rating === "explicit" ? "bad" : p.content_rating === "mature" ? "warn" : "default"}>{p.content_rating}</PillBadge>
+                  <PillBadge tone={p.moderation_status === "removed" ? "bad" : p.moderation_status === "flagged" ? "warn" : p.moderation_status === "pending" ? "warn" : "good"}>{p.moderation_status}</PillBadge>
+                  <span className="text-[10px] text-muted-foreground font-mono truncate flex-1">{p.id.slice(0, 12)}…</span>
+                </div>
+                {p.caption ? <div className="text-xs line-clamp-2">{p.caption}</div> : null}
+                {p.sensitive_reason ? <div className="text-[10px] text-muted-foreground">Reason: {p.sensitive_reason}</div> : null}
+                <div className="flex gap-1.5 flex-wrap">
+                  <select
+                    className="h-7 rounded border border-border/60 bg-card/60 text-[10px] px-1"
+                    value={p.content_rating}
+                    onChange={(e) => updatePost(p.id, { content_rating: e.target.value })}
+                  >
+                    {RATINGS.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <select
+                    className="h-7 rounded border border-border/60 bg-card/60 text-[10px] px-1"
+                    value={p.moderation_status}
+                    onChange={(e) => updatePost(p.id, { moderation_status: e.target.value })}
+                  >
+                    {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => updatePost(p.id, { is_sensitive: !p.is_sensitive })}>
+                    {p.is_sensitive ? "Unmark sensitive" : "Mark sensitive"}
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
