@@ -116,7 +116,12 @@ export default function Shorts() {
           if (e.isIntersecting && e.intersectionRatio > 0.65) {
             setActiveIdx(idx);
             vid.muted = muted;
-            vid.play().catch(() => { /* Autoplay blocked by browser policy */ });
+            // Never autoplay sensitive content that hasn't been revealed yet.
+            if (!isBlurred(items[idx])) {
+              vid.play().catch(() => { /* Autoplay blocked by browser policy */ });
+            } else {
+              vid.pause();
+            }
             if (idx >= items.length - 3) loadMore();
           } else {
             vid.pause();
@@ -128,7 +133,7 @@ export default function Shorts() {
     const slides = root.querySelectorAll<HTMLElement>("[data-short-slide]");
     slides.forEach((s) => io.observe(s));
     return () => io.disconnect();
-  }, [items, muted, loadMore]);
+  }, [items, muted, loadMore, isBlurred]);
 
   useEffect(() => {
     videoRefs.current.forEach((v) => { if (v) v.muted = muted; });
