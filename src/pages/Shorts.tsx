@@ -228,12 +228,40 @@ export default function Shorts() {
                 muted={muted}
                 preload={Math.abs(idx - activeIdx) <= 1 ? "auto" : "metadata"}
                 onClick={(e) => {
+                  if (isBlurred(p)) return;
                   const v = e.currentTarget;
                   if (v.paused) v.play().catch(() => {});
                   else v.pause();
                 }}
-                className="h-full w-full object-contain bg-black"
+                className={`h-full w-full object-contain bg-black transition-[filter] ${isBlurred(p) ? "blur-2xl scale-105" : ""}`}
               />
+
+              {isBlurred(p) && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/60 backdrop-blur-sm p-6 text-center">
+                  <div className="flex items-center gap-2 text-white">
+                    <EyeOff size={18} className="text-gold" />
+                    <span className="font-display text-sm uppercase tracking-widest">Content warning</span>
+                  </div>
+                  <p className="text-xs text-white/70 max-w-[260px]">
+                    {p.sensitive_reason?.trim()
+                      ? p.sensitive_reason
+                      : "The author marked this scroll as sensitive."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRevealed((s) => { const n = new Set(s); n.add(p.id); return n; });
+                      // Resume playback once revealed if this is the active slide.
+                      const vid = videoRefs.current[idx];
+                      if (vid && idx === activeIdx) vid.play().catch(() => {});
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-gold/90 hover:bg-gold text-background px-3 py-1.5 text-xs font-semibold active:scale-95 transition"
+                  >
+                    <Eye size={14} /> View post
+                  </button>
+                </div>
+              )}
 
               <div className="absolute right-3 bottom-28 flex flex-col items-center gap-5">
                 <button
