@@ -15,6 +15,7 @@ import {
   Stethoscope,
   Bug,
   ToggleRight,
+  HeartPulse,
 } from "lucide-react";
 
 const NAV: Array<{ to: string; label: string; icon: ReactNode }> = [
