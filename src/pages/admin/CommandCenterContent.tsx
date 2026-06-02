@@ -5,17 +5,29 @@ import { Button } from "@/components/ui/button";
 import { removePost, removeComment, resolveQueueItem } from "@/lib/admin";
 import { toast } from "sonner";
 
+const RATINGS = ["safe", "suggestive", "mature", "explicit"] as const;
+const STATUSES = ["pending", "approved", "flagged", "removed"] as const;
+
 export default function CommandCenterContent() {
   const [queue, setQueue] = useState<any[]>([]);
   const [takedowns, setTakedowns] = useState<any[]>([]);
+  const [sensitive, setSensitive] = useState<any[]>([]);
 
   const load = async () => {
-    const [q, t] = await Promise.all([
+    const [q, t, s] = await Promise.all([
       supabase.from("moderation_queue").select("*").eq("status","pending").order("priority", { ascending: false }).order("created_at", { ascending: false }).limit(50),
       supabase.from("content_takedowns").select("*").order("created_at", { ascending: false }).limit(30),
+      supabase
+        .from("posts")
+        .select("id,user_id,caption,is_sensitive,sensitive_reason,content_rating,moderation_status,created_at")
+        .or("is_sensitive.eq.true,moderation_status.neq.approved,content_rating.neq.safe")
+        .eq("is_removed", false)
+        .order("created_at", { ascending: false })
+        .limit(40),
     ]);
     setQueue(q.data ?? []);
     setTakedowns(t.data ?? []);
+    setSensitive(s.data ?? []);
   };
 
   useEffect(() => {
@@ -24,6 +36,7 @@ export default function CommandCenterContent() {
       .channel("cc-content")
       .on("postgres_changes", { event: "*", schema: "public", table: "moderation_queue" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "content_takedowns" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, load)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
@@ -38,6 +51,13 @@ export default function CommandCenterContent() {
       toast.success(action === "remove" ? "Removed" : "Dismissed");
       load();
     } catch (e: any) { toast.error(e.message ?? "Failed"); }
+  };
+
+  const updatePost = async (id: string, patch: Record<string, any>) => {
+    const { error } = await supabase.from("posts").update(patch).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Updated");
+    load();
   };
 
   return (
