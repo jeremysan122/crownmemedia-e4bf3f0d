@@ -333,6 +333,42 @@ export type Database = {
           },
         ]
       }
+      billing_reconciliations: {
+        Row: {
+          actual_charge_usd: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          estimated_cost_usd: number
+          id: string
+          notes: string | null
+          period_end: string
+          period_start: string
+        }
+        Insert: {
+          actual_charge_usd: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          estimated_cost_usd?: number
+          id?: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+        }
+        Update: {
+          actual_charge_usd?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          estimated_cost_usd?: number
+          id?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+        }
+        Relationships: []
+      }
       blocks: {
         Row: {
           blocked_id: string
@@ -452,6 +488,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cloud_cost_assumptions: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          metric_key: string
+          notes: string | null
+          provider: string
+          unit_cost: number
+          unit_name: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          metric_key: string
+          notes?: string | null
+          provider?: string
+          unit_cost?: number
+          unit_name: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          metric_key?: string
+          notes?: string | null
+          provider?: string
+          unit_cost?: number
+          unit_name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       comment_reactions: {
         Row: {
@@ -615,6 +690,96 @@ export type Database = {
           reversible?: boolean
           target_id?: string
           target_type?: string
+        }
+        Relationships: []
+      }
+      cost_alert_rules: {
+        Row: {
+          comparison_window: string
+          created_at: string
+          created_by: string | null
+          feature: string | null
+          id: string
+          is_active: boolean
+          metric_key: string
+          name: string
+          threshold_type: string
+          threshold_value: number
+          updated_at: string
+        }
+        Insert: {
+          comparison_window?: string
+          created_at?: string
+          created_by?: string | null
+          feature?: string | null
+          id?: string
+          is_active?: boolean
+          metric_key: string
+          name: string
+          threshold_type: string
+          threshold_value: number
+          updated_at?: string
+        }
+        Update: {
+          comparison_window?: string
+          created_at?: string
+          created_by?: string | null
+          feature?: string | null
+          id?: string
+          is_active?: boolean
+          metric_key?: string
+          name?: string
+          threshold_type?: string
+          threshold_value?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cost_alerts: {
+        Row: {
+          acknowledged: boolean
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          created_at: string
+          current_value: number
+          feature: string | null
+          id: string
+          message: string
+          metric_key: string
+          percent_change: number
+          previous_value: number
+          rule_id: string | null
+          severity: string
+        }
+        Insert: {
+          acknowledged?: boolean
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          current_value?: number
+          feature?: string | null
+          id?: string
+          message: string
+          metric_key: string
+          percent_change?: number
+          previous_value?: number
+          rule_id?: string | null
+          severity?: string
+        }
+        Update: {
+          acknowledged?: boolean
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          current_value?: number
+          feature?: string | null
+          id?: string
+          message?: string
+          metric_key?: string
+          percent_change?: number
+          previous_value?: number
+          rule_id?: string | null
+          severity?: string
         }
         Relationships: []
       }
@@ -909,6 +1074,45 @@ export type Database = {
           total_claims?: number
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      daily_usage_rollups: {
+        Row: {
+          created_at: string
+          date: string
+          estimated_cost: number
+          feature: string
+          id: string
+          metadata: Json
+          metric_key: string
+          total_bytes: number
+          total_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          estimated_cost?: number
+          feature: string
+          id?: string
+          metadata?: Json
+          metric_key: string
+          total_bytes?: number
+          total_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          estimated_cost?: number
+          feature?: string
+          id?: string
+          metadata?: Json
+          metric_key?: string
+          total_bytes?: number
+          total_count?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -3315,6 +3519,7 @@ export type Database = {
         }
       }
       assert_security_invariants: { Args: never; Returns: undefined }
+      assumption: { Args: { _default?: number; _key: string }; Returns: number }
       bump_filter_streak: {
         Args: { _filter: string }
         Returns: {
@@ -3339,6 +3544,7 @@ export type Database = {
       claim_daily_reward: { Args: never; Returns: Json }
       claim_daily_royal_boost: { Args: { p_post_id: string }; Returns: Json }
       comments_allowed_on: { Args: { _post: string }; Returns: boolean }
+      compute_daily_usage_rollup: { Args: { _d?: string }; Returns: undefined }
       confirm_my_age: { Args: { _dob: string }; Returns: undefined }
       deactivate_my_account: { Args: never; Returns: undefined }
       delete_email: {
@@ -3352,6 +3558,7 @@ export type Database = {
         Returns: number
       }
       ensure_my_wallet: { Args: never; Returns: undefined }
+      evaluate_cost_alerts: { Args: never; Returns: number }
       evaluate_creator_milestones: {
         Args: { _creator_id: string }
         Returns: undefined

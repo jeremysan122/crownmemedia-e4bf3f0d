@@ -1,74 +1,87 @@
-## Scope
+# Cloud Spend & Usage Intelligence
 
-Five independent workstreams, all secure and RLS-safe. I'll implement in this order so each can ship without blocking the next. This is a large change set — flagging up front so we agree on scope before I touch files.
+Admin-only dashboard inside Command Center that **estimates** cloud cost drivers from internal app metrics + configurable pricing assumptions. Clearly labeled "ESTIMATE" — never presented as actual Workspace/Lovable billing.
 
----
+## Scope guardrails
 
-### Part 1 — Broken Crown / Dislike sound
+To ship something useful without bloating the app, I'm pulling these levers:
 
-- Generate a short (~0.6s) "cracked-crown / soft metal break" SFX via ElevenLabs and store at `src/assets/broken-crown.mp3`. (Falls back to a tiny synthesized WebAudio "thud" if generation fails so the feature never blocks.)
-- New `src/lib/sounds.ts` utility: lazy `HTMLAudioElement` cache, ~250 ms throttle, fail-silent on `Audio` errors, respects `localStorage.crownme:sound-muted` (future settings hook), light `navigator.vibrate(15)` when available.
-- Wire into `src/components/PostCard.tsx` inside the dislike branch of `onVote` — only after the optimistic UI commits. Like/crown/fire/diamond chimes via `fxVote` stay untouched.
+- **No new client-side event firehose.** Adding `usage_events` writes on every avatar/feed/scroll render would inflate DB rollback rate (already 9%), increase egress, and cost more than it measures. Instead I'll **derive feature usage from data the app already writes**: `analytics_events` (already exists, privacy-safe), `posts`, `votes`, `comments`, `messages`, `notifications`, storage object metadata, `function_edge_logs` (analytics warehouse), and the new `db_health_snapshots`.
+- **Lightweight new tracking only where the existing tables don't cover it:** share-card downloads, crown-map opens, scrolls views, feed opens — added as `analytics_events` rows (table already exists with privacy-safe hashing), **not** a new high-volume `usage_events` table.
+- **Daily rollup is computed by a Postgres function on a cron**, queried by the dashboard. The dashboard never aggregates raw events live.
 
-### Part 2 — Legal docs versioning
+## Database
 
-- Add a shared `<LegalDocHeader>` component (`src/components/legal/LegalDocHeader.tsx`) rendering title, **Version 1.0**, **Effective Date: May 30, 2026**, **Last Updated: May 30, 2026**, owner line "CrownMe Media, a product of Talent Connect World LLC", and `legal@crownmemedia.com` contact.
-- Insert it at the top of every page in `src/pages/legal/`: TermsOfService, PrivacyPolicy, CommunityGuidelines, AcceptableUse, CookiePolicy, DmcaPolicy, CsaePolicy, Eula, SubscriptionTerms, VirtualGoodsPolicy, ContactLegal.
-- Update `LegalCenter.tsx` to list every policy with its version + last-updated date pulled from a single `LEGAL_DOCS` registry (`src/lib/legalDocs.ts`) so footer + Legal Center + headers stay in sync.
-- Verify `AppFooter.tsx` links match the registry; fix any broken paths.
-- Add an HTML comment at the top of each page: `<!-- Internal: drafted by product team; requires attorney review before public launch. -->`
-- **Not building** the optional `legal_documents` DB table — current pages are static React, adding a CMS is out of scope unless you ask.
+New migration:
 
-### Part 3 — Notifications "Mark all read"
+1. `cloud_cost_assumptions` — provider, metric_key (unique), unit_name, unit_cost numeric, currency, notes, updated_by, updated_at. Seeded with reasonable defaults (storage $0.021/GB/mo, egress $0.09/GB, edge invocations $2/M, avg post image 1.5 MB, avg avatar 80 KB, avg share card 350 KB). Admin-only RLS.
+2. `daily_usage_rollups` — date, feature, metric_key, total_count bigint, total_bytes bigint, estimated_cost numeric, metadata jsonb. Unique on (date, feature, metric_key). Admin-only read.
+3. `cost_alert_rules` — name, metric_key, feature, threshold_type (`pct_change_dod`, `pct_change_wow`, `absolute`), threshold_value, comparison_window, is_active, created_by. Admin-only.
+4. `cost_alerts` — rule_id, metric_key, feature, severity, message, current_value, previous_value, percent_change, acknowledged. Admin-only. Reuse existing `admin_alerts` for the global notification surface; `cost_alerts` is the per-rule ledger.
+5. `billing_reconciliations` — period_start, period_end, actual_charge_usd, estimated_cost_usd (snapshot), notes, created_by. Admin-only.
 
-- Add button to `src/pages/Notifications.tsx` header, visible only when `unread_count > 0`.
-- New SECURITY DEFINER RPC `mark_all_notifications_read()` that updates `notifications` where `user_id = auth.uid() AND read = false` and returns the row count. Granted to `authenticated` only.
-- Optimistic UI + `useUnreadByType` invalidation. Toast on success/failure. Button disabled while in-flight.
+New SECURITY DEFINER functions (service-role-only EXECUTE):
 
-### Part 4 — Inbox "Mark all read"
+- `compute_daily_usage_rollup(d date)` — aggregates that day's `posts` (uploads & storage growth), `votes`, `comments`, `messages`, `notifications`, `analytics_events` grouped by `category`/`event_name`, storage object growth per bucket. Writes to `daily_usage_rollups`. Computes per-row `estimated_cost` from `cloud_cost_assumptions`.
+- `evaluate_cost_alerts()` — for every active rule, compares the latest rollup to its baseline (dod / 7-day avg). Inserts to `cost_alerts` and `admin_alerts` when threshold crossed.
 
-- Audit `src/pages/Messages.tsx` and `src/hooks/useThreadUnread.ts` to determine the right read marker (per-message `read_at` on `messages` where `receiver_id = auth.uid()`).
-- New RPC `mark_all_messages_read()` doing `UPDATE messages SET read_at = now() WHERE receiver_id = auth.uid() AND read_at IS NULL`.
-- Button in Messages header, visible only when there are unread threads; optimistic + invalidate.
+Cron (via `supabase--insert`, not migration): runs both at 00:10 UTC daily.
 
-### Part 5 — Reply to comments
+## Frontend
 
-Database migration:
-- `comments` already has `parent_id` (confirmed via grep). Add if missing: index on `(parent_id)`, `reply_count int default 0` on parent rows maintained by trigger.
-- Trigger `trg_comments_reply_count`: on insert/delete of a comment with non-null `parent_id`, bump/decrement `reply_count` on the parent. Also enforce: parent must belong to same `post_id`, and depth is capped at 1 (parent's `parent_id` must be null).
-- Existing notification trigger `trg_notify_comment_reply` already covers reply notifications — verified in earlier audit.
-- RLS unchanged — current comment policies already self-scope inserts and allow public read on visible posts.
+New page `src/pages/admin/CommandCenterCloudSpend.tsx` with tabbed sections:
 
-Frontend (`src/components/CommentsDrawer.tsx`):
-- Group fetched comments into `top-level` + `replies[parentId]`. Render replies indented under each parent, collapsed behind "View N replies" when `reply_count > 0`.
-- Add `replyingTo: { commentId, username } | null` state. "Reply" button on each top-level comment sets it; composer placeholder becomes `Reply to @username…`; small chip above input with an X to cancel.
-- On send: if `replyingTo` is set, include `parent_id` in insert. Optimistic insert under the right parent, rollback on failure.
-- `crownme:comment-added` event payload extended with `parentId?: string` so listeners can bump the right count. Post `comment_count` continues to include replies (DB trigger already counts all rows).
-- Lazy-load replies: only fetch a parent's replies when user expands, up to 50 per request.
+1. **Overview** — estimated cost today, this week, this month, projected end-of-month, top cost driver. Sparkline trends.
+2. **Cost Projection** — daily growth rate, 7d/30d trend lines, naive linear forecast.
+3. **Feature Attribution** — table grouping rollup rows by feature (Feed, Scrolls, Profile, Crown Map, Leaderboard, Voting, Comments, DMs, Notifications, Verification, Share Cards, Royal Pass, Admin) with media loads, est egress GB, edge invocations, est cost, % share.
+4. **Alerts** — list `cost_alerts` (filter by acknowledged), create/edit `cost_alert_rules` (name, metric, threshold type, value, window).
+5. **Billing Reconciliation** — admin pastes actual Workspace charge for a period; UI computes delta vs. our estimate. Export buttons for CSV (7d, 30d, custom range) including assumptions used + disclaimer.
+6. **Settings** — editable `cloud_cost_assumptions` table.
 
----
+Add nav entry "Cloud Spend" in `CommandCenterLayout`.
 
-## Files I expect to touch
+## Lightweight client tracking
 
-```text
-new   src/assets/broken-crown.mp3
-new   src/lib/sounds.ts
-new   src/lib/legalDocs.ts
-new   src/components/legal/LegalDocHeader.tsx
-edit  src/components/PostCard.tsx              (sound trigger)
-edit  src/components/CommentsDrawer.tsx        (replies UI)
-edit  src/pages/Notifications.tsx              (mark all read)
-edit  src/pages/Messages.tsx                   (mark all read)
-edit  src/pages/legal/*.tsx                    (11 files: insert header)
-edit  src/components/AppFooter.tsx             (verify links)
-new   supabase migration                       (RPCs + reply trigger + index)
-```
+Add 6 new `analytics_events` event names, fired once per session-screen view (not per media load) using a small debounced helper `src/lib/usageTrack.ts`:
 
-## Risks / explicit non-goals
+- `feed_opened`, `scrolls_opened`, `crown_map_opened`, `leaderboard_opened`, `post_viewed`, `share_card_downloaded`
 
-- I will **not** build a legal CMS table unless you ask — pages stay static React with a shared header.
-- I will **not** change vote scoring, gifts, Royal Pass, wallet logic, or any other unrelated surface.
-- ElevenLabs SFX generation needs an API key. If `ELEVENLABS_API_KEY` isn't already set, I'll fall back to a synthesized WebAudio "crack" sound (no asset file, no secret prompt) so this part doesn't block.
-- Final legal review by an attorney is still required — I'll add the internal comment but cannot replace counsel.
+These slot into the existing `analytics_events` table (privacy-safe, user_hash only) and feed the daily rollup. Fired with `requestIdleCallback` so they never block UI. **No per-image-load tracking** — egress is estimated from `posts.media_url` count × avg size from assumptions.
 
-Reply **approve** to proceed, or tell me which parts to drop / reorder.
+## Honesty / labelling
+
+- Every cost figure on the dashboard is prefixed "Est." and the page header reads "Estimate — not a billing invoice. Reconcile against Workspace → Billing."
+- Billing Reconciliation tab lets admins record the real number and shows variance.
+
+## Performance
+
+- Dashboard reads `daily_usage_rollups` only (small: ~50 rows/day × 30 days = 1.5k rows). No raw aggregation on read.
+- Indexes on rollups (date desc), assumptions (metric_key unique), alerts (created_at desc, acknowledged).
+- Tracking helper batches client events through existing `analytics.track()` (already on the page).
+
+## Security
+
+- All new tables: RLS enabled, admin-only via `is_any_admin(auth.uid())`. Service-role grants for the cron functions.
+- No service-role keys reach the frontend (existing pattern).
+- Dashboard route wrapped in `AdminRoute` (existing).
+
+## Files
+
+**Migration (one):** the 5 tables + 2 functions + grants + RLS.
+**Insert (cron):** schedule both jobs + seed `cloud_cost_assumptions`.
+**New code:**
+- `src/pages/admin/CommandCenterCloudSpend.tsx`
+- `src/components/admin/cc/CostAssumptionsEditor.tsx`
+- `src/components/admin/cc/AlertRulesEditor.tsx`
+- `src/components/admin/cc/BillingReconciliation.tsx`
+- `src/lib/usageTrack.ts` (thin wrapper around existing `analytics.track`)
+**Edits:**
+- `src/App.tsx` (lazy route)
+- `src/pages/admin/CommandCenterLayout.tsx` (nav entry)
+- 6 page-level tracking calls in `Feed.tsx`, `Shorts.tsx`, `CrownMap.tsx`, `Leaderboard.tsx`, `PostPage.tsx`, `ShareDialog.tsx`
+
+## Out of scope / explicitly not built
+
+- Real-time per-media-load egress tracking (cost > value at this scale).
+- Pulling real Workspace billing programmatically (no API available to me — that's why Reconciliation exists).
+- External email/SMS alerts (reuses internal `admin_alerts` only, per your instructions).
