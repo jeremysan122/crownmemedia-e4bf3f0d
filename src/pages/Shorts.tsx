@@ -56,10 +56,25 @@ export default function Shorts() {
   const loadingMoreRef = useRef(false);
 
 
+  // Helper: is this scroll currently hidden behind a content warning?
+  // Authors always see their own. Hide mode filters at load time.
+  const isBlurred = useCallback((p: Short) => {
+    if (!p.is_sensitive) return false;
+    if (user?.id && p.user_id === user.id) return false;
+    if (sensitiveMode === "show") return false;
+    return !revealed.has(p.id);
+  }, [revealed, sensitiveMode, user?.id]);
+
   const loadPage = useCallback(async (cursor?: string) => {
     const rows = await fetchShortsPage({ limit: PAGE_SIZE, beforeCreatedAt: cursor });
-    return rows.filter((r) => !!r.video_url) as Short[];
-  }, []);
+    return rows.filter((r) => {
+      if (!r.video_url) return false;
+      // Viewer chose to hide sensitive content — drop it from the queue entirely
+      // (except for the author's own scrolls).
+      if (sensitiveMode === "hide" && r.is_sensitive && r.user_id !== user?.id) return false;
+      return true;
+    }) as Short[];
+  }, [sensitiveMode, user?.id]);
 
 
   useEffect(() => {
