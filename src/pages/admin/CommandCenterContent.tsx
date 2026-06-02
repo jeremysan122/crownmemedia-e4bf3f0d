@@ -1,12 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionCard, EmptyState, PillBadge } from "@/components/admin/cc/CommandCenterUI";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { removePost, removeComment, resolveQueueItem } from "@/lib/admin";
 import { toast } from "sonner";
 
 const RATINGS = ["safe", "suggestive", "mature", "explicit"] as const;
 const STATUSES = ["pending", "approved", "flagged", "removed"] as const;
+
+type BulkKind = "approve" | "flag" | "unflag" | "remove";
+const BULK_DEFS: Record<BulkKind, { label: string; patch: Record<string, any>; destructive?: boolean; verb: string; description: string }> = {
+  approve: { label: "Approve", verb: "approve", patch: { moderation_status: "approved" }, description: "Posts will be marked approved and visible to all viewers per their content filter." },
+  flag:    { label: "Flag",    verb: "flag",    patch: { moderation_status: "flagged"  }, description: "Posts will be marked flagged and hidden from non-moderator viewers." },
+  unflag:  { label: "Unflag",  verb: "unflag",  patch: { moderation_status: "approved", is_sensitive: false }, description: "Posts will be approved and the sensitive flag cleared." },
+  remove:  { label: "Remove",  verb: "remove",  patch: { moderation_status: "removed" }, destructive: true, description: "Posts will be removed from the feed. This is destructive and visible in the audit log." },
+};
 type Post = {
   id: string;
   user_id: string;
@@ -34,6 +46,11 @@ export default function CommandCenterContent() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
   const [history, setHistory] = useState<Record<string, AuditRow[]>>({});
+  const [confirmKind, setConfirmKind] = useState<BulkKind | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ kind: BulkKind; done: number; total: number } | null>(null);
+  const [recentlyChanged, setRecentlyChanged] = useState<Map<string, number>>(new Map());
+  const expandedRef = useRef<string | null>(null);
+  expandedRef.current = expanded;
 
   const load = async () => {
     const sb = supabase as any;
@@ -77,12 +94,27 @@ export default function CommandCenterContent() {
       .channel("cc-content")
       .on("postgres_changes", { event: "*", schema: "public", table: "moderation_queue" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "content_takedowns" }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, (payload: any) => {
+        const id = (payload?.new ?? payload?.old)?.id;
+        if (id) {
+          setRecentlyChanged((m) => { const n = new Map(m); n.set(id, Date.now()); return n; });
+        }
+        load();
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "admin_audit_log" }, () => {
-        if (expanded) loadHistory(expanded);
+        if (expandedRef.current) loadHistory(expandedRef.current);
       })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    const tick = window.setInterval(() => {
+      setRecentlyChanged((m) => {
+        const cutoff = Date.now() - 10_000;
+        let changed = false;
+        const n = new Map(m);
+        for (const [k, t] of n) if (t < cutoff) { n.delete(k); changed = true; }
+        return changed ? n : m;
+      });
+    }, 2000);
+    return () => { supabase.removeChannel(ch); window.clearInterval(tick); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -131,6 +163,31 @@ export default function CommandCenterContent() {
     load();
   };
 
+  const requestBulk = (kind: BulkKind) => {
+    if (selected.size === 0) { toast.message("Select posts first"); return; }
+    setConfirmKind(kind);
+  };
+
+  const runBulk = async (kind: BulkKind) => {
+    const def = BULK_DEFS[kind];
+    const ids = Array.from(selected);
+    const CHUNK = 25;
+    setBulkProgress({ kind, done: 0, total: ids.length });
+    let failed = 0;
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const slice = ids.slice(i, i + CHUNK);
+      const { error } = await (supabase as any).from("posts").update(def.patch).in("id", slice);
+      if (error) { failed += slice.length; }
+      setBulkProgress({ kind, done: Math.min(i + slice.length, ids.length), total: ids.length });
+    }
+    setBulkProgress(null);
+    setConfirmKind(null);
+    if (failed > 0) toast.error(`${def.label} failed for ${failed} of ${ids.length}`);
+    else toast.success(`${def.label} · ${ids.length} post${ids.length === 1 ? "" : "s"}`);
+    setSelected(new Set());
+    load();
+  };
+
   const toggleSel = (id: string) => {
     setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   };
@@ -146,6 +203,7 @@ export default function CommandCenterContent() {
             onChange={() => toggleSel(p.id)}
           />
         ) : null}
+        {recentlyChanged.has(p.id) ? <PillBadge tone="good">NEW</PillBadge> : null}
         {p.is_sensitive ? <PillBadge tone="warn">sensitive</PillBadge> : null}
         <PillBadge tone={p.content_rating === "explicit" ? "bad" : p.content_rating === "mature" ? "warn" : "default"}>
           {p.content_rating}
@@ -268,13 +326,24 @@ export default function CommandCenterContent() {
         }
       >
         {selected.size > 0 ? (
-          <div className="flex flex-wrap gap-1.5 pb-2 border-b border-border/40">
+          <div className="flex flex-wrap items-center gap-1.5 pb-2 border-b border-border/40">
             <span className="text-[10px] text-muted-foreground self-center">{selected.size} selected:</span>
-            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => bulk({ moderation_status: "approved" }, "Approved")}>Approve</Button>
-            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => bulk({ moderation_status: "flagged" }, "Flagged")}>Flag</Button>
-            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => bulk({ moderation_status: "approved", is_sensitive: false }, "Unflagged")}>Unflag</Button>
-            <Button size="sm" variant="destructive" className="h-7 text-[10px]" onClick={() => bulk({ moderation_status: "removed" }, "Removed")}>Remove</Button>
-            <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setSelected(new Set())}>Clear</Button>
+            <Button size="sm" variant="outline" className="h-7 text-[10px]" disabled={!!bulkProgress} onClick={() => requestBulk("approve")}>Approve</Button>
+            <Button size="sm" variant="outline" className="h-7 text-[10px]" disabled={!!bulkProgress} onClick={() => requestBulk("flag")}>Flag</Button>
+            <Button size="sm" variant="outline" className="h-7 text-[10px]" disabled={!!bulkProgress} onClick={() => requestBulk("unflag")}>Unflag</Button>
+            <Button size="sm" variant="destructive" className="h-7 text-[10px]" disabled={!!bulkProgress} onClick={() => requestBulk("remove")}>Remove</Button>
+            <Button size="sm" variant="ghost" className="h-7 text-[10px]" disabled={!!bulkProgress} onClick={() => setSelected(new Set())}>Clear</Button>
+            {bulkProgress ? (
+              <div className="flex items-center gap-2 ml-auto text-[10px] text-muted-foreground">
+                <span>{BULK_DEFS[bulkProgress.kind].label}… {bulkProgress.done}/{bulkProgress.total}</span>
+                <div className="w-24 h-1.5 rounded bg-muted overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${Math.round((bulkProgress.done / Math.max(1, bulkProgress.total)) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
         {reviewQueue.length === 0 ? <EmptyState message="No posts need review." /> : (
@@ -302,6 +371,39 @@ export default function CommandCenterContent() {
           </ul>
         )}
       </SectionCard>
+
+      <AlertDialog open={!!confirmKind} onOpenChange={(o) => { if (!o && !bulkProgress) setConfirmKind(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmKind ? `${BULK_DEFS[confirmKind].label} ${selected.size} post${selected.size === 1 ? "" : "s"}?` : ""}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmKind ? BULK_DEFS[confirmKind].description : ""}
+              {confirmKind === "remove" ? " This cannot be self-served by users — only mods can reverse it." : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {bulkProgress ? (
+            <div className="space-y-1.5">
+              <div className="text-xs text-muted-foreground">Processing {bulkProgress.done}/{bulkProgress.total}…</div>
+              <div className="w-full h-1.5 rounded bg-muted overflow-hidden">
+                <div className="h-full bg-primary transition-all"
+                     style={{ width: `${Math.round((bulkProgress.done / Math.max(1, bulkProgress.total)) * 100)}%` }} />
+              </div>
+            </div>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!bulkProgress}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!!bulkProgress}
+              className={confirmKind && BULK_DEFS[confirmKind].destructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+              onClick={(e) => { e.preventDefault(); if (confirmKind) runBulk(confirmKind); }}
+            >
+              {confirmKind ? (bulkProgress ? "Working…" : `Confirm ${BULK_DEFS[confirmKind].verb}`) : "Confirm"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
