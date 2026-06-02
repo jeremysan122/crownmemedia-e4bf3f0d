@@ -11,13 +11,15 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { withCacheBust } from "@/lib/cacheBust";
+import { resolveSensitiveDecision, type SensitiveViewer } from "@/lib/sensitiveVisibility";
 
 /** Columns to select on the `posts` table for share rendering. */
 export const POST_SHARE_COLUMNS =
-  "id, user_id, image_url, image_urls, caption, category, vote_count, comment_count, share_count, video_url, video_poster_url, media_type, city, state, country, created_at, edited_at, is_removed";
+  "id, user_id, image_url, image_urls, caption, category, vote_count, comment_count, share_count, video_url, video_poster_url, media_type, city, state, country, created_at, edited_at, is_removed, is_sensitive, sensitive_reason";
 
 export interface PostShareLike {
   id: string;
+  user_id?: string | null;
   image_url?: string | null;
   image_urls?: string[] | null;
   video_poster_url?: string | null;
@@ -26,6 +28,8 @@ export interface PostShareLike {
   edited_at?: string | null;
   created_at?: string | null;
   is_removed?: boolean | null;
+  is_sensitive?: boolean | null;
+  sensitive_reason?: string | null;
 }
 
 /** True only when the database confirms the post is gone or removed. */
@@ -38,19 +42,39 @@ export function isPostDeleted(
   return post.is_removed === true;
 }
 
-/** Deterministic cache-bust token tied to the post's last meaningful change. */
+/**
+ * Deterministic cache-bust token tied to the post's last meaningful change.
+ * is_sensitive flips are picked up via edited_at — Upload/Edit must touch
+ * edited_at when the sensitivity toggle changes so cached share images are
+ * invalidated everywhere.
+ */
 export function getPostShareVersion(post: PostShareLike | null | undefined): string | undefined {
   if (!post) return undefined;
-  return (post.edited_at || post.created_at || undefined) ?? undefined;
+  // Mix the sensitive flag into the token so toggling it busts caches even
+  // when edited_at hasn't otherwise changed.
+  const base = post.edited_at || post.created_at || undefined;
+  if (!base) return undefined;
+  return post.is_sensitive ? `${base}|s` : base;
 }
 
 /**
  * Resolve the canonical display image for a share card. Picks video poster for
  * video posts, otherwise the latest image_url. Returns null only when the post
- * is confirmed deleted or has no usable media at all.
+ * is confirmed deleted, has no usable media, OR when sensitive-content rules
+ * say the viewer must not see the media in clear (callers should render their
+ * existing "content warning" placeholder in that case).
  */
-export function resolvePostShareImage(post: PostShareLike | null | undefined): string | null {
+export function resolvePostShareImage(
+  post: PostShareLike | null | undefined,
+  viewer?: SensitiveViewer,
+): string | null {
   if (!post || isPostDeleted(post)) return null;
+  if (viewer) {
+    const d = resolveSensitiveDecision(post, viewer);
+    // Share cards never bake an unblurred sensitive image when the viewer's
+    // own preference/eligibility says otherwise.
+    if (d !== "show") return null;
+  }
   const raw =
     (post.media_type === "video" && post.video_poster_url) ||
     post.image_url ||
