@@ -1530,6 +1530,28 @@ function MapView({
       </div>
     );
   }
+  if (mapAuthError) {
+    return (
+      <div className="royal-card p-6 text-sm text-muted-foreground space-y-3 animate-fade-in">
+        <div className="flex items-center gap-2">
+          <MapPin size={16} className="text-gold" aria-hidden />
+          <p className="font-display text-base text-foreground">The world map is taking a breather</p>
+        </div>
+        <p>
+          We can't reach the map service right now (the tile provider returned a permission error).
+          Your crowns and regions are safe — you can switch to the list view to keep exploring.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => { setMapAuthError(false); window.location.reload(); }}>
+            Try again
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => navigate("/map?view=list")}>
+            Open list view
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="royal-card p-3 overflow-hidden animate-fade-in">
