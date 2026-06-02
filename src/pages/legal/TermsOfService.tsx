@@ -2,7 +2,7 @@ import LegalShell, { H2, H3, P, UL } from "@/components/legal/LegalShell";
 
 export default function TermsOfService() {
   return (
-    <LegalShell title="Terms of Service" effectiveDate="May 2, 2026" lastUpdated="May 30, 2026" pdfSlug="crownme-terms">
+    <LegalShell title="Terms of Service" effectiveDate="May 2, 2026" lastUpdated="June 2, 2026" version="1.1" pdfSlug="crownme-terms">
       <P>
         Welcome to CrownMe Media, a social photo-sharing community operated by{" "}
         <strong>CrownMe Media</strong>, a Wisconsin limited liability company
@@ -71,6 +71,20 @@ export default function TermsOfService() {
         <li>Upload malware, attempt to probe or breach security, or disrupt the Service.</li>
         <li>Use the Service for any illegal activity or to violate any applicable law.</li>
       </UL>
+
+      <H2>4A. Sensitive Content</H2>
+      <P>
+        Posts may be rated <em>safe</em>, <em>suggestive</em>, <em>mature</em>, or
+        <em> explicit</em>, and may be flagged as sensitive by the author, an automated
+        classifier, or a moderator. Sensitive content is hidden from anyone who has not
+        confirmed they are 18+, is governed by the viewer's Content Filter preference, and
+        is never exposed unblurred through share cards, embeds, or previews when the rules
+        require blur or hide. You may not attempt to bypass age gating, lower a
+        moderator-set rating, un-mark sensitivity, or otherwise circumvent the controls
+        described in our{" "}
+        <a className="underline text-primary" href="/sensitive-content">Sensitive Content Policy</a>.
+        Removed or banned content will not reappear through sensitive-content logic.
+      </P>
 
       <H2>5. Virtual Goods, Crowns & No Gambling</H2>
       <P>

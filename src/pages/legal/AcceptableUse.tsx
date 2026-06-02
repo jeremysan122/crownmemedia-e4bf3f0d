@@ -2,7 +2,7 @@ import LegalShell, { H2, P, UL } from "@/components/legal/LegalShell";
 
 export default function AcceptableUse() {
   return (
-    <LegalShell title="Acceptable Use Policy" effectiveDate="May 2, 2026" lastUpdated="May 30, 2026">
+    <LegalShell title="Acceptable Use Policy" effectiveDate="May 2, 2026" lastUpdated="June 2, 2026" version="1.1">
       <P>
         This Acceptable Use Policy ("AUP") supplements our{" "}
         <a className="underline text-primary" href="/terms">Terms of Service</a> and{" "}
@@ -39,6 +39,20 @@ export default function AcceptableUse() {
         <li>Interfering with the Service's operation, including denial-of-service attacks.</li>
         <li>Scraping, harvesting, or replicating substantial portions of the Service or user data.</li>
       </UL>
+
+      <H2>Sensitive Content &amp; Moderation Bypass</H2>
+      <UL>
+        <li>Mis-classifying your own content to evade Content Filters or age gating.</li>
+        <li>Attempting to un-mark <code>is_sensitive</code> or lower a moderator-set rating.</li>
+        <li>Using share links, embeds, deep links, or API calls to expose sensitive media unblurred to ineligible viewers.</li>
+        <li>Modifying or attempting to modify <code>moderation_status</code>, <code>content_rating</code>, or audit-log entries without the moderator role.</li>
+        <li>Re-uploading or rehosting content that has been removed by moderation.</li>
+      </UL>
+      <P>
+        See our{" "}
+        <a className="underline text-primary" href="/sensitive-content">Sensitive Content Policy</a>{" "}
+        for the full rules, definitions, and appeals process.
+      </P>
 
       <H2>Reporting & Enforcement</H2>
       <P>
