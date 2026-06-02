@@ -39,6 +39,7 @@ const SCOPE_META: Record<Scope, { label: string; icon: typeof Crown; needsRegion
 
 export default function Leaderboard() {
   const { profile, user } = useAuth();
+  useEffect(() => { trackUsage("leaderboard_opened"); }, []);
   useSeoMeta({
     title: "Leaderboard — CrownMe Media",
     description: "See who holds the crown. CrownMe city, country, and global photo competition rankings, updated live.",
