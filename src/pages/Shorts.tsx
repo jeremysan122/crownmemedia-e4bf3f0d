@@ -68,6 +68,8 @@ export default function Shorts() {
     })();
   }, [loadPage]);
 
+  useEffect(() => { trackUsage("scrolls_opened"); }, []);
+
   const loadMore = useCallback(async () => {
     if (loadingMoreRef.current || endReached || items.length === 0) return;
     loadingMoreRef.current = true;
