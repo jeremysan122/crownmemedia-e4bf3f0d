@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Copy, Instagram, Twitter, Facebook, Loader2 } from "lucide-react";
+import { Copy, Instagram, Twitter, Facebook, Loader2, AlertCircle } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORY_LABEL, locationLabel } from "@/lib/crown";
 import { FeedPost } from "./PostCard";
 import { trackEvent } from "@/lib/analytics";
-import { withCacheBust } from "@/lib/cacheBust";
+import { resolvePostShareImage, usePostShareData } from "@/lib/postShare";
 
 interface ShareProps {
   open: boolean;
@@ -16,43 +15,16 @@ interface ShareProps {
   post: FeedPost;
 }
 
-
 export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProps) {
   // Always render against the freshest server copy so edits to the image,
   // caption, category, or username appear immediately in the share card.
-  const [post, setPost] = useState<FeedPost>(initialPost);
-  const [loadingFresh, setLoadingFresh] = useState(false);
-  const [deleted, setDeleted] = useState(false);
-
-  useEffect(() => { setPost(initialPost); }, [initialPost.id]);
-
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    (async () => {
-      setLoadingFresh(true);
-      const { data, error, status } = await supabase
-        .from("posts")
-        .select("id, image_url, caption, category, share_count, edited_at, user_id, city, state, country")
-        .eq("id", initialPost.id)
-        .maybeSingle();
-      if (cancelled) return;
-      // Only treat as deleted when the row is genuinely missing (200 + null).
-      // Any other error (network/RLS/schema) should NOT nuke the share card —
-      // we already have the post from props and can render against that.
-      if (!error && !data && status === 200) {
-        setDeleted(true);
-      } else if (data) {
-        setPost((prev) => ({ ...prev, ...(data as Partial<FeedPost>) } as FeedPost));
-      }
-      setLoadingFresh(false);
-    })();
-    return () => { cancelled = true; };
-  }, [open, initialPost.id]);
+  // The hook NEVER sets `deleted` for transient errors — only when the DB
+  // confirms the row is missing or is_removed = true.
+  const { post, loading: loadingFresh, deleted, refreshError } = usePostShareData(initialPost, open);
 
   const url = `${window.location.origin}/p/${post.id}`;
   const text = `Competing for King/Queen of ${post.city || "Global"} on CrownMe — ${CATEGORY_LABEL[post.category]}`;
-  const previewImg = withCacheBust(post.image_url, (post as any).edited_at);
+  const previewImg = resolvePostShareImage(post);
 
   const incrementShare = async (channel: string) => {
     await supabase.from("posts").update({ share_count: (post.share_count || 0) + 1 }).eq("id", post.id);
@@ -92,7 +64,9 @@ export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProp
             </div>
 
             <div className="aspect-square rounded-xl overflow-hidden mb-3 ring-1 ring-primary/20 relative bg-muted/20">
-              <img key={previewImg} loading="lazy" src={previewImg} alt="" crossOrigin="anonymous" className="w-full h-full object-cover" />
+              {previewImg && (
+                <img key={previewImg} loading="lazy" src={previewImg} alt="" crossOrigin="anonymous" className="w-full h-full object-cover" />
+              )}
               {loadingFresh && (
                 <div className="absolute top-2 right-2 bg-black/40 backdrop-blur rounded-full p-1.5">
                   <Loader2 size={12} className="animate-spin text-white" />
@@ -104,6 +78,12 @@ export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProp
               Competing for {CATEGORY_LABEL[post.category]} in {locationLabel(post)}
             </p>
             <p className="font-display text-xs text-primary tracking-wide">Earn the crown. Defend the throne.</p>
+            {refreshError && (
+              <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <AlertCircle size={11} />
+                <span>Unable to refresh post right now — showing last known version.</span>
+              </div>
+            )}
           </div>
         )}
 
