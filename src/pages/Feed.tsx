@@ -179,6 +179,11 @@ export default function Feed() {
   const [openComment, setOpenComment] = useState<string | null>(null);
   const [newPosts, setNewPosts] = useState<FeedPost[]>([]);
   const [followingIds, setFollowingIds] = useState<string[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Block + muted-word filters (loaded once per user, applied to query
+  // results AND realtime INSERTs).
+  const feedFilters = useFeedFilters();
 
   // Pre-fetch following ids so the "Following" tab + INSERT filter both work.
   useEffect(() => {
