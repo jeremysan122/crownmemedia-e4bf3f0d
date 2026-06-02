@@ -68,10 +68,10 @@ export default function Profile() {
   const nav = useNavigate();
   const [prof, setProf] = useState<ProfileFull | null>(null);
   const [crownVoteTotal, setCrownVoteTotal] = useState<number>(0);
-  const [posts, setPosts] = useState<{ id: string; image_url: string; crown_score: number; filter: string | null; pinned_at?: string | null }[]>([]);
+  const [posts, setPosts] = useState<{ id: string; image_url: string; crown_score: number; filter: string | null; pinned_at?: string | null; is_sensitive?: boolean | null }[]>([]);
   const [crowns, setCrowns] = useState<{ id: string; title: string; region_name: string; active: boolean; category: string }[]>([]);
-  const [liked, setLiked] = useState<{ id: string; image_url: string; crown_score: number }[]>([]);
-  const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number }[]>([]);
+  const [liked, setLiked] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null }[]>([]);
+  const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null }[]>([]);
   const [battles, setBattles] = useState<BattleRow[]>([]);
   const [following, setFollowing] = useState(false);
   const [openPost, setOpenPost] = useState<FeedPost | null>(null);
