@@ -27,6 +27,7 @@ const PAGE_SIZE = 12;
 export default function Shorts() {
   const nav = useNavigate();
   const { user } = useAuth();
+  const { sensitiveMode } = useFeedFilters();
   useSeoMeta({
     title: "Scrolls — CrownMe",
     description: "Scroll through quick royal videos from the CrownMe community.",
@@ -38,6 +39,7 @@ export default function Shorts() {
   const [endReached, setEndReached] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
   // Desktop ≥1024px → right-side comments panel; below → bottom slide-up sheet.
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches,
