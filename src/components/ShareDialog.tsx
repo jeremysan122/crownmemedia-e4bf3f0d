@@ -7,7 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { CATEGORY_LABEL, locationLabel } from "@/lib/crown";
 import { FeedPost } from "./PostCard";
 import { trackEvent } from "@/lib/analytics";
+import { trackUsage, trackUsageEvent } from "@/lib/usageTrack";
 import { resolvePostShareImage, usePostShareData } from "@/lib/postShare";
+import { useEffect } from "react";
 
 interface ShareProps {
   open: boolean;
