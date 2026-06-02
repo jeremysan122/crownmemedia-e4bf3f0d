@@ -386,11 +386,17 @@ export default function Feed() {
   useEffect(() => {
     const el = ptrRef.current;
     if (!el) return;
+    // Respect prefers-reduced-motion: disable the pull-to-refresh gesture
+    // entirely (browser-native reload still works on iOS Safari).
+    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
     let startY = 0;
+    let startX = 0;
     let active = false;
     const onStart = (e: TouchEvent) => {
       if (window.scrollY > 0) { active = false; return; }
       startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
       active = true;
     };
     const onMove = (e: TouchEvent) => {
