@@ -2,7 +2,7 @@ import LegalShell, { H2, H3, P, UL } from "@/components/legal/LegalShell";
 
 export default function CommunityGuidelines() {
   return (
-    <LegalShell title="Community Guidelines" effectiveDate="May 2, 2026" lastUpdated="May 30, 2026" shellTitle="Conduct" pdfSlug="crownme-community-guidelines">
+    <LegalShell title="Community Guidelines" effectiveDate="May 2, 2026" lastUpdated="June 2, 2026" version="1.1" shellTitle="Conduct" pdfSlug="crownme-community-guidelines">
       <P>
         CrownMe Media is an 18+ social photo-sharing community where members earn crowns through
         positive engagement. These Community Guidelines explain what is and is not allowed.
@@ -52,6 +52,16 @@ export default function CommunityGuidelines() {
         <li>No commercial spam or unsolicited promotion.</li>
         <li>Block and report aggressive or abusive senders — we review every report.</li>
       </UL>
+
+      <H2>5A. Sensitive Content Labels</H2>
+      <P>
+        Posts may carry a sensitive label and a content rating (<em>safe</em>,{" "}
+        <em>suggestive</em>, <em>mature</em>, <em>explicit</em>). You must label honestly,
+        respect viewers' Content Filter preferences, and accept that moderators can change
+        labels and that those changes cannot be reversed by the author. Full rules,
+        including what is gated, blurred, hidden, or removed, are in the{" "}
+        <a className="underline text-primary" href="/sensitive-content">Sensitive Content Policy</a>.
+      </P>
 
       <H2>6. Reporting</H2>
       <P>

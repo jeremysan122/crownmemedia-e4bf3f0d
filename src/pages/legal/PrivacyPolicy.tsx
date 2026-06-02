@@ -2,7 +2,7 @@ import LegalShell, { H2, H3, P, UL } from "@/components/legal/LegalShell";
 
 export default function PrivacyPolicy() {
   return (
-    <LegalShell title="Privacy Policy" effectiveDate="May 2, 2026" lastUpdated="May 30, 2026" pdfSlug="crownme-privacy">
+    <LegalShell title="Privacy Policy" effectiveDate="May 2, 2026" lastUpdated="June 2, 2026" version="1.1" pdfSlug="crownme-privacy">
       <P>
         This Privacy Policy explains how CrownMe Media,
         ("CrownMe Media," "we," "us"), collects, uses, shares, and protects information about
@@ -120,6 +120,21 @@ export default function PrivacyPolicy() {
       <P>
         We may update this Privacy Policy. Material changes will be communicated via the
         app or email at least 14 days before they take effect.
+      </P>
+
+      <H2>11A. Sensitive Content &amp; Moderation Data</H2>
+      <P>
+        To operate our Sensitive Content system we process: your age-eligibility
+        confirmation and timestamp; your Content Filter preference; per-post fields{" "}
+        (<code>is_sensitive</code>, <code>sensitive_reason</code>,{" "}
+        <code>content_rating</code>, <code>moderation_status</code>,{" "}
+        <code>moderation_notes</code>, <code>moderated_by</code>,{" "}
+        <code>moderated_at</code>); and a tamper-resistant audit log of every moderation
+        change. Audit entries are accessible only to admins and moderators, retained for
+        the lifetime of the post and a reasonable period thereafter for legal, safety, and
+        regulator response, and may be exported as CSV to fulfil lawful requests. See our{" "}
+        <a className="underline text-primary" href="/sensitive-content">Sensitive Content Policy</a>{" "}
+        for the user-facing rules.
       </P>
 
       <H2>12. Contact / Data Protection Officer</H2>

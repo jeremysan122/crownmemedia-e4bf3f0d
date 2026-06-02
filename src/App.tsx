@@ -98,6 +98,7 @@ const CsaePolicy = lazy(() => import("./pages/legal/CsaePolicy"));
 const Eula = lazy(() => import("./pages/legal/Eula"));
 const AcceptableUse = lazy(() => import("./pages/legal/AcceptableUse"));
 const ContactLegal = lazy(() => import("./pages/legal/ContactLegal"));
+const SensitiveContentPolicy = lazy(() => import("./pages/legal/SensitiveContentPolicy"));
 
 // React Query: sensible defaults so tab switches don't blank-flash and
 // background refetches don't dogpile the DB.
@@ -147,6 +148,7 @@ const App = () => (
               <Route path="/eula" element={<Eula />} />
               <Route path="/acceptable-use" element={<AcceptableUse />} />
               <Route path="/contact-legal" element={<ContactLegal />} />
+              <Route path="/sensitive-content" element={<SensitiveContentPolicy />} />
 
               <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
               <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />

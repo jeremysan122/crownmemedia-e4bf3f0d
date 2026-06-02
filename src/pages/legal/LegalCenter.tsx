@@ -13,11 +13,12 @@ import {
   BookOpen,
   ShieldCheck,
   Mail,
+  EyeOff,
   ChevronRight,
 } from "lucide-react";
 
-const VERSION = "1.0";
-const LAST_UPDATED = "May 30, 2026";
+const VERSION = "1.1";
+const LAST_UPDATED = "June 2, 2026";
 
 const docs = [
   { to: "/terms", label: "Terms of Service", desc: "The contract between you and CrownMe Media.", Icon: FileText, version: VERSION, updated: LAST_UPDATED },
@@ -28,6 +29,7 @@ const docs = [
   { to: "/virtual-goods", label: "Virtual Goods & No-Gambling", desc: "Shekels, crowns, gifts — no real-money value.", Icon: Coins, version: VERSION, updated: LAST_UPDATED },
   { to: "/subscription-terms", label: "Subscription Terms (Royal Pass)", desc: "Billing, renewal, and cancellation.", Icon: Receipt, version: VERSION, updated: LAST_UPDATED },
   { to: "/csae-policy", label: "Child Safety (CSAE Standards)", desc: "Zero tolerance for child sexual abuse and exploitation.", Icon: Baby, version: VERSION, updated: LAST_UPDATED },
+  { to: "/sensitive-content", label: "Sensitive Content Policy", desc: "Ratings, blur, age gating, moderation, and audit logging across every surface.", Icon: EyeOff, version: "1.0", updated: LAST_UPDATED },
   { to: "/eula", label: "End-User License Agreement (EULA)", desc: "License covering your use of the CrownMe Media app.", Icon: ShieldCheck, version: VERSION, updated: LAST_UPDATED },
   { to: "/acceptable-use", label: "Acceptable Use Policy", desc: "Prohibited content and behavior in detail.", Icon: BookOpen, version: VERSION, updated: LAST_UPDATED },
   { to: "/contact-legal", label: "Legal Contact & DPO", desc: "Reach our legal, privacy, and safety teams.", Icon: Mail, version: VERSION, updated: LAST_UPDATED },
