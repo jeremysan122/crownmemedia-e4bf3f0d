@@ -9,6 +9,7 @@ import { CrownIcon } from "@/components/CrownIcon";
 import { toast } from "sonner";
 import { fetchShortsPage } from "@/lib/postQuery";
 import type { FeedPost } from "@/components/PostCard";
+import { trackUsage } from "@/lib/usageTrack";
 import CommentsDrawer from "@/components/CommentsDrawer";
 
 
