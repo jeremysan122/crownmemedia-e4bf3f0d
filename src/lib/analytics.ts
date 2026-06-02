@@ -22,7 +22,18 @@ type EventName =
   | "post_reposted"
   | "post_tagged_people"
   | "post_scheduled"
-  | "post_deleted";
+  | "post_deleted"
+  // Cloud Spend usage tracking — fired once per session-screen, never per render
+  | "feed_opened"
+  | "scrolls_opened"
+  | "crown_map_opened"
+  | "crown_map_marker_opened"
+  | "leaderboard_opened"
+  | "profile_opened"
+  | "share_card_previewed"
+  | "share_card_downloaded"
+  | "dm_opened"
+  | "verification_page_opened";
 
 async function sha256Hex(input: string): Promise<string> {
   const buf = new TextEncoder().encode(input);
