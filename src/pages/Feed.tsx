@@ -226,9 +226,11 @@ export default function Feed() {
 
   // INITIAL / FILTER-CHANGE LOAD
   useEffect(() => {
+    if (!feedFilters.ready) return; // wait for blocks/muted-words
     let cancelled = false;
     const load = async () => {
       setLoading(true);
+      setLoadError(null);
       setNewPosts([]);
       setHasMore(true);
 
@@ -243,15 +245,22 @@ export default function Feed() {
 
       const { data, error } = await q;
       if (cancelled) return;
-      if (error) { toast.error("Failed to load posts"); setLoading(false); return; }
-      const rows = (data as any[]) || [];
+      if (error) {
+        toast.error("Failed to load posts");
+        setLoadError(error.message || "Network error");
+        setPosts([]);
+        setLoading(false);
+        return;
+      }
+      const rows = ((data as any[]) || []).filter((p) => !isFilteredOut(p, feedFilters));
       setPosts(rows as FeedPost[]);
-      setHasMore(rows.length >= PAGE_SIZE);
+      setHasMore(((data as any[]) || []).length >= PAGE_SIZE);
       setLoading(false);
     };
     load();
     return () => { cancelled = true; };
-  }, [tab, catFilter, tagFilter, sort, timeWindow, profile?.city, profile?.state, user?.id, followingIds, buildQuery]);
+  }, [tab, catFilter, tagFilter, sort, timeWindow, profile?.city, profile?.state, user?.id, followingIds, buildQuery, feedFilters]);
+
 
   // LOAD MORE (infinite scroll)
   const loadMore = useCallback(async () => {
