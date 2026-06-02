@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import TrendingHashtags from "@/components/TrendingHashtags";
 import { Hash, X as XIcon, ArrowUp, Loader2, Clock, TrendingUp, Flame as FlameIcon, type LucideIcon } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import PostCard, { FeedPost } from "@/components/PostCard";
+import { FeedPost } from "@/components/PostCard";
 import CommentsDrawer from "@/components/CommentsDrawer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,12 +13,18 @@ import { trackUsage } from "@/lib/usageTrack";
 import FeedRightRail from "@/components/desktop/FeedRightRail";
 import FeedRealtimeAlert from "@/components/FeedRealtimeAlert";
 import DailyRewardChip from "@/components/DailyRewardChip";
-import { Camera, Plus, Sparkles, Crown } from "lucide-react";
+import { Camera, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { CATEGORIES, CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
 import { CATEGORY_ICON } from "@/lib/categoryIcons";
 import { FILTERS, FilterId } from "@/lib/filters";
 import SpotlightStrip from "@/components/feed/SpotlightStrip";
+import FeedSkeleton from "@/components/feed/FeedSkeleton";
+import FeedEmptyState from "@/components/feed/FeedEmptyState";
+import FeedErrorState from "@/components/feed/FeedErrorState";
+import BackToTopButton from "@/components/feed/BackToTopButton";
+import FeedPostCard from "@/components/feed/FeedPostCard";
+import { useFeedFilters, isFilteredOut } from "@/hooks/useFeedFilters";
 
 type Tab = "nearby" | "city" | "state" | "global" | "following";
 type CatFilter = "all" | CrownCategory;
@@ -160,6 +166,31 @@ export default function Feed() {
   useEffect(() => { try { localStorage.setItem(WINDOW_KEY, timeWindow); } catch { /* noop */ } }, [timeWindow]);
   useEffect(() => { try { localStorage.setItem(FILTER_SORT_KEY, filterSort); } catch { /* noop */ } }, [filterSort]);
 
+  // ── Scroll restoration ─────────────────────────────────────────────────────
+  // When the user opens a post and presses back, the browser remounts Feed.
+  // We persist scrollY (per filter signature) in sessionStorage and restore
+  // it once the matching post list is on the page. Persistence is throttled
+  // so the scroll listener stays cheap.
+  const scrollKey = useMemo(
+    () => `crownme:feed:scroll:${tab}:${catFilter}:${tagFilter}:${sort}:${timeWindow}`,
+    [tab, catFilter, tagFilter, sort, timeWindow],
+  );
+  useEffect(() => {
+    let pending = false;
+    const save = () => {
+      pending = false;
+      try { sessionStorage.setItem(scrollKey, String(window.scrollY)); } catch { /* noop */ }
+    };
+    const onScroll = () => {
+      if (pending) return;
+      pending = true;
+      window.requestAnimationFrame(save);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); save(); };
+  }, [scrollKey]);
+
+
   const [debouncedFilterSort, setDebouncedFilterSort] = useState<FilterSort>(filterSort);
   useEffect(() => {
     const t = setTimeout(() => setDebouncedFilterSort(filterSort), 180);
@@ -173,6 +204,34 @@ export default function Feed() {
   const [openComment, setOpenComment] = useState<string | null>(null);
   const [newPosts, setNewPosts] = useState<FeedPost[]>([]);
   const [followingIds, setFollowingIds] = useState<string[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Block + muted-word filters (loaded once per user, applied to query
+  // results AND realtime INSERTs).
+  const feedFilters = useFeedFilters();
+
+  // Restore saved scrollY once posts for the current filter signature have
+  // rendered. We only do this once per mount-per-signature so manual scrolls
+  // afterward aren't yanked back.
+  const restoredFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (loading) return;
+    if (posts.length === 0) return;
+    if (restoredFor.current === scrollKey) return;
+    let saved: number | null = null;
+    try {
+      const v = sessionStorage.getItem(scrollKey);
+      saved = v ? parseInt(v, 10) : null;
+    } catch { /* noop */ }
+    restoredFor.current = scrollKey;
+    if (saved && saved > 0) {
+      // Defer to next frame so PostCards have a chance to lay out before scroll.
+      window.requestAnimationFrame(() => {
+        try { window.scrollTo(0, saved!); } catch { /* noop */ }
+      });
+    }
+  }, [loading, posts.length, scrollKey]);
+
 
   // Pre-fetch following ids so the "Following" tab + INSERT filter both work.
   useEffect(() => {
@@ -215,9 +274,11 @@ export default function Feed() {
 
   // INITIAL / FILTER-CHANGE LOAD
   useEffect(() => {
+    if (!feedFilters.ready) return; // wait for blocks/muted-words
     let cancelled = false;
     const load = async () => {
       setLoading(true);
+      setLoadError(null);
       setNewPosts([]);
       setHasMore(true);
 
@@ -232,15 +293,22 @@ export default function Feed() {
 
       const { data, error } = await q;
       if (cancelled) return;
-      if (error) { toast.error("Failed to load posts"); setLoading(false); return; }
-      const rows = (data as any[]) || [];
+      if (error) {
+        toast.error("Failed to load posts");
+        setLoadError(error.message || "Network error");
+        setPosts([]);
+        setLoading(false);
+        return;
+      }
+      const rows = ((data as any[]) || []).filter((p) => !isFilteredOut(p, feedFilters));
       setPosts(rows as FeedPost[]);
-      setHasMore(rows.length >= PAGE_SIZE);
+      setHasMore(((data as any[]) || []).length >= PAGE_SIZE);
       setLoading(false);
     };
     load();
     return () => { cancelled = true; };
-  }, [tab, catFilter, tagFilter, sort, timeWindow, profile?.city, profile?.state, user?.id, followingIds, buildQuery]);
+  }, [tab, catFilter, tagFilter, sort, timeWindow, profile?.city, profile?.state, user?.id, followingIds, buildQuery, feedFilters]);
+
 
   // LOAD MORE (infinite scroll)
   const loadMore = useCallback(async () => {
@@ -252,14 +320,15 @@ export default function Feed() {
     if (tab === "following" && followingIds && followingIds.length) q = q.in("user_id", followingIds);
     const { data, error } = await q;
     if (error) { setLoadingMore(false); return; }
-    const rows = (data as any[]) || [];
+    const rawRows = (data as any[]) || [];
+    const rows = rawRows.filter((r) => !isFilteredOut(r, feedFilters));
     setPosts((prev) => {
       const seen = new Set(prev.map((p) => p.id));
       return [...prev, ...rows.filter((r) => !seen.has(r.id))] as FeedPost[];
     });
-    setHasMore(rows.length >= PAGE_SIZE);
+    setHasMore(rawRows.length >= PAGE_SIZE);
     setLoadingMore(false);
-  }, [posts, loading, loadingMore, hasMore, orderColumn, buildQuery, tab, followingIds]);
+  }, [posts, loading, loadingMore, hasMore, orderColumn, buildQuery, tab, followingIds, feedFilters]);
 
   // IntersectionObserver sentinel
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -276,6 +345,7 @@ export default function Feed() {
   // REALTIME — UPDATE/DELETE patch + INSERT queue for "new posts" pill.
   const matchesCurrentFilters = useCallback((p: any): boolean => {
     if (!p || p.is_removed) return false;
+    if (isFilteredOut(p, feedFilters)) return false;
     if (catFilter !== "all" && p.category !== catFilter) return false;
     if (tagFilter && !(Array.isArray(p.hashtags) && p.hashtags.includes(tagFilter))) return false;
     if (sinceIso && p.created_at && p.created_at < sinceIso) return false;
@@ -286,7 +356,7 @@ export default function Feed() {
       if (!followingIds || !followingIds.includes(p.user_id)) return false;
     }
     return true;
-  }, [catFilter, tagFilter, sinceIso, tab, profile?.city, profile?.state, followingIds]);
+  }, [catFilter, tagFilter, sinceIso, tab, profile?.city, profile?.state, followingIds, feedFilters]);
 
   useEffect(() => {
     const onUpdated = (e: Event) => {
@@ -364,16 +434,26 @@ export default function Feed() {
   useEffect(() => {
     const el = ptrRef.current;
     if (!el) return;
+    // Respect prefers-reduced-motion: disable the pull-to-refresh gesture
+    // entirely (browser-native reload still works on iOS Safari).
+    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
     let startY = 0;
+    let startX = 0;
     let active = false;
     const onStart = (e: TouchEvent) => {
       if (window.scrollY > 0) { active = false; return; }
       startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
       active = true;
     };
     const onMove = (e: TouchEvent) => {
       if (!active) return;
       const dy = e.touches[0].clientY - startY;
+      const dx = Math.abs(e.touches[0].clientX - startX);
+      // If the user is clearly swiping horizontally (e.g. category carousel),
+      // bail out of the pull gesture entirely.
+      if (dx > 12 && dx > Math.abs(dy)) { active = false; pullDistRef.current = 0; setPullDist(0); return; }
       if (dy > 0) {
         const d = Math.min(90, dy * 0.5);
         pullDistRef.current = d;
@@ -626,6 +706,7 @@ export default function Feed() {
           <div className="sticky top-12 z-30 flex justify-center pt-2 pointer-events-none">
             <button
               onClick={showNewPosts}
+              aria-live="polite"
               className="pointer-events-auto inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-gold text-primary-foreground text-xs font-bold gold-shadow shadow-lg animate-fade-in"
             >
               <ArrowUp size={14} />
@@ -633,50 +714,56 @@ export default function Feed() {
             </button>
           </div>
         )}
+        <span className="sr-only" aria-live="polite" aria-atomic="true">
+          {newPosts.length > 0 ? `${newPosts.length} new ${newPosts.length === 1 ? "post" : "posts"} available` : ""}
+        </span>
 
         <div className="px-3 lg:px-0 pt-1">
           <div className="pb-3"><SpotlightStrip /></div>
           {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="royal-card overflow-hidden">
-                  <div className="flex items-center gap-3 p-3">
-                    <div className="size-10 rounded-full bg-muted animate-pulse" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3 w-32 rounded bg-muted animate-pulse" />
-                      <div className="h-2 w-20 rounded bg-muted/60 animate-pulse" />
-                    </div>
-                  </div>
-                  <div className="aspect-square bg-muted animate-pulse" />
-                  <div className="p-3 space-y-2">
-                    <div className="h-3 w-3/4 rounded bg-muted animate-pulse" />
-                    <div className="h-3 w-1/2 rounded bg-muted/60 animate-pulse" />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <FeedSkeleton count={4} />
+          ) : loadError ? (
+            <FeedErrorState
+              onRetry={() => {
+                // Bumping followingIds reference would refetch, but the simplest
+                // trigger is to toggle through the loader path by clearing error
+                // and re-running the same effect via a no-op tab set.
+                setLoadError(null);
+                setTab((t) => t);
+              }}
+              onGoGlobal={tab !== "global" ? () => { setTab("global"); setCatFilter("all"); } : undefined}
+              message={loadError}
+            />
           ) : orderedPosts.length === 0 ? (
-            <div className="royal-card p-10 text-center mt-8">
-              <p className="font-display text-gold text-lg mb-2">The throne awaits</p>
-              <p className="text-sm text-muted-foreground mb-5">
-                {tab === "following"
-                  ? "Follow some royals to fill this realm with their moments."
-                  : catFilter !== "all"
-                    ? `No posts yet in ${CATEGORY_LABEL[catFilter as CrownCategory]}. Be the first to claim it.`
-                    : tab === "city" || tab === "nearby"
-                      ? `No posts yet in ${profile?.city || "your city"}. Be the first to claim it.`
-                      : tab === "state"
-                        ? `No posts yet in ${profile?.state || "your state"}.`
-                        : "No posts yet in this realm. Be the first to claim it."}
-              </p>
-              <Link to="/upload" className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gradient-gold text-primary-foreground font-bold text-sm">
-                <Plus size={16} /> Crown a Post
-              </Link>
-            </div>
+            <FeedEmptyState
+              tab={tab}
+              catFilter={catFilter}
+              tagFilter={tagFilter}
+              city={profile?.city}
+              state={profile?.state}
+              hasAnyFilter={catFilter !== "all" || !!tagFilter || tab !== "global"}
+              onClearFilters={() => {
+                setCatFilter("all");
+                if (tagFilter) {
+                  const next = new URLSearchParams(searchParams);
+                  next.delete("tag");
+                  try { localStorage.removeItem(TAG_FILTER_KEY); } catch { /* noop */ }
+                  setSearchParams(next, { replace: true });
+                }
+              }}
+              onGoGlobal={() => { setTab("global"); }}
+            />
           ) : (
             <>
               {rankedPosts.map((p) => (
-                <PostCard key={p.id} post={p} onCommentClick={setOpenComment} />
+                <FeedPostCard
+                  key={p.id}
+                  post={p}
+                  onCommentClick={setOpenComment}
+                  feature="Feed"
+                  tab={tab}
+                  category={p.category ?? null}
+                />
               ))}
               <div ref={sentinelRef} className="h-12 flex items-center justify-center">
                 {loadingMore && (
@@ -696,6 +783,7 @@ export default function Feed() {
       </div>
 
       <CommentsDrawer postId={openComment} onClose={() => setOpenComment(null)} />
+      <BackToTopButton />
     </AppShell>
   );
 }
