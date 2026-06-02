@@ -687,6 +687,7 @@ export default function Profile() {
                             style={isValidFilter(p.filter) && p.filter && p.filter !== "none" ? { filter: cssFor(p.filter as any) } : undefined}
                             alt=""
                           />
+                          <SensitiveThumb blurred={shouldBlurThumb(p)} />
                         </button>
                         <div className="absolute bottom-1 right-1 glass px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1 pointer-events-none">
                           <Crown size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
@@ -908,6 +909,7 @@ export default function Profile() {
                         aria-label="Open post"
                       >
                         <img loading="lazy" src={p.image_url} className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]" alt="" />
+                        <SensitiveThumb blurred={shouldBlurThumb(p)} />
                         <div className="absolute bottom-1 right-1 glass px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1">
                           <Heart size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
                         </div>
@@ -941,6 +943,7 @@ export default function Profile() {
                           aria-label="Open post"
                         >
                           <img loading="lazy" src={p.image_url} className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]" alt="" />
+                          <SensitiveThumb blurred={shouldBlurThumb(p)} />
                           <div className="absolute bottom-1 right-1 glass px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1">
                             <Bookmark size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
                           </div>
