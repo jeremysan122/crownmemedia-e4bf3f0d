@@ -1,12 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionCard, EmptyState, PillBadge } from "@/components/admin/cc/CommandCenterUI";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { removePost, removeComment, resolveQueueItem } from "@/lib/admin";
 import { toast } from "sonner";
 
 const RATINGS = ["safe", "suggestive", "mature", "explicit"] as const;
 const STATUSES = ["pending", "approved", "flagged", "removed"] as const;
+
+type BulkKind = "approve" | "flag" | "unflag" | "remove";
+const BULK_DEFS: Record<BulkKind, { label: string; patch: Record<string, any>; destructive?: boolean; verb: string; description: string }> = {
+  approve: { label: "Approve", verb: "approve", patch: { moderation_status: "approved" }, description: "Posts will be marked approved and visible to all viewers per their content filter." },
+  flag:    { label: "Flag",    verb: "flag",    patch: { moderation_status: "flagged"  }, description: "Posts will be marked flagged and hidden from non-moderator viewers." },
+  unflag:  { label: "Unflag",  verb: "unflag",  patch: { moderation_status: "approved", is_sensitive: false }, description: "Posts will be approved and the sensitive flag cleared." },
+  remove:  { label: "Remove",  verb: "remove",  patch: { moderation_status: "removed" }, destructive: true, description: "Posts will be removed from the feed. This is destructive and visible in the audit log." },
+};
 type Post = {
   id: string;
   user_id: string;
