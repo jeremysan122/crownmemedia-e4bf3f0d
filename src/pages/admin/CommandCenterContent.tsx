@@ -163,6 +163,31 @@ export default function CommandCenterContent() {
     load();
   };
 
+  const requestBulk = (kind: BulkKind) => {
+    if (selected.size === 0) { toast.message("Select posts first"); return; }
+    setConfirmKind(kind);
+  };
+
+  const runBulk = async (kind: BulkKind) => {
+    const def = BULK_DEFS[kind];
+    const ids = Array.from(selected);
+    const CHUNK = 25;
+    setBulkProgress({ kind, done: 0, total: ids.length });
+    let failed = 0;
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const slice = ids.slice(i, i + CHUNK);
+      const { error } = await (supabase as any).from("posts").update(def.patch).in("id", slice);
+      if (error) { failed += slice.length; }
+      setBulkProgress({ kind, done: Math.min(i + slice.length, ids.length), total: ids.length });
+    }
+    setBulkProgress(null);
+    setConfirmKind(null);
+    if (failed > 0) toast.error(`${def.label} failed for ${failed} of ${ids.length}`);
+    else toast.success(`${def.label} · ${ids.length} post${ids.length === 1 ? "" : "s"}`);
+    setSelected(new Set());
+    load();
+  };
+
   const toggleSel = (id: string) => {
     setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   };
