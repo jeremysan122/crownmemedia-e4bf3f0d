@@ -166,6 +166,31 @@ export default function Feed() {
   useEffect(() => { try { localStorage.setItem(WINDOW_KEY, timeWindow); } catch { /* noop */ } }, [timeWindow]);
   useEffect(() => { try { localStorage.setItem(FILTER_SORT_KEY, filterSort); } catch { /* noop */ } }, [filterSort]);
 
+  // ── Scroll restoration ─────────────────────────────────────────────────────
+  // When the user opens a post and presses back, the browser remounts Feed.
+  // We persist scrollY (per filter signature) in sessionStorage and restore
+  // it once the matching post list is on the page. Persistence is throttled
+  // so the scroll listener stays cheap.
+  const scrollKey = useMemo(
+    () => `crownme:feed:scroll:${tab}:${catFilter}:${tagFilter}:${sort}:${timeWindow}`,
+    [tab, catFilter, tagFilter, sort, timeWindow],
+  );
+  useEffect(() => {
+    let pending = false;
+    const save = () => {
+      pending = false;
+      try { sessionStorage.setItem(scrollKey, String(window.scrollY)); } catch { /* noop */ }
+    };
+    const onScroll = () => {
+      if (pending) return;
+      pending = true;
+      window.requestAnimationFrame(save);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); save(); };
+  }, [scrollKey]);
+
+
   const [debouncedFilterSort, setDebouncedFilterSort] = useState<FilterSort>(filterSort);
   useEffect(() => {
     const t = setTimeout(() => setDebouncedFilterSort(filterSort), 180);
