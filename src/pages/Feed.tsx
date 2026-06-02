@@ -735,6 +735,7 @@ export default function Feed() {
       </div>
 
       <CommentsDrawer postId={openComment} onClose={() => setOpenComment(null)} />
+      <BackToTopButton />
     </AppShell>
   );
 }
