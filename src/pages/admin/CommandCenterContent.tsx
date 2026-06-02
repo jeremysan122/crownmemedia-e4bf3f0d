@@ -51,6 +51,11 @@ export default function CommandCenterContent() {
   const [recentlyChanged, setRecentlyChanged] = useState<Map<string, number>>(new Map());
   const expandedRef = useRef<string | null>(null);
   expandedRef.current = expanded;
+
+  const load = async () => {
+    const sb = supabase as any;
+    const [q, t, s, r] = await Promise.all([
+      supabase
         .from("moderation_queue")
         .select("*")
         .eq("status", "pending")
