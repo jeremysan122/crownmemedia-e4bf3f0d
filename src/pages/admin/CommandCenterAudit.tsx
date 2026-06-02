@@ -106,10 +106,24 @@ export default function CommandCenterAudit() {
   return (
     <div className="space-y-3">
       <SectionCard title="Filters">
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <Input value={actor} onChange={(e)=>setActor(e.target.value)} placeholder="Actor email…" className="h-8 text-xs" />
-          <Input value={action} onChange={(e)=>setAction(e.target.value)} placeholder="Action (e.g. UPDATE:posts)" className="h-8 text-xs" />
+          <Input value={action} onChange={(e)=>setAction(e.target.value)} placeholder="Action (e.g. post_moderation_update)" className="h-8 text-xs" />
           <Input value={targetType} onChange={(e)=>setTargetType(e.target.value)} placeholder="Target type" className="h-8 text-xs" />
+          <Input value={targetId} onChange={(e)=>setTargetId(e.target.value)} placeholder="Post / target id…" className="h-8 text-xs" />
+          <select
+            value={modField}
+            onChange={(e)=>setModField(e.target.value)}
+            className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+          >
+            <option value="">Any moderation field</option>
+            <option value="moderation_status">moderation_status</option>
+            <option value="content_rating">content_rating</option>
+            <option value="is_sensitive">is_sensitive</option>
+            <option value="sensitive_reason">sensitive_reason</option>
+            <option value="is_removed">is_removed</option>
+            <option value="moderation_notes">moderation_notes</option>
+          </select>
           <Input type="date" value={from} onChange={(e)=>setFrom(e.target.value)} className="h-8 text-xs" />
           <Input type="date" value={to} onChange={(e)=>setTo(e.target.value)} className="h-8 text-xs" />
         </div>
