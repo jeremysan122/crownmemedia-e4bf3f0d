@@ -99,6 +99,12 @@ const Eula = lazy(() => import("./pages/legal/Eula"));
 const AcceptableUse = lazy(() => import("./pages/legal/AcceptableUse"));
 const ContactLegal = lazy(() => import("./pages/legal/ContactLegal"));
 const SensitiveContentPolicy = lazy(() => import("./pages/legal/SensitiveContentPolicy"));
+const AccountLegal = lazy(() => import("./pages/AccountLegal"));
+const SensitiveAppeal = lazy(() => import("./pages/SensitiveAppeal"));
+const SensitiveAppealsList = lazy(() => import("./pages/SensitiveAppeal").then((m) => ({ default: m.SensitiveAppealsList })));
+const AdminSensitiveAppeals = lazy(() => import("./pages/admin/AdminSensitiveAppeals"));
+const ComplianceCheck = lazy(() => import("./pages/admin/ComplianceCheck"));
+import LegalConsentGate from "@/components/legal/LegalConsentGate";
 
 // React Query: sensible defaults so tab switches don't blank-flash and
 // background refetches don't dogpile the DB.
@@ -126,6 +132,7 @@ const App = () => (
           <PointerEventsGuard />
           <NotificationToaster />
           <Suspense fallback={<RouteFallback />}>
+            <LegalConsentGate>
             <Routes>
               <Route path="/" element={<Splash />} />
               <Route path="/age-gate" element={<AgeGate />} />
@@ -217,8 +224,16 @@ const App = () => (
               <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
               <Route path="/admin/verification" element={<ProtectedRoute><AdminRoute><AdminVerification /></AdminRoute></ProtectedRoute>} />
 
+              <Route path="/account/legal" element={<ProtectedRoute><AccountLegal /></ProtectedRoute>} />
+              <Route path="/appeals/sensitive" element={<ProtectedRoute><SensitiveAppealsList /></ProtectedRoute>} />
+              <Route path="/appeals/sensitive/new" element={<ProtectedRoute><SensitiveAppeal /></ProtectedRoute>} />
+              <Route path="/appeals/sensitive/new/:postId" element={<ProtectedRoute><SensitiveAppeal /></ProtectedRoute>} />
+              <Route path="/admin/sensitive-appeals" element={<ProtectedRoute><AdminRoute><AdminSensitiveAppeals /></AdminRoute></ProtectedRoute>} />
+              <Route path="/admin/compliance" element={<ProtectedRoute><AdminRoute><ComplianceCheck /></AdminRoute></ProtectedRoute>} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </LegalConsentGate>
           </Suspense>
         </AuthProvider>
       </BrowserRouter>

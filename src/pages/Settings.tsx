@@ -358,8 +358,12 @@ export default function Settings() {
             { to: "/blocked", label: "Blocked Accounts", Icon: Ban },
             { to: "/reports/mine", label: "My Reports & Appeals", Icon: Flag },
             { to: "/legal", label: "Legal Center", Icon: Scale },
+            { to: "/account/legal", label: "My Legal Acceptances", Icon: Scale },
+            { to: "/appeals/sensitive", label: "My Sensitive Appeals", Icon: Flag },
             ...(isModerator ? [
               { to: "/admin", label: "Moderator Panel", Icon: Shield },
+              { to: "/admin/sensitive-appeals", label: "Sensitive Appeals Queue", Icon: Shield },
+              { to: "/admin/compliance", label: "Legal Compliance Check", Icon: Shield },
               { to: "/admin/bundles", label: "Shekel Bundles & Webhooks", Icon: Coins },
             ] : []),
           ].map(({ to, label, Icon }) => (

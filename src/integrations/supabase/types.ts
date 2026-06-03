@@ -2903,6 +2903,48 @@ export type Database = {
           },
         ]
       }
+      sensitive_appeals: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_type: string
+          id: string
+          moderator_notes: string | null
+          post_id: string | null
+          status: Database["public"]["Enums"]["sensitive_appeal_status"]
+          updated_at: string
+          user_id: string
+          user_statement: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_type?: string
+          id?: string
+          moderator_notes?: string | null
+          post_id?: string | null
+          status?: Database["public"]["Enums"]["sensitive_appeal_status"]
+          updated_at?: string
+          user_id: string
+          user_statement: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_type?: string
+          id?: string
+          moderator_notes?: string | null
+          post_id?: string | null
+          status?: Database["public"]["Enums"]["sensitive_appeal_status"]
+          updated_at?: string
+          user_id?: string
+          user_statement?: string
+        }
+        Relationships: []
+      }
       shekel_bundles: {
         Row: {
           active: boolean
@@ -3158,6 +3200,39 @@ export type Database = {
           id?: string
           metadata?: Json | null
           reason?: string
+        }
+        Relationships: []
+      }
+      user_legal_acceptances: {
+        Row: {
+          accepted_at: string
+          doc_slug: string
+          id: string
+          last_updated: string | null
+          source: string | null
+          user_agent: string | null
+          user_id: string
+          version: string
+        }
+        Insert: {
+          accepted_at?: string
+          doc_slug: string
+          id?: string
+          last_updated?: string | null
+          source?: string | null
+          user_agent?: string | null
+          user_id: string
+          version: string
+        }
+        Update: {
+          accepted_at?: string
+          doc_slug?: string
+          id?: string
+          last_updated?: string | null
+          source?: string | null
+          user_agent?: string | null
+          user_id?: string
+          version?: string
         }
         Relationships: []
       }
@@ -3865,6 +3940,12 @@ export type Database = {
         | "dismissed"
         | "action_taken"
         | "denied"
+      sensitive_appeal_status:
+        | "pending"
+        | "under_review"
+        | "approved"
+        | "denied"
+        | "withdrawn"
       verification_plan_type: "standard" | "subscription"
       verification_status:
         | "pending"
@@ -4076,6 +4157,13 @@ export const Constants = {
         "dismissed",
         "action_taken",
         "denied",
+      ],
+      sensitive_appeal_status: [
+        "pending",
+        "under_review",
+        "approved",
+        "denied",
+        "withdrawn",
       ],
       verification_plan_type: ["standard", "subscription"],
       verification_status: [
