@@ -233,6 +233,7 @@ const App = () => (
 
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </LegalConsentGate>
           </Suspense>
         </AuthProvider>
       </BrowserRouter>
