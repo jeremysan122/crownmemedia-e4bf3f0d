@@ -60,7 +60,10 @@ export default function Auth() {
     dob: "",
     referral: "",
   });
-  const [policiesOk, setPoliciesOk] = useState(false);
+  const [termsOk, setTermsOk] = useState(false);
+  const [privacyOk, setPrivacyOk] = useState(false);
+  const [communityOk, setCommunityOk] = useState(false);
+  const policiesOk = termsOk && privacyOk && communityOk;
   const [marketingOk, setMarketingOk] = useState(true);
   const [rememberMe, setRememberMe] = useState(true);
   const [showPw, setShowPw] = useState(false);
@@ -575,25 +578,29 @@ export default function Auth() {
           {mode === "signup" && (
             <>
               <label className="flex items-start gap-3 p-3 rounded-xl bg-muted/40 cursor-pointer">
-                <Checkbox
-                  checked={policiesOk}
-                  onCheckedChange={(v) => setPoliciesOk(!!v)}
-                  className="mt-0.5"
-                />
+                <Checkbox checked={termsOk} onCheckedChange={(v) => setTermsOk(!!v)} className="mt-0.5" />
                 <span className="text-xs leading-snug text-muted-foreground">
                   I'm 18 or older and I agree to CrownMe Media's{" "}
-                  <Link to="/terms" target="_blank" className="underline text-primary">Terms</Link>,{" "}
-                  <Link to="/privacy" target="_blank" className="underline text-primary">Privacy Policy</Link>,{" "}
-                  <Link to="/acceptable-use" target="_blank" className="underline text-primary">Community Guidelines</Link>,
+                  <Link to="/terms" target="_blank" className="underline text-primary">Terms of Service</Link>.
+                </span>
+              </label>
+              <label className="flex items-start gap-3 p-3 rounded-xl bg-muted/40 cursor-pointer">
+                <Checkbox checked={privacyOk} onCheckedChange={(v) => setPrivacyOk(!!v)} className="mt-0.5" />
+                <span className="text-xs leading-snug text-muted-foreground">
+                  I have read and accept the{" "}
+                  <Link to="/privacy" target="_blank" className="underline text-primary">Privacy Policy</Link>.
+                </span>
+              </label>
+              <label className="flex items-start gap-3 p-3 rounded-xl bg-muted/40 cursor-pointer">
+                <Checkbox checked={communityOk} onCheckedChange={(v) => setCommunityOk(!!v)} className="mt-0.5" />
+                <span className="text-xs leading-snug text-muted-foreground">
+                  I'll follow the{" "}
+                  <Link to="/acceptable-use" target="_blank" className="underline text-primary">Community Guidelines</Link>{" "}
                   and CrownMe's <Link to="/csae-policy" target="_blank" className="underline text-primary">zero-tolerance CSAE policy</Link>.
                 </span>
               </label>
               <label className="flex items-start gap-3 p-3 rounded-xl bg-muted/20 cursor-pointer">
-                <Checkbox
-                  checked={marketingOk}
-                  onCheckedChange={(v) => setMarketingOk(!!v)}
-                  className="mt-0.5"
-                />
+                <Checkbox checked={marketingOk} onCheckedChange={(v) => setMarketingOk(!!v)} className="mt-0.5" />
                 <span className="text-xs leading-snug text-muted-foreground">
                   Send me royal updates — drops, contests, and Crown Score milestones. Unsubscribe anytime.
                 </span>
