@@ -7,7 +7,7 @@ import {
   ShieldCheck, Mail, EyeOff,
 } from "lucide-react";
 
-const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+const ICONS: Record<string, React.ElementType> = {
   terms: FileText,
   privacy: Lock,
   community: BookOpen,
