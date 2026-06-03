@@ -182,7 +182,7 @@ export default function Auth() {
           return;
         }
         if (!policiesOk) {
-          toast.error("Please agree to the Terms, Privacy Policy, and Community Guidelines.");
+          toast.error("Please accept the Terms, Privacy Policy, and Community Guidelines.");
           return;
         }
         try { sessionStorage.setItem("crownme_age_confirmed", "true"); sessionStorage.setItem("crownme_dob", parsed.data.dob); } catch { /* noop */ }
@@ -221,6 +221,12 @@ export default function Auth() {
           return;
         }
         persistRemember();
+        if (data.user) {
+          try {
+            const { recordAcceptances } = await import("@/lib/legalAcceptance");
+            await recordAcceptances(data.user.id, ["terms", "privacy", "community", "csae"], "signup");
+          } catch { /* non-fatal; consent gate will re-prompt */ }
+        }
         if (data.session) {
           await tryRedeemPendingInvite();
           toast.success("Welcome to CrownMe");
