@@ -29,7 +29,6 @@ export async function recordAcceptances(
   // ignore duplicate-key errors (already accepted that version)
   await supabase
     .from("user_legal_acceptances")
-    // @ts-expect-error onConflict variant
     .upsert(rows, { onConflict: "user_id,doc_slug,version", ignoreDuplicates: true });
 }
 
