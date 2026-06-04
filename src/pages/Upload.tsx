@@ -33,7 +33,8 @@ import FilterOverlay from "@/components/FilterOverlay";
 import TagPeopleInput, { type TaggedProfile } from "@/components/TagPeopleInput";
 import { cssFor, FilterId } from "@/lib/filters";
 import { trackEvent } from "@/lib/analytics";
-import { Calendar as CalendarIcon, Users } from "lucide-react";
+import { Calendar as CalendarIcon, Users, Hash } from "lucide-react";
+import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
 
 const MAX_PHOTOS = 10;
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;          // 8MB raw input
@@ -98,6 +99,23 @@ export default function Upload() {
   const [sensitiveReason, setSensitiveReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  // New category system: derives hub (main category) from the legacy enum
+  // and persists both columns. Tags live in caption hashtags for now.
+  const [catSubs, setCatSubs] = useState<Subcategory[]>([]);
+  const [catMains, setCatMains] = useState<MainCategory[]>([]);
+  useEffect(() => {
+    Promise.all([fetchMainCategories(), fetchSubcategories()]).then(([m, s]) => {
+      setCatMains(m); setCatSubs(s);
+    });
+  }, []);
+  const derivedSub = useMemo(
+    () => catSubs.find((s) => s.legacy_enum === category) ?? null,
+    [catSubs, category]
+  );
+  const derivedMain = useMemo(
+    () => derivedSub ? catMains.find((m) => m.id === derivedSub.main_category_id) ?? null : null,
+    [catMains, derivedSub]
+  );
   const [cameraOpen, setCameraOpen] = useState<null | Mode>(null);
   // Crop editor state — when set, the user is reviewing a captured/picked photo
   // before it gets added to the photos array. `fromCamera` lets the "Retake"
@@ -810,6 +828,9 @@ export default function Upload() {
         media_origin: mode === "photo" ? (photos[0]?.origin ?? "gallery") : (video?.origin ?? "gallery"),
         is_sensitive: isSensitive,
         sensitive_reason: isSensitive ? (sensitiveReason.trim().slice(0, 120) || null) : null,
+        // New category system — written alongside the legacy enum.
+        main_category_slug: derivedMain?.slug ?? null,
+        subcategory_slug: derivedSub?.slug ?? null,
       } as any);
       if (error) {
         // 23505 = unique_violation on (user_id, submission_key) → already posted.
@@ -1485,6 +1506,12 @@ export default function Upload() {
               })}
             </SelectContent>
           </Select>
+          {derivedMain && (
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              Royal Hub: <span className="text-primary font-semibold">{derivedMain.label}</span>
+              {derivedSub && <> → <span className="font-semibold">{derivedSub.label}</span></>}
+            </p>
+          )}
         </div>
 
         {/* Location */}

@@ -489,6 +489,130 @@ export type Database = {
           },
         ]
       }
+      category_follows: {
+        Row: {
+          created_at: string
+          id: string
+          main_category_id: string | null
+          state: string
+          subcategory_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          main_category_id?: string | null
+          state?: string
+          subcategory_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          main_category_id?: string | null
+          state?: string
+          subcategory_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_follows_main_category_id_fkey"
+            columns: ["main_category_id"]
+            isOneToOne: false
+            referencedRelation: "main_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_follows_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      category_suggestions: {
+        Row: {
+          created_at: string
+          id: string
+          main_category_id: string | null
+          proposed_label: string
+          proposed_slug: string | null
+          rationale: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          suggested_by: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          main_category_id?: string | null
+          proposed_label: string
+          proposed_slug?: string | null
+          rationale?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_by: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          main_category_id?: string | null
+          proposed_label?: string
+          proposed_slug?: string | null
+          rationale?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_suggestions_main_category_id_fkey"
+            columns: ["main_category_id"]
+            isOneToOne: false
+            referencedRelation: "main_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      category_tags: {
+        Row: {
+          created_at: string
+          id: string
+          post_count: number
+          subcategory_id: string | null
+          tag: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_count?: number
+          subcategory_id?: string | null
+          tag: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_count?: number
+          subcategory_id?: string | null
+          tag?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_tags_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cloud_cost_assumptions: {
         Row: {
           created_at: string
@@ -1575,6 +1699,45 @@ export type Database = {
         }
         Relationships: []
       }
+      main_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          gradient: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          label: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          gradient?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          gradient?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       media_hashes: {
         Row: {
           created_at: string
@@ -2149,6 +2312,7 @@ export type Database = {
           is_archived: boolean
           is_removed: boolean
           is_sensitive: boolean
+          main_category_slug: string | null
           media_height: number | null
           media_origin: string | null
           media_type: string
@@ -2167,6 +2331,7 @@ export type Database = {
           share_count: number
           spotlight_until: string | null
           state: string | null
+          subcategory_slug: string | null
           submission_key: string | null
           tagged_user_ids: string[]
           user_id: string
@@ -2200,6 +2365,7 @@ export type Database = {
           is_archived?: boolean
           is_removed?: boolean
           is_sensitive?: boolean
+          main_category_slug?: string | null
           media_height?: number | null
           media_origin?: string | null
           media_type?: string
@@ -2218,6 +2384,7 @@ export type Database = {
           share_count?: number
           spotlight_until?: string | null
           state?: string | null
+          subcategory_slug?: string | null
           submission_key?: string | null
           tagged_user_ids?: string[]
           user_id: string
@@ -2251,6 +2418,7 @@ export type Database = {
           is_archived?: boolean
           is_removed?: boolean
           is_sensitive?: boolean
+          main_category_slug?: string | null
           media_height?: number | null
           media_origin?: string | null
           media_type?: string
@@ -2269,6 +2437,7 @@ export type Database = {
           share_count?: number
           spotlight_until?: string | null
           state?: string | null
+          subcategory_slug?: string | null
           submission_key?: string | null
           tagged_user_ids?: string[]
           user_id?: string
@@ -3133,6 +3302,56 @@ export type Database = {
           type?: string
         }
         Relationships: []
+      }
+      subcategories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_featured: boolean
+          label: string
+          legacy_enum: string | null
+          main_category_id: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          label: string
+          legacy_enum?: string | null
+          main_category_id: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          label?: string
+          legacy_enum?: string | null
+          main_category_id?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategories_main_category_id_fkey"
+            columns: ["main_category_id"]
+            isOneToOne: false
+            referencedRelation: "main_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       support_tickets: {
         Row: {

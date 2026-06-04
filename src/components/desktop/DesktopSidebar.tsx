@@ -1,9 +1,10 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Swords, Map, Plus, User, Trophy, Store, MessageCircle, Bell, Settings as SettingsIcon, Clapperboard, Gift } from "lucide-react";
+import { Home, Swords, Map, Plus, User, Trophy, Store, MessageCircle, Bell, Settings as SettingsIcon, Clapperboard, Gift, Compass } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const items = [
   { to: "/feed", label: "Feed", icon: Home },
+  { to: "/discover", label: "Discover", icon: Compass },
   { to: "/scrolls", label: "Scrolls", icon: Clapperboard },
   { to: "/battles", label: "Battles", icon: Swords },
   { to: "/map", label: "Crown Map", icon: Map },
