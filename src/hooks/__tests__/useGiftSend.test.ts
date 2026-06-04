@@ -1,0 +1,71 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// Mock supabase client BEFORE importing the hook so the module captures our mock.
+const rpcMock = vi.fn();
+const insertMock = vi.fn().mockResolvedValue({ error: null });
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    rpc: (...args: unknown[]) => rpcMock(...args),
+    auth: { getUser: async () => ({ data: { user: { id: "u1" } } }) },
+    from: () => ({ insert: insertMock }),
+  },
+}));
+
+import { renderHook, act } from "@testing-library/react";
+import { useGiftSend } from "@/hooks/useGiftSend";
+import type { RoyalGift } from "@/types/gifts";
+
+const gift: RoyalGift = {
+  id: "rose",
+  name: "Rose",
+  shekelCost: 10,
+  category: "low",
+  rarity: "common",
+  animationType: "rose",
+  icon: "🌹",
+};
+
+describe("useGiftSend — purchase & send regression", () => {
+  beforeEach(() => {
+    rpcMock.mockReset();
+    insertMock.mockClear();
+  });
+
+  it("succeeds on first try and returns the RPC result", async () => {
+    rpcMock.mockResolvedValueOnce({ data: { success: true, transaction_id: "tx1", total: 10 }, error: null });
+    const { result } = renderHook(() => useGiftSend());
+    let res: any;
+    await act(async () => {
+      res = await result.current.sendGift({ gift, recipientId: "r1", quantity: 1, maxRetries: 2 });
+    });
+    expect(res.success).toBe(true);
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries transient RPC failures up to maxRetries and logs each attempt", async () => {
+    rpcMock
+      .mockResolvedValueOnce({ data: null, error: { message: "network blip" } })
+      .mockResolvedValueOnce({ data: null, error: { message: "network blip" } })
+      .mockResolvedValueOnce({ data: { success: true, transaction_id: "tx2", total: 10 }, error: null });
+    const { result } = renderHook(() => useGiftSend());
+    await act(async () => {
+      const res = await result.current.sendGift({ gift, recipientId: "r1", quantity: 1, maxRetries: 2 });
+      expect(res.success).toBe(true);
+    });
+    expect(rpcMock).toHaveBeenCalledTimes(3);
+    // Two failed attempts were logged to error_logs server-side.
+    expect(insertMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does NOT retry fatal failures (insufficient funds / permission)", async () => {
+    rpcMock.mockResolvedValue({ data: null, error: { message: "Insufficient shekels" } });
+    const { result } = renderHook(() => useGiftSend());
+    await act(async () => {
+      await expect(
+        result.current.sendGift({ gift, recipientId: "r1", quantity: 1, maxRetries: 3 }),
+      ).rejects.toBeTruthy();
+    });
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(insertMock).toHaveBeenCalledTimes(1);
+  });
+});

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, TrendingUp, Crown, Send, ShoppingCart, Wallet, Heart } from "lucide-react";
+import { Search, TrendingUp, Crown, Send, ShoppingCart, Wallet, Heart, Loader2 } from "lucide-react";
 import { ROYAL_GIFTS, SHEKEL, formatShekels, shekelToUsd, CATEGORY_TABS, findGift } from "@/lib/gifts";
 import { GiftCategory, RoyalGift } from "@/types/gifts";
 import { useWallet } from "@/hooks/useWallet";
@@ -11,8 +11,18 @@ import { GiftIcon } from "./GiftIcon";
 import { useGiftFavorites } from "@/hooks/useGiftFavorites";
 import { fxGiftPreview, fxGiftSend, fxPurchase, fxTap, unlockAudio } from "@/lib/giftFx";
 import DailyDealCard from "@/components/store/DailyDealCard";
-import GiftPanel from "./GiftPanel";
 import GiftTargetPicker from "./GiftTargetPicker";
+import { useGiftSend } from "@/hooks/useGiftSend";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { RecentGiftTarget } from "@/lib/recentGiftTargets";
 
 const ALL_TABS: { key: GiftCategory | "all"; label: string }[] = [
@@ -21,7 +31,7 @@ const ALL_TABS: { key: GiftCategory | "all"; label: string }[] = [
 ];
 
 export default function RoyalGiftStore() {
-  const { wallet, refreshWallet } = useWallet();
+  const { wallet, refreshWallet, applyDelta } = useWallet();
   const navigate = useNavigate();
   const [tab, setTab] = useState<GiftCategory | "all">("all");
   const [query, setQuery] = useState("");
@@ -30,7 +40,43 @@ export default function RoyalGiftStore() {
   const [targetPickerOpen, setTargetPickerOpen] = useState(false);
   const [pendingGift, setPendingGift] = useState<RoyalGift | null>(null);
   const [giftTarget, setGiftTarget] = useState<RecentGiftTarget | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [sending, setSending] = useState(false);
   const { pinFront, favorites } = useGiftFavorites();
+  const { sendGift } = useGiftSend();
+
+  const performSend = async (gift: RoyalGift, target: RecentGiftTarget): Promise<boolean> => {
+    setSending(true);
+    const total = gift.shekelCost;
+    applyDelta(-total, total);
+    try {
+      await sendGift({ gift, recipientId: target.userId, postId: target.id, quantity: 1 });
+      fxGiftSend(gift.category);
+      toast.success(`Sent ${gift.name} to @${target.username}`, {
+        description: `${SHEKEL}${formatShekels(total)} · They'll be notified instantly`,
+      });
+      refreshWallet();
+      setSending(false);
+      return true;
+    } catch (e) {
+      applyDelta(total, -total);
+      refreshWallet();
+      const msg = e instanceof Error ? e.message : "Gift could not be sent";
+      toast.error("Gift failed to send", {
+        description: msg,
+        action: {
+          label: "Retry",
+          onClick: () => {
+            void performSend(gift, target);
+          },
+        },
+        duration: 8000,
+      });
+      setSending(false);
+      return false;
+    }
+  };
+
 
   const favoriteGifts = useMemo(
     () => favorites.map((id) => findGift(id)).filter(Boolean) as RoyalGift[],
@@ -247,27 +293,68 @@ export default function RoyalGiftStore() {
         onPick={(target) => {
           setGiftTarget(target);
           setTargetPickerOpen(false);
+          setConfirming(true);
         }}
       />
-      {pendingGift && giftTarget && (
-        <GiftPanel
-          isOpen={!!giftTarget}
-          onClose={() => setGiftTarget(null)}
-          recipient={{
-            id: giftTarget.userId,
-            username: giftTarget.username,
-            avatarUrl: giftTarget.avatarUrl ?? undefined,
-          }}
-          postId={giftTarget.id}
-          initialGift={pendingGift}
-          onSent={(gift) => {
-            fxGiftSend(gift.category);
+
+      <AlertDialog
+        open={confirming && !!pendingGift && !!giftTarget}
+        onOpenChange={(o) => {
+          if (!o && !sending) {
+            setConfirming(false);
             setGiftTarget(null);
             setPendingGift(null);
-            refreshWallet();
-          }}
-        />
-      )}
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-gold">
+              Send {pendingGift?.name} to @{giftTarget?.username}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will deduct {SHEKEL}{pendingGift ? formatShekels(pendingGift.shekelCost) : "0"} from your wallet
+              and notify @{giftTarget?.username} immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {giftTarget && (
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-card/60 border border-border/60">
+              {pendingGift && (
+                <GiftIcon animationType={pendingGift.animationType} tier={pendingGift.category} size="sm" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate">@{giftTarget.username}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {giftTarget.caption || "Recent post"}
+                </p>
+              </div>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={sending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={sending || !pendingGift || !giftTarget}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!pendingGift || !giftTarget) return;
+                const ok = await performSend(pendingGift, giftTarget);
+                if (ok) {
+                  setConfirming(false);
+                  setGiftTarget(null);
+                  setPendingGift(null);
+                }
+              }}
+              className="bg-gradient-gold text-primary-foreground"
+            >
+              {sending ? (
+                <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Sending…</span>
+              ) : (
+                <>Confirm send</>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
