@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Crown, Hash, MapPin, User } from "lucide-react";
+import { Search, Crown, Hash, MapPin, User, Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
 
 interface UserHit {
   id: string;
@@ -21,19 +22,6 @@ interface PostHit {
   category: string;
 }
 
-const CATEGORIES = [
-  "overall",
-  "fashion",
-  "beauty",
-  "fitness",
-  "lifestyle",
-  "travel",
-  "food",
-  "art",
-  "music",
-  "luxury",
-];
-
 interface Props {
   open: boolean;
   onOpenChange: (b: boolean) => void;
@@ -43,9 +31,16 @@ export default function GlobalSearchDialog({ open, onOpenChange }: Props) {
   const [q, setQ] = useState("");
   const [users, setUsers] = useState<UserHit[]>([]);
   const [posts, setPosts] = useState<PostHit[]>([]);
+  const [mains, setMains] = useState<MainCategory[]>([]);
+  const [subs, setSubs] = useState<Subcategory[]>([]);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const nav = useNavigate();
+
+  useEffect(() => {
+    fetchMainCategories().then(setMains);
+    fetchSubcategories().then(setSubs);
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -112,15 +107,29 @@ export default function GlobalSearchDialog({ open, onOpenChange }: Props) {
 
   const term = q.trim().toLowerCase();
 
-  const matchedCats =
-    term.length >= 2 ? CATEGORIES.filter((c) => c.includes(term)).slice(0, 5) : [];
+  // Category/topic matches (Phase 4)
+  const matchedHubs = useMemo(() => {
+    if (term.length < 2) return [];
+    return mains
+      .filter((m) => m.label.toLowerCase().includes(term) || m.slug.includes(term))
+      .slice(0, 4);
+  }, [term, mains]);
+
+  const matchedTopics = useMemo(() => {
+    if (term.length < 2) return [];
+    return subs
+      .filter((s) => s.label.toLowerCase().includes(term) || s.slug.includes(term))
+      .slice(0, 6);
+  }, [term, subs]);
+
+  const subToMain = (s: Subcategory) => mains.find((m) => m.id === s.main_category_id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 gap-0 max-w-lg overflow-hidden">
         <VisuallyHidden>
           <DialogTitle>Search</DialogTitle>
-          <DialogDescription>Search users, hashtags, and places.</DialogDescription>
+          <DialogDescription>Search users, hubs, topics, and places.</DialogDescription>
         </VisuallyHidden>
         <div className="flex items-center gap-2 px-4 h-14 border-b border-border">
           <Search size={18} className="text-muted-foreground shrink-0" />
@@ -129,7 +138,7 @@ export default function GlobalSearchDialog({ open, onOpenChange }: Props) {
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search royals, cities, categories…"
+            placeholder="Search royals, hubs, topics, cities…"
             className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground/70"
           />
         </div>
@@ -145,27 +154,67 @@ export default function GlobalSearchDialog({ open, onOpenChange }: Props) {
             !loading &&
             users.length === 0 &&
             posts.length === 0 &&
-            matchedCats.length === 0 && (
+            matchedHubs.length === 0 &&
+            matchedTopics.length === 0 && (
               <div className="px-4 py-8 text-center text-xs text-muted-foreground">
                 No matches for "{q}".
               </div>
             )}
 
-          {matchedCats.length > 0 && (
+          {matchedHubs.length > 0 && (
             <Section title="Categories">
-              {matchedCats.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => go(`/leaderboard?category=${c}`)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 text-left"
-                >
-                  <div className="size-8 rounded-full bg-muted flex items-center justify-center">
-                    <Hash size={14} className="text-muted-foreground" />
-                  </div>
-
-                  <span className="text-sm capitalize">{c}</span>
-                </button>
+              {matchedHubs.map((m) => (
+                <div key={m.id} className="flex items-stretch">
+                  <button
+                    onClick={() => go(`/c/${m.slug}`)}
+                    className="flex-1 flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 text-left"
+                  >
+                    <div className="size-8 rounded-full bg-muted flex items-center justify-center text-base">
+                      {m.icon ?? "🏷️"}
+                    </div>
+                    <span className="text-sm font-semibold">{m.label}</span>
+                  </button>
+                  <button
+                    onClick={() => go(`/leaderboard/c/${m.slug}`)}
+                    title={`${m.label} leaderboard`}
+                    className="px-3 hover:bg-muted/50 text-muted-foreground"
+                  >
+                    <Trophy size={14} />
+                  </button>
+                </div>
               ))}
+            </Section>
+          )}
+
+          {matchedTopics.length > 0 && (
+            <Section title="Topics">
+              {matchedTopics.map((s) => {
+                const m = subToMain(s);
+                if (!m) return null;
+                return (
+                  <div key={s.id} className="flex items-stretch">
+                    <button
+                      onClick={() => go(`/c/${m.slug}/${s.slug}`)}
+                      className="flex-1 flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 text-left"
+                    >
+                      <div className="size-8 rounded-full bg-muted flex items-center justify-center">
+                        <Hash size={14} className="text-muted-foreground" />
+                      </div>
+                      <span className="text-sm">
+                        {s.label}
+                        <span className="text-muted-foreground text-[11px]"> · {m.label}</span>
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => go(`/leaderboard/c/${m.slug}?topic=${s.slug}`)}
+                      title="Leaderboard"
+                      className="px-3 hover:bg-muted/50 text-muted-foreground"
+                    >
+                      <Trophy size={14} />
+                    </button>
+                  </div>
+                );
+              })}
             </Section>
           )}
 
