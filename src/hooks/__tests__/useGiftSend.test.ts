@@ -53,8 +53,20 @@ describe("useGiftSend — purchase & send regression", () => {
       expect(res.success).toBe(true);
     });
     expect(rpcMock).toHaveBeenCalledTimes(3);
+    const firstKey = rpcMock.mock.calls[0][1].p_dedupe_key;
+    expect(firstKey).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(rpcMock.mock.calls.every((call) => call[1].p_dedupe_key === firstKey)).toBe(true);
     // Two failed attempts were logged to error_logs server-side.
     expect(insertMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("reuses a provided idempotency key for manual retry actions", async () => {
+    rpcMock.mockResolvedValueOnce({ data: { success: true, transaction_id: "tx3", total: 10 }, error: null });
+    const { result } = renderHook(() => useGiftSend());
+    await act(async () => {
+      await result.current.sendGift({ gift, recipientId: "r1", quantity: 1, idempotencyKey: "11111111-1111-4111-8111-111111111111" });
+    });
+    expect(rpcMock.mock.calls[0][1].p_dedupe_key).toBe("11111111-1111-4111-8111-111111111111");
   });
 
   it("does NOT retry fatal failures (insufficient funds / permission)", async () => {
