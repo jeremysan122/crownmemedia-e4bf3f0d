@@ -25,6 +25,7 @@ import FeedErrorState from "@/components/feed/FeedErrorState";
 import BackToTopButton from "@/components/feed/BackToTopButton";
 import FeedPostCard from "@/components/feed/FeedPostCard";
 import { useFeedFilters, isFilteredOut } from "@/hooks/useFeedFilters";
+import { useCategoryTree } from "@/lib/categories";
 
 type Tab = "nearby" | "city" | "state" | "global" | "following";
 type CatFilter = "all" | CrownCategory;
@@ -38,6 +39,8 @@ const FEED_TAB_KEY = "crownme:feed:tab";
 const TAG_FILTER_KEY = "crownme:feed:tag";
 const SORT_KEY = "crownme:feed:sort";
 const WINDOW_KEY = "crownme:feed:window";
+const HUB_KEY = "crownme:feed:hub";
+const TOPIC_KEY = "crownme:feed:topic";
 
 const isValidFilterSort = (v: unknown): v is FilterSort => {
   if (v === "off" || v === "filtered-first") return true;
