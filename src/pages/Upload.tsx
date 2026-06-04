@@ -825,11 +825,18 @@ export default function Upload() {
       }
 
       const filterId = filter === "none" ? null : filter;
+      // Append picker tags as hashtags in the caption so the DB hashtag-extract
+      // trigger picks them up. Skip any tags that already appear.
+      const captionLc = caption.toLowerCase();
+      const extraTags = pickerVal.tags.filter((t) => !captionLc.includes(`#${t}`));
+      const finalCaption = (
+        extraTags.length > 0 ? `${caption}${caption ? " " : ""}${extraTags.map((t) => `#${t}`).join(" ")}` : caption
+      ).slice(0, 500);
       const { error } = await supabase.from("posts").insert({
         user_id: user.id,
         image_url: imageUrls[0],
         image_urls: imageUrls,
-        caption: caption.slice(0, 500),
+        caption: finalCaption,
         category,
         city: city.trim(),
         state: state.trim(),
