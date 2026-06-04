@@ -24,6 +24,7 @@ import NotificationToaster from "./components/NotificationToaster";
 // Lazy: secondary user pages (load on demand, reduces TTI)
 const Upload = lazy(() => import("./pages/Upload"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const CategoryLeaderboard = lazy(() => import("./pages/CategoryLeaderboard"));
 const Profile = lazy(() => import("./pages/Profile"));
 const CrownMap = lazy(() => import("./pages/CrownMap"));
 const Battles = lazy(() => import("./pages/Battles"));
