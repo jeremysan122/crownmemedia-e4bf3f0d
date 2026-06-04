@@ -31,12 +31,13 @@ function isFatal(msg: string) {
 }
 
 export function makeGiftIdempotencyKey() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  const cryptoApi = typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
+  if (cryptoApi?.randomUUID) return cryptoApi.randomUUID();
 
   // RFC4122-ish UUID fallback for older WebViews; Postgres expects uuid syntax.
   const bytes = new Uint8Array(16);
-  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
-    crypto.getRandomValues(bytes);
+  if (cryptoApi?.getRandomValues) {
+    cryptoApi.getRandomValues(bytes);
   } else {
     for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
   }
