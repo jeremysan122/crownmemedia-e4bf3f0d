@@ -99,10 +99,8 @@ export default function Upload() {
   const [sensitiveReason, setSensitiveReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-  // New category system: auto-derived from `category` enum via subcategories.legacy_enum
-  // mapping, plus user-editable tag list. Always written alongside the legacy enum.
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
+  // New category system: derives hub (main category) from the legacy enum
+  // and persists both columns. Tags live in caption hashtags for now.
   const [catSubs, setCatSubs] = useState<Subcategory[]>([]);
   const [catMains, setCatMains] = useState<MainCategory[]>([]);
   useEffect(() => {
@@ -1508,6 +1506,12 @@ export default function Upload() {
               })}
             </SelectContent>
           </Select>
+          {derivedMain && (
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              Royal Hub: <span className="text-primary font-semibold">{derivedMain.label}</span>
+              {derivedSub && <> → <span className="font-semibold">{derivedSub.label}</span></>}
+            </p>
+          )}
         </div>
 
         {/* Location */}
