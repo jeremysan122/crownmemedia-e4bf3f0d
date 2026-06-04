@@ -68,7 +68,7 @@ export default function CategoryLeaderboard() {
 
   useSeoMeta({
     title: main ? `${main.label} Leaderboard — CrownMe` : "Category Leaderboard — CrownMe",
-    description: `Top creators in ${main?.name ?? "this category"}. Scoped by location and time on CrownMe.`,
+    description: `Top creators in ${main?.label ?? "this category"}. Scoped by location and time on CrownMe.`,
   });
 
   // Default scope_value from profile when picking country/state/city
