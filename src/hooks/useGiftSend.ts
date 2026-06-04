@@ -70,7 +70,9 @@ export function useGiftSend() {
         return data as GiftSendResult;
       } catch (e: unknown) {
         lastErr = e;
-        const msg = e instanceof Error ? e.message : String(e);
+        const msg = e instanceof Error
+          ? e.message
+          : (e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : String(e));
         await logGiftFailure(`attempt-${attempt}`, e, { giftId: gift.id, recipientId, postId, quantity, attempt });
         if (isFatal(msg) || attempt === maxRetries) break;
         // Exponential backoff: 350ms, 900ms
