@@ -75,6 +75,10 @@ export default function Battles() {
   const [category, setCategory] = useState<string>(params.get("category") || "all");
   const [sort, setSort] = useState<string>(params.get("sort") || "hot");
   const [tab, setTab] = useState(params.get("tab") || "active");
+  const [hub, setHub] = useState<string>(params.get("hub") || "all");
+  const [topic, setTopic] = useState<string>(params.get("topic") || "all");
+  const [mains, setMains] = useState<MainCategory[]>([]);
+  const [subs, setSubs] = useState<Subcategory[]>([]);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [acceptBattle, setAcceptBattle] = useState<Battle | null>(null);
   const [shareBattle, setShareBattle] = useState<Battle | null>(null);
