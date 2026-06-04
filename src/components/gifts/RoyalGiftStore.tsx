@@ -293,27 +293,68 @@ export default function RoyalGiftStore() {
         onPick={(target) => {
           setGiftTarget(target);
           setTargetPickerOpen(false);
+          setConfirming(true);
         }}
       />
-      {pendingGift && giftTarget && (
-        <GiftPanel
-          isOpen={!!giftTarget}
-          onClose={() => setGiftTarget(null)}
-          recipient={{
-            id: giftTarget.userId,
-            username: giftTarget.username,
-            avatarUrl: giftTarget.avatarUrl ?? undefined,
-          }}
-          postId={giftTarget.id}
-          initialGift={pendingGift}
-          onSent={(gift) => {
-            fxGiftSend(gift.category);
+
+      <AlertDialog
+        open={confirming && !!pendingGift && !!giftTarget}
+        onOpenChange={(o) => {
+          if (!o && !sending) {
+            setConfirming(false);
             setGiftTarget(null);
             setPendingGift(null);
-            refreshWallet();
-          }}
-        />
-      )}
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-gold">
+              Send {pendingGift?.name} to @{giftTarget?.username}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will deduct {SHEKEL}{pendingGift ? formatShekels(pendingGift.shekelCost) : "0"} from your wallet
+              and notify @{giftTarget?.username} immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {giftTarget && (
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-card/60 border border-border/60">
+              {pendingGift && (
+                <GiftIcon animationType={pendingGift.animationType} tier={pendingGift.category} size="sm" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate">@{giftTarget.username}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {giftTarget.caption || "Recent post"}
+                </p>
+              </div>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={sending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={sending || !pendingGift || !giftTarget}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!pendingGift || !giftTarget) return;
+                const ok = await performSend(pendingGift, giftTarget);
+                if (ok) {
+                  setConfirming(false);
+                  setGiftTarget(null);
+                  setPendingGift(null);
+                }
+              }}
+              className="bg-gradient-gold text-primary-foreground"
+            >
+              {sending ? (
+                <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Sending…</span>
+              ) : (
+                <>Confirm send</>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
