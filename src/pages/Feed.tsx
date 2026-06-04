@@ -164,10 +164,41 @@ export default function Feed() {
   const [timeWindow, setTimeWindow] = useState<TimeWindow>(() => readSavedWindow());
   const [filterSort, setFilterSort] = useState<FilterSort>(() => readSavedFilterSort());
 
+  // Category system filters — hub (main category) + topic (subcategory). URL
+  // params win over localStorage so a shared link instantly applies a filter.
+  const { mains: hubList, subs: topicList } = useCategoryTree();
+  const initialHub = searchParams.get("hub") || (typeof localStorage !== "undefined" ? localStorage.getItem(HUB_KEY) : "") || "";
+  const initialTopic = searchParams.get("topic") || (typeof localStorage !== "undefined" ? localStorage.getItem(TOPIC_KEY) : "") || "";
+  const [hubSlug, setHubSlug] = useState<string>(initialHub);
+  const [topicSlug, setTopicSlug] = useState<string>(initialTopic);
+
   useEffect(() => { try { localStorage.setItem(FEED_TAB_KEY, tab); } catch { /* noop */ } }, [tab]);
   useEffect(() => { try { localStorage.setItem(SORT_KEY, sort); } catch { /* noop */ } }, [sort]);
   useEffect(() => { try { localStorage.setItem(WINDOW_KEY, timeWindow); } catch { /* noop */ } }, [timeWindow]);
   useEffect(() => { try { localStorage.setItem(FILTER_SORT_KEY, filterSort); } catch { /* noop */ } }, [filterSort]);
+  useEffect(() => {
+    try { localStorage.setItem(HUB_KEY, hubSlug); localStorage.setItem(TOPIC_KEY, topicSlug); } catch { /* noop */ }
+    const next = new URLSearchParams(searchParams);
+    if (hubSlug) next.set("hub", hubSlug); else next.delete("hub");
+    if (topicSlug) next.set("topic", topicSlug); else next.delete("topic");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hubSlug, topicSlug]);
+
+  const visibleTopics = useMemo(() => {
+    if (!hubSlug) return [];
+    const hub = hubList.find((h) => h.slug === hubSlug);
+    if (!hub) return [];
+    return topicList.filter((t) => t.main_category_id === hub.id);
+  }, [hubSlug, hubList, topicList]);
+
+  // If the saved topic no longer belongs to the chosen hub, clear it.
+  useEffect(() => {
+    if (!topicSlug) return;
+    if (!hubSlug) { setTopicSlug(""); return; }
+    if (visibleTopics.length === 0) return; // still loading
+    if (!visibleTopics.some((t) => t.slug === topicSlug)) setTopicSlug("");
+  }, [hubSlug, visibleTopics, topicSlug]);
 
   // ── Scroll restoration ─────────────────────────────────────────────────────
   // When the user opens a post and presses back, the browser remounts Feed.
