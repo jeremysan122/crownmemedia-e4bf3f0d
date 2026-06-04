@@ -219,10 +219,7 @@ export default function CategoryLeaderboard() {
                 return (
                   <li
                     key={r.user_id}
-                    layout
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex items-center gap-3 p-3 rounded-xl border ${
+                    className={`flex items-center gap-3 p-3 rounded-xl border animate-fade-in ${
                       podium ? "bg-gradient-to-r from-amber-500/10 to-transparent border-amber-500/30" : "bg-card border-border"
                     }`}
                   >
