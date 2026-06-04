@@ -58,7 +58,7 @@ describe("useGiftSend — purchase & send regression", () => {
   });
 
   it("does NOT retry fatal failures (insufficient funds / permission)", async () => {
-    rpcMock.mockResolvedValueOnce({ data: null, error: { message: "Insufficient shekels" } });
+    rpcMock.mockResolvedValue({ data: null, error: { message: "Insufficient shekels" } });
     const { result } = renderHook(() => useGiftSend());
     await act(async () => {
       await expect(
