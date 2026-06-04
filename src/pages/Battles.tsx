@@ -535,13 +535,52 @@ export default function Battles() {
               <Select value={sort} onValueChange={setSort}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hot">🔥 Hottest</SelectItem>
+                  <SelectItem value="hot">🔥 Trending</SelectItem>
                   <SelectItem value="newest">Newest</SelectItem>
                   <SelectItem value="ending">Ending soon</SelectItem>
                   <SelectItem value="votes">Most votes</SelectItem>
+                  <SelectItem value="competitive">Most competitive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Hub + Topic chips (Phase 4) */}
+            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+              <button
+                onClick={() => { setHub("all"); setTopic("all"); }}
+                className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${
+                  hub === "all" ? "bg-foreground text-background" : "bg-muted text-foreground"
+                }`}
+              >All hubs</button>
+              {mains.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => { setHub(m.slug); setTopic("all"); }}
+                  className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${
+                    hub === m.slug ? "bg-foreground text-background" : "bg-muted text-foreground"
+                  }`}
+                >{m.icon ?? "🏷️"} {m.label}</button>
+              ))}
+            </div>
+            {hub !== "all" && (
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                <button
+                  onClick={() => setTopic("all")}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap ${
+                    topic === "all" ? "bg-primary text-primary-foreground" : "bg-muted/60 text-muted-foreground"
+                  }`}
+                >All topics</button>
+                {subs.filter((s) => s.main_category_id === mains.find((m) => m.slug === hub)?.id).map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setTopic(s.slug)}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap ${
+                      topic === s.slug ? "bg-primary text-primary-foreground" : "bg-muted/60 text-muted-foreground"
+                    }`}
+                  >{s.label}</button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Featured */}
