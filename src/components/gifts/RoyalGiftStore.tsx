@@ -31,7 +31,7 @@ const ALL_TABS: { key: GiftCategory | "all"; label: string }[] = [
 ];
 
 export default function RoyalGiftStore() {
-  const { wallet, refreshWallet } = useWallet();
+  const { wallet, refreshWallet, applyDelta } = useWallet();
   const navigate = useNavigate();
   const [tab, setTab] = useState<GiftCategory | "all">("all");
   const [query, setQuery] = useState("");
@@ -40,7 +40,43 @@ export default function RoyalGiftStore() {
   const [targetPickerOpen, setTargetPickerOpen] = useState(false);
   const [pendingGift, setPendingGift] = useState<RoyalGift | null>(null);
   const [giftTarget, setGiftTarget] = useState<RecentGiftTarget | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [sending, setSending] = useState(false);
   const { pinFront, favorites } = useGiftFavorites();
+  const { sendGift } = useGiftSend();
+
+  const performSend = async (gift: RoyalGift, target: RecentGiftTarget): Promise<boolean> => {
+    setSending(true);
+    const total = gift.shekelCost;
+    applyDelta(-total, total);
+    try {
+      await sendGift({ gift, recipientId: target.userId, postId: target.id, quantity: 1 });
+      fxGiftSend(gift.category);
+      toast.success(`Sent ${gift.name} to @${target.username}`, {
+        description: `${SHEKEL}${formatShekels(total)} · They'll be notified instantly`,
+      });
+      refreshWallet();
+      setSending(false);
+      return true;
+    } catch (e) {
+      applyDelta(total, -total);
+      refreshWallet();
+      const msg = e instanceof Error ? e.message : "Gift could not be sent";
+      toast.error("Gift failed to send", {
+        description: msg,
+        action: {
+          label: "Retry",
+          onClick: () => {
+            void performSend(gift, target);
+          },
+        },
+        duration: 8000,
+      });
+      setSending(false);
+      return false;
+    }
+  };
+
 
   const favoriteGifts = useMemo(
     () => favorites.map((id) => findGift(id)).filter(Boolean) as RoyalGift[],
