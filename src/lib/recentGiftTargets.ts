@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type RecentGiftTargetSource = "saved" | "liked" | "viewed";
+export type RecentGiftTargetSource = "saved" | "liked" | "viewed" | "commented";
 
 export type RecentGiftTarget = {
   id: string;
@@ -67,7 +67,7 @@ export async function fetchRecentGiftTargets(userId?: string | null): Promise<Re
   readStored().forEach((r) => add(r.id, r.source || "viewed", r.at));
 
   if (userId) {
-    const [{ data: bookmarks }, { data: votes }] = await Promise.all([
+    const [{ data: bookmarks }, { data: votes }, { data: comments }] = await Promise.all([
       supabase
         .from("post_bookmarks" as any)
         .select("post_id, created_at")
@@ -81,10 +81,18 @@ export async function fetchRecentGiftTargets(userId?: string | null): Promise<Re
         .in("vote_type", ["crown", "fire", "diamond"])
         .order("created_at", { ascending: false })
         .limit(36),
+      supabase
+        .from("comments")
+        .select("post_id, created_at")
+        .eq("user_id", userId)
+        .eq("is_removed", false)
+        .order("created_at", { ascending: false })
+        .limit(24),
     ]);
 
     ((bookmarks as any[]) || []).forEach((r) => add(r.post_id, "saved", r.created_at));
     ((votes as any[]) || []).forEach((r) => add(r.post_id, "liked", r.created_at));
+    ((comments as any[]) || []).forEach((r) => add(r.post_id, "commented", r.created_at));
   }
 
   const ordered = [...merged.values()].sort((a, b) => b.at - a.at).slice(0, 60);
