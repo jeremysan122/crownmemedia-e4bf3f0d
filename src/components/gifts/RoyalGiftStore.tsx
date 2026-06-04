@@ -12,7 +12,7 @@ import { useGiftFavorites } from "@/hooks/useGiftFavorites";
 import { fxGiftPreview, fxGiftSend, fxPurchase, fxTap, unlockAudio } from "@/lib/giftFx";
 import DailyDealCard from "@/components/store/DailyDealCard";
 import GiftTargetPicker from "./GiftTargetPicker";
-import { useGiftSend } from "@/hooks/useGiftSend";
+import { makeGiftIdempotencyKey, useGiftSend } from "@/hooks/useGiftSend";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,12 +45,12 @@ export default function RoyalGiftStore() {
   const { pinFront, favorites } = useGiftFavorites();
   const { sendGift } = useGiftSend();
 
-  const performSend = async (gift: RoyalGift, target: RecentGiftTarget): Promise<boolean> => {
+  const performSend = async (gift: RoyalGift, target: RecentGiftTarget, idempotencyKey = makeGiftIdempotencyKey()): Promise<boolean> => {
     setSending(true);
     const total = gift.shekelCost;
     applyDelta(-total, total);
     try {
-      await sendGift({ gift, recipientId: target.userId, postId: target.id, quantity: 1 });
+      await sendGift({ gift, recipientId: target.userId, postId: target.id, quantity: 1, idempotencyKey });
       fxGiftSend(gift.category);
       toast.success(`Sent ${gift.name} to @${target.username}`, {
         description: `${SHEKEL}${formatShekels(total)} · They'll be notified instantly`,
@@ -67,7 +67,7 @@ export default function RoyalGiftStore() {
         action: {
           label: "Retry",
           onClick: () => {
-            void performSend(gift, target);
+            void performSend(gift, target, idempotencyKey);
           },
         },
         duration: 8000,
