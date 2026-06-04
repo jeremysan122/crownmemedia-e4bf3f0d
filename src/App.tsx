@@ -166,6 +166,7 @@ const App = () => (
               <Route path="/shorts" element={<ProtectedRoute><Scrolls /></ProtectedRoute>} />
               <Route path="/scrolls" element={<ProtectedRoute><Scrolls /></ProtectedRoute>} />
               <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+              <Route path="/leaderboard/c/:mainSlug" element={<ProtectedRoute><CategoryLeaderboard /></ProtectedRoute>} />
               <Route path="/map" element={<ProtectedRoute><CrownMap /></ProtectedRoute>} />
               <Route path="/battles" element={<ProtectedRoute><Battles /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
