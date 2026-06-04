@@ -22,6 +22,7 @@ import TopBattlersWidget from "@/components/battles/TopBattlersWidget";
 import WinnerReveal from "@/components/battles/WinnerReveal";
 import { haptic } from "@/lib/haptics";
 import { Play } from "lucide-react";
+import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
 
 interface Battle {
   id: string;
@@ -32,7 +33,7 @@ interface Battle {
   created_at: string;
   challenger: { username: string; profile_photo_url: string | null } | null;
   opponent: { username: string; profile_photo_url: string | null } | null;
-  challenger_post: { image_url: string; category: CrownCategory; city: string | null; state: string | null; country: string | null } | null;
+  challenger_post: { image_url: string; category: CrownCategory; city: string | null; state: string | null; country: string | null; main_category_slug: string | null; subcategory_slug: string | null } | null;
   opponent_post: { image_url: string; category: CrownCategory } | null;
 }
 
@@ -74,6 +75,10 @@ export default function Battles() {
   const [category, setCategory] = useState<string>(params.get("category") || "all");
   const [sort, setSort] = useState<string>(params.get("sort") || "hot");
   const [tab, setTab] = useState(params.get("tab") || "active");
+  const [hub, setHub] = useState<string>(params.get("hub") || "all");
+  const [topic, setTopic] = useState<string>(params.get("topic") || "all");
+  const [mains, setMains] = useState<MainCategory[]>([]);
+  const [subs, setSubs] = useState<Subcategory[]>([]);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [acceptBattle, setAcceptBattle] = useState<Battle | null>(null);
   const [shareBattle, setShareBattle] = useState<Battle | null>(null);
@@ -87,7 +92,7 @@ export default function Battles() {
     const { data } = await supabase.from("battles").select(`*,
       challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url),
       opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url),
-      challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country),
+      challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country, main_category_slug, subcategory_slug),
       opponent_post:posts!battles_opponent_post_id_fkey(image_url, category)
     `).order("created_at", { ascending: false }).limit(80);
     const arr = (data as any[]) || [];
@@ -119,6 +124,7 @@ export default function Battles() {
   };
 
   useEffect(() => { load(); }, [user?.id]);
+  useEffect(() => { fetchMainCategories().then(setMains); fetchSubcategories().then(setSubs); }, []);
 
   // Sync filters to URL (shareable deep links)
   useEffect(() => {
@@ -131,11 +137,13 @@ export default function Battles() {
     setOrDel("category", category, "all");
     setOrDel("sort", sort, "hot");
     setOrDel("q", query.trim(), "");
+    setOrDel("hub", hub, "all");
+    setOrDel("topic", topic, "all");
     if (next.toString() !== params.toString()) {
       setParams(next, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, region, category, sort, query]);
+  }, [tab, region, category, sort, query, hub, topic]);
 
   // Realtime subscription on battles + battle_votes
   useEffect(() => {
@@ -234,6 +242,18 @@ export default function Battles() {
       });
     }
     if (category !== "all") arr = arr.filter((b) => b.challenger_post?.category === category);
+    if (hub !== "all") arr = arr.filter((b) => b.challenger_post?.main_category_slug === hub);
+    if (topic !== "all") arr = arr.filter((b) => b.challenger_post?.subcategory_slug === topic);
+    if (sort === "competitive") {
+      arr.sort((a, b) => {
+        const ta = a.challenger_votes + a.opponent_votes;
+        const tb = b.challenger_votes + b.opponent_votes;
+        const ma = Math.abs(a.challenger_votes - a.opponent_votes) / Math.max(ta, 1);
+        const mb = Math.abs(b.challenger_votes - b.opponent_votes) / Math.max(tb, 1);
+        // Smaller margin first, then more votes
+        return ma - mb || tb - ta;
+      });
+    }
     if (region !== "all") {
       arr = arr.filter((b) => {
         const p = b.challenger_post;
@@ -248,7 +268,7 @@ export default function Battles() {
     else if (sort === "ending") arr.sort((a, b) => (new Date(a.ends_at || 0).getTime() || Infinity) - (new Date(b.ends_at || 0).getTime() || Infinity));
     else if (sort === "votes") arr.sort((a, b) => (b.challenger_votes + b.opponent_votes) - (a.challenger_votes + a.opponent_votes));
     return arr;
-  }, [battles, query, category, region, sort, user]);
+  }, [battles, query, category, region, sort, user, hub, topic]);
 
   // A battle is "done" if it's marked completed OR its end time has passed
   // (covers the small window before the backend flips status).
@@ -515,13 +535,52 @@ export default function Battles() {
               <Select value={sort} onValueChange={setSort}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hot">🔥 Hottest</SelectItem>
+                  <SelectItem value="hot">🔥 Trending</SelectItem>
                   <SelectItem value="newest">Newest</SelectItem>
                   <SelectItem value="ending">Ending soon</SelectItem>
                   <SelectItem value="votes">Most votes</SelectItem>
+                  <SelectItem value="competitive">Most competitive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Hub + Topic chips (Phase 4) */}
+            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+              <button
+                onClick={() => { setHub("all"); setTopic("all"); }}
+                className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${
+                  hub === "all" ? "bg-foreground text-background" : "bg-muted text-foreground"
+                }`}
+              >All hubs</button>
+              {mains.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => { setHub(m.slug); setTopic("all"); }}
+                  className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${
+                    hub === m.slug ? "bg-foreground text-background" : "bg-muted text-foreground"
+                  }`}
+                >{m.icon ?? "🏷️"} {m.label}</button>
+              ))}
+            </div>
+            {hub !== "all" && (
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                <button
+                  onClick={() => setTopic("all")}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap ${
+                    topic === "all" ? "bg-primary text-primary-foreground" : "bg-muted/60 text-muted-foreground"
+                  }`}
+                >All topics</button>
+                {subs.filter((s) => s.main_category_id === mains.find((m) => m.slug === hub)?.id).map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setTopic(s.slug)}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap ${
+                      topic === s.slug ? "bg-primary text-primary-foreground" : "bg-muted/60 text-muted-foreground"
+                    }`}
+                  >{s.label}</button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Featured */}
