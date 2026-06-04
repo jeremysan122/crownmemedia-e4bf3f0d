@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, Sparkles, TrendingUp, Crown, Send, ShoppingCart, Wallet, Pin, Heart } from "lucide-react";
+import { Search, TrendingUp, Crown, Send, ShoppingCart, Wallet, Heart } from "lucide-react";
 import { ROYAL_GIFTS, SHEKEL, formatShekels, shekelToUsd, CATEGORY_TABS, findGift } from "@/lib/gifts";
 import { GiftCategory, RoyalGift } from "@/types/gifts";
 import { useWallet } from "@/hooks/useWallet";
@@ -21,7 +21,7 @@ const ALL_TABS: { key: GiftCategory | "all"; label: string }[] = [
 ];
 
 export default function RoyalGiftStore() {
-  const { wallet, refreshWallet, applyDelta } = useWallet();
+  const { wallet, refreshWallet } = useWallet();
   const navigate = useNavigate();
   const [tab, setTab] = useState<GiftCategory | "all">("all");
   const [query, setQuery] = useState("");
@@ -30,7 +30,7 @@ export default function RoyalGiftStore() {
   const [targetPickerOpen, setTargetPickerOpen] = useState(false);
   const [pendingGift, setPendingGift] = useState<RoyalGift | null>(null);
   const [giftTarget, setGiftTarget] = useState<RecentGiftTarget | null>(null);
-  const { isFavorite, pinFront, favorites } = useGiftFavorites();
+  const { pinFront, favorites } = useGiftFavorites();
 
   const favoriteGifts = useMemo(
     () => favorites.map((id) => findGift(id)).filter(Boolean) as RoyalGift[],
