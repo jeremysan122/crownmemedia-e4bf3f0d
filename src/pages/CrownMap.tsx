@@ -1392,12 +1392,11 @@ function MapView({
       }
       wrap.appendChild(el);
 
-      const navTarget =
-        markerMode === "posts" && p.r.post_id
-          ? `/post/${p.r.post_id}`
-          : p.r.profile?.username
-            ? `/u/${encodeURIComponent(p.r.profile.username)}`
-            : `/u/${p.r.user_id}`;
+      const profileTarget = p.r.profile?.username
+        ? `/u/${encodeURIComponent(p.r.profile.username)}`
+        : null;
+      const postTarget = p.r.post_id ? `/post/${p.r.post_id}` : null;
+      const navTarget = markerMode === "posts" && postTarget ? postTarget : profileTarget;
 
       const popupHtml = `
         <div style="min-width:200px;font-family:inherit">
@@ -1415,7 +1414,7 @@ function MapView({
             <span style="font-size:13px;font-weight:800;color:hsl(45 95% 65%)">${formatScore(p.r.crown_score)}</span>
           </div>
           <div style="margin-top:6px;font-size:10px;color:#777;font-style:italic">
-            ${markerMode === "posts" ? "Click to view post" : "Click to view profile"}${p.approximate ? " · approx. location" : ""}
+            ${markerMode === "posts" ? (postTarget ? "Click to view post" : "Click to view holder") : "Click to view profile"}${p.approximate ? " · approx. location" : ""}
           </div>
         </div>
       `;
@@ -1428,9 +1427,34 @@ function MapView({
         el.style.transform = "translate(-50%, -50%) scale(1)";
         popup.remove();
       });
-      el.addEventListener("click", (ev) => {
+      el.addEventListener("click", async (ev) => {
         ev.stopPropagation();
-        navigate(navTarget);
+        // Verify the post still exists & is visible before navigating to /post/:id.
+        // Falls back to the holder's profile (or a toast) instead of dumping the user
+        // on the 404 page when the underlying post was removed/hidden.
+        if (markerMode === "posts" && postTarget && p.r.post_id) {
+          try {
+            const { data } = await supabase
+              .from("posts")
+              .select("id")
+              .eq("id", p.r.post_id)
+              .eq("is_removed", false)
+              .maybeSingle();
+            if (data?.id) {
+              navigate(postTarget);
+              return;
+            }
+          } catch { /* fall through */ }
+          if (profileTarget) {
+            toast.info("Post unavailable — opening holder's profile");
+            navigate(profileTarget);
+            return;
+          }
+          toast.error("This crown's post is no longer available");
+          return;
+        }
+        if (navTarget) navigate(navTarget);
+        else toast.error("No destination for this crown");
       });
 
       const marker = new mapboxgl.Marker({ element: wrap, anchor: "center" })
