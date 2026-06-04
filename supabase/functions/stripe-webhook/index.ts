@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
   if (!webhookSecret) return jsonError(500, "config_error", "STRIPE_WEBHOOK_SECRET is not configured");
 
   const sig = req.headers.get("stripe-signature");
-  const isTest = req.headers.get("x-test-bypass-signature") === "1";
+  const isTest = Deno.env.get("ENABLE_WEBHOOK_TEST_BYPASS") === "true" && req.headers.get("x-test-bypass-signature") === "1";
   if (!sig && !isTest) return jsonError(400, "missing_signature", "stripe-signature header required");
 
   const body = await req.text();
