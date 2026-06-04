@@ -41,6 +41,7 @@ import CommentsDrawer from "./CommentsDrawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useIsBelowDesktop } from "@/hooks/use-below-desktop";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { rememberPostAsGiftTarget } from "@/lib/recentGiftTargets";
 
 export interface FeedPost {
   id: string;
@@ -150,6 +151,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [repostOpen, setRepostOpen] = useState(false);
   const nav = useNavigate();
+  const articleRef = useRef<HTMLElement | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [commentsDrawerOpen, setCommentsDrawerOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -249,6 +251,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           .from("post_bookmarks" as any)
           .insert({ user_id: user.id, post_id: post.id });
         if (error && (error as any).code !== "23505") throw error;
+        rememberPostAsGiftTarget(post, "saved");
         toast.success("Saved");
       }
     } catch (e) {
@@ -516,6 +519,20 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     if (commentBumpTimerRef.current) clearTimeout(commentBumpTimerRef.current);
   }, []);
 
+  useEffect(() => {
+    const node = articleRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    let marked = false;
+    const io = new IntersectionObserver(([entry]) => {
+      if (marked || !entry.isIntersecting || entry.intersectionRatio < 0.55) return;
+      marked = true;
+      rememberPostAsGiftTarget(post, "viewed");
+      io.disconnect();
+    }, { threshold: [0.55] });
+    io.observe(node);
+    return () => io.disconnect();
+  }, [post.id]);
+
   const onVote = useCallback(async (t: VoteType) => {
     if (!user) return;
     const had = myVotes.has(t);
@@ -528,6 +545,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
     burstTimerRef.current = setTimeout(() => setBurst(null), 500);
     if (!had) {
+      if (t !== "dislike") rememberPostAsGiftTarget(post, "liked");
       // Sound + haptics now play centrally inside toggleVote() so every
       // dislike entry point (Feed, Profile, Scrolls, PostDetail, PostPage,
       // dialogs) shares one throttled implementation. We intentionally do not
@@ -575,14 +593,14 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       return nextC;
     });
     await toggleVote(post.id, user!.id, t);
-  }, [user?.id, myVotes, counts, liveFilter, bumpFilterStreak, post.id]);
+  }, [user?.id, myVotes, counts, liveFilter, bumpFilterStreak, post]);
 
   const showLikes = canSeeLikes(post.profile, { isOwner });
   const showComments = canSeeComments(post.profile, { isOwner });
 
   if (hidden) return null;
   return (
-    <article className="royal-card overflow-hidden mb-2 animate-fade-in relative text-[13px]">
+    <article ref={articleRef} className="royal-card overflow-hidden mb-2 animate-fade-in relative text-[13px]">
       {/* Header */}
       <header className="flex items-center justify-between gap-2 p-2">
         <Link to={`/u/${post.profile.username}`} className="flex items-center gap-2.5 min-w-0 flex-1">

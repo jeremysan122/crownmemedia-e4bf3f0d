@@ -13,6 +13,7 @@ import { trackUsage } from "@/lib/usageTrack";
 import CommentsDrawer from "@/components/CommentsDrawer";
 import { useFeedFilters } from "@/hooks/useFeedFilters";
 import { EyeOff, Eye } from "lucide-react";
+import { rememberPostAsGiftTarget } from "@/lib/recentGiftTargets";
 
 
 // Shorts uses the canonical post row shape (see src/lib/postQuery.ts) so the
@@ -115,6 +116,7 @@ export default function Shorts() {
           if (!vid) return;
           if (e.isIntersecting && e.intersectionRatio > 0.65) {
             setActiveIdx(idx);
+            rememberPostAsGiftTarget(items[idx], "viewed");
             vid.muted = muted;
             // Never autoplay sensitive content that hasn't been revealed yet.
             if (!isBlurred(items[idx])) {
@@ -164,6 +166,7 @@ export default function Shorts() {
 
   async function castCrown(post: Short) {
     if (!user) { nav("/auth?mode=login"); return; }
+    rememberPostAsGiftTarget(post, "liked");
     setItems((prev) => prev.map((p) => p.id === post.id ? { ...p, vote_count: p.vote_count + 1 } : p));
     const { error } = await supabase.from("votes").insert({
       post_id: post.id,

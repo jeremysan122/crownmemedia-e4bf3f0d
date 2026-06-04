@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, Sparkles, TrendingUp, Crown, Send, ShoppingCart, Wallet, Pin, Check, Heart } from "lucide-react";
+import { Search, TrendingUp, Crown, Send, ShoppingCart, Wallet, Heart } from "lucide-react";
 import { ROYAL_GIFTS, SHEKEL, formatShekels, shekelToUsd, CATEGORY_TABS, findGift } from "@/lib/gifts";
 import { GiftCategory, RoyalGift } from "@/types/gifts";
 import { useWallet } from "@/hooks/useWallet";
@@ -11,6 +11,9 @@ import { GiftIcon } from "./GiftIcon";
 import { useGiftFavorites } from "@/hooks/useGiftFavorites";
 import { fxGiftPreview, fxGiftSend, fxPurchase, fxTap, unlockAudio } from "@/lib/giftFx";
 import DailyDealCard from "@/components/store/DailyDealCard";
+import GiftPanel from "./GiftPanel";
+import GiftTargetPicker from "./GiftTargetPicker";
+import type { RecentGiftTarget } from "@/lib/recentGiftTargets";
 
 const ALL_TABS: { key: GiftCategory | "all"; label: string }[] = [
   { key: "all", label: "All" },
@@ -18,14 +21,16 @@ const ALL_TABS: { key: GiftCategory | "all"; label: string }[] = [
 ];
 
 export default function RoyalGiftStore() {
-  const { wallet, refreshWallet, applyDelta } = useWallet();
+  const { wallet, refreshWallet } = useWallet();
   const navigate = useNavigate();
   const [tab, setTab] = useState<GiftCategory | "all">("all");
   const [query, setQuery] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [previewing, setPreviewing] = useState<RoyalGift | null>(null);
-  const [unlocked, setUnlocked] = useState<string | null>(null);
-  const { isFavorite, pinFront, favorites } = useGiftFavorites();
+  const [targetPickerOpen, setTargetPickerOpen] = useState(false);
+  const [pendingGift, setPendingGift] = useState<RoyalGift | null>(null);
+  const [giftTarget, setGiftTarget] = useState<RecentGiftTarget | null>(null);
+  const { pinFront, favorites } = useGiftFavorites();
 
   const favoriteGifts = useMemo(
     () => favorites.map((id) => findGift(id)).filter(Boolean) as RoyalGift[],
@@ -193,25 +198,16 @@ export default function RoyalGiftStore() {
                       setShowAdd(true);
                       return;
                     }
-                    // Deduct shekels (optimistic) + persist via wallet update
-                    applyDelta(-previewing.shekelCost, previewing.shekelCost);
                     pinFront(previewing.id);
                     fxPurchase();
-                    fxGiftSend(previewing.category);
-                    setUnlocked(previewing.id);
-                    toast.success(`${previewing.name} purchased — pick a post to send`);
-                    setTimeout(() => {
-                      setUnlocked(null);
-                      setPreviewing(null);
-                      navigate("/feed");
-                    }, 900);
+                    setPendingGift(previewing);
+                    setPreviewing(null);
+                    setTargetPickerOpen(true);
                   }}
                   className="w-full h-11 rounded-full bg-gradient-gold text-primary-foreground font-bold text-sm gold-shadow flex items-center justify-center gap-2"
                 >
-                  {unlocked === previewing.id ? <Check size={16} /> : <Send size={16} />}
-                  {unlocked === previewing.id
-                    ? "Purchased!"
-                    : `Purchase & Send · ${SHEKEL}${formatShekels(previewing.shekelCost)}`}
+                  <Send size={16} />
+                  {`Purchase and send · ${SHEKEL}${formatShekels(previewing.shekelCost)}`}
                 </button>
                 <div className="flex gap-2 w-full">
                   <button
@@ -239,6 +235,38 @@ export default function RoyalGiftStore() {
             </div>
           </div>
         </div>
+      )}
+      <GiftTargetPicker
+        open={targetPickerOpen}
+        onOpenChange={setTargetPickerOpen}
+        onFeed={() => {
+          setTargetPickerOpen(false);
+          navigate("/feed");
+          toast.info("Pick a post to send this gift");
+        }}
+        onPick={(target) => {
+          setGiftTarget(target);
+          setTargetPickerOpen(false);
+        }}
+      />
+      {pendingGift && giftTarget && (
+        <GiftPanel
+          isOpen={!!giftTarget}
+          onClose={() => setGiftTarget(null)}
+          recipient={{
+            id: giftTarget.userId,
+            username: giftTarget.username,
+            avatarUrl: giftTarget.avatarUrl ?? undefined,
+          }}
+          postId={giftTarget.id}
+          initialGift={pendingGift}
+          onSent={(gift) => {
+            fxGiftSend(gift.category);
+            setGiftTarget(null);
+            setPendingGift(null);
+            refreshWallet();
+          }}
+        />
       )}
     </div>
   );
