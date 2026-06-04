@@ -104,6 +104,9 @@ const SensitiveAppeal = lazy(() => import("./pages/SensitiveAppeal"));
 const SensitiveAppealsList = lazy(() => import("./pages/SensitiveAppeal").then((m) => ({ default: m.SensitiveAppealsList })));
 const AdminSensitiveAppeals = lazy(() => import("./pages/admin/AdminSensitiveAppeals"));
 const ComplianceCheck = lazy(() => import("./pages/admin/ComplianceCheck"));
+const CategoryHub = lazy(() => import("./pages/CategoryHub"));
+const Discover = lazy(() => import("./pages/Discover"));
+const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
 import LegalConsentGate from "@/components/legal/LegalConsentGate";
 
 // React Query: sensible defaults so tab switches don't blank-flash and
@@ -230,6 +233,11 @@ const App = () => (
               <Route path="/appeals/sensitive/new/:postId" element={<ProtectedRoute><SensitiveAppeal /></ProtectedRoute>} />
               <Route path="/admin/sensitive-appeals" element={<ProtectedRoute><AdminRoute><AdminSensitiveAppeals /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/compliance" element={<ProtectedRoute><AdminRoute><ComplianceCheck /></AdminRoute></ProtectedRoute>} />
+              <Route path="/admin/categories" element={<ProtectedRoute><AdminRoute><AdminCategories /></AdminRoute></ProtectedRoute>} />
+
+              <Route path="/discover" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
+              <Route path="/c/:mainSlug" element={<CategoryHub />} />
+              <Route path="/c/:mainSlug/:subSlug" element={<CategoryHub />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
