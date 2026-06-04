@@ -124,6 +124,7 @@ export default function Battles() {
   };
 
   useEffect(() => { load(); }, [user?.id]);
+  useEffect(() => { fetchMainCategories().then(setMains); fetchSubcategories().then(setSubs); }, []);
 
   // Sync filters to URL (shareable deep links)
   useEffect(() => {
@@ -136,11 +137,13 @@ export default function Battles() {
     setOrDel("category", category, "all");
     setOrDel("sort", sort, "hot");
     setOrDel("q", query.trim(), "");
+    setOrDel("hub", hub, "all");
+    setOrDel("topic", topic, "all");
     if (next.toString() !== params.toString()) {
       setParams(next, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, region, category, sort, query]);
+  }, [tab, region, category, sort, query, hub, topic]);
 
   // Realtime subscription on battles + battle_votes
   useEffect(() => {
