@@ -658,48 +658,95 @@ export default function Feed() {
         </div>
 
 
-        {/* Category filter chip rail */}
+        {/* Master Category (Hub) chip rail */}
         <div className="px-3 lg:px-0 pt-3">
           <div className="flex items-center gap-2 mb-1.5">
             <Sparkles size={12} className="text-primary" />
-            <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Crown Category</span>
+            <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Master Category</span>
+            {(hubSlug || topicSlug) && (
+              <button
+                onClick={() => { setHubSlug(""); setTopicSlug(""); }}
+                className="ml-auto text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+              >
+                <XIcon size={10} /> Clear
+              </button>
+            )}
           </div>
           <div
-            data-testid="crown-category-carousel"
+            data-testid="hub-category-carousel"
             className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0"
             style={{ touchAction: "pan-x", overscrollBehaviorY: "contain", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch" }}
           >
-
             <button
-              onClick={() => setCatFilter("all")}
+              onClick={() => { setHubSlug(""); setTopicSlug(""); }}
               className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border transition ${
-                catFilter === "all"
+                !hubSlug
                   ? "bg-gradient-gold text-primary-foreground border-transparent gold-shadow"
                   : "bg-card/60 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
               }`}
             >
               <Sparkles size={12} fill="currentColor" /> All
             </button>
-            {CATEGORIES.map((c) => {
-              const Icon = CATEGORY_ICON[c];
-              const active = catFilter === c;
+            {hubList.map((h) => {
+              const active = hubSlug === h.slug;
               return (
                 <button
-                  key={c}
-                  onClick={() => setCatFilter(c)}
+                  key={h.id}
+                  onClick={() => { setHubSlug(active ? "" : h.slug); setTopicSlug(""); }}
                   className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border transition ${
                     active
-                      ? "bg-gradient-gold text-primary-foreground border-transparent gold-shadow"
+                      ? `text-white border-transparent shadow bg-gradient-to-br ${h.gradient ?? "from-amber-400 to-yellow-600"}`
                       : "bg-card/60 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
                   }`}
                 >
-                  <Icon size={12} fill="currentColor" />
-                  {CATEGORY_LABEL[c]}
+                  {h.label}
                 </button>
               );
             })}
           </div>
         </div>
+
+        {/* Topic chip rail — only when a hub is selected */}
+        {hubSlug && visibleTopics.length > 0 && (
+          <div className="px-3 lg:px-0 pt-2">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Hash size={12} className="text-primary" />
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Topic</span>
+            </div>
+            <div
+              data-testid="topic-carousel"
+              className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0"
+              style={{ touchAction: "pan-x", overscrollBehaviorY: "contain", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch" }}
+            >
+              <button
+                onClick={() => setTopicSlug("")}
+                className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition ${
+                  !topicSlug
+                    ? "bg-primary/15 text-primary border-primary/40"
+                    : "bg-card/60 text-muted-foreground border-border hover:text-foreground hover:border-primary/40"
+                }`}
+              >
+                All topics
+              </button>
+              {visibleTopics.map((t) => {
+                const active = topicSlug === t.slug;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setTopicSlug(active ? "" : t.slug)}
+                    className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition ${
+                      active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card/60 text-muted-foreground border-border hover:text-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {trendingFilters.length > 0 && (
           <div className="px-3 lg:px-0 pt-2" aria-label="Trending filters in this feed">
