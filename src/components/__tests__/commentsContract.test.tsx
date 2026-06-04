@@ -94,10 +94,11 @@ import CommentsDrawer from "@/components/CommentsDrawer";
 import { toast } from "sonner";
 
 function setupQueryChain(rows: any[] = []) {
-  // Chainable select().eq().eq().order() that resolves with { data: rows }
+  // Chainable select().eq().eq().is().order() that resolves with { data: rows }
   const order = vi.fn().mockResolvedValue({ data: rows });
-  const eq2 = vi.fn().mockReturnValue({ order });
-  const eq1 = vi.fn().mockReturnValue({ eq: eq2 });
+  const is = vi.fn().mockReturnValue({ order });
+  const eq2 = vi.fn().mockReturnValue({ is, order });
+  const eq1 = vi.fn().mockReturnValue({ eq: eq2, is, order });
   const select = vi.fn().mockReturnValue({ eq: eq1, in: vi.fn().mockResolvedValue({ data: [] }) });
   return select;
 }
