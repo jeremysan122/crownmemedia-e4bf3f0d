@@ -1394,8 +1394,10 @@ function MapView({
 
       const navTarget =
         markerMode === "posts" && p.r.post_id
-          ? `/?post=${p.r.post_id}`
-          : `/profile/${p.r.profile?.username ?? p.r.user_id}`;
+          ? `/post/${p.r.post_id}`
+          : p.r.profile?.username
+            ? `/u/${encodeURIComponent(p.r.profile.username)}`
+            : `/u/${p.r.user_id}`;
 
       const popupHtml = `
         <div style="min-width:200px;font-family:inherit">
