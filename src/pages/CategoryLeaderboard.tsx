@@ -67,7 +67,7 @@ export default function CategoryLeaderboard() {
   );
 
   useSeoMeta({
-    title: main ? `${main.name} Leaderboard — CrownMe` : "Category Leaderboard — CrownMe",
+    title: main ? `${main.label} Leaderboard — CrownMe` : "Category Leaderboard — CrownMe",
     description: `Top creators in ${main?.name ?? "this category"}. Scoped by location and time on CrownMe.`,
   });
 
@@ -118,7 +118,7 @@ export default function CategoryLeaderboard() {
           className="rounded-2xl p-5 text-white mb-4"
           style={{
             background: main
-              ? `linear-gradient(135deg, ${main.gradient_from ?? "#6d28d9"}, ${main.gradient_to ?? "#db2777"})`
+              ? `linear-gradient(135deg, ${main.gradient ?? "#6d28d9"})`
               : "linear-gradient(135deg, #6d28d9, #db2777)",
           }}
         >
@@ -127,7 +127,7 @@ export default function CategoryLeaderboard() {
             ← {main?.name ?? "Category"}
           </Link>
           <h1 className="text-2xl font-black mt-1 flex items-center gap-2">
-            <Trophy size={22} /> {topicSub ? `${topicSub.name} Leaderboard` : `${main?.name ?? ""} Leaderboard`}
+            <Trophy size={22} /> {topicSub ? `${topicSub.label} Leaderboard` : `${main?.name ?? ""} Leaderboard`}
           </h1>
           <p className="text-sm opacity-90 mt-1">
             {PERIODS.find((p) => p.id === period)?.label} · {scope === "global" ? "Global" : (scopeValue || "—")}
@@ -153,7 +153,7 @@ export default function CategoryLeaderboard() {
                   topic === s.slug ? "bg-foreground text-background" : "bg-muted text-foreground"
                 }`}
               >
-                {s.icon ?? "🏷️"} {s.name}
+                {"🏷️"} {s.label}
               </button>
             ))}
           </div>
@@ -213,7 +213,7 @@ export default function CategoryLeaderboard() {
             </Link>
           </div>
         ) : (
-          <AnimatePresence initial={false}>
+          
             <ul className="space-y-2">
               {rows.map((r) => {
                 const delta = r.prev_rank == null ? 0 : r.prev_rank - r.rank;
@@ -222,7 +222,7 @@ export default function CategoryLeaderboard() {
                   delta > 0 ? "text-emerald-500" : delta < 0 ? "text-rose-500" : "text-muted-foreground";
                 const podium = r.rank <= 3;
                 return (
-                  <motion.li
+                  <li
                     key={r.user_id}
                     layout
                     initial={{ opacity: 0, y: 6 }}
@@ -255,11 +255,11 @@ export default function CategoryLeaderboard() {
                         {delta !== 0 ? Math.abs(delta) : "—"}
                       </div>
                     </div>
-                  </motion.li>
+                  </li>
                 );
               })}
             </ul>
-          </AnimatePresence>
+          
         )}
       </div>
     </AppShell>
