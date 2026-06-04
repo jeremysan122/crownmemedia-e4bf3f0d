@@ -268,7 +268,7 @@ export default function Battles() {
     else if (sort === "ending") arr.sort((a, b) => (new Date(a.ends_at || 0).getTime() || Infinity) - (new Date(b.ends_at || 0).getTime() || Infinity));
     else if (sort === "votes") arr.sort((a, b) => (b.challenger_votes + b.opponent_votes) - (a.challenger_votes + a.opponent_votes));
     return arr;
-  }, [battles, query, category, region, sort, user]);
+  }, [battles, query, category, region, sort, user, hub, topic]);
 
   // A battle is "done" if it's marked completed OR its end time has passed
   // (covers the small window before the backend flips status).
