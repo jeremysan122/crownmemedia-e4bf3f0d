@@ -87,7 +87,7 @@ export default function Battles() {
     const { data } = await supabase.from("battles").select(`*,
       challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url),
       opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url),
-      challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country),
+      challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country, main_category_slug, subcategory_slug),
       opponent_post:posts!battles_opponent_post_id_fkey(image_url, category)
     `).order("created_at", { ascending: false }).limit(80);
     const arr = (data as any[]) || [];
