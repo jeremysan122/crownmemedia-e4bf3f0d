@@ -1,10 +1,16 @@
-// Category Hub — /c/:mainSlug and /c/:mainSlug/:subSlug
+// Category Hub — /c/:mainSlug and /c/:mainSlug/:subSlug  (Phase 2)
 //
-// Shows the full competitive surface for a category: top crown holder,
-// trending posts, leaderboard, subcategory navigator.
+// Sections:
+//   - Hero (gradient, follow / leaderboard / compete CTAs)
+//   - Subcategory chip nav
+//   - Crown Holder strip (current reigning user)
+//   - Top Competitors podium (top 3 by crown_score)
+//   - Active Battles (open battles in this hub/topic)
+//   - Recent Winners (last 5 awarded crowns)
+//   - Trending Posts grid
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Crown, Flame, TrendingUp, Users } from "lucide-react";
+import { Crown, Flame, TrendingUp, Trophy, Swords, Medal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -24,6 +30,18 @@ interface PostRow {
   vote_count: number;
   profile: { username: string; profile_photo_url: string | null } | null;
 }
+interface CrownRow {
+  id: string;
+  category: string;
+  awarded_at: string;
+  user: { username: string; profile_photo_url: string | null } | null;
+}
+interface BattleRow {
+  id: string;
+  status: string | null;
+  ends_at: string | null;
+  category: string | null;
+}
 
 export default function CategoryHub() {
   const { mainSlug, subSlug } = useParams();
@@ -31,6 +49,8 @@ export default function CategoryHub() {
   const [mains, setMains] = useState<MainCategory[]>([]);
   const [subs, setSubs] = useState<Subcategory[]>([]);
   const [posts, setPosts] = useState<PostRow[]>([]);
+  const [crowns, setCrowns] = useState<CrownRow[]>([]);
+  const [battles, setBattles] = useState<BattleRow[]>([]);
   const [following, setFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -50,7 +70,7 @@ export default function CategoryHub() {
     [subs, main]
   );
 
-  // Load posts for this category
+  // Posts in this category
   useEffect(() => {
     if (!mainSlug) return;
     setLoading(true);
@@ -68,6 +88,44 @@ export default function CategoryHub() {
       setLoading(false);
     })();
   }, [mainSlug, sub?.slug]);
+
+  // Crowns scoped by legacy_enum of any sub in this hub (or the specific sub)
+  useEffect(() => {
+    if (!main) return;
+    const legacyEnums = (sub ? [sub] : mainSubs)
+      .map((s) => s.legacy_enum)
+      .filter(Boolean) as string[];
+    if (legacyEnums.length === 0) { setCrowns([]); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("crowns")
+        .select("id, category, awarded_at, user:profiles!crowns_user_id_fkey(username, profile_photo_url)")
+        .eq("active", true)
+        .in("category", legacyEnums as any)
+        .order("awarded_at", { ascending: false })
+        .limit(10);
+      setCrowns((data as any) || []);
+    })();
+  }, [main?.id, sub?.id, mainSubs.length]);
+
+  // Active battles (best-effort; depends on existing battles table shape)
+  useEffect(() => {
+    if (!main) return;
+    const legacyEnums = (sub ? [sub] : mainSubs)
+      .map((s) => s.legacy_enum)
+      .filter(Boolean) as string[];
+    if (legacyEnums.length === 0) { setBattles([]); return; }
+    (async () => {
+      const { data, error } = await supabase
+        .from("battles" as any)
+        .select("id, status, ends_at, category")
+        .in("category", legacyEnums as any)
+        .eq("status", "active")
+        .order("ends_at", { ascending: true })
+        .limit(5);
+      if (!error) setBattles((data as any) || []);
+    })();
+  }, [main?.id, sub?.id, mainSubs.length]);
 
   // Follow state
   useEffect(() => {
@@ -105,11 +163,15 @@ export default function CategoryHub() {
     });
   };
 
+  const reignHolder = crowns[0]?.user ?? null;
+  const top3 = posts.slice(0, 3);
+  const rest = posts.slice(3);
+
   return (
     <main className="max-w-5xl mx-auto px-4 pb-24">
       {/* Hero */}
       <header className={`relative rounded-3xl overflow-hidden p-8 mt-4 mb-6 bg-gradient-to-br ${main.gradient ?? "from-amber-400 to-yellow-600"} text-white shadow-xl`}>
-        <div className="absolute inset-0 bg-black/20" />
+        <div className="absolute inset-0 bg-black/25" />
         <div className="relative">
           <p className="text-xs uppercase tracking-[0.3em] opacity-80 mb-1">Royal Hub</p>
           <h1 className="font-display text-4xl md:text-5xl mb-2">{main.label}</h1>
@@ -162,10 +224,110 @@ export default function CategoryHub() {
         </nav>
       )}
 
-      {/* Rankings */}
+      {/* Crown Holder strip */}
+      {reignHolder && (
+        <section className="royal-card p-4 mb-6 flex items-center gap-4 border-gold/40">
+          <div className="size-14 rounded-full bg-gradient-gold p-[2px]">
+            <div className="size-full rounded-full bg-muted overflow-hidden">
+              {reignHolder.profile_photo_url && (
+                <img src={reignHolder.profile_photo_url} alt="" className="w-full h-full object-cover" />
+              )}
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-widest text-gold font-bold">Reigning Crown Holder</p>
+            <Link to={`/profile/${reignHolder.username}`} className="font-display text-lg hover:text-primary truncate block">
+              @{reignHolder.username}
+            </Link>
+          </div>
+          <Crown size={28} className="text-gold" fill="currentColor" />
+        </section>
+      )}
+
+      {/* Top Competitors podium */}
+      {top3.length > 0 && (
+        <section className="mb-6">
+          <h2 className="font-display text-lg mb-3 flex items-center gap-2">
+            <Medal size={16} className="text-primary" />Top Competitors
+          </h2>
+          <div className="grid grid-cols-3 gap-2">
+            {top3.map((p, i) => (
+              <Link key={p.id} to={`/post/${p.id}`} className={`royal-card overflow-hidden hover:border-primary/40 transition ${
+                i === 0 ? "ring-2 ring-gold/60" : ""
+              }`}>
+                <div className="relative aspect-square bg-muted">
+                  {p.image_url && <img src={p.image_url} alt="" className="w-full h-full object-cover" />}
+                  <div className={`absolute top-1.5 left-1.5 size-6 rounded-full flex items-center justify-center text-[10px] font-black ${
+                    i === 0 ? "bg-gold text-black" : i === 1 ? "bg-slate-300 text-black" : "bg-amber-700 text-white"
+                  }`}>
+                    {i + 1}
+                  </div>
+                </div>
+                <div className="p-2">
+                  <p className="text-[11px] font-bold truncate">@{p.profile?.username ?? "?"}</p>
+                  <p className="text-[10px] text-gold flex items-center gap-1">
+                    <Crown size={9} fill="currentColor" />{p.crown_score}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Active Battles + Recent Winners */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="royal-card p-4">
+          <h2 className="font-display text-base mb-3 flex items-center gap-2">
+            <Swords size={14} className="text-primary" />Active Battles
+          </h2>
+          {battles.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No live battles right now.</p>
+          ) : (
+            <ul className="space-y-2">
+              {battles.map((b) => (
+                <li key={b.id}>
+                  <Link to={`/battles/${b.id}`} className="block text-xs hover:text-primary">
+                    Battle #{b.id.slice(0, 6)} · {b.category?.replace(/_/g, " ")}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link to={`/battles?main=${main.slug}${sub ? `&sub=${sub.slug}` : ""}`}
+            className="text-[11px] text-primary mt-2 inline-block">All battles →</Link>
+        </div>
+
+        <div className="royal-card p-4">
+          <h2 className="font-display text-base mb-3 flex items-center gap-2">
+            <Trophy size={14} className="text-primary" />Recent Winners
+          </h2>
+          {crowns.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No crowns awarded here yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {crowns.slice(0, 5).map((c) => (
+                <li key={c.id} className="flex items-center gap-2">
+                  <div className="size-7 rounded-full bg-muted overflow-hidden">
+                    {c.user?.profile_photo_url && (
+                      <img src={c.user.profile_photo_url} alt="" className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  <Link to={`/profile/${c.user?.username}`} className="text-xs font-bold hover:text-primary truncate flex-1">
+                    @{c.user?.username ?? "unknown"}
+                  </Link>
+                  <span className="text-[10px] text-muted-foreground truncate">{c.category.replace(/_/g, " ")}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      {/* Trending posts grid */}
       <section>
         <h2 className="font-display text-lg mb-3 flex items-center gap-2">
-          <TrendingUp size={16} className="text-primary" /> Top contenders
+          <TrendingUp size={16} className="text-primary" /> Trending Posts
         </h2>
         {loading && <p className="text-xs text-muted-foreground">Loading rankings…</p>}
         {!loading && posts.length === 0 && (
@@ -180,14 +342,14 @@ export default function CategoryHub() {
           </div>
         )}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {posts.map((p, i) => (
+          {rest.map((p, i) => (
             <Link key={p.id} to={`/post/${p.id}`} className="royal-card overflow-hidden hover:border-primary/40 transition group">
               <div className="relative aspect-square bg-muted overflow-hidden">
                 {p.image_url && (
                   <img loading="lazy" src={p.image_url} alt={p.caption ?? ""} className="w-full h-full object-cover group-hover:scale-105 transition" />
                 )}
                 <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur">
-                  #{i + 1}
+                  #{i + 4}
                 </div>
                 <div className="absolute bottom-2 right-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 text-gold text-[10px] font-bold backdrop-blur">
                   <Crown size={10} fill="currentColor" />{p.crown_score}
