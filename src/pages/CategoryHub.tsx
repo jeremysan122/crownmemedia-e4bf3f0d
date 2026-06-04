@@ -288,7 +288,7 @@ export default function CategoryHub() {
               {battles.map((b) => (
                 <li key={b.id}>
                   <Link to={`/battles/${b.id}`} className="block text-xs hover:text-primary">
-                    Battle #{b.id.slice(0, 6)} · {b.category?.replaceAll("_", " ")}
+                    Battle #{b.id.slice(0, 6)} · {b.category?.replace(/_/g, " ")}
                   </Link>
                 </li>
               ))}
@@ -316,7 +316,7 @@ export default function CategoryHub() {
                   <Link to={`/profile/${c.user?.username}`} className="text-xs font-bold hover:text-primary truncate flex-1">
                     @{c.user?.username ?? "unknown"}
                   </Link>
-                  <span className="text-[10px] text-muted-foreground truncate">{c.category.replaceAll("_", " ")}</span>
+                  <span className="text-[10px] text-muted-foreground truncate">{c.category.replace(/_/g, " ")}</span>
                 </li>
               ))}
             </ul>

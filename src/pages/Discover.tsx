@@ -241,7 +241,7 @@ export default function Discover() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold truncate">@{c.user?.username ?? "unknown"}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{c.category.replaceAll("_", " ")}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{c.category.replace(/_/g, " ")}</p>
                 </div>
                 <Crown size={12} className="text-gold shrink-0" fill="currentColor" />
               </li>
