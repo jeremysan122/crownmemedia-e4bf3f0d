@@ -29,11 +29,12 @@ interface GiftPanelProps {
   onClose: () => void;
   recipient: GiftPanelRecipient;
   postId?: string;
+  initialGift?: RoyalGift | null;
   /** Called after a successful send so the parent (e.g. PostCard) can play an anchored animation. */
   onSent?: (gift: RoyalGift, quantity: number) => void;
 }
 
-export default function GiftPanel({ isOpen, onClose, recipient, postId, onSent }: GiftPanelProps) {
+export default function GiftPanel({ isOpen, onClose, recipient, postId, initialGift, onSent }: GiftPanelProps) {
   const { user } = useAuth();
   const isSelf = !!user && user.id === recipient.id;
   const [activeCategory, setActiveCategory] = useState<GiftCategory>("popular");
@@ -54,10 +55,11 @@ export default function GiftPanel({ isOpen, onClose, recipient, postId, onSent }
       unlockAudio();
       refreshWallet();
       setStatus("idle");
+      if (initialGift) setSelectedGift(initialGift);
     } else {
       reset();
     }
-  }, [isOpen, refreshWallet, reset]);
+  }, [isOpen, refreshWallet, reset, initialGift]);
 
   const totalCost = (selectedGift?.shekelCost ?? 0) * quantity;
   const insufficient = !!selectedGift && totalCost > wallet.shekelBalance;
