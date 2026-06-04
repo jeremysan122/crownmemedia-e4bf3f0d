@@ -2,7 +2,7 @@
 // Phase 3: Category + Topic, location + time scoped rankings.
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+
 import { Crown, ArrowUp, ArrowDown, Minus, Globe2, MapPin, Building2, Trophy } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
