@@ -11,6 +11,7 @@ import EditPostDialog from "@/components/EditPostDialog";
 import PostInsightsDialog from "@/components/PostInsightsDialog";
 import CrownLoader from "@/components/CrownLoader";
 import ProfileLinks from "@/components/profile/ProfileLinks";
+import ProfileCategoryRankings from "@/components/profile/ProfileCategoryRankings";
 import { formatScore, locationLabel } from "@/lib/crown";
 import { cssFor, isValidFilter } from "@/lib/filters";
 import { toast } from "sonner";
