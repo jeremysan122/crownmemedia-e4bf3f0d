@@ -187,7 +187,7 @@ export default function CategoryHub() {
             >
               {following ? "Following" : "Follow Category"}
             </button>
-            <Link to={`/leaderboard?main=${main.slug}${sub ? `&sub=${sub.slug}` : ""}`}
+            <Link to={`/leaderboard/c/${main.slug}${sub ? `?topic=${sub.slug}` : ""}`}
               className="px-4 py-2 rounded-full text-xs font-bold bg-black/30 text-white hover:bg-black/40">
               <Crown size={12} className="inline mr-1.5" />Leaderboard
             </Link>
