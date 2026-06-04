@@ -4153,26 +4153,16 @@ export type Database = {
         }
         Returns: string
       }
-      send_royal_gift:
-        | {
-            Args: {
-              p_gift_id: string
-              p_post_id: string
-              p_quantity: number
-              p_recipient_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_dedupe_key?: string
-              p_gift_id: string
-              p_post_id: string
-              p_quantity: number
-              p_recipient_id: string
-            }
-            Returns: Json
-          }
+      send_royal_gift: {
+        Args: {
+          p_dedupe_key?: string
+          p_gift_id: string
+          p_post_id: string
+          p_quantity: number
+          p_recipient_id: string
+        }
+        Returns: Json
+      }
       snapshot_category_ranks: { Args: never; Returns: undefined }
       spin_daily_wheel: { Args: never; Returns: Json }
       submit_verification_request: {
