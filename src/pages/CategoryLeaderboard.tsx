@@ -115,20 +115,19 @@ export default function CategoryLeaderboard() {
       <div className="mx-auto max-w-2xl p-3 pb-24">
         {/* Header */}
         <header
-          className="rounded-2xl p-5 text-white mb-4"
-          style={{
-            background: main
-              ? `linear-gradient(135deg, ${main.gradient ?? "#6d28d9"})`
-              : "linear-gradient(135deg, #6d28d9, #db2777)",
-          }}
+          className={`rounded-2xl p-5 text-white mb-4 bg-gradient-to-br ${main?.gradient ?? "from-amber-400 to-yellow-600"} shadow-xl`}
         >
           <Link to={main ? `/c/${main.slug}${topic ? `/${topic}` : ""}` : "/discover"}
                 className="text-xs uppercase tracking-widest opacity-80 hover:opacity-100">
-            ← {main?.name ?? "Category"}
+            ← {main?.label ?? "Category"}
           </Link>
           <h1 className="text-2xl font-black mt-1 flex items-center gap-2">
-            <Trophy size={22} /> {topicSub ? `${topicSub.label} Leaderboard` : `${main?.name ?? ""} Leaderboard`}
+            <Trophy size={22} /> {topicSub ? `${topicSub.label} Leaderboard` : `${main?.label ?? ""} Leaderboard`}
           </h1>
+          <p className="text-sm opacity-90 mt-1">
+            {PERIODS.find((p) => p.id === period)?.label} · {scope === "global" ? "Global" : (scopeValue || "—")}
+          </p>
+        </header>
           <p className="text-sm opacity-90 mt-1">
             {PERIODS.find((p) => p.id === period)?.label} · {scope === "global" ? "Global" : (scopeValue || "—")}
           </p>
