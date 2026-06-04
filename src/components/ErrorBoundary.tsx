@@ -10,6 +10,28 @@ interface State {
   error: Error | null;
 }
 
+const RELOAD_FLAG = "crownme:chunk-reload-at";
+
+/**
+ * Detects the family of errors that happen when the browser holds a stale
+ * reference to a lazy-loaded JS chunk after a redeploy. In that case we
+ * hard-reload (once) so the user gets the fresh asset graph instead of a
+ * permanent "Something went wrong" screen.
+ */
+function isStaleChunkError(error: Error | null): boolean {
+  if (!error) return false;
+  const msg = `${error.name || ""} ${error.message || ""}`.toLowerCase();
+  return (
+    msg.includes("importing a module script failed") ||
+    msg.includes("failed to fetch dynamically imported module") ||
+    msg.includes("error loading dynamically imported module") ||
+    msg.includes("chunkloaderror") ||
+    msg.includes("loading chunk") ||
+    msg.includes("loading css chunk") ||
+    msg.includes("unexpected token '<'") // index.html served instead of JS
+  );
+}
+
 /**
  * Top-level error boundary — catches any React render error and shows a
  * graceful recovery screen instead of a white blank page.
@@ -26,17 +48,50 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // Log to your error reporter (errorReporter.ts already installs window.onerror)
     console.error("[ErrorBoundary]", error, info.componentStack);
+
+    if (isStaleChunkError(error)) {
+      try {
+        const last = Number(sessionStorage.getItem(RELOAD_FLAG) || "0");
+        const now = Date.now();
+        // Only auto-reload if we haven't tried within the last 30s (avoid loops).
+        if (now - last > 30_000) {
+          sessionStorage.setItem(RELOAD_FLAG, String(now));
+          // Best-effort: clear service worker caches so the new chunk hash resolves.
+          if ("caches" in window) {
+            caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).catch(() => {});
+          }
+          if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.getRegistrations().then((regs) =>
+              Promise.all(regs.map((r) => r.update().catch(() => undefined))),
+            ).catch(() => {});
+          }
+          window.location.reload();
+        }
+      } catch {
+        window.location.reload();
+      }
+    }
   }
 
   handleReload = () => {
+    try { sessionStorage.removeItem(RELOAD_FLAG); } catch { /* ignore */ }
     this.setState({ hasError: false, error: null });
     window.location.reload();
   };
 
   render() {
     if (this.state.hasError) {
+      // While the auto-reload is in flight for a stale chunk, show a lightweight
+      // refreshing screen instead of the scary error message.
+      if (isStaleChunkError(this.state.error)) {
+        return (
+          <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-background text-foreground text-center gap-4">
+            <div className="text-4xl animate-pulse">👑</div>
+            <p className="text-sm text-muted-foreground">Updating CrownMe…</p>
+          </div>
+        );
+      }
       if (this.props.fallback) return this.props.fallback;
       return (
         <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-background text-foreground text-center gap-6">
@@ -64,4 +119,25 @@ export class ErrorBoundary extends Component<Props, State> {
     }
     return this.props.children;
   }
+}
+
+// Also catch chunk-load failures that happen outside React's render path
+// (e.g. inside React.lazy's Suspense resolver, or async route loaders).
+if (typeof window !== "undefined") {
+  const tryReload = (err: unknown) => {
+    const error = err instanceof Error ? err : new Error(String(err ?? ""));
+    if (!isStaleChunkError(error)) return;
+    try {
+      const last = Number(sessionStorage.getItem(RELOAD_FLAG) || "0");
+      const now = Date.now();
+      if (now - last > 30_000) {
+        sessionStorage.setItem(RELOAD_FLAG, String(now));
+        window.location.reload();
+      }
+    } catch {
+      window.location.reload();
+    }
+  };
+  window.addEventListener("error", (e) => tryReload(e.error ?? e.message));
+  window.addEventListener("unhandledrejection", (e) => tryReload(e.reason));
 }
