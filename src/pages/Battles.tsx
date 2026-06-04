@@ -242,6 +242,18 @@ export default function Battles() {
       });
     }
     if (category !== "all") arr = arr.filter((b) => b.challenger_post?.category === category);
+    if (hub !== "all") arr = arr.filter((b) => b.challenger_post?.main_category_slug === hub);
+    if (topic !== "all") arr = arr.filter((b) => b.challenger_post?.subcategory_slug === topic);
+    if (sort === "competitive") {
+      arr.sort((a, b) => {
+        const ta = a.challenger_votes + a.opponent_votes;
+        const tb = b.challenger_votes + b.opponent_votes;
+        const ma = Math.abs(a.challenger_votes - a.opponent_votes) / Math.max(ta, 1);
+        const mb = Math.abs(b.challenger_votes - b.opponent_votes) / Math.max(tb, 1);
+        // Smaller margin first, then more votes
+        return ma - mb || tb - ta;
+      });
+    }
     if (region !== "all") {
       arr = arr.filter((b) => {
         const p = b.challenger_post;
