@@ -15,8 +15,7 @@ import FeedRealtimeAlert from "@/components/FeedRealtimeAlert";
 import DailyRewardChip from "@/components/DailyRewardChip";
 import { Camera, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { CATEGORIES, CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
-import { CATEGORY_ICON } from "@/lib/categoryIcons";
+import { CrownCategory } from "@/lib/crown";
 import { FILTERS, FilterId } from "@/lib/filters";
 import SpotlightStrip from "@/components/feed/SpotlightStrip";
 import FeedSkeleton from "@/components/feed/FeedSkeleton";
@@ -25,6 +24,7 @@ import FeedErrorState from "@/components/feed/FeedErrorState";
 import BackToTopButton from "@/components/feed/BackToTopButton";
 import FeedPostCard from "@/components/feed/FeedPostCard";
 import { useFeedFilters, isFilteredOut } from "@/hooks/useFeedFilters";
+import { useCategoryTree } from "@/lib/categories";
 
 type Tab = "nearby" | "city" | "state" | "global" | "following";
 type CatFilter = "all" | CrownCategory;
@@ -38,6 +38,8 @@ const FEED_TAB_KEY = "crownme:feed:tab";
 const TAG_FILTER_KEY = "crownme:feed:tag";
 const SORT_KEY = "crownme:feed:sort";
 const WINDOW_KEY = "crownme:feed:window";
+const HUB_KEY = "crownme:feed:hub";
+const TOPIC_KEY = "crownme:feed:topic";
 
 const isValidFilterSort = (v: unknown): v is FilterSort => {
   if (v === "off" || v === "filtered-first") return true;
@@ -161,10 +163,41 @@ export default function Feed() {
   const [timeWindow, setTimeWindow] = useState<TimeWindow>(() => readSavedWindow());
   const [filterSort, setFilterSort] = useState<FilterSort>(() => readSavedFilterSort());
 
+  // Category system filters — hub (main category) + topic (subcategory). URL
+  // params win over localStorage so a shared link instantly applies a filter.
+  const { mains: hubList, subs: topicList } = useCategoryTree();
+  const initialHub = searchParams.get("hub") || (typeof localStorage !== "undefined" ? localStorage.getItem(HUB_KEY) : "") || "";
+  const initialTopic = searchParams.get("topic") || (typeof localStorage !== "undefined" ? localStorage.getItem(TOPIC_KEY) : "") || "";
+  const [hubSlug, setHubSlug] = useState<string>(initialHub);
+  const [topicSlug, setTopicSlug] = useState<string>(initialTopic);
+
   useEffect(() => { try { localStorage.setItem(FEED_TAB_KEY, tab); } catch { /* noop */ } }, [tab]);
   useEffect(() => { try { localStorage.setItem(SORT_KEY, sort); } catch { /* noop */ } }, [sort]);
   useEffect(() => { try { localStorage.setItem(WINDOW_KEY, timeWindow); } catch { /* noop */ } }, [timeWindow]);
   useEffect(() => { try { localStorage.setItem(FILTER_SORT_KEY, filterSort); } catch { /* noop */ } }, [filterSort]);
+  useEffect(() => {
+    try { localStorage.setItem(HUB_KEY, hubSlug); localStorage.setItem(TOPIC_KEY, topicSlug); } catch { /* noop */ }
+    const next = new URLSearchParams(searchParams);
+    if (hubSlug) next.set("hub", hubSlug); else next.delete("hub");
+    if (topicSlug) next.set("topic", topicSlug); else next.delete("topic");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hubSlug, topicSlug]);
+
+  const visibleTopics = useMemo(() => {
+    if (!hubSlug) return [];
+    const hub = hubList.find((h) => h.slug === hubSlug);
+    if (!hub) return [];
+    return topicList.filter((t) => t.main_category_id === hub.id);
+  }, [hubSlug, hubList, topicList]);
+
+  // If the saved topic no longer belongs to the chosen hub, clear it.
+  useEffect(() => {
+    if (!topicSlug) return;
+    if (!hubSlug) { setTopicSlug(""); return; }
+    if (visibleTopics.length === 0) return; // still loading
+    if (!visibleTopics.some((t) => t.slug === topicSlug)) setTopicSlug("");
+  }, [hubSlug, visibleTopics, topicSlug]);
 
   // ── Scroll restoration ─────────────────────────────────────────────────────
   // When the user opens a post and presses back, the browser remounts Feed.
@@ -172,8 +205,8 @@ export default function Feed() {
   // it once the matching post list is on the page. Persistence is throttled
   // so the scroll listener stays cheap.
   const scrollKey = useMemo(
-    () => `crownme:feed:scroll:${tab}:${catFilter}:${tagFilter}:${sort}:${timeWindow}`,
-    [tab, catFilter, tagFilter, sort, timeWindow],
+    () => `crownme:feed:scroll:${tab}:${catFilter}:${hubSlug}:${topicSlug}:${tagFilter}:${sort}:${timeWindow}`,
+    [tab, catFilter, hubSlug, topicSlug, tagFilter, sort, timeWindow],
   );
   useEffect(() => {
     let pending = false;
@@ -257,6 +290,8 @@ export default function Feed() {
       .limit(PAGE_SIZE);
 
     if (catFilter !== "all") q = q.eq("category", catFilter);
+    if (hubSlug) q = q.eq("main_category_slug", hubSlug);
+    if (topicSlug) q = q.eq("subcategory_slug", topicSlug);
     if (tagFilter) q = q.contains("hashtags", [tagFilter]);
     if (sinceIso) q = q.gte("created_at", sinceIso);
 
@@ -270,7 +305,7 @@ export default function Feed() {
       q = q.lt(orderColumn, opts.cursor.val as any);
     }
     return q;
-  }, [catFilter, tagFilter, sinceIso, tab, profile?.city, profile?.state, orderColumn]);
+  }, [catFilter, hubSlug, topicSlug, tagFilter, sinceIso, tab, profile?.city, profile?.state, orderColumn]);
 
   // INITIAL / FILTER-CHANGE LOAD
   useEffect(() => {
@@ -307,7 +342,7 @@ export default function Feed() {
     };
     load();
     return () => { cancelled = true; };
-  }, [tab, catFilter, tagFilter, sort, timeWindow, profile?.city, profile?.state, user?.id, followingIds, buildQuery, feedFilters]);
+  }, [tab, catFilter, hubSlug, topicSlug, tagFilter, sort, timeWindow, profile?.city, profile?.state, user?.id, followingIds, buildQuery, feedFilters]);
 
 
   // LOAD MORE (infinite scroll)
@@ -347,6 +382,8 @@ export default function Feed() {
     if (!p || p.is_removed) return false;
     if (isFilteredOut(p, feedFilters)) return false;
     if (catFilter !== "all" && p.category !== catFilter) return false;
+    if (hubSlug && p.main_category_slug !== hubSlug) return false;
+    if (topicSlug && p.subcategory_slug !== topicSlug) return false;
     if (tagFilter && !(Array.isArray(p.hashtags) && p.hashtags.includes(tagFilter))) return false;
     if (sinceIso && p.created_at && p.created_at < sinceIso) return false;
     if (tab === "city" && profile?.city && p.city !== profile.city) return false;
@@ -356,7 +393,7 @@ export default function Feed() {
       if (!followingIds || !followingIds.includes(p.user_id)) return false;
     }
     return true;
-  }, [catFilter, tagFilter, sinceIso, tab, profile?.city, profile?.state, followingIds, feedFilters]);
+  }, [catFilter, hubSlug, topicSlug, tagFilter, sinceIso, tab, profile?.city, profile?.state, followingIds, feedFilters]);
 
   useEffect(() => {
     const onUpdated = (e: Event) => {
@@ -490,7 +527,7 @@ export default function Feed() {
   // pullDist removed — read via pullDistRef.current inside onEnd instead.
   }, [buildQuery, tab, followingIds]);
 
-  const showRank = catFilter !== "all" || tab === "city" || tab === "state";
+  const showRank = catFilter !== "all" || !!hubSlug || !!topicSlug || tab === "city" || tab === "state";
 
   const filterPopularity = useMemo(() => {
     const m = new Map<FilterId, number>();
@@ -620,48 +657,95 @@ export default function Feed() {
         </div>
 
 
-        {/* Category filter chip rail */}
+        {/* Master Category (Hub) chip rail */}
         <div className="px-3 lg:px-0 pt-3">
           <div className="flex items-center gap-2 mb-1.5">
             <Sparkles size={12} className="text-primary" />
-            <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Crown Category</span>
+            <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Master Category</span>
+            {(hubSlug || topicSlug) && (
+              <button
+                onClick={() => { setHubSlug(""); setTopicSlug(""); }}
+                className="ml-auto text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+              >
+                <XIcon size={10} /> Clear
+              </button>
+            )}
           </div>
           <div
-            data-testid="crown-category-carousel"
+            data-testid="hub-category-carousel"
             className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0"
             style={{ touchAction: "pan-x", overscrollBehaviorY: "contain", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch" }}
           >
-
             <button
-              onClick={() => setCatFilter("all")}
+              onClick={() => { setHubSlug(""); setTopicSlug(""); }}
               className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border transition ${
-                catFilter === "all"
+                !hubSlug
                   ? "bg-gradient-gold text-primary-foreground border-transparent gold-shadow"
                   : "bg-card/60 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
               }`}
             >
               <Sparkles size={12} fill="currentColor" /> All
             </button>
-            {CATEGORIES.map((c) => {
-              const Icon = CATEGORY_ICON[c];
-              const active = catFilter === c;
+            {hubList.map((h) => {
+              const active = hubSlug === h.slug;
               return (
                 <button
-                  key={c}
-                  onClick={() => setCatFilter(c)}
+                  key={h.id}
+                  onClick={() => { setHubSlug(active ? "" : h.slug); setTopicSlug(""); }}
                   className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border transition ${
                     active
-                      ? "bg-gradient-gold text-primary-foreground border-transparent gold-shadow"
+                      ? `text-white border-transparent shadow bg-gradient-to-br ${h.gradient ?? "from-amber-400 to-yellow-600"}`
                       : "bg-card/60 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
                   }`}
                 >
-                  <Icon size={12} fill="currentColor" />
-                  {CATEGORY_LABEL[c]}
+                  {h.label}
                 </button>
               );
             })}
           </div>
         </div>
+
+        {/* Topic chip rail — only when a hub is selected */}
+        {hubSlug && visibleTopics.length > 0 && (
+          <div className="px-3 lg:px-0 pt-2">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Hash size={12} className="text-primary" />
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Topic</span>
+            </div>
+            <div
+              data-testid="topic-carousel"
+              className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0"
+              style={{ touchAction: "pan-x", overscrollBehaviorY: "contain", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch" }}
+            >
+              <button
+                onClick={() => setTopicSlug("")}
+                className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition ${
+                  !topicSlug
+                    ? "bg-primary/15 text-primary border-primary/40"
+                    : "bg-card/60 text-muted-foreground border-border hover:text-foreground hover:border-primary/40"
+                }`}
+              >
+                All topics
+              </button>
+              {visibleTopics.map((t) => {
+                const active = topicSlug === t.slug;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setTopicSlug(active ? "" : t.slug)}
+                    className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition ${
+                      active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card/60 text-muted-foreground border-border hover:text-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {trendingFilters.length > 0 && (
           <div className="px-3 lg:px-0 pt-2" aria-label="Trending filters in this feed">
@@ -741,7 +825,7 @@ export default function Feed() {
               tagFilter={tagFilter}
               city={profile?.city}
               state={profile?.state}
-              hasAnyFilter={catFilter !== "all" || !!tagFilter || tab !== "global"}
+              hasAnyFilter={catFilter !== "all" || !!hubSlug || !!topicSlug || !!tagFilter || tab !== "global"}
               onClearFilters={() => {
                 setCatFilter("all");
                 if (tagFilter) {

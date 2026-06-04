@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { Switch } from "@/components/ui/switch";
-import { CATEGORIES, CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
-import { CATEGORY_ICON, CategoryBadge } from "@/lib/categoryIcons";
+import { CATEGORIES, CrownCategory } from "@/lib/crown";
+import { CategoryBadge } from "@/lib/categoryIcons";
 import { ImagePlus, Crown, X, Star, Camera, Video as VideoIcon, GripVertical, Trash2, Loader2, Crop, RotateCw, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -35,6 +35,7 @@ import { cssFor, FilterId } from "@/lib/filters";
 import { trackEvent } from "@/lib/analytics";
 import { Calendar as CalendarIcon, Users, Hash } from "lucide-react";
 import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
+import CategoryPicker, { type CategoryPickerValue } from "@/components/categories/CategoryPicker";
 
 const MAX_PHOTOS = 10;
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;          // 8MB raw input
@@ -99,23 +100,44 @@ export default function Upload() {
   const [sensitiveReason, setSensitiveReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-  // New category system: derives hub (main category) from the legacy enum
-  // and persists both columns. Tags live in caption hashtags for now.
+  // ── Category system (Master Category + Topic + tags) ──
+  // The picker is the source of truth. The legacy `category` enum is kept
+  // in sync from the chosen topic's legacy_enum so existing crown/leaderboard
+  // logic keeps working unchanged.
   const [catSubs, setCatSubs] = useState<Subcategory[]>([]);
   const [catMains, setCatMains] = useState<MainCategory[]>([]);
+  const [pickerVal, setPickerVal] = useState<CategoryPickerValue>({ mainSlug: null, subSlug: null, tags: [] });
   useEffect(() => {
     Promise.all([fetchMainCategories(), fetchSubcategories()]).then(([m, s]) => {
       setCatMains(m); setCatSubs(s);
     });
   }, []);
+  // Hydrate picker from legacy `category` (drafts) once categories are loaded
+  // and the user hasn't picked anything yet.
+  useEffect(() => {
+    if (pickerVal.subSlug || catSubs.length === 0) return;
+    const sub = catSubs.find((s) => s.legacy_enum === category);
+    if (!sub) return;
+    const main = catMains.find((m) => m.id === sub.main_category_id);
+    if (!main) return;
+    setPickerVal((v) => ({ ...v, mainSlug: main.slug, subSlug: sub.slug }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catSubs, catMains]);
   const derivedSub = useMemo(
-    () => catSubs.find((s) => s.legacy_enum === category) ?? null,
-    [catSubs, category]
+    () => catSubs.find((s) => s.slug === pickerVal.subSlug) ?? null,
+    [catSubs, pickerVal.subSlug]
   );
   const derivedMain = useMemo(
-    () => derivedSub ? catMains.find((m) => m.id === derivedSub.main_category_id) ?? null : null,
-    [catMains, derivedSub]
+    () => catMains.find((m) => m.slug === pickerVal.mainSlug) ?? null,
+    [catMains, pickerVal.mainSlug]
   );
+  // Keep legacy enum aligned with chosen topic for downstream consumers.
+  useEffect(() => {
+    if (derivedSub?.legacy_enum && derivedSub.legacy_enum !== category) {
+      setCategory(derivedSub.legacy_enum as CrownCategory);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [derivedSub?.legacy_enum]);
   const [cameraOpen, setCameraOpen] = useState<null | Mode>(null);
   // Crop editor state — when set, the user is reviewing a captured/picked photo
   // before it gets added to the photos array. `fromCamera` lets the "Retake"
@@ -535,6 +557,11 @@ export default function Upload() {
   const validation = useMemo(() => {
     if (mode === "photo" && photos.length === 0) return "Add at least one photo";
     if (mode === "video" && !video) return "Record or pick a video";
+    if (!pickerVal.mainSlug) return "Pick a master category";
+    if (!pickerVal.subSlug) return "Pick a topic inside that category";
+    if (derivedSub && derivedMain && derivedSub.main_category_id !== derivedMain.id) {
+      return "Topic doesn't belong to the chosen category";
+    }
     if (!city.trim() || !country.trim()) return "Location required";
     if (scheduledFor) {
       const t = new Date(scheduledFor).getTime();
@@ -543,7 +570,7 @@ export default function Upload() {
       if (t > Date.now() + 1000 * 60 * 60 * 24 * 60) return "Schedule within the next 60 days";
     }
     return null;
-  }, [mode, photos, video, city, country, scheduledFor]);
+  }, [mode, photos, video, city, country, scheduledFor, pickerVal.mainSlug, pickerVal.subSlug, derivedSub, derivedMain]);
 
   const cancelUpload = () => {
     cancelledRef.current = true;
@@ -798,11 +825,18 @@ export default function Upload() {
       }
 
       const filterId = filter === "none" ? null : filter;
+      // Append picker tags as hashtags in the caption so the DB hashtag-extract
+      // trigger picks them up. Skip any tags that already appear.
+      const captionLc = caption.toLowerCase();
+      const extraTags = pickerVal.tags.filter((t) => !captionLc.includes(`#${t}`));
+      const finalCaption = (
+        extraTags.length > 0 ? `${caption}${caption ? " " : ""}${extraTags.map((t) => `#${t}`).join(" ")}` : caption
+      ).slice(0, 500);
       const { error } = await supabase.from("posts").insert({
         user_id: user.id,
         image_url: imageUrls[0],
         image_urls: imageUrls,
-        caption: caption.slice(0, 500),
+        caption: finalCaption,
         category,
         city: city.trim(),
         state: state.trim(),
@@ -1484,32 +1518,24 @@ export default function Upload() {
           />
         </div>
 
-        {/* Category */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <Label>Crown Category</Label>
-            <CategoryBadge category={category} label={CATEGORY_LABEL[category]} size="sm" />
+        {/* Category — Master Category → Topic → optional tags */}
+        <div className="rounded-xl border border-border bg-card/40 p-3">
+          <div className="flex items-center justify-between mb-3">
+            <Label className="m-0">Category & Topic <span className="text-destructive">*</span></Label>
+            {derivedSub && (
+              <CategoryBadge category={category} label={derivedSub.label} size="sm" />
+            )}
           </div>
-          <Select value={category} onValueChange={(v) => setCategory(v as CrownCategory)}>
-            <SelectTrigger className="bg-input h-12"><SelectValue /></SelectTrigger>
-            <SelectContent className="max-h-80">
-              {CATEGORIES.map((c) => {
-                const Icon = CATEGORY_ICON[c];
-                return (
-                  <SelectItem key={c} value={c}>
-                    <span className="inline-flex items-center gap-2">
-                      <Icon size={14} className="text-primary" fill="currentColor" />
-                      {CATEGORY_LABEL[c]}
-                    </span>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-          {derivedMain && (
-            <p className="text-[11px] text-muted-foreground mt-1.5">
-              Royal Hub: <span className="text-primary font-semibold">{derivedMain.label}</span>
-              {derivedSub && <> → <span className="font-semibold">{derivedSub.label}</span></>}
+          <CategoryPicker value={pickerVal} onChange={setPickerVal} maxTags={8} />
+          {!pickerVal.subSlug && (
+            <p className="text-[11px] text-amber-500 mt-2">
+              Pick a master category and a topic to publish — every post competes inside a topic.
+            </p>
+          )}
+          {derivedMain && derivedSub && (
+            <p className="text-[11px] text-muted-foreground mt-2">
+              Competing in: <span className="text-primary font-semibold">{derivedMain.label}</span>
+              {" → "}<span className="font-semibold">{derivedSub.label}</span>
             </p>
           )}
         </div>
