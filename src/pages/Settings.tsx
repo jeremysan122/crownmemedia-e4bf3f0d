@@ -41,6 +41,19 @@ export default function Settings() {
     toast.success(next ? "Liked posts are now visible to others" : "Liked posts are now private");
   };
 
+  const toggleVotePrivacy = async (next: boolean) => {
+    if (!profile?.id) return;
+    const value = next ? "public" : "private";
+    const { error } = await supabase
+      .from("profiles")
+      .update({ vote_privacy: value } as any)
+      .eq("id", profile.id);
+    if (error) { toast.error(error.message); return; }
+    await refreshProfile();
+    toast.success(next ? "Your voting activity is now public" : "Your voting activity is now private");
+  };
+
+
   type PrivacyRow = {
     is_private: boolean;
     hide_likes: boolean;
@@ -338,7 +351,23 @@ export default function Settings() {
               aria-label="Show liked posts on my profile"
             />
           </div>
+
+          <div className="flex items-center gap-3 py-1.5 border-t border-border/40 pt-3">
+            <Eye size={18} className="text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold">Vote privacy</div>
+              <div className="text-[11px] text-muted-foreground">
+                Choose whether other users can see your voting activity. Your votes always still count toward rankings.
+              </div>
+            </div>
+            <Switch
+              checked={(profile as any)?.vote_privacy === "public"}
+              onCheckedChange={toggleVotePrivacy}
+              aria-label="Make my voting activity public"
+            />
+          </div>
         </section>
+
 
         <StripeConnectSection />
         <PayoutPanel />
