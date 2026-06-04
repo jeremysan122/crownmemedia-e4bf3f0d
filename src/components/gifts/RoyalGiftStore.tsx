@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, TrendingUp, Crown, Send, ShoppingCart, Wallet, Heart } from "lucide-react";
+import { Search, TrendingUp, Crown, Send, ShoppingCart, Wallet, Heart, Loader2 } from "lucide-react";
 import { ROYAL_GIFTS, SHEKEL, formatShekels, shekelToUsd, CATEGORY_TABS, findGift } from "@/lib/gifts";
 import { GiftCategory, RoyalGift } from "@/types/gifts";
 import { useWallet } from "@/hooks/useWallet";
@@ -11,8 +11,18 @@ import { GiftIcon } from "./GiftIcon";
 import { useGiftFavorites } from "@/hooks/useGiftFavorites";
 import { fxGiftPreview, fxGiftSend, fxPurchase, fxTap, unlockAudio } from "@/lib/giftFx";
 import DailyDealCard from "@/components/store/DailyDealCard";
-import GiftPanel from "./GiftPanel";
 import GiftTargetPicker from "./GiftTargetPicker";
+import { useGiftSend } from "@/hooks/useGiftSend";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { RecentGiftTarget } from "@/lib/recentGiftTargets";
 
 const ALL_TABS: { key: GiftCategory | "all"; label: string }[] = [
