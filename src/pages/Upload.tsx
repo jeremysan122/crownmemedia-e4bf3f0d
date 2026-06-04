@@ -1511,32 +1511,24 @@ export default function Upload() {
           />
         </div>
 
-        {/* Category */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <Label>Crown Category</Label>
-            <CategoryBadge category={category} label={CATEGORY_LABEL[category]} size="sm" />
+        {/* Category — Master Category → Topic → optional tags */}
+        <div className="rounded-xl border border-border bg-card/40 p-3">
+          <div className="flex items-center justify-between mb-3">
+            <Label className="m-0">Category & Topic <span className="text-destructive">*</span></Label>
+            {derivedSub && (
+              <CategoryBadge category={category} label={derivedSub.label} size="sm" />
+            )}
           </div>
-          <Select value={category} onValueChange={(v) => setCategory(v as CrownCategory)}>
-            <SelectTrigger className="bg-input h-12"><SelectValue /></SelectTrigger>
-            <SelectContent className="max-h-80">
-              {CATEGORIES.map((c) => {
-                const Icon = CATEGORY_ICON[c];
-                return (
-                  <SelectItem key={c} value={c}>
-                    <span className="inline-flex items-center gap-2">
-                      <Icon size={14} className="text-primary" fill="currentColor" />
-                      {CATEGORY_LABEL[c]}
-                    </span>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-          {derivedMain && (
-            <p className="text-[11px] text-muted-foreground mt-1.5">
-              Royal Hub: <span className="text-primary font-semibold">{derivedMain.label}</span>
-              {derivedSub && <> → <span className="font-semibold">{derivedSub.label}</span></>}
+          <CategoryPicker value={pickerVal} onChange={setPickerVal} maxTags={8} />
+          {!pickerVal.subSlug && (
+            <p className="text-[11px] text-amber-500 mt-2">
+              Pick a master category and a topic to publish — every post competes inside a topic.
+            </p>
+          )}
+          {derivedMain && derivedSub && (
+            <p className="text-[11px] text-muted-foreground mt-2">
+              Competing in: <span className="text-primary font-semibold">{derivedMain.label}</span>
+              {" → "}<span className="font-semibold">{derivedSub.label}</span>
             </p>
           )}
         </div>
