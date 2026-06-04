@@ -128,10 +128,6 @@ export default function CategoryLeaderboard() {
             {PERIODS.find((p) => p.id === period)?.label} · {scope === "global" ? "Global" : (scopeValue || "—")}
           </p>
         </header>
-          <p className="text-sm opacity-90 mt-1">
-            {PERIODS.find((p) => p.id === period)?.label} · {scope === "global" ? "Global" : (scopeValue || "—")}
-          </p>
-        </header>
 
         {/* Topic chips */}
         {hubSubs.length > 0 && (
