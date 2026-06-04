@@ -32,7 +32,7 @@ interface Battle {
   created_at: string;
   challenger: { username: string; profile_photo_url: string | null } | null;
   opponent: { username: string; profile_photo_url: string | null } | null;
-  challenger_post: { image_url: string; category: CrownCategory; city: string | null; state: string | null; country: string | null } | null;
+  challenger_post: { image_url: string; category: CrownCategory; city: string | null; state: string | null; country: string | null; main_category_slug: string | null; subcategory_slug: string | null } | null;
   opponent_post: { image_url: string; category: CrownCategory } | null;
 }
 
