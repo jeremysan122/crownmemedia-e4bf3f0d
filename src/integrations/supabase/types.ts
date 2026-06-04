@@ -2547,6 +2547,7 @@ export type Database = {
           verification_plan: string | null
           verified: boolean
           verified_at: string | null
+          vote_privacy: string
           votes_given: number
           votes_received: number
           watermark_enabled: boolean
@@ -2615,6 +2616,7 @@ export type Database = {
           verification_plan?: string | null
           verified?: boolean
           verified_at?: string | null
+          vote_privacy?: string
           votes_given?: number
           votes_received?: number
           watermark_enabled?: boolean
@@ -2683,6 +2685,7 @@ export type Database = {
           verification_plan?: string | null
           verified?: boolean
           verified_at?: string | null
+          vote_privacy?: string
           votes_given?: number
           votes_received?: number
           watermark_enabled?: boolean
@@ -3864,6 +3867,10 @@ export type Database = {
       comments_allowed_on: { Args: { _post: string }; Returns: boolean }
       compute_daily_usage_rollup: { Args: { _d?: string }; Returns: undefined }
       confirm_my_age: { Args: { _dob: string }; Returns: undefined }
+      count_post_votes_by_type: {
+        Args: { _post_ids: string[]; _vote_type: string }
+        Returns: number
+      }
       deactivate_my_account: { Args: never; Returns: undefined }
       delete_email: {
         Args: { message_id: number; queue_name: string }
@@ -3946,6 +3953,7 @@ export type Database = {
           verification_plan: string | null
           verified: boolean
           verified_at: string | null
+          vote_privacy: string
           votes_given: number
           votes_received: number
           watermark_enabled: boolean
@@ -3968,6 +3976,24 @@ export type Database = {
         }[]
       }
       get_or_create_my_invite_code: { Args: never; Returns: string }
+      get_post_public_voters: {
+        Args: { _limit?: number; _post_id: string }
+        Returns: {
+          created_at: string
+          profile_photo_url: string
+          user_id: string
+          username: string
+          vote_type: string
+        }[]
+      }
+      get_post_vote_stats: { Args: { _post_id: string }; Returns: Json }
+      get_user_liked_post_ids: {
+        Args: { _limit?: number; _user_id: string }
+        Returns: {
+          created_at: string
+          post_id: string
+        }[]
+      }
       grant_pass_invite_bonus: {
         Args: { _user_id: string }
         Returns: undefined

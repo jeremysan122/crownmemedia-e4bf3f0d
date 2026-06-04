@@ -163,25 +163,22 @@ export default function Profile() {
       // tap the crown button.
       const myPostIds = ((ps as any) || []).map((row: any) => row.id as string);
       if (myPostIds.length) {
-        const { count } = await supabase
-          .from("votes")
-          .select("id", { count: "exact", head: true })
-          .in("post_id", myPostIds)
-          .eq("vote_type", "crown");
-        if (!cancelled) setCrownVoteTotal(count ?? 0);
+        const { data: c } = await supabase.rpc("count_post_votes_by_type", {
+          _post_ids: myPostIds,
+          _vote_type: "crown",
+        });
+        if (!cancelled) setCrownVoteTotal(Number(c ?? 0));
       } else {
         setCrownVoteTotal(0);
       }
 
-      // Liked posts (public viewable)
-      const { data: votes } = await supabase
-        .from("votes")
-        .select("post_id, created_at")
-        .eq("user_id", pid)
-        .order("created_at", { ascending: false })
-        .limit(60);
+      // Liked posts (only visible if the profile has liked_posts_public = true,
+      // enforced server-side by get_user_liked_post_ids).
+      const { data: votes } = await supabase.rpc("get_user_liked_post_ids", {
+        _user_id: pid,
+        _limit: 60,
+      });
       if (cancelled) return;
-      // Fix #2: filter nulls before creating Set to avoid malformed .in() query
       const likedIds: string[] = Array.from(
         new Set(((votes as any) || []).map((v: any) => v.post_id as string).filter(Boolean))
       );

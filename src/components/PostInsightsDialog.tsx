@@ -36,8 +36,8 @@ export default function PostInsightsDialog({ postId, open, onOpenChange, base }:
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [{ data: voteRows }, { data: giftRows }] = await Promise.all([
-        supabase.from("votes").select("vote_type").eq("post_id", postId),
+      const [{ data: stats }, { data: giftRows }] = await Promise.all([
+        supabase.rpc("get_post_vote_stats", { _post_id: postId }),
         supabase
           .from("gift_transactions")
           .select("gift_name, quantity, total_shekels")
@@ -45,11 +45,12 @@ export default function PostInsightsDialog({ postId, open, onOpenChange, base }:
           .eq("status", "completed"),
       ]);
       if (cancelled) return;
-      const vb: VoteBreakdown = { crown: 0, fire: 0, diamond: 0 };
-      (voteRows ?? []).forEach((r: any) => {
-        const t = r.vote_type as keyof VoteBreakdown;
-        if (t in vb) vb[t]++;
-      });
+      const counts = ((stats ?? {}) as { counts?: Record<string, number> }).counts ?? {};
+      const vb: VoteBreakdown = {
+        crown: counts.crown ?? 0,
+        fire: counts.fire ?? 0,
+        diamond: counts.diamond ?? 0,
+      };
       setVotes(vb);
       const agg = new Map<string, GiftStat>();
       let total = 0;

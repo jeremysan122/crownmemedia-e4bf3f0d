@@ -222,17 +222,11 @@ export default function PostDetailDialog({ post, onClose }: Props) {
     setCounts((c) => ({ ...c, total: post.vote_count, score: post.crown_score, comments: post.comment_count }));
 
     (async () => {
-      const { data: votes } = await supabase.from("votes").select("vote_type, user_id").eq("post_id", post.id);
-
-      if (votes) {
-        const byType = { crown: 0, fire: 0, diamond: 0, dislike: 0 };
-        const mine = new Set<VoteType>();
-
-        for (const v of votes) {
-          byType[v.vote_type as VoteType]++;
-          if (user && v.user_id === user.id) mine.add(v.vote_type as VoteType);
-        }
-
+      const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: post.id });
+      if (stats) {
+        const c2 = ((stats as { counts?: Record<string, number> }).counts) ?? {};
+        const byType = { crown: c2.crown ?? 0, fire: c2.fire ?? 0, diamond: c2.diamond ?? 0, dislike: c2.dislike ?? 0 };
+        const mine = new Set<VoteType>(((stats as { my_votes?: string[] }).my_votes ?? []) as VoteType[]);
         setMyVotes(mine);
         setCounts((c) => ({ ...c, ...byType, total: byType.crown + byType.fire + byType.diamond }));
       }
@@ -288,13 +282,10 @@ export default function PostDetailDialog({ post, onClose }: Props) {
       "postgres_changes",
       { event: "*", schema: "public", table: "votes", filter: `post_id=eq.${post.id}` },
       async () => {
-        const { data: votes } = await supabase.from("votes").select("vote_type").eq("post_id", post.id);
-
-        if (cancelled || !votes) return;
-
-        const byType = { crown: 0, fire: 0, diamond: 0, dislike: 0 };
-        for (const v of votes) byType[v.vote_type as VoteType]++;
-
+        const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: post.id });
+        if (cancelled || !stats) return;
+        const c2 = ((stats as { counts?: Record<string, number> }).counts) ?? {};
+        const byType = { crown: c2.crown ?? 0, fire: c2.fire ?? 0, diamond: c2.diamond ?? 0, dislike: c2.dislike ?? 0 };
         setCounts((c) => ({ ...c, ...byType, total: byType.crown + byType.fire + byType.diamond }));
       },
     ).on(

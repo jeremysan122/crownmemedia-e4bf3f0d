@@ -328,14 +328,16 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
 
   useEffect(() => {
     const load = async () => {
-      const { data: votes } = await supabase.from("votes").select("vote_type, user_id").eq("post_id", post.id);
-      if (!votes) return;
-      const byType = { crown: 0, fire: 0, diamond: 0, dislike: 0 };
-      const mine = new Set<VoteType>();
-      for (const v of votes) {
-        byType[v.vote_type as VoteType]++;
-        if (user && v.user_id === user.id) mine.add(v.vote_type as VoteType);
-      }
+      const { data } = await supabase.rpc("get_post_vote_stats", { _post_id: post.id });
+      const stats = (data ?? {}) as { counts?: Record<string, number>; my_votes?: string[] };
+      const counts = stats.counts ?? {};
+      const byType = {
+        crown: counts.crown ?? 0,
+        fire: counts.fire ?? 0,
+        diamond: counts.diamond ?? 0,
+        dislike: counts.dislike ?? 0,
+      };
+      const mine = new Set<VoteType>((stats.my_votes ?? []) as VoteType[]);
       setMyVotes(mine);
       setCounts((c) => ({ ...c, ...byType, total: byType.crown + byType.fire + byType.diamond }));
     };
@@ -343,6 +345,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   // user?.id — the stable primitive, not the full User object, prevents
   // redundant refetches when other user properties update.
   }, [post.id, user?.id]);
+
 
   // Realtime status — for graceful loading/error UI when the channel drops
   const [rtStatus, setRtStatus] = useState<"connecting" | "live" | "reconnecting" | "error">("connecting");
@@ -359,14 +362,14 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     let activeChannel: ReturnType<typeof supabase.channel> | null = null;
 
     const refetchAll = async () => {
-      const [{ data: votes }, { data: postRow }, { count: cmtCount }] = await Promise.all([
-        supabase.from("votes").select("vote_type").eq("post_id", post.id),
+      const [{ data: stats }, { data: postRow }, { count: cmtCount }] = await Promise.all([
+        supabase.rpc("get_post_vote_stats", { _post_id: post.id }),
         supabase.from("posts").select("crown_score, comment_count, share_count, battle_wins").eq("id", post.id).maybeSingle(),
         supabase.from("comments").select("id", { count: "exact", head: true }).eq("post_id", post.id).eq("is_removed", false),
       ]);
       if (cancelled) return;
-      const byType = { crown: 0, fire: 0, diamond: 0, dislike: 0 };
-      for (const v of votes ?? []) byType[v.vote_type as VoteType]++;
+      const c2 = ((stats ?? {}) as { counts?: Record<string, number> }).counts ?? {};
+      const byType = { crown: c2.crown ?? 0, fire: c2.fire ?? 0, diamond: c2.diamond ?? 0, dislike: c2.dislike ?? 0 };
       setCounts((c) => ({
         ...c,
         ...byType,
@@ -377,6 +380,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         battleWins: postRow?.battle_wins ?? c.battleWins,
       }));
     };
+
 
     const teardown = () => {
       if (activeChannel) {
@@ -411,13 +415,14 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         "postgres_changes",
         { event: "*", schema: "public", table: "votes", filter: `post_id=eq.${post.id}` },
         async () => {
-          const { data: votes } = await supabase.from("votes").select("vote_type").eq("post_id", post.id);
-          if (!votes || cancelled) return;
-          const byType = { crown: 0, fire: 0, diamond: 0, dislike: 0 };
-          for (const v of votes) byType[v.vote_type as VoteType]++;
+          const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: post.id });
+          if (cancelled) return;
+          const c2 = ((stats ?? {}) as { counts?: Record<string, number> }).counts ?? {};
+          const byType = { crown: c2.crown ?? 0, fire: c2.fire ?? 0, diamond: c2.diamond ?? 0, dislike: c2.dislike ?? 0 };
           setCounts((c) => ({ ...c, ...byType, total: byType.crown + byType.fire + byType.diamond }));
         },
       ).on(
+
         "postgres_changes",
         { event: "*", schema: "public", table: "posts", filter: `id=eq.${post.id}` },
         (payload) => {
