@@ -1605,6 +1605,7 @@ export type Database = {
       }
       gift_transactions: {
         Row: {
+          client_dedupe_key: string | null
           created_at: string
           gift_id: string
           gift_name: string
@@ -1619,6 +1620,7 @@ export type Database = {
           total_shekels: number
         }
         Insert: {
+          client_dedupe_key?: string | null
           created_at?: string
           gift_id: string
           gift_name: string
@@ -1633,6 +1635,7 @@ export type Database = {
           total_shekels: number
         }
         Update: {
+          client_dedupe_key?: string | null
           created_at?: string
           gift_id?: string
           gift_name?: string
@@ -4150,15 +4153,26 @@ export type Database = {
         }
         Returns: string
       }
-      send_royal_gift: {
-        Args: {
-          p_gift_id: string
-          p_post_id: string
-          p_quantity: number
-          p_recipient_id: string
-        }
-        Returns: Json
-      }
+      send_royal_gift:
+        | {
+            Args: {
+              p_gift_id: string
+              p_post_id: string
+              p_quantity: number
+              p_recipient_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_dedupe_key?: string
+              p_gift_id: string
+              p_post_id: string
+              p_quantity: number
+              p_recipient_id: string
+            }
+            Returns: Json
+          }
       snapshot_category_ranks: { Args: never; Returns: undefined }
       spin_daily_wheel: { Args: never; Returns: Json }
       submit_verification_request: {
