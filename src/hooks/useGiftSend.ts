@@ -57,6 +57,13 @@ export function useGiftSend() {
     setError(null);
     let lastErr: unknown = null;
 
+    // Stable idempotency key per send — reused across retries so the server
+    // can dedupe and never double-charge / double-send the same gift.
+    const dedupeKey =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         const { data, error: rpcError } = await supabase.rpc("send_royal_gift", {
@@ -64,7 +71,8 @@ export function useGiftSend() {
           p_recipient_id: recipientId,
           p_post_id: postId ?? null,
           p_quantity: quantity,
-        });
+          p_dedupe_key: dedupeKey,
+        } as never);
         if (rpcError) throw rpcError;
         setIsSending(false);
         return data as GiftSendResult;
