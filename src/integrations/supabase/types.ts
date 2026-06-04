@@ -531,6 +531,51 @@ export type Database = {
           },
         ]
       }
+      category_rankings: {
+        Row: {
+          id: string
+          main_slug: string
+          period: Database["public"]["Enums"]["ranking_period"]
+          prev_rank: number | null
+          rank: number
+          scope_type: Database["public"]["Enums"]["ranking_scope"]
+          scope_value: string
+          score: number
+          snapshot_at: string
+          subcategory_slug: string | null
+          user_id: string
+          votes: number
+        }
+        Insert: {
+          id?: string
+          main_slug: string
+          period: Database["public"]["Enums"]["ranking_period"]
+          prev_rank?: number | null
+          rank: number
+          scope_type: Database["public"]["Enums"]["ranking_scope"]
+          scope_value?: string
+          score?: number
+          snapshot_at?: string
+          subcategory_slug?: string | null
+          user_id: string
+          votes?: number
+        }
+        Update: {
+          id?: string
+          main_slug?: string
+          period?: Database["public"]["Enums"]["ranking_period"]
+          prev_rank?: number | null
+          rank?: number
+          scope_type?: Database["public"]["Enums"]["ranking_scope"]
+          scope_value?: string
+          score?: number
+          snapshot_at?: string
+          subcategory_slug?: string | null
+          user_id?: string
+          votes?: number
+        }
+        Relationships: []
+      }
       category_suggestions: {
         Row: {
           created_at: string
@@ -3888,6 +3933,30 @@ export type Database = {
         Args: { _creator_id: string }
         Returns: undefined
       }
+      get_category_leaderboard: {
+        Args: {
+          _limit?: number
+          _main_slug: string
+          _period?: Database["public"]["Enums"]["ranking_period"]
+          _scope_type?: Database["public"]["Enums"]["ranking_scope"]
+          _scope_value?: string
+          _sub_slug?: string
+        }
+        Returns: {
+          city: string
+          country: string
+          crowns_held: number
+          prev_rank: number
+          profile_photo_url: string
+          rank: number
+          score: number
+          snapshot_at: string
+          state: string
+          user_id: string
+          username: string
+          votes: number
+        }[]
+      }
       get_creator_dashboard: { Args: { _user_id?: string }; Returns: Json }
       get_db_vitals: { Args: never; Returns: Json }
       get_my_profile: {
@@ -4090,6 +4159,7 @@ export type Database = {
         }
         Returns: Json
       }
+      snapshot_category_ranks: { Args: never; Returns: undefined }
       spin_daily_wheel: { Args: never; Returns: Json }
       submit_verification_request: {
         Args: {
@@ -4178,6 +4248,8 @@ export type Database = {
         | "battle_lost"
         | "dm"
         | "system"
+      ranking_period: "day" | "week" | "month" | "all"
+      ranking_scope: "global" | "country" | "state" | "city"
       region_type: "city" | "state" | "country" | "global"
       report_status:
         | "open"
@@ -4395,6 +4467,8 @@ export const Constants = {
         "dm",
         "system",
       ],
+      ranking_period: ["day", "week", "month", "all"],
+      ranking_scope: ["global", "country", "state", "city"],
       region_type: ["city", "state", "country", "global"],
       report_status: [
         "open",
