@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { Bookmark, Crown, Eye, Film, Loader2, ShieldAlert } from "lucide-react";
+import { Bookmark, Crown, Eye, Film, Loader2, MessageCircle, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { fetchRecentGiftTargets, type RecentGiftTarget, type RecentGiftTargetSource } from "@/lib/recentGiftTargets";
 
@@ -9,12 +9,14 @@ const SOURCE_LABEL: Record<RecentGiftTargetSource, string> = {
   saved: "Saved",
   liked: "Liked",
   viewed: "Viewed",
+  commented: "Commented",
 };
 
 const SOURCE_ICON: Record<RecentGiftTargetSource, typeof Bookmark> = {
   saved: Bookmark,
   liked: Crown,
   viewed: Eye,
+  commented: MessageCircle,
 };
 
 export default function GiftTargetPicker({
