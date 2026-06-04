@@ -24,6 +24,7 @@ import NotificationToaster from "./components/NotificationToaster";
 // Lazy: secondary user pages (load on demand, reduces TTI)
 const Upload = lazy(() => import("./pages/Upload"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const CategoryLeaderboard = lazy(() => import("./pages/CategoryLeaderboard"));
 const Profile = lazy(() => import("./pages/Profile"));
 const CrownMap = lazy(() => import("./pages/CrownMap"));
 const Battles = lazy(() => import("./pages/Battles"));
@@ -165,6 +166,7 @@ const App = () => (
               <Route path="/shorts" element={<ProtectedRoute><Scrolls /></ProtectedRoute>} />
               <Route path="/scrolls" element={<ProtectedRoute><Scrolls /></ProtectedRoute>} />
               <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+              <Route path="/leaderboard/c/:mainSlug" element={<ProtectedRoute><CategoryLeaderboard /></ProtectedRoute>} />
               <Route path="/map" element={<ProtectedRoute><CrownMap /></ProtectedRoute>} />
               <Route path="/battles" element={<ProtectedRoute><Battles /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
