@@ -801,26 +801,28 @@ export default function Upload() {
         setUploadProgress(90);
       }
 
-      // ─── Pre-publish safety check ───
-      // Run NSFW/violence moderation on the uploaded image URLs. Server fails
-      // open on infra errors so users aren't blocked by transient gateway issues.
+      // ─── Pre-publish safety check (fail-closed) ───
+      // Run NSFW/violence moderation on the uploaded image URLs. For launch we
+      // fail closed: if the moderation service is unreachable we block the
+      // upload rather than risk publishing unsafe content. Staging can opt in
+      // to fail-open via VITE_MODERATION_FAIL_OPEN=true.
+      const failOpen = import.meta.env.VITE_MODERATION_FAIL_OPEN === "true";
       const toModerate = imageUrls.filter(Boolean).slice(0, 6);
       if (toModerate.length > 0) {
         setUploadStage("Checking content safety…");
-        try {
-          const { data: verdict, error: modErr } = await supabase.functions.invoke("moderate-media", {
-            body: { image_urls: toModerate },
-          });
-          if (modErr) {
-            // Network/function error — log and proceed. (We don't want infra to gate posting.)
-            console.warn("moderation invoke failed", modErr);
-          } else if (verdict && verdict.safe === false) {
-            const reason = (verdict.reason as string) || "Content flagged as not safe for the feed.";
-            throw new Error(`Blocked: ${reason}`);
+        const { data: verdict, error: modErr } = await supabase.functions.invoke("moderate-media", {
+          body: { image_urls: toModerate },
+        });
+        if (modErr) {
+          console.warn("moderation invoke failed", modErr);
+          if (!failOpen) {
+            throw new Error(
+              "Blocked: Couldn't verify content safety right now. Please try again in a moment.",
+            );
           }
-        } catch (e) {
-          if (e instanceof Error && e.message.startsWith("Blocked:")) throw e;
-          console.warn("moderation skipped", e);
+        } else if (verdict && verdict.safe === false) {
+          const reason = (verdict.reason as string) || "Content flagged as not safe for the feed.";
+          throw new Error(`Blocked: ${reason}`);
         }
       }
 

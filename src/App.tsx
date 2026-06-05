@@ -211,6 +211,8 @@ const App = () => (
                   a login prompt for actions that need auth (follow, vote, comment). */}
               <Route path="/u/:username" element={<Profile />} />
               <Route path="/post/:id" element={<PostPage />} />
+              {/* Public short-link alias used in share cards / OG / external links. */}
+              <Route path="/p/:id" element={<PostPage />} />
               <Route path="/reports/mine" element={<ProtectedRoute><MyReports /></ProtectedRoute>} />
               <Route path="/blocked" element={<ProtectedRoute><BlockedAccounts /></ProtectedRoute>} />
               <Route path="/preferences" element={<ProtectedRoute><Preferences /></ProtectedRoute>} />
