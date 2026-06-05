@@ -801,26 +801,28 @@ export default function Upload() {
         setUploadProgress(90);
       }
 
-      // ─── Pre-publish safety check ───
-      // Run NSFW/violence moderation on the uploaded image URLs. Server fails
-      // open on infra errors so users aren't blocked by transient gateway issues.
+      // ─── Pre-publish safety check (fail-closed) ───
+      // Run NSFW/violence moderation on the uploaded image URLs. For launch we
+      // fail closed: if the moderation service is unreachable we block the
+      // upload rather than risk publishing unsafe content. Staging can opt in
+      // to fail-open via VITE_MODERATION_FAIL_OPEN=true.
+      const failOpen = import.meta.env.VITE_MODERATION_FAIL_OPEN === "true";
       const toModerate = imageUrls.filter(Boolean).slice(0, 6);
       if (toModerate.length > 0) {
         setUploadStage("Checking content safety…");
-        try {
-          const { data: verdict, error: modErr } = await supabase.functions.invoke("moderate-media", {
-            body: { image_urls: toModerate },
-          });
-          if (modErr) {
-            // Network/function error — log and proceed. (We don't want infra to gate posting.)
-            console.warn("moderation invoke failed", modErr);
-          } else if (verdict && verdict.safe === false) {
-            const reason = (verdict.reason as string) || "Content flagged as not safe for the feed.";
-            throw new Error(`Blocked: ${reason}`);
+        const { data: verdict, error: modErr } = await supabase.functions.invoke("moderate-media", {
+          body: { image_urls: toModerate },
+        });
+        if (modErr) {
+          console.warn("moderation invoke failed", modErr);
+          if (!failOpen) {
+            throw new Error(
+              "Blocked: Couldn't verify content safety right now. Please try again in a moment.",
+            );
           }
-        } catch (e) {
-          if (e instanceof Error && e.message.startsWith("Blocked:")) throw e;
-          console.warn("moderation skipped", e);
+        } else if (verdict && verdict.safe === false) {
+          const reason = (verdict.reason as string) || "Content flagged as not safe for the feed.";
+          throw new Error(`Blocked: ${reason}`);
         }
       }
 
@@ -942,6 +944,56 @@ export default function Upload() {
   const [trimming, setTrimming] = useState(false);
   const [trimProgress, setTrimProgress] = useState(0);
 
+  // ─── Clipboard paste (Ctrl/Cmd+V on desktop) — must run before early return ───
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageFiles: File[] = [];
+      let videoFile: File | null = null;
+      for (const item of Array.from(items)) {
+        if (item.kind !== "file") continue;
+        const file = item.getAsFile();
+        if (!file) continue;
+        if (file.type.startsWith("image/")) imageFiles.push(file);
+        else if (file.type.startsWith("video/") && !videoFile) videoFile = file;
+      }
+      if (imageFiles.length === 0 && !videoFile) return;
+      e.preventDefault();
+      if (imageFiles.length > 0) {
+        const dt = new DataTransfer();
+        imageFiles.forEach((f) => dt.items.add(f));
+        setMode("photo");
+        void onPickPhotos(dt.files);
+        toast.success(`Pasted ${imageFiles.length} image${imageFiles.length === 1 ? "" : "s"}`);
+      } else if (videoFile) {
+        setMode("video");
+        void onPickVideo(videoFile);
+        toast.success("Pasted video");
+      }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [photos.length]);
+
+  // ─── Beforeunload guard — must run before early return ───
+  useEffect(() => {
+    const hasWork = submitting || photos.length > 0 || !!video;
+    if (!hasWork || success) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [submitting, photos.length, video, success]);
+
+  // ─── Reset trim range when the user swaps the video — must run before early return ───
+  useEffect(() => {
+    if (video) setTrimRange([0, Math.min(MAX_VIDEO_MS, video.durationMs) / 1000]);
+    else setTrimRange(null);
+  }, [video?.preview]);
+
   // ────────── Render ──────────
   if (success) {
     return (
@@ -992,60 +1044,7 @@ export default function Upload() {
     }
   };
 
-  // ─── Clipboard paste (Ctrl/Cmd+V on desktop) ───
-  // Lets users paste a screenshot or copied image straight into the composer.
-  useEffect(() => {
-    const onPaste = (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      const imageFiles: File[] = [];
-      let videoFile: File | null = null;
-      for (const item of Array.from(items)) {
-        if (item.kind !== "file") continue;
-        const file = item.getAsFile();
-        if (!file) continue;
-        if (file.type.startsWith("image/")) imageFiles.push(file);
-        else if (file.type.startsWith("video/") && !videoFile) videoFile = file;
-      }
-      if (imageFiles.length === 0 && !videoFile) return;
-      e.preventDefault();
-      if (imageFiles.length > 0) {
-        const dt = new DataTransfer();
-        imageFiles.forEach((f) => dt.items.add(f));
-        setMode("photo");
-        void onPickPhotos(dt.files);
-        toast.success(`Pasted ${imageFiles.length} image${imageFiles.length === 1 ? "" : "s"}`);
-      } else if (videoFile) {
-        setMode("video");
-        void onPickVideo(videoFile);
-        toast.success("Pasted video");
-      }
-    };
-    window.addEventListener("paste", onPaste);
-    return () => window.removeEventListener("paste", onPaste);
-  }, [photos.length]);
-
-  // ─── Beforeunload guard ───
-  // Warn the user before navigating away with unsaved picks or mid-upload.
-  useEffect(() => {
-    const hasWork = submitting || photos.length > 0 || !!video;
-    if (!hasWork || success) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [submitting, photos.length, video, success]);
-
-
-  // ─── Video trim state is declared above the early return ───
-
-  // Reset trim range when the user swaps the video.
-  useEffect(() => {
-    if (video) setTrimRange([0, Math.min(MAX_VIDEO_MS, video.durationMs) / 1000]);
-    else setTrimRange(null);
-  }, [video?.preview]);
+  // (paste, beforeunload, trim-reset effects moved above early return for rules-of-hooks)
 
   const applyTrim = async () => {
     if (!video || !trimRange) return;

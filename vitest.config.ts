@@ -9,6 +9,11 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // Use forked processes so vitest can hard-kill workers if an
+    // unclosed realtime/timer keeps the event loop alive (CI exit).
+    pool: "forks",
+    poolOptions: { forks: { singleFork: false } },
+    teardownTimeout: 5_000,
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
