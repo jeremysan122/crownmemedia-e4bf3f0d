@@ -37,5 +37,6 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-expressions": "warn",
       "@typescript-eslint/ban-ts-comment": "warn",
       "@typescript-eslint/no-require-imports": "error",
+    },
   },
 );
