@@ -1,0 +1,108 @@
+// CrownMe brand tokens for email templates.
+// Email body must stay white per platform rules; gold + royal purple accents.
+
+export const brand = {
+  gold: '#E0B43A',
+  goldDark: '#B8860B',
+  royal: '#1A0F2E',
+  royalDeep: '#14092B',
+  purple: '#6B3FA0',
+  ivory: '#FFF8E7',
+  borderGold: '#E7C04A',
+}
+
+export const styles = {
+  main: {
+    backgroundColor: '#ffffff',
+    fontFamily: 'Georgia, "Times New Roman", serif',
+    margin: 0,
+    padding: 0,
+  } as const,
+  container: {
+    maxWidth: '560px',
+    margin: '0 auto',
+    padding: '0',
+    border: `1px solid ${brand.borderGold}`,
+    borderRadius: '16px',
+    overflow: 'hidden',
+  } as const,
+  header: {
+    background: `linear-gradient(135deg, ${brand.royal} 0%, ${brand.purple} 100%)`,
+    backgroundColor: brand.royal,
+    padding: '28px 24px',
+    textAlign: 'center' as const,
+  } as const,
+  brandText: {
+    color: brand.gold,
+    fontSize: '24px',
+    fontWeight: 'bold' as const,
+    letterSpacing: '4px',
+    margin: 0,
+    textTransform: 'uppercase' as const,
+  } as const,
+  brandTag: {
+    color: '#F3E2A9',
+    fontSize: '11px',
+    letterSpacing: '2px',
+    margin: '6px 0 0',
+    textTransform: 'uppercase' as const,
+  } as const,
+  body: {
+    padding: '32px 28px',
+    backgroundColor: '#ffffff',
+  } as const,
+  h1: {
+    fontSize: '24px',
+    fontWeight: 'bold' as const,
+    color: brand.royal,
+    margin: '0 0 18px',
+    lineHeight: '1.3',
+  } as const,
+  text: {
+    fontSize: '15px',
+    color: '#3d3548',
+    lineHeight: '1.6',
+    margin: '0 0 20px',
+    fontFamily: 'Georgia, "Times New Roman", serif',
+  } as const,
+  link: { color: brand.goldDark, textDecoration: 'underline' } as const,
+  button: {
+    backgroundColor: brand.gold,
+    backgroundImage: `linear-gradient(135deg, ${brand.gold} 0%, #F4CB5A 100%)`,
+    color: brand.royalDeep,
+    fontSize: '14px',
+    fontWeight: 'bold' as const,
+    borderRadius: '12px',
+    padding: '14px 28px',
+    textDecoration: 'none',
+    letterSpacing: '1.5px',
+    textTransform: 'uppercase' as const,
+    display: 'inline-block',
+  } as const,
+  code: {
+    fontFamily: 'Courier, monospace',
+    fontSize: '28px',
+    fontWeight: 'bold' as const,
+    color: brand.royal,
+    letterSpacing: '6px',
+    backgroundColor: brand.ivory,
+    border: `1px dashed ${brand.borderGold}`,
+    borderRadius: '12px',
+    padding: '16px 20px',
+    textAlign: 'center' as const,
+    margin: '0 0 24px',
+  } as const,
+  footer: {
+    fontSize: '12px',
+    color: '#8a8194',
+    margin: '28px 0 0',
+    lineHeight: '1.5',
+    fontStyle: 'italic' as const,
+  } as const,
+  signature: {
+    fontSize: '13px',
+    color: brand.royal,
+    margin: '24px 0 0',
+    fontWeight: 'bold' as const,
+  } as const,
+}

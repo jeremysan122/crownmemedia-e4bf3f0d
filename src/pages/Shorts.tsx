@@ -180,8 +180,7 @@ export default function Shorts() {
   }
 
   async function share(post: Short) {
-    // Public short-link alias — same destination as /post/:id, friendlier for share sheets.
-    const url = `${window.location.origin}/p/${post.id}`;
+    const url = `${window.location.origin}/post/${post.id}`;
     if (navigator.share) {
       try { await navigator.share({ url, title: "CrownMe Scroll" }); return; } catch { /* user cancelled */ }
     }

@@ -10,9 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "seed:launch-fixtures": "bun run scripts/seed-launch-fixtures.ts",
-    "cleanup:launch-fixtures": "bun run scripts/seed-launch-fixtures.ts cleanup"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
