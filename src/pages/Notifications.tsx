@@ -72,7 +72,7 @@ export default function Notifications() {
     setList(dedupe(data || []));
   };
 
-  useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => { refresh();   }, [user?.id]);
   useEffect(() => { trackUsage("notifications_opened"); }, []);
 
   // Realtime: new notifications stream in, deduped by id.

@@ -38,7 +38,7 @@ export default function ArchivedPosts() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => { load();   }, [user?.id]);
 
   const restore = async (id: string) => {
     const { error } = await supabase

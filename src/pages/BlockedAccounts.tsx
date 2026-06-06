@@ -42,7 +42,7 @@ export default function BlockedAccounts() {
     }
     const list = (data as any[]) || [];
     const ids = Array.from(new Set(list.map((r) => r.blocked_id)));
-    let profiles: Record<string, any> = {};
+    const profiles: Record<string, any> = {};
     if (ids.length) {
       const { data: pData } = await supabase
         .from("profiles")

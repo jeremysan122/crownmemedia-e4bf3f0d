@@ -241,7 +241,7 @@ export default function Rewards() {
           const lx = cx + (labelR + labelRadialOffset) * cosM;
           const ly = cy + (labelR + labelRadialOffset) * sinM;
 
-          let rotDeg = (mid * 180) / Math.PI + 90;
+          const rotDeg = (mid * 180) / Math.PI + 90;
           const flip = rotDeg > 90 && rotDeg < 270;
           const textRot = flip ? rotDeg + 180 : rotDeg;
 

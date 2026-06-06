@@ -115,7 +115,7 @@ export default function CommandCenterContent() {
       });
     }, 2000);
     return () => { supabase.removeChannel(ch); window.clearInterval(tick); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const loadHistory = async (postId: string) => {

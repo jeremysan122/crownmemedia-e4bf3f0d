@@ -75,7 +75,7 @@ export default function FeedRealtimeAlert() {
       if (timer) clearTimeout(timer);
       teardown();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   if (status === "live" && !recovered) return null;

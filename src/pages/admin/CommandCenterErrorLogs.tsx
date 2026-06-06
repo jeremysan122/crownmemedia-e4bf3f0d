@@ -41,7 +41,7 @@ export default function CommandCenterErrorLogs() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [filter]);
+  useEffect(() => { load();   }, [filter]);
 
   const last24 = rows.filter((r) => Date.now() - new Date(r.created_at).getTime() < 86400000).length;
   const lastHour = rows.filter((r) => Date.now() - new Date(r.created_at).getTime() < 3600000).length;

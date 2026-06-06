@@ -56,7 +56,7 @@ export default function CommandCenterReports() {
     setCounts({ open: openC.count ?? 0, resolved: resC.count ?? 0, dismissed: disC.count ?? 0 });
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [filter]);
+  useEffect(() => { load();   }, [filter]);
 
   // Surgical realtime merging — no full reload, no duplicates
   const rt = useRealtimeStatus("cc-reports", (ch) =>
