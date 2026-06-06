@@ -30,7 +30,7 @@ export default function MutedWords() {
     setRows((data as any[])?.map((r) => ({ id: r.id, word: r.word })) ?? []);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => { load();   }, [user?.id]);
 
   const add = async () => {
     const word = input.trim().toLowerCase();

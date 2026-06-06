@@ -35,7 +35,7 @@ export default function Drafts() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => { load();   }, [user?.id]);
 
   const remove = async (id: string) => {
     if (!confirm("Delete this draft?")) return;

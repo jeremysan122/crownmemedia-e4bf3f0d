@@ -47,7 +47,7 @@ export default function RestrictedAccounts() {
     setRows((data as any[] ?? []) as Row[]);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => { load();   }, [user?.id]);
 
   const remove = async (id: string) => {
     const { error } = await supabase.from("restricted_users" as any).delete().eq("id", id);

@@ -230,8 +230,8 @@ export default function Profile() {
       const battleRows = (bs as any) || [];
       const postIds: string[] = Array.from(new Set(battleRows.flatMap((b: any) => [b.challenger_post_id, b.opponent_post_id]).filter(Boolean) as string[]));
       const userIds: string[] = Array.from(new Set(battleRows.flatMap((b: any) => [b.challenger_id, b.opponent_id]).filter(Boolean) as string[]));
-      let postMap: Record<string, { image_url: string; city: string | null; country: string | null; category: string | null }> = {};
-      let userMap: Record<string, string> = {};
+      const postMap: Record<string, { image_url: string; city: string | null; country: string | null; category: string | null }> = {};
+      const userMap: Record<string, string> = {};
       if (postIds.length) {
         const { data: bp } = await supabase.from("posts").select("id, image_url, city, country, category").in("id", postIds);
         ((bp as any) || []).forEach((row: any) => { postMap[row.id] = { image_url: row.image_url, city: row.city, country: row.country, category: row.category }; });

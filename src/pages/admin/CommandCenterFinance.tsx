@@ -77,7 +77,7 @@ export default function CommandCenterFinance() {
   };
 
   useEffect(() => { loadStats(); }, []);
-  useEffect(() => { loadPayouts(); /* eslint-disable-next-line */ }, [page, statusFilter, search]);
+  useEffect(() => { loadPayouts();   }, [page, statusFilter, search]);
 
   // Polling fallback. payouts + shekel_ledger were removed from the Realtime
   // publication (financial CDC events could leak across users via crafted topics).

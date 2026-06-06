@@ -80,7 +80,7 @@ export default function CreatorProgram() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => { load();   }, [user?.id]);
 
   const apply = async () => {
     setSubmitting(true);

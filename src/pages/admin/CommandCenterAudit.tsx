@@ -63,7 +63,7 @@ export default function CommandCenterAudit() {
   };
 
   useEffect(() => { load(true); /* eslint-disable-next-line */ }, [actor, action, targetType, targetId, modField, from, to]);
-  useEffect(() => { load(false); /* eslint-disable-next-line */ }, [page]);
+  useEffect(() => { load(false);   }, [page]);
 
   const clearFilters = () => { setActor(""); setAction(""); setTargetType(""); setTargetId(""); setModField(""); setFrom(""); setTo(""); };
 

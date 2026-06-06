@@ -457,7 +457,7 @@ export default function Feed() {
     setNewPosts([]);
     try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch { /* noop */ }
   // newPosts is intentionally captured here — it's the batch we want to prepend.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [newPosts]);
 
   // Pull-to-refresh (mobile only)

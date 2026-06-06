@@ -37,7 +37,7 @@ export default function AdminSensitiveAppeals() {
     setRows((data as Appeal[] | null) ?? []);
   };
 
-  useEffect(() => { if (isModerator) load(); /* eslint-disable-next-line */ }, [isModerator, filter]);
+  useEffect(() => { if (isModerator) load();   }, [isModerator, filter]);
 
   const decide = async (id: string, status: "approved" | "denied") => {
     if (!user) return;
