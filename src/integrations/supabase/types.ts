@@ -2834,10 +2834,12 @@ export type Database = {
           category: Database["public"]["Enums"]["crown_category"]
           crown_score: number
           id: string
+          main_category_slug: string | null
           post_id: string
           rank: number | null
           region: string
           scope: Database["public"]["Enums"]["region_type"]
+          subcategory_slug: string | null
           total: number
         }
         Insert: {
@@ -2845,10 +2847,12 @@ export type Database = {
           category: Database["public"]["Enums"]["crown_category"]
           crown_score?: number
           id?: string
+          main_category_slug?: string | null
           post_id: string
           rank?: number | null
           region: string
           scope: Database["public"]["Enums"]["region_type"]
+          subcategory_slug?: string | null
           total?: number
         }
         Update: {
@@ -2856,10 +2860,12 @@ export type Database = {
           category?: Database["public"]["Enums"]["crown_category"]
           crown_score?: number
           id?: string
+          main_category_slug?: string | null
           post_id?: string
           rank?: number | null
           region?: string
           scope?: Database["public"]["Enums"]["region_type"]
+          subcategory_slug?: string | null
           total?: number
         }
         Relationships: []
