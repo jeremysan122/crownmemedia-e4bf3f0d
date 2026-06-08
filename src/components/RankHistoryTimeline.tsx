@@ -14,16 +14,32 @@ interface Props {
   postId: string | null;
   scope: "city" | "state" | "global";
   region: string;
+  /** Legacy crown_category enum value — used as a fallback when the post / older
+   *  snapshots predate the official Master Category + Topic slug system. */
   category: string;
+  /** Official topic slug (preferred). When omitted, the component will look it
+   *  up from posts.subcategory_slug. */
+  subcategorySlug?: string | null;
+  /** Official master-category slug (optional, for master-level history). */
+  mainCategorySlug?: string | null;
 }
 
 /**
- * Sparkline-style timeline of a post's ranked position over time. Lower rank
- * (closer to #1) is plotted higher — matches user intuition of "going up".
- * Each datapoint exposes its captured_at timestamp on hover, and the header
- * surfaces the absolute rank delta since the very first snapshot.
+ * Sparkline-style timeline of a post's ranked position over time.
+ *
+ * Data source preference (null-safe):
+ *   1. rank_snapshots filtered by subcategory_slug (official topic)
+ *   2. rank_snapshots filtered by main_category_slug (official master)
+ *   3. rank_snapshots filtered by legacy category enum
+ *
+ * Older snapshot rows where slug columns are NULL still render via path #3.
+ * Rows are de-duplicated by captured_at so overlap between the slug era and
+ * the legacy era never produces double points on the chart.
  */
-export default function RankHistoryTimeline({ postId, scope, region, category }: Props) {
+export default function RankHistoryTimeline({
+  postId, scope, region, category,
+  subcategorySlug, mainCategorySlug,
+}: Props) {
   const [rows, setRows] = useState<Snapshot[] | null>(null);
   const [hover, setHover] = useState<number | null>(null);
 
@@ -31,20 +47,64 @@ export default function RankHistoryTimeline({ postId, scope, region, category }:
     let cancelled = false;
     if (!postId) { setRows(null); return; }
     setRows(null);
+
     (async () => {
-      const { data } = await supabase
-        .from("rank_snapshots")
-        .select("rank, total, captured_at")
-        .eq("post_id", postId)
-        .eq("scope", scope)
-        .eq("region", region)
-        .eq("category", category as never)
-        .order("captured_at", { ascending: true })
-        .limit(48); // ~2 days hourly, capped by 14-day retention server-side
-      if (!cancelled) setRows((data ?? []) as Snapshot[]);
+      // Resolve official slugs from the post if not supplied by the caller.
+      let subSlug = subcategorySlug ?? null;
+      let mainSlug = mainCategorySlug ?? null;
+      if (!subSlug && !mainSlug) {
+        try {
+          const { data: p } = await supabase
+            .from("posts")
+            .select("subcategory_slug, main_category_slug")
+            .eq("id", postId)
+            .maybeSingle();
+          subSlug = (p as any)?.subcategory_slug ?? null;
+          mainSlug = (p as any)?.main_category_slug ?? null;
+        } catch { /* non-fatal — fall back to legacy */ }
+      }
+
+      const base = () =>
+        supabase
+          .from("rank_snapshots")
+          .select("rank, total, captured_at")
+          .eq("post_id", postId)
+          .eq("scope", scope)
+          .eq("region", region)
+          .order("captured_at", { ascending: true })
+          .limit(48);
+
+      let data: Snapshot[] = [];
+      // 1) Prefer official topic slug.
+      if (subSlug) {
+        const { data: d } = await base().eq("subcategory_slug", subSlug);
+        data = (d ?? []) as Snapshot[];
+      }
+      // 2) Then master slug.
+      if (data.length === 0 && mainSlug) {
+        const { data: d } = await base().eq("main_category_slug", mainSlug);
+        data = (d ?? []) as Snapshot[];
+      }
+      // 3) Legacy category enum fallback (covers older snapshots with NULL slugs).
+      if (data.length === 0 && category) {
+        const { data: d } = await base().eq("category", category as never);
+        data = (d ?? []) as Snapshot[];
+      }
+
+      // De-dupe by captured_at (keeps first occurrence, which is the preferred source).
+      const seen = new Set<string>();
+      const deduped = data.filter((r) => {
+        if (!r?.captured_at) return false;
+        if (seen.has(r.captured_at)) return false;
+        seen.add(r.captured_at);
+        return true;
+      });
+
+      if (!cancelled) setRows(deduped);
     })();
+
     return () => { cancelled = true; };
-  }, [postId, scope, region, category]);
+  }, [postId, scope, region, category, subcategorySlug, mainCategorySlug]);
 
   const points = useMemo(
     () => (rows ?? []).filter((r) => r.rank != null) as Array<Snapshot & { rank: number }>,
@@ -85,9 +145,7 @@ export default function RankHistoryTimeline({ postId, scope, region, category }:
         </div>
         <p className="text-[12px] font-semibold text-foreground">Rank history coming soon</p>
         <p className="text-[10px] text-muted-foreground mt-0.5">
-          {points.length === 0
-            ? "We'll start tracking this post's position on the next hourly snapshot."
-            : "One snapshot in — the timeline appears after the next update."}
+          Rank history will appear after the next leaderboard update.
         </p>
       </div>
     );
@@ -98,7 +156,6 @@ export default function RankHistoryTimeline({ postId, scope, region, category }:
   const minR = Math.min(...ranks);
   const maxR = Math.max(...ranks, minR + 1);
   const xStep = (W - P * 2) / Math.max(points.length - 1, 1);
-  // Lower rank → higher Y position visually (invert)
   const y = (r: number) => P + ((r - minR) / (maxR - minR)) * (H - P * 2);
   const x = (i: number) => P + i * xStep;
   const path = points.map((p, i) => `${i === 0 ? "M" : "L"} ${x(i)} ${y(p.rank)}`).join(" ");
@@ -106,7 +163,7 @@ export default function RankHistoryTimeline({ postId, scope, region, category }:
 
   const first = points[0];
   const last = points[points.length - 1];
-  const delta = first.rank - last.rank; // positive → improved (rank went down numerically)
+  const delta = first.rank - last.rank;
   const Trend = delta > 0 ? TrendingUp : delta < 0 ? TrendingDown : Minus;
   const trendCls = delta > 0 ? "text-gold" : delta < 0 ? "text-destructive" : "text-muted-foreground";
   const trendLabel =
@@ -167,7 +224,6 @@ export default function RankHistoryTimeline({ postId, scope, region, category }:
                 stroke={isLast ? "hsl(var(--background))" : "transparent"}
                 strokeWidth={isLast ? 1.5 : 0}
               />
-              {/* Invisible hover hit area */}
               <rect
                 x={x(i) - xStep / 2} y={0}
                 width={xStep} height={H}
