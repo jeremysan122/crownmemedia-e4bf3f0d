@@ -5,10 +5,15 @@
 // Backward compatibility:
 //   • rank_snapshots.category (crown_category enum, NOT NULL) is still
 //     populated from the snapshotted post's own posts.category, so legacy
-//     consumers keep working.
+//     consumers keep working. Official slug values are NEVER written into
+//     rank_snapshots.category — they go into the new nullable slug columns.
 //   • New nullable columns rank_snapshots.main_category_slug /
-//     subcategory_slug carry the official taxonomy. Future readers can filter
-//     by these instead of the legacy enum.
+//     subcategory_slug carry the official taxonomy.
+//
+// Optional query params (cron / admin only — auth is still enforced):
+//   ?dryRun=true        → compute rows, log totals, do NOT insert.
+//   ?topic=best-style   → restrict to one subcategory_slug.
+//   ?scope=global|city|state  → restrict to one scope.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -34,6 +39,7 @@ interface Topic {
 }
 
 const PER_SCOPE_LIMIT = 200;
+const ALLOWED_SCOPES = new Set(["global", "city", "state"]);
 
 const stableSort = (a: PostRow, b: PostRow) => {
   if (b.crown_score !== a.crown_score) return b.crown_score - a.crown_score;
@@ -46,7 +52,7 @@ const stableSort = (a: PostRow, b: PostRow) => {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  // Auth: require either a matching cron secret OR an admin JWT.
+  // ─── Auth: cron secret OR admin JWT ─────────────────────────────────────
   const cronSecret = Deno.env.get("SNAPSHOT_RANKS_CRON_SECRET");
   const providedSecret = req.headers.get("x-cron-secret");
   let authorized = !!(cronSecret && providedSecret && providedSecret === cronSecret);
@@ -70,9 +76,7 @@ Deno.serve(async (req) => {
             .maybeSingle();
           if (roleRow) authorized = true;
         }
-      } catch {
-        /* fall through to 401 */
-      }
+      } catch { /* fall through to 401 */ }
     }
   }
 
@@ -83,29 +87,52 @@ Deno.serve(async (req) => {
     });
   }
 
+  // ─── Query params ───────────────────────────────────────────────────────
+  const url = new URL(req.url);
+  const dryRun = url.searchParams.get("dryRun") === "true";
+  const topicFilter = url.searchParams.get("topic");
+  const scopeFilterRaw = url.searchParams.get("scope");
+  const scopeFilter = scopeFilterRaw && ALLOWED_SCOPES.has(scopeFilterRaw) ? scopeFilterRaw : null;
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
   const capturedAt = new Date().toISOString();
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  const rowsInsertedByScope: Record<string, number> = { global: 0, city: 0, state: 0 };
+  let skippedTopics = 0;
+  let skippedScopes = 0;
 
-  // 1) Load official active topics from DB (source of truth).
-  const { data: subcats, error: subErr } = await supabase
+  console.info("[snapshot-ranks] start", { capturedAt, dryRun, topicFilter, scopeFilter });
+
+  // ─── 1) Load official active topics ─────────────────────────────────────
+  let topicQuery = supabase
     .from("subcategories")
     .select("slug, is_active, main_category_id, main_categories!inner(slug)")
     .eq("is_active", true);
+  if (topicFilter) topicQuery = topicQuery.eq("slug", topicFilter);
 
+  const { data: subcats, error: subErr } = await topicQuery;
   if (subErr) {
-    return new Response(JSON.stringify({ error: `Failed to load topics: ${subErr.message}` }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("[snapshot-ranks] topic-load failed", subErr.message);
+    return new Response(
+      JSON.stringify({ ok: false, error: `Failed to load topics: ${subErr.message}` }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 
-  const topics: Topic[] = (subcats ?? []).map((s: any) => ({
-    slug: s.slug as string,
-    main_slug: s.main_categories?.slug as string,
-  })).filter((t) => t.slug && t.main_slug);
+  const topics: Topic[] = (subcats ?? [])
+    .map((s: any) => ({ slug: s.slug as string, main_slug: s.main_categories?.slug as string }))
+    .filter((t) => t.slug && t.main_slug);
+
+  const masterCategories = new Set(topics.map((t) => t.main_slug));
+  console.info("[snapshot-ranks] topics loaded", {
+    topicsProcessed: topics.length,
+    masterCategoriesProcessed: masterCategories.size,
+  });
 
   const rows: Array<Record<string, unknown>> = [];
 
@@ -117,110 +144,185 @@ Deno.serve(async (req) => {
      .eq("is_archived", false)
      .eq("moderation_status", "approved");
 
+  const wantScope = (s: string) => !scopeFilter || scopeFilter === s;
+  const scopesProcessed = ["global", "city", "state"].filter(wantScope);
+
+  // ─── 2) Per-topic snapshotting ──────────────────────────────────────────
   for (const topic of topics) {
-    // GLOBAL — top N for this official topic.
-    const { data: globalPosts, error: gErr } = await baseFilter(
-      supabase.from("posts").select(eligibleSelect),
-    )
-      .eq("subcategory_slug", topic.slug)
-      .order("crown_score", { ascending: false })
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .limit(PER_SCOPE_LIMIT);
+    let topicHadAnyRow = false;
 
-    if (gErr) continue;
-    const globalList = ((globalPosts ?? []) as PostRow[]).slice().sort(stableSort);
-
-    globalList.forEach((p, idx) => {
-      rows.push({
-        post_id: p.id,
-        category: p.category, // legacy enum — preserved from the post itself
-        main_category_slug: topic.main_slug,
-        subcategory_slug: topic.slug,
-        scope: "global", region: "Global",
-        rank: idx + 1, total: globalList.length, crown_score: p.crown_score,
-        captured_at: capturedAt,
-      });
-    });
-
-    // Determine which cities / states to track for this topic.
-    // (Tracked regions = those present in the global top-N; ranking *within*
-    // each region is computed from a fresh per-region query so a city #1 that
-    // is not in the global top-N still gets ranked accurately.)
-    const cities = new Set<string>();
-    const states = new Set<string>();
-    for (const p of globalList) {
-      if (p.city) cities.add(p.city);
-      if (p.state) states.add(p.state);
-    }
-
-    for (const city of cities) {
-      const { data: cityPosts } = await baseFilter(
+    // GLOBAL
+    if (wantScope("global")) {
+      const { data: globalPosts, error: gErr } = await baseFilter(
         supabase.from("posts").select(eligibleSelect),
       )
         .eq("subcategory_slug", topic.slug)
-        .eq("city", city)
         .order("crown_score", { ascending: false })
         .order("created_at", { ascending: true })
         .order("id", { ascending: true })
         .limit(PER_SCOPE_LIMIT);
 
-      const list = ((cityPosts ?? []) as PostRow[]).slice().sort(stableSort);
-      list.forEach((p, idx) => {
-        rows.push({
-          post_id: p.id,
-          category: p.category,
-          main_category_slug: topic.main_slug,
-          subcategory_slug: topic.slug,
-          scope: "city", region: city,
-          rank: idx + 1, total: list.length, crown_score: p.crown_score,
-          captured_at: capturedAt,
+      if (gErr) {
+        const msg = `global query failed for topic=${topic.slug}: ${gErr.message}`;
+        console.error("[snapshot-ranks]", msg);
+        errors.push(msg);
+        skippedScopes++;
+      } else {
+        const globalList = ((globalPosts ?? []) as PostRow[]).slice().sort(stableSort);
+        if (globalList.length > 0) topicHadAnyRow = true;
+
+        globalList.forEach((p, idx) => {
+          rows.push({
+            post_id: p.id,
+            category: p.category, // legacy enum — preserved
+            main_category_slug: topic.main_slug,
+            subcategory_slug: topic.slug,
+            scope: "global", region: "Global",
+            rank: idx + 1, total: globalList.length, crown_score: p.crown_score,
+            captured_at: capturedAt,
+          });
         });
-      });
+
+        // Cities/States seed list comes from globalList just to know which
+        // regions to track. Actual ranking is computed per-region below.
+        const cities = new Set<string>();
+        const states = new Set<string>();
+        for (const p of globalList) {
+          if (p.city) cities.add(p.city);
+          if (p.state) states.add(p.state);
+        }
+
+        if (wantScope("city")) {
+          for (const city of cities) {
+            const { data: cityPosts, error: cErr } = await baseFilter(
+              supabase.from("posts").select(eligibleSelect),
+            )
+              .eq("subcategory_slug", topic.slug)
+              .eq("city", city)
+              .order("crown_score", { ascending: false })
+              .order("created_at", { ascending: true })
+              .order("id", { ascending: true })
+              .limit(PER_SCOPE_LIMIT);
+
+            if (cErr) {
+              const msg = `city query failed for topic=${topic.slug} city=${city}: ${cErr.message}`;
+              console.error("[snapshot-ranks]", msg);
+              errors.push(msg);
+              skippedScopes++;
+              continue;
+            }
+            const list = ((cityPosts ?? []) as PostRow[]).slice().sort(stableSort);
+            list.forEach((p, idx) => {
+              rows.push({
+                post_id: p.id,
+                category: p.category,
+                main_category_slug: topic.main_slug,
+                subcategory_slug: topic.slug,
+                scope: "city", region: city,
+                rank: idx + 1, total: list.length, crown_score: p.crown_score,
+                captured_at: capturedAt,
+              });
+            });
+          }
+        }
+
+        if (wantScope("state")) {
+          for (const state of states) {
+            const { data: statePosts, error: sErr } = await baseFilter(
+              supabase.from("posts").select(eligibleSelect),
+            )
+              .eq("subcategory_slug", topic.slug)
+              .eq("state", state)
+              .order("crown_score", { ascending: false })
+              .order("created_at", { ascending: true })
+              .order("id", { ascending: true })
+              .limit(PER_SCOPE_LIMIT);
+
+            if (sErr) {
+              const msg = `state query failed for topic=${topic.slug} state=${state}: ${sErr.message}`;
+              console.error("[snapshot-ranks]", msg);
+              errors.push(msg);
+              skippedScopes++;
+              continue;
+            }
+            const list = ((statePosts ?? []) as PostRow[]).slice().sort(stableSort);
+            list.forEach((p, idx) => {
+              rows.push({
+                post_id: p.id,
+                category: p.category,
+                main_category_slug: topic.main_slug,
+                subcategory_slug: topic.slug,
+                scope: "state", region: state,
+                rank: idx + 1, total: list.length, crown_score: p.crown_score,
+                captured_at: capturedAt,
+              });
+            });
+          }
+        }
+      }
     }
 
-    for (const state of states) {
-      const { data: statePosts } = await baseFilter(
-        supabase.from("posts").select(eligibleSelect),
-      )
-        .eq("subcategory_slug", topic.slug)
-        .eq("state", state)
-        .order("crown_score", { ascending: false })
-        .order("created_at", { ascending: true })
-        .order("id", { ascending: true })
-        .limit(PER_SCOPE_LIMIT);
-
-      const list = ((statePosts ?? []) as PostRow[]).slice().sort(stableSort);
-      list.forEach((p, idx) => {
-        rows.push({
-          post_id: p.id,
-          category: p.category,
-          main_category_slug: topic.main_slug,
-          subcategory_slug: topic.slug,
-          scope: "state", region: state,
-          rank: idx + 1, total: list.length, crown_score: p.crown_score,
-          captured_at: capturedAt,
-        });
-      });
-    }
+    if (!topicHadAnyRow) skippedTopics++;
   }
 
-  // Insert in chunks
-  const CHUNK = 1000;
+  // Tally per-scope
+  for (const r of rows) {
+    const s = String((r as any).scope);
+    if (s in rowsInsertedByScope) rowsInsertedByScope[s]++;
+  }
+
+  console.info("[snapshot-ranks] prepared", {
+    rowsPrepared: rows.length,
+    rowsInsertedByScope,
+    skippedTopics,
+    skippedScopes,
+  });
+
+  // ─── 3) Insert (skipped on dryRun) ──────────────────────────────────────
   let inserted = 0;
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    const chunk = rows.slice(i, i + CHUNK);
-    const { error } = await supabase.from("rank_snapshots").insert(chunk);
-    if (error) {
-      return new Response(JSON.stringify({ error: error.message, inserted }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+  if (!dryRun) {
+    const CHUNK = 1000;
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const chunk = rows.slice(i, i + CHUNK);
+      const { error } = await supabase.from("rank_snapshots").insert(chunk);
+      if (error) {
+        console.error("[snapshot-ranks] insert failed", { inserted, message: error.message });
+        return new Response(
+          JSON.stringify({
+            ok: false, error: error.message, inserted, capturedAt,
+            topicsProcessed: topics.length,
+            masterCategoriesProcessed: masterCategories.size,
+            scopesProcessed, rowsPrepared: rows.length,
+            rowsInsertedByScope, skippedTopics, skippedScopes,
+            warnings, errors: [...errors, error.message],
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      inserted += chunk.length;
     }
-    inserted += chunk.length;
+  } else {
+    warnings.push("dryRun=true — no rows inserted");
   }
+
+  console.info("[snapshot-ranks] done", { inserted, dryRun, errorsCount: errors.length });
 
   return new Response(
-    JSON.stringify({ ok: true, inserted, topics: topics.length, capturedAt }),
+    JSON.stringify({
+      ok: true,
+      capturedAt,
+      dryRun,
+      inserted,
+      topicsProcessed: topics.length,
+      masterCategoriesProcessed: masterCategories.size,
+      scopesProcessed,
+      skippedTopics,
+      skippedScopes,
+      rowsPrepared: rows.length,
+      rowsInsertedByScope,
+      warnings,
+      errors,
+    }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 });

@@ -936,6 +936,8 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                     scope={liveRank.scope}
                     region={liveRank.region}
                     category={post.category}
+                    subcategorySlug={(post as any).subcategory_slug ?? null}
+                    mainCategorySlug={(post as any).main_category_slug ?? null}
                   />
                 </div>
               </details>
@@ -945,6 +947,8 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                   scope={liveRank.scope}
                   region={liveRank.region}
                   category={post.category}
+                  subcategorySlug={(post as any).subcategory_slug ?? null}
+                  mainCategorySlug={(post as any).main_category_slug ?? null}
                 />
               </div>
             </>
