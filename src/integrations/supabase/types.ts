@@ -4170,6 +4170,7 @@ export type Database = {
         Returns: Json
       }
       snapshot_category_ranks: { Args: never; Returns: undefined }
+      snapshot_post_ranks: { Args: never; Returns: undefined }
       spin_daily_wheel: { Args: never; Returns: Json }
       submit_verification_request: {
         Args: {
