@@ -1589,7 +1589,14 @@ function MapView({
           Your crowns and regions are safe — you can switch to the list view to keep exploring.
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={() => { setMapAuthError(false); window.location.reload(); }}>
+          <Button size="sm" variant="outline" onClick={async () => {
+            // Reset the one-shot guard and ask the hook for a fresh token —
+            // far cheaper than a full page reload and preserves filters/state.
+            refreshAttemptedRef.current = null;
+            setMapAuthError(false);
+            const t = await refreshToken();
+            if (!t) setMapAuthError(true);
+          }}>
             Try again
           </Button>
           <Button size="sm" variant="ghost" onClick={() => navigate("/map?view=list")}>
