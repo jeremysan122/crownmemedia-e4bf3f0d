@@ -7,6 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Navigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/crown";
+import { banUser } from "@/lib/admin";
+import { useAdminRoles } from "@/hooks/useAdminRoles";
+import { ModerationReasonDialog } from "@/components/admin/ModerationReasonDialog";
 import { Ban, Flag, Shield, RefreshCw, Gavel, Paperclip, ExternalLink, Loader2 } from "lucide-react";
 
 interface BlockRow {
