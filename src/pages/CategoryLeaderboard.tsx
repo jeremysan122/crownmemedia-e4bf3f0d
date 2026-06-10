@@ -57,6 +57,8 @@ export default function CategoryLeaderboard() {
   const [subs, setSubs] = useState<Subcategory[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   const main = useMemo(() => mains.find((m) => m.slug === mainSlug), [mains, mainSlug]);
   const topicSub = useMemo(
@@ -88,23 +90,60 @@ export default function CategoryLeaderboard() {
     fetchSubcategories().then(setSubs);
   }, []);
 
-  useEffect(() => {
-    if (!mainSlug) return;
-    if (scope !== "global" && !scopeValue) { setRows([]); setLoading(false); return; }
-    setLoading(true);
-    (supabase.rpc as any)("get_category_leaderboard", {
+  const fetchPage = useCallback(async (limit: number): Promise<Row[] | null> => {
+    const { data, error } = await (supabase.rpc as any)("get_category_leaderboard", {
       _main_slug: mainSlug,
       _sub_slug: topic || null,
       _scope_type: scope,
       _scope_value: scopeValue,
       _period: period,
-      _limit: 100,
-    }).then(({ data, error }: { data: Row[] | null; error: { message: string } | null }) => {
-      if (error) console.error("[leaderboard]", error.message);
-      setRows((data as Row[]) || []);
+      _limit: limit,
+    });
+    if (error) { console.error("[leaderboard]", error.message); return null; }
+    return (data as Row[]) || [];
+  }, [mainSlug, topic, scope, scopeValue, period]);
+
+  // First page on filter change
+  useEffect(() => {
+    if (!mainSlug) return;
+    if (scope !== "global" && !scopeValue) { setRows([]); setLoading(false); setHasMore(false); return; }
+    let cancelled = false;
+    setLoading(true);
+    setHasMore(true);
+    fetchPage(PAGE_SIZE).then((data) => {
+      if (cancelled) return;
+      const arr = data ?? [];
+      setRows(arr);
+      setHasMore(arr.length === PAGE_SIZE);
       setLoading(false);
     });
-  }, [mainSlug, topic, scope, scopeValue, period]);
+    return () => { cancelled = true; };
+  }, [mainSlug, scope, scopeValue, fetchPage]);
+
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    // RPC has no offset param; request a larger window and slice.
+    // Server-side sort is stable on (score desc, user_id) so re-fetching is safe.
+    const nextLimit = rows.length + PAGE_SIZE;
+    const data = await fetchPage(nextLimit);
+    if (data) {
+      setRows(data);
+      setHasMore(data.length === nextLimit);
+    }
+    setLoadingMore(false);
+  }, [fetchPage, rows.length, loading, loadingMore, hasMore]);
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) loadMore();
+    }, { rootMargin: "400px 0px" });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loadMore]);
 
   const updateParam = (key: string, val: string) => {
     const next = new URLSearchParams(params);
