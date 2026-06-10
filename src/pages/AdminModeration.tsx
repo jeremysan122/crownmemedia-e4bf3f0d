@@ -305,10 +305,17 @@ export default function AdminModeration() {
         <div className="flex items-center gap-2">
           <Shield size={18} className="text-primary" />
           <h1 className="font-display text-xl text-gold">Moderation Queue</h1>
-          <Button size="sm" variant="ghost" onClick={load} className="ml-auto">
-            <RefreshCw size={14} />
+          <Button size="sm" variant="ghost" onClick={load} className="ml-auto" disabled={isLoading} aria-label="Refresh">
+            {isLoading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
           </Button>
         </div>
+
+        {loadError && (
+          <div className="rounded border border-destructive/40 bg-destructive/10 text-destructive text-xs px-3 py-2 flex items-center justify-between gap-2">
+            <span>Failed to load: {loadError}</span>
+            <Button size="sm" variant="outline" onClick={load} className="h-6 text-[10px]">Retry</Button>
+          </div>
+        )}
 
         <div className="flex gap-1 text-[11px]">
           {(["reports", "appeals", "blocks"] as const).map((t) => (
