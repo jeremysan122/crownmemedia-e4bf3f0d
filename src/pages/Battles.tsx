@@ -86,6 +86,8 @@ export default function Battles() {
   const burstTimers = useRef<Record<string, any>>({});
   const [freshWins, setFreshWins] = useState<Set<string>>(new Set()); // battles that just completed in this session
   const prevStatusRef = useRef<Record<string, { status: string; winner: string | null }>>({});
+  /** Prevents a rapid double-tap from optimistically incrementing twice before the insert resolves. */
+  const inFlightVotes = useRef<Set<string>>(new Set());
 
   const load = async () => {
     setLoading(true);
