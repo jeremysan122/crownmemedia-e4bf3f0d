@@ -333,7 +333,25 @@ export default function AdminModeration() {
           ))}
         </div>
 
-        {tab === "reports" && reports.map((r) => (
+        {tab === "reports" && (
+          <div className="flex gap-1 text-[10px]">
+            {(["open", "all"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setReportStatusFilter(f)}
+                className={`px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
+                  reportStatusFilter === f
+                    ? "bg-secondary text-foreground border border-primary/40"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {f === "open" ? `Open (${openCounts.reports})` : `All (${reports.length})`}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab === "reports" && visibleReports.map((r) => (
           <div key={r.id} className="royal-card p-3 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1 text-primary">
@@ -375,6 +393,16 @@ export default function AdminModeration() {
                       {o.label}
                     </Button>
                   ))}
+                  {r.reported_user_id && roles.canBan && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={busyId === r.id}
+                      onClick={() => setBanTarget({ reportId: r.id, userId: r.reported_user_id!, reason: r.reason || "" })}
+                    >
+                      <Ban size={12} className="mr-1" /> Ban user
+                    </Button>
+                  )}
                 </div>
               </>
             )}
