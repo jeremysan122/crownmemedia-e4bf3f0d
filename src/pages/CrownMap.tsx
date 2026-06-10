@@ -1273,7 +1273,7 @@ function MapView({
   onToggleBookmark: (rt: Row["region_type"], rn: string, cat: CrownCategory) => void;
 }) {
   const navigate = useNavigate();
-  const { token, loading: tokenLoading, error: tokenError } = useMapboxToken();
+  const { token, version: tokenVersion, loading: tokenLoading, error: tokenError, refresh: refreshToken } = useMapboxToken();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
@@ -1282,6 +1282,9 @@ function MapView({
   // Surface a friendly error UI when Mapbox rejects requests (401/403),
   // which usually means an expired/invalid token or a restricted account.
   const [mapAuthError, setMapAuthError] = useState(false);
+  // Track whether we've already attempted a one-shot token refresh for the
+  // current token version, so we don't loop forever on a genuinely bad token.
+  const refreshAttemptedRef = useRef<number | null>(null);
 
   const points = useMemo(
     () =>
