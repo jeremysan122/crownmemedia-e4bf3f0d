@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CATEGORIES, CATEGORY_LABEL, CrownCategory, formatScore, locationLabel } from "@/lib/crown";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { Crown, MapPin, Users, Globe2, Building2 } from "lucide-react";
+import { Crown, MapPin, Users, Globe2, Building2, Loader2 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import MyRankCard from "@/components/MyRankCard";
 import { rankBadgeLabel } from "@/lib/rankTitle";
@@ -16,6 +16,8 @@ import { POST_SELECT } from "@/lib/postQuery";
 import { trackUsage } from "@/lib/usageTrack";
 import SensitiveThumb from "@/components/SensitiveThumb";
 import { useFeedFilters } from "@/hooks/useFeedFilters";
+
+const PAGE_SIZE = 30;
 
 type Scope = "nearby" | "city" | "state" | "country" | "global" | "following";
 
@@ -62,9 +64,13 @@ export default function Leaderboard() {
             ? profile?.country ?? ""
             : ""),
   );
-  const [category, setCategory] = useState<CrownCategory>("overall");
+  const [category, setCategory] = useState<CrownCategory>(
+    (params.get("category") as CrownCategory) || "overall",
+  );
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [followingIds, setFollowingIds] = useState<string[]>([]);
 
   // Load follow list once when scope=following
@@ -85,46 +91,99 @@ export default function Leaderboard() {
     else setRegion("");
   }, [scope, profile?.city, profile?.state, profile?.country]);
 
+  /**
+   * Build the base posts query for current filters. Returns null when the
+   * filter combination produces an empty set (e.g. region scope without a
+   * region, following scope with no follows) so callers can short-circuit.
+   */
+  const buildQuery = useCallback(() => {
+    let q = supabase
+      .from("posts")
+      .select(POST_SELECT)
+      .eq("is_removed", false)
+      .eq("category", category)
+      .order("crown_score", { ascending: false });
+
+    if (scope === "city" || scope === "nearby") {
+      if (!region) return null;
+      q = q.eq("city", region);
+    } else if (scope === "state") {
+      if (!region) return null;
+      q = q.eq("state", region);
+    } else if (scope === "country") {
+      if (!region) return null;
+      q = q.eq("country", region);
+    } else if (scope === "following") {
+      if (!user) return null;
+      if (followingIds.length === 0) return null;
+      q = q.in("user_id", followingIds);
+    }
+    return q;
+  }, [scope, region, category, user, followingIds]);
+
+  // First page on filter change
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
-      let q = supabase
-        .from("posts")
-        // Canonical post shape — see src/lib/postQuery.ts
-        .select(POST_SELECT)
-        .eq("is_removed", false)
-        .eq("category", category)
-        .order("crown_score", { ascending: false })
-        .limit(50);
-
-      if (scope === "city" || scope === "nearby") {
-        if (!region) { setRows([]); setLoading(false); return; }
-        q = q.eq("city", region);
-      } else if (scope === "state") {
-        if (!region) { setRows([]); setLoading(false); return; }
-        q = q.eq("state", region);
-      } else if (scope === "country") {
-        if (!region) { setRows([]); setLoading(false); return; }
-        q = q.eq("country", region);
-      } else if (scope === "following") {
-        if (!user) { setRows([]); setLoading(false); return; }
-        if (followingIds.length === 0) { setRows([]); setLoading(false); return; }
-        q = q.in("user_id", followingIds);
-      }
-
-      const { data } = await q;
+      setHasMore(true);
+      const q = buildQuery();
+      if (!q) { setRows([]); setLoading(false); setHasMore(false); return; }
+      const { data } = await q.range(0, PAGE_SIZE - 1);
       if (cancelled) return;
-      setRows((data as any) ?? []);
+      const arr = (data as any[]) ?? [];
+      setRows(arr);
+      setHasMore(arr.length === PAGE_SIZE);
       setLoading(false);
     };
     load();
     return () => { cancelled = true; };
-  }, [scope, region, category, user, followingIds]);
+  }, [buildQuery]);
 
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return;
+    const q = buildQuery();
+    if (!q) return;
+    setLoadingMore(true);
+    const from = rows.length;
+    const to = from + PAGE_SIZE - 1;
+    const { data } = await q.range(from, to);
+    const arr = (data as any[]) ?? [];
+    // De-dupe by id in case realtime/score changes shifted ordering between pages.
+    setRows((prev) => {
+      const seen = new Set(prev.map((r) => r.id));
+      return [...prev, ...arr.filter((r) => !seen.has(r.id))];
+    });
+    setHasMore(arr.length === PAGE_SIZE);
+    setLoadingMore(false);
+  }, [buildQuery, rows.length, loading, loadingMore, hasMore]);
+
+  // Infinite-scroll sentinel
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    setParams(region ? { scope, region } : { scope });
-  }, [scope, region, setParams]);
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) loadMore();
+    }, { rootMargin: "400px 0px" });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loadMore]);
+
+  // Sync filters → URL, preserving any other params (e.g. ?utm=…).
+  useEffect(() => {
+    const next = new URLSearchParams(params);
+    const setOrDel = (k: string, v: string, def: string) => {
+      if (v && v !== def) next.set(k, v); else next.delete(k);
+    };
+    setOrDel("scope", scope, "global");
+    setOrDel("region", region, "");
+    setOrDel("category", category, "overall");
+    if (next.toString() !== params.toString()) {
+      setParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, region, category]);
 
   // Realtime refresh trigger for MyRankCard — bumps on vote/post/battle changes
   const [refreshKey, setRefreshKey] = useState(0);
@@ -347,6 +406,19 @@ export default function Leaderboard() {
                 );
               })}
             </div>
+
+            {/* Infinite-scroll sentinel + loading/exhausted indicator */}
+            <div ref={sentinelRef} className="h-1" aria-hidden="true" />
+            {loadingMore && (
+              <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
+                <Loader2 size={14} className="animate-spin" /> Loading more…
+              </div>
+            )}
+            {!hasMore && rows.length >= PAGE_SIZE && (
+              <p className="text-center text-[10px] text-muted-foreground uppercase tracking-wider py-3">
+                · End of leaderboard ·
+              </p>
+            )}
           </>
         )}
       </div>

@@ -1,14 +1,16 @@
 // Category Leaderboard — /leaderboard/c/:mainSlug
 // Phase 3: Category + Topic, location + time scoped rankings.
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
-import { Crown, ArrowUp, ArrowDown, Minus, Globe2, MapPin, Building2, Trophy } from "lucide-react";
+import { Crown, ArrowUp, ArrowDown, Minus, Globe2, MapPin, Building2, Trophy, Loader2 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
+
+const PAGE_SIZE = 50;
 
 type Period = "day" | "week" | "month" | "all";
 type Scope = "global" | "country" | "state" | "city";
@@ -55,6 +57,8 @@ export default function CategoryLeaderboard() {
   const [subs, setSubs] = useState<Subcategory[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   const main = useMemo(() => mains.find((m) => m.slug === mainSlug), [mains, mainSlug]);
   const topicSub = useMemo(
@@ -86,23 +90,60 @@ export default function CategoryLeaderboard() {
     fetchSubcategories().then(setSubs);
   }, []);
 
-  useEffect(() => {
-    if (!mainSlug) return;
-    if (scope !== "global" && !scopeValue) { setRows([]); setLoading(false); return; }
-    setLoading(true);
-    (supabase.rpc as any)("get_category_leaderboard", {
+  const fetchPage = useCallback(async (limit: number): Promise<Row[] | null> => {
+    const { data, error } = await (supabase.rpc as any)("get_category_leaderboard", {
       _main_slug: mainSlug,
       _sub_slug: topic || null,
       _scope_type: scope,
       _scope_value: scopeValue,
       _period: period,
-      _limit: 100,
-    }).then(({ data, error }: { data: Row[] | null; error: { message: string } | null }) => {
-      if (error) console.error("[leaderboard]", error.message);
-      setRows((data as Row[]) || []);
+      _limit: limit,
+    });
+    if (error) { console.error("[leaderboard]", error.message); return null; }
+    return (data as Row[]) || [];
+  }, [mainSlug, topic, scope, scopeValue, period]);
+
+  // First page on filter change
+  useEffect(() => {
+    if (!mainSlug) return;
+    if (scope !== "global" && !scopeValue) { setRows([]); setLoading(false); setHasMore(false); return; }
+    let cancelled = false;
+    setLoading(true);
+    setHasMore(true);
+    fetchPage(PAGE_SIZE).then((data) => {
+      if (cancelled) return;
+      const arr = data ?? [];
+      setRows(arr);
+      setHasMore(arr.length === PAGE_SIZE);
       setLoading(false);
     });
-  }, [mainSlug, topic, scope, scopeValue, period]);
+    return () => { cancelled = true; };
+  }, [mainSlug, scope, scopeValue, fetchPage]);
+
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    // RPC has no offset param; request a larger window and slice.
+    // Server-side sort is stable on (score desc, user_id) so re-fetching is safe.
+    const nextLimit = rows.length + PAGE_SIZE;
+    const data = await fetchPage(nextLimit);
+    if (data) {
+      setRows(data);
+      setHasMore(data.length === nextLimit);
+    }
+    setLoadingMore(false);
+  }, [fetchPage, rows.length, loading, loadingMore, hasMore]);
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) loadMore();
+    }, { rootMargin: "400px 0px" });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loadMore]);
 
   const updateParam = (key: string, val: string) => {
     const next = new URLSearchParams(params);
@@ -208,7 +249,7 @@ export default function CategoryLeaderboard() {
             </Link>
           </div>
         ) : (
-          
+          <>
             <ul className="space-y-2">
               {rows.map((r) => {
                 const delta = r.prev_rank == null ? 0 : r.prev_rank - r.rank;
@@ -251,7 +292,18 @@ export default function CategoryLeaderboard() {
                 );
               })}
             </ul>
-          
+            <div ref={sentinelRef} className="h-1" aria-hidden="true" />
+            {loadingMore && (
+              <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
+                <Loader2 size={14} className="animate-spin" /> Loading more…
+              </div>
+            )}
+            {!hasMore && rows.length >= PAGE_SIZE && (
+              <p className="text-center text-[10px] text-muted-foreground uppercase tracking-wider py-3">
+                · End of leaderboard ·
+              </p>
+            )}
+          </>
         )}
       </div>
     </AppShell>
