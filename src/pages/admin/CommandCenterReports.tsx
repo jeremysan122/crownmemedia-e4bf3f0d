@@ -105,40 +105,66 @@ export default function CommandCenterReports() {
     setDetailLoading(false);
   };
 
-  const onResolve = async (r: ReportRow) => {
+  const onResolve = (r: ReportRow) => {
     if (!roles.canResolveReports) { toast.error("Not authorized"); return; }
-    const note = window.prompt("Resolution notes:", "Reviewed; no action needed.");
-    if (!note) return;
-    try { await resolveReport(r.id, note); toast.success("Report resolved"); }
-    catch (e: any) { toast.error(e.message ?? "Failed"); }
+    setPending({ kind: "resolve", report: r });
   };
-  const onDismiss = async (r: ReportRow) => {
+  const onDismiss = (r: ReportRow) => {
     if (!roles.canDismissReports) { toast.error("Not authorized"); return; }
-    const note = window.prompt("Dismiss reason:", "Not a violation");
-    if (!note) return;
-    try { await dismissReport(r.id, note); toast.success("Report dismissed"); }
-    catch (e: any) { toast.error(e.message ?? "Failed"); }
+    setPending({ kind: "dismiss", report: r });
   };
-  const onRemoveContent = async (r: ReportRow) => {
+  const onRemoveContent = (r: ReportRow) => {
     if (!roles.canResolveReports) { toast.error("Not authorized"); return; }
     if (!r.post_id && !r.comment_id) { toast.error("No content target"); return; }
-    if (!window.confirm("Remove this content and resolve report?")) return;
-    try {
-      if (r.post_id) await removePost(r.post_id, r.reason || "Reported content");
-      else if (r.comment_id) await removeComment(r.comment_id, r.reason || "Reported content");
-      await resolveReport(r.id, "Content removed by moderator");
-      toast.success("Content removed & report resolved");
-    } catch (e: any) { toast.error(e.message ?? "Failed"); }
+    setPending({ kind: "remove", report: r });
   };
-  const onSuspendUser = async (r: ReportRow) => {
+  const onSuspendUser = (r: ReportRow) => {
     if (!roles.canSuspend) { toast.error("Not authorized"); return; }
     if (!r.reported_user_id) { toast.error("No user target"); return; }
-    if (!window.confirm("Suspend reported user?")) return;
+    setPending({ kind: "suspend", report: r });
+  };
+  const onBanUser = (r: ReportRow) => {
+    if (!roles.canBan) { toast.error("Not authorized"); return; }
+    if (!r.reported_user_id) { toast.error("No user target"); return; }
+    setPending({ kind: "ban", report: r });
+  };
+
+  const runPending = async (reason: string) => {
+    if (!pending) return;
+    const r = pending.report;
     try {
-      await suspendUser(r.reported_user_id, r.reason || "Reported user");
-      await resolveReport(r.id, "User suspended");
-      toast.success("User suspended & report resolved");
-    } catch (e: any) { toast.error(e.message ?? "Failed"); }
+      if (pending.kind === "resolve") {
+        await resolveReport(r.id, reason);
+        toast.success("Report resolved");
+      } else if (pending.kind === "dismiss") {
+        await dismissReport(r.id, reason);
+        toast.success("Report dismissed");
+      } else if (pending.kind === "remove") {
+        if (r.post_id) await removePost(r.post_id, reason);
+        else if (r.comment_id) await removeComment(r.comment_id, reason);
+        await resolveReport(r.id, `Content removed: ${reason}`);
+        toast.success("Content removed & report resolved");
+      } else if (pending.kind === "suspend") {
+        await suspendUser(r.reported_user_id!, reason);
+        await resolveReport(r.id, `User suspended: ${reason}`);
+        toast.success("User suspended & report resolved");
+      } else if (pending.kind === "ban") {
+        await banUser(r.reported_user_id!, reason);
+        await resolveReport(r.id, `User banned: ${reason}`);
+        toast.success("User banned & report resolved");
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed");
+      throw e; // keep dialog open on failure
+    }
+  };
+
+  const pendingCopy: Record<PendingAction["kind"], { title: string; desc: string; confirm: string; destructive: boolean; defaultReason: string }> = {
+    resolve: { title: "Resolve report", desc: "Mark this report as resolved with a note visible in the audit log.", confirm: "Resolve", destructive: false, defaultReason: "Reviewed; no action needed." },
+    dismiss: { title: "Dismiss report", desc: "Dismiss without further action. Reason recorded in the audit log.", confirm: "Dismiss", destructive: false, defaultReason: "Not a violation." },
+    remove: { title: "Remove content", desc: "Remove the reported content and resolve the report.", confirm: "Remove content", destructive: true, defaultReason: pending?.report.reason || "" },
+    suspend: { title: "Suspend user", desc: "Temporarily suspend the reported user and resolve the report.", confirm: "Suspend user", destructive: true, defaultReason: pending?.report.reason || "" },
+    ban: { title: "Ban user (permanent)", desc: "Permanently ban the reported user. This writes to the admin audit log.", confirm: "Ban user", destructive: true, defaultReason: pending?.report.reason || "" },
   };
 
   return (
