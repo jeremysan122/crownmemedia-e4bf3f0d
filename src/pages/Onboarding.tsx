@@ -45,11 +45,6 @@ export default function Onboarding() {
     }
   };
 
-  const goNext = () => {
-    const idx = STEPS.indexOf(step);
-    if (idx < STEPS.length - 1) setStep(STEPS[idx + 1]);
-    else finish();
-  };
 
   const finish = async () => {
     setBusy(true);
