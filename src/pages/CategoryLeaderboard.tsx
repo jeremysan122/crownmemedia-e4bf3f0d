@@ -1,14 +1,16 @@
 // Category Leaderboard — /leaderboard/c/:mainSlug
 // Phase 3: Category + Topic, location + time scoped rankings.
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
-import { Crown, ArrowUp, ArrowDown, Minus, Globe2, MapPin, Building2, Trophy } from "lucide-react";
+import { Crown, ArrowUp, ArrowDown, Minus, Globe2, MapPin, Building2, Trophy, Loader2 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
+
+const PAGE_SIZE = 50;
 
 type Period = "day" | "week" | "month" | "all";
 type Scope = "global" | "country" | "state" | "city";
