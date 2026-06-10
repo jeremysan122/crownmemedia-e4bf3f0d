@@ -249,7 +249,7 @@ export default function CategoryLeaderboard() {
             </Link>
           </div>
         ) : (
-          
+          <>
             <ul className="space-y-2">
               {rows.map((r) => {
                 const delta = r.prev_rank == null ? 0 : r.prev_rank - r.rank;
