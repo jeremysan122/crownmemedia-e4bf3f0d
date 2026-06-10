@@ -235,7 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signOut, refreshProfile, isModerator, isAdmin, ageConfirmed, needsOnboarding, markOnboarded }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signOut, refreshProfile, isModerator, isAdmin, ageConfirmed, needsOnboarding, markOnboarded, onboardingStep, setOnboardingStep }}>
       {children}
     </AuthContext.Provider>
   );
@@ -253,6 +253,8 @@ const AUTH_FALLBACK: AuthContextValue = {
   ageConfirmed: null,
   needsOnboarding: false,
   markOnboarded: async () => {},
+  onboardingStep: 0,
+  setOnboardingStep: async () => {},
 };
 
 export function useAuth() {
