@@ -92,7 +92,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const markOnboarded = async () => {
     if (!user) return;
-    await supabase.from("profiles_private").update({ onboarded_at: new Date().toISOString() }).eq("id", user.id);
+    const stamp = new Date().toISOString();
+    // Upsert so a missing private row can't silently fail the UPDATE and
+    // leave needsOnboarding=true, which would bounce the user back to
+    // /onboarding on the next route guard check.
+    const { error } = await supabase
+      .from("profiles_private")
+      .upsert({ id: user.id, onboarded_at: stamp }, { onConflict: "id" });
+    if (error) {
+      console.error("[AuthContext] markOnboarded failed:", error);
+      throw error;
+    }
     setNeedsOnboarding(false);
   };
 

@@ -37,9 +37,14 @@ export default function Onboarding() {
     setBusy(true);
     try {
       await markOnboarded();
-      await refreshProfile();
       toast.success("You're all set");
+      // Navigate before refreshing the profile — refreshProfile re-reads
+      // profiles_private and a race against replication could momentarily
+      // flip needsOnboarding back to true, bouncing us back to step 1.
       nav("/feed", { replace: true });
+      refreshProfile().catch(() => { /* noop */ });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't finish setup");
     } finally {
       setBusy(false);
     }
