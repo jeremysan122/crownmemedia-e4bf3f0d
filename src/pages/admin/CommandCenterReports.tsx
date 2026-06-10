@@ -213,6 +213,9 @@ export default function CommandCenterReports() {
                     {r.reported_user_id && roles.canSuspend && (
                       <Button size="sm" variant="destructive" className="h-7 text-[10px]" onClick={() => onSuspendUser(r)}>Suspend user</Button>
                     )}
+                    {r.reported_user_id && roles.canBan && (
+                      <Button size="sm" variant="destructive" className="h-7 text-[10px]" onClick={() => onBanUser(r)}>Ban user</Button>
+                    )}
                     {roles.canResolveReports && <Button size="sm" className="h-7 text-[10px]" onClick={() => onResolve(r)}>Resolve</Button>}
                     {roles.canDismissReports && <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => onDismiss(r)}>Dismiss</Button>}
                     <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => openDrawer(r)}>Details</Button>
