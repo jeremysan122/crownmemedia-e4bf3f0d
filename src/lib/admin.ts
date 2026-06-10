@@ -392,6 +392,8 @@ export async function banUser(userId: string, reason: string) {
     })
     .eq("id", userId);
   if (error) throw error;
+  // Ban is the most severe user action — always write an audit entry.
+  await logAdminAction("ban_user", "user", userId, { reason });
 }
 
 export async function unbanUser(userId: string) {
@@ -406,6 +408,7 @@ export async function unbanUser(userId: string) {
     })
     .eq("id", userId);
   if (error) throw error;
+  await logAdminAction("unban_user", "user", userId, {});
 }
 
 // ---------- Reports ----------

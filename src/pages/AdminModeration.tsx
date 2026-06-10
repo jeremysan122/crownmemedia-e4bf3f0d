@@ -7,6 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Navigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/crown";
+import { banUser } from "@/lib/admin";
+import { useAdminRoles } from "@/hooks/useAdminRoles";
+import { ModerationReasonDialog } from "@/components/admin/ModerationReasonDialog";
 import { Ban, Flag, Shield, RefreshCw, Gavel, Paperclip, ExternalLink, Loader2 } from "lucide-react";
 
 interface BlockRow {
@@ -26,6 +29,7 @@ interface ReportRow {
   post_id: string | null;
   comment_id: string | null;
   reporter_id: string;
+  reported_user_id: string | null;
   mod_notes: string | null;
   evidence_paths: string[] | null;
   reporter?: { username: string } | null;
@@ -163,41 +167,58 @@ function EvidenceLinks({ paths }: { paths: string[] | null }) {
 
 export default function AdminModeration() {
   const { isModerator, loading } = useAuth();
+  const roles = useAdminRoles();
   const [tab, setTab] = useState<TabKey>("reports");
+  const [reportStatusFilter, setReportStatusFilter] = useState<"open" | "all">("open");
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [appeals, setAppeals] = useState<AppealRow[]>([]);
   const [blocks, setBlocks] = useState<BlockRow[]>([]);
   const [notesById, setNotesById] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [banTarget, setBanTarget] = useState<{ reportId: string; userId: string; reason: string } | null>(null);
 
   const load = async () => {
-    const [r, a, b] = await Promise.all([
-      supabase
-        .from("reports")
-        .select("id, created_at, reason, reason_code, status, post_id, comment_id, reporter_id, mod_notes, evidence_paths, reporter:profiles!reports_reporter_id_fkey(username)")
-        .order("created_at", { ascending: false })
-        .limit(150),
-      supabase
-        .from("report_appeals")
-        .select("id, created_at, status, body, mod_notes, user_id, report_id, evidence_paths")
-        .order("created_at", { ascending: false })
-        .limit(150),
-      supabase
-        .from("blocks")
-        .select("id, created_at, blocker_id, blocked_id, blocker:profiles!blocks_blocker_id_fkey(username), blocked:profiles!blocks_blocked_id_fkey(username)")
-        .order("created_at", { ascending: false })
-        .limit(200),
-    ]);
-    setReports((r.data as unknown as ReportRow[]) || []);
-    const appealRows = (a.data as unknown as AppealRow[]) || [];
-    const userIds = Array.from(new Set(appealRows.map((x) => x.user_id)));
-    if (userIds.length) {
-      const { data: profs } = await supabase.from("profiles").select("id,username").in("id", userIds);
-      const map = new Map((profs ?? []).map((p) => [p.id, p.username]));
-      appealRows.forEach((x) => { x.user = { username: map.get(x.user_id) ?? x.user_id.slice(0, 8) }; });
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const [r, a, b] = await Promise.all([
+        supabase
+          .from("reports")
+          .select("id, created_at, reason, reason_code, status, post_id, comment_id, reporter_id, mod_notes, evidence_paths, reporter:profiles!reports_reporter_id_fkey(username), reported_user_id")
+          .order("created_at", { ascending: false })
+          .limit(150),
+        supabase
+          .from("report_appeals")
+          .select("id, created_at, status, body, mod_notes, user_id, report_id, evidence_paths")
+          .order("created_at", { ascending: false })
+          .limit(150),
+        supabase
+          .from("blocks")
+          .select("id, created_at, blocker_id, blocked_id, blocker:profiles!blocks_blocker_id_fkey(username), blocked:profiles!blocks_blocked_id_fkey(username)")
+          .order("created_at", { ascending: false })
+          .limit(200),
+      ]);
+      if (r.error) throw r.error;
+      if (a.error) throw a.error;
+      if (b.error) throw b.error;
+      setReports((r.data as unknown as ReportRow[]) || []);
+      const appealRows = (a.data as unknown as AppealRow[]) || [];
+      const userIds = Array.from(new Set(appealRows.map((x) => x.user_id)));
+      if (userIds.length) {
+        const { data: profs } = await supabase.from("profiles").select("id,username").in("id", userIds);
+        const map = new Map((profs ?? []).map((p) => [p.id, p.username]));
+        appealRows.forEach((x) => { x.user = { username: map.get(x.user_id) ?? x.user_id.slice(0, 8) }; });
+      }
+      setAppeals(appealRows);
+      setBlocks((b.data as unknown as BlockRow[]) || []);
+    } catch (e: any) {
+      setLoadError(e?.message ?? "Failed to load moderation queue");
+      toast.error(e?.message ?? "Failed to load moderation queue");
+    } finally {
+      setIsLoading(false);
     }
-    setAppeals(appealRows);
-    setBlocks((b.data as unknown as BlockRow[]) || []);
   };
   useEffect(() => {
     if (isModerator) load();
@@ -210,6 +231,11 @@ export default function AdminModeration() {
       blocks: blocks.length,
     }),
     [reports, appeals, blocks],
+  );
+
+  const visibleReports = useMemo(
+    () => reportStatusFilter === "open" ? reports.filter((r) => r.status === "open") : reports,
+    [reports, reportStatusFilter],
   );
 
   if (loading) return <AppShell><div className="py-20 text-center">Loading…</div></AppShell>;
@@ -279,10 +305,17 @@ export default function AdminModeration() {
         <div className="flex items-center gap-2">
           <Shield size={18} className="text-primary" />
           <h1 className="font-display text-xl text-gold">Moderation Queue</h1>
-          <Button size="sm" variant="ghost" onClick={load} className="ml-auto">
-            <RefreshCw size={14} />
+          <Button size="sm" variant="ghost" onClick={load} className="ml-auto" disabled={isLoading} aria-label="Refresh">
+            {isLoading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
           </Button>
         </div>
+
+        {loadError && (
+          <div className="rounded border border-destructive/40 bg-destructive/10 text-destructive text-xs px-3 py-2 flex items-center justify-between gap-2">
+            <span>Failed to load: {loadError}</span>
+            <Button size="sm" variant="outline" onClick={load} className="h-6 text-[10px]">Retry</Button>
+          </div>
+        )}
 
         <div className="flex gap-1 text-[11px]">
           {(["reports", "appeals", "blocks"] as const).map((t) => (
@@ -300,7 +333,25 @@ export default function AdminModeration() {
           ))}
         </div>
 
-        {tab === "reports" && reports.map((r) => (
+        {tab === "reports" && (
+          <div className="flex gap-1 text-[10px]">
+            {(["open", "all"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setReportStatusFilter(f)}
+                className={`px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
+                  reportStatusFilter === f
+                    ? "bg-secondary text-foreground border border-primary/40"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {f === "open" ? `Open (${openCounts.reports})` : `All (${reports.length})`}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab === "reports" && visibleReports.map((r) => (
           <div key={r.id} className="royal-card p-3 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1 text-primary">
@@ -342,13 +393,25 @@ export default function AdminModeration() {
                       {o.label}
                     </Button>
                   ))}
+                  {r.reported_user_id && roles.canBan && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={busyId === r.id}
+                      onClick={() => setBanTarget({ reportId: r.id, userId: r.reported_user_id!, reason: r.reason || "" })}
+                    >
+                      <Ban size={12} className="mr-1" /> Ban user
+                    </Button>
+                  )}
                 </div>
               </>
             )}
           </div>
         ))}
-        {tab === "reports" && !reports.length && (
-          <p className="text-center text-sm text-muted-foreground py-10">No reports yet.</p>
+        {tab === "reports" && !visibleReports.length && (
+          <p className="text-center text-sm text-muted-foreground py-10">
+            {reportStatusFilter === "open" ? "No open reports. Nice." : "No reports yet."}
+          </p>
         )}
 
         {tab === "appeals" && appeals.map((a) => (
@@ -425,6 +488,39 @@ export default function AdminModeration() {
           <p className="text-center text-sm text-muted-foreground py-10">No blocks recorded.</p>
         )}
       </div>
+
+      {banTarget && (
+        <ModerationReasonDialog
+          open={!!banTarget}
+          onOpenChange={(o) => { if (!o) setBanTarget(null); }}
+          title="Ban user (permanent)"
+          description="This permanently bans the reported user and writes to the admin audit log. The linked report will be marked action_taken."
+          confirmLabel="Ban user"
+          destructive
+          defaultReason={banTarget.reason}
+          onConfirm={async (reason) => {
+            setBusyId(banTarget.reportId);
+            try {
+              await banUser(banTarget.userId, reason);
+              await supabase
+                .from("reports")
+                .update({
+                  status: "action_taken" as "open" | "resolved" | "dismissed",
+                  mod_notes: `Banned: ${reason}`,
+                  resolved_at: new Date().toISOString(),
+                })
+                .eq("id", banTarget.reportId);
+              toast.success("User banned & report closed");
+              load();
+            } catch (e: any) {
+              toast.error(e?.message ?? "Ban failed");
+              throw e;
+            } finally {
+              setBusyId(null);
+            }
+          }}
+        />
+      )}
     </AppShell>
   );
 }
