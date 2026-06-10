@@ -292,7 +292,18 @@ export default function CategoryLeaderboard() {
                 );
               })}
             </ul>
-          
+            <div ref={sentinelRef} className="h-1" aria-hidden="true" />
+            {loadingMore && (
+              <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
+                <Loader2 size={14} className="animate-spin" /> Loading more…
+              </div>
+            )}
+            {!hasMore && rows.length >= PAGE_SIZE && (
+              <p className="text-center text-[10px] text-muted-foreground uppercase tracking-wider py-3">
+                · End of leaderboard ·
+              </p>
+            )}
+          </>
         )}
       </div>
     </AppShell>
