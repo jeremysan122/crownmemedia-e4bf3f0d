@@ -42,6 +42,14 @@ export default function CommandCenterReports() {
   const [history, setHistory] = useState<AuditLite[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  type PendingAction =
+    | { kind: "resolve"; report: ReportRow }
+    | { kind: "dismiss"; report: ReportRow }
+    | { kind: "remove"; report: ReportRow }
+    | { kind: "suspend"; report: ReportRow }
+    | { kind: "ban"; report: ReportRow };
+  const [pending, setPending] = useState<PendingAction | null>(null);
+
   const roles = useAdminRoles();
 
   const load = async () => {
