@@ -408,8 +408,10 @@ export default function AdminModeration() {
             )}
           </div>
         ))}
-        {tab === "reports" && !reports.length && (
-          <p className="text-center text-sm text-muted-foreground py-10">No reports yet.</p>
+        {tab === "reports" && !visibleReports.length && (
+          <p className="text-center text-sm text-muted-foreground py-10">
+            {reportStatusFilter === "open" ? "No open reports. Nice." : "No reports yet."}
+          </p>
         )}
 
         {tab === "appeals" && appeals.map((a) => (
