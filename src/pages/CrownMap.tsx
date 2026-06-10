@@ -1318,7 +1318,17 @@ function MapView({
     map.on("error", (e: any) => {
       const status = e?.error?.status ?? e?.status;
       if (status === 401 || status === 403) {
-        setMapAuthError(true);
+        // Try a one-shot refresh of the Mapbox token before giving up — the
+        // current value may simply have expired. The map effect re-runs when
+        // `tokenVersion` changes, so a fresh token rebuilds the map cleanly.
+        if (refreshAttemptedRef.current !== tokenVersion) {
+          refreshAttemptedRef.current = tokenVersion;
+          refreshToken().then((t) => {
+            if (!t) setMapAuthError(true);
+          }).catch(() => setMapAuthError(true));
+        } else {
+          setMapAuthError(true);
+        }
       }
     });
     map.on("style.load", () => {
