@@ -216,6 +216,10 @@ export default function Battles() {
       toast.info("Can't vote in your own battle"); return;
     }
 
+    // Guard against rapid double-tap: drop subsequent calls until this vote resolves.
+    if (inFlightVotes.current.has(b.id)) return;
+    inFlightVotes.current.add(b.id);
+
     // optimistic + haptic confirm
     haptic("success");
     const isC = forUserId === b.challenger_id;
@@ -230,6 +234,7 @@ export default function Battles() {
     const { error } = await supabase.from("battle_votes").insert({
       battle_id: b.id, user_id: user.id, voted_for_user_id: forUserId,
     });
+    inFlightVotes.current.delete(b.id);
     if (error) {
       // rollback
       haptic("error");
