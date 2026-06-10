@@ -29,6 +29,7 @@ interface ReportRow {
   post_id: string | null;
   comment_id: string | null;
   reporter_id: string;
+  reported_user_id: string | null;
   mod_notes: string | null;
   evidence_paths: string[] | null;
   reporter?: { username: string } | null;
