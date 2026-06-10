@@ -343,6 +343,9 @@ export default function CommandCenterReports() {
                     {selected.reported_user_id && roles.canSuspend && (
                       <Button size="sm" variant="destructive" className="flex-1 min-w-[100px]" onClick={() => onSuspendUser(selected)}>Suspend user</Button>
                     )}
+                    {selected.reported_user_id && roles.canBan && (
+                      <Button size="sm" variant="destructive" className="flex-1 min-w-[100px]" onClick={() => onBanUser(selected)}>Ban user</Button>
+                    )}
                     {!roles.canResolveReports && !roles.canDismissReports && (
                       <p className="text-[10px] text-muted-foreground w-full text-center">You don't have permission to act on reports.</p>
                     )}
@@ -353,6 +356,19 @@ export default function CommandCenterReports() {
           ) : null}
         </SheetContent>
       </Sheet>
+
+      {pending && (
+        <ModerationReasonDialog
+          open={!!pending}
+          onOpenChange={(o) => { if (!o) setPending(null); }}
+          title={pendingCopy[pending.kind].title}
+          description={pendingCopy[pending.kind].desc}
+          confirmLabel={pendingCopy[pending.kind].confirm}
+          destructive={pendingCopy[pending.kind].destructive}
+          defaultReason={pendingCopy[pending.kind].defaultReason}
+          onConfirm={runPending}
+        />
+      )}
     </div>
   );
 }
