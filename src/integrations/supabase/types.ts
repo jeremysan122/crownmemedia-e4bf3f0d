@@ -1126,6 +1126,33 @@ export type Database = {
         }
         Relationships: []
       }
+      cron_error_log: {
+        Row: {
+          context: Json
+          created_at: string
+          error_message: string | null
+          id: string
+          job_name: string
+          sqlstate: string | null
+        }
+        Insert: {
+          context?: Json
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_name: string
+          sqlstate?: string | null
+        }
+        Update: {
+          context?: Json
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_name?: string
+          sqlstate?: string | null
+        }
+        Relationships: []
+      }
       crowns: {
         Row: {
           active: boolean
