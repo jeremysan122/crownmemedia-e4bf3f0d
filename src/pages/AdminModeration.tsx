@@ -488,6 +488,39 @@ export default function AdminModeration() {
           <p className="text-center text-sm text-muted-foreground py-10">No blocks recorded.</p>
         )}
       </div>
+
+      {banTarget && (
+        <ModerationReasonDialog
+          open={!!banTarget}
+          onOpenChange={(o) => { if (!o) setBanTarget(null); }}
+          title="Ban user (permanent)"
+          description="This permanently bans the reported user and writes to the admin audit log. The linked report will be marked action_taken."
+          confirmLabel="Ban user"
+          destructive
+          defaultReason={banTarget.reason}
+          onConfirm={async (reason) => {
+            setBusyId(banTarget.reportId);
+            try {
+              await banUser(banTarget.userId, reason);
+              await supabase
+                .from("reports")
+                .update({
+                  status: "action_taken" as "open" | "resolved" | "dismissed",
+                  mod_notes: `Banned: ${reason}`,
+                  resolved_at: new Date().toISOString(),
+                })
+                .eq("id", banTarget.reportId);
+              toast.success("User banned & report closed");
+              load();
+            } catch (e: any) {
+              toast.error(e?.message ?? "Ban failed");
+              throw e;
+            } finally {
+              setBusyId(null);
+            }
+          }}
+        />
+      )}
     </AppShell>
   );
 }
