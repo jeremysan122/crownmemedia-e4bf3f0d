@@ -147,11 +147,37 @@ export default function Battles() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, region, category, sort, query, hub, topic]);
 
-  // Realtime subscription on battles + battle_votes
+  // Realtime subscription on battles + battle_votes.
+  // - battles UPDATE: surgical merge of payload.new into the existing row (no full reload),
+  //   and detect a fresh status transition into "completed" so WinnerReveal fires confetti live.
+  // - battles INSERT: prepend the new row (kept light — full hydration of related profiles/posts
+  //   comes from a background load so the row is not stuck without media).
+  // - battles DELETE: remove the row.
+  // - battle_votes INSERT: merge +1 onto the relevant side, but ignore the voter's own event
+  //   because vote() already applied the optimistic increment (avoids +2 double-count).
   useEffect(() => {
     const ch = supabase.channel("battles-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "battles" }, () => load())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "battles" }, (payload: any) => {
+        const row = payload.new as Battle;
+        setBattles((prev) => prev.map((b) => b.id === row.id ? { ...b, ...row } : b));
+        const prev = prevStatusRef.current[row.id];
+        if (prev && prev.status !== "completed" && row.status === "completed" && row.winner_id) {
+          setFreshWins((s) => { const n = new Set(s); n.add(row.id); return n; });
+        }
+        prevStatusRef.current[row.id] = { status: row.status, winner: row.winner_id };
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "battles" }, () => {
+        // New battles need related profiles/posts joined — a single targeted reload is cheaper
+        // and rarer than an UPDATE flood, and it avoids rendering a row with null relations.
+        load();
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "battles" }, (payload: any) => {
+        const id = (payload.old as { id?: string } | null)?.id;
+        if (id) setBattles((prev) => prev.filter((b) => b.id !== id));
+      })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "battle_votes" }, (payload: any) => {
+        // Skip the voter's own event — vote() already applied an optimistic increment.
+        if (user && payload.new.user_id === user.id) return;
         setBattles((prev) => prev.map((b) => {
           if (b.id !== payload.new.battle_id) return b;
           const isC = payload.new.voted_for_user_id === b.challenger_id;
@@ -165,7 +191,7 @@ export default function Battles() {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.id]);
 
   const triggerBurst = (battleId: string, side: string) => {
     setBurstMap((m) => ({ ...m, [battleId]: side }));
