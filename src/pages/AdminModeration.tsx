@@ -166,41 +166,58 @@ function EvidenceLinks({ paths }: { paths: string[] | null }) {
 
 export default function AdminModeration() {
   const { isModerator, loading } = useAuth();
+  const roles = useAdminRoles();
   const [tab, setTab] = useState<TabKey>("reports");
+  const [reportStatusFilter, setReportStatusFilter] = useState<"open" | "all">("open");
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [appeals, setAppeals] = useState<AppealRow[]>([]);
   const [blocks, setBlocks] = useState<BlockRow[]>([]);
   const [notesById, setNotesById] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [banTarget, setBanTarget] = useState<{ reportId: string; userId: string; reason: string } | null>(null);
 
   const load = async () => {
-    const [r, a, b] = await Promise.all([
-      supabase
-        .from("reports")
-        .select("id, created_at, reason, reason_code, status, post_id, comment_id, reporter_id, mod_notes, evidence_paths, reporter:profiles!reports_reporter_id_fkey(username)")
-        .order("created_at", { ascending: false })
-        .limit(150),
-      supabase
-        .from("report_appeals")
-        .select("id, created_at, status, body, mod_notes, user_id, report_id, evidence_paths")
-        .order("created_at", { ascending: false })
-        .limit(150),
-      supabase
-        .from("blocks")
-        .select("id, created_at, blocker_id, blocked_id, blocker:profiles!blocks_blocker_id_fkey(username), blocked:profiles!blocks_blocked_id_fkey(username)")
-        .order("created_at", { ascending: false })
-        .limit(200),
-    ]);
-    setReports((r.data as unknown as ReportRow[]) || []);
-    const appealRows = (a.data as unknown as AppealRow[]) || [];
-    const userIds = Array.from(new Set(appealRows.map((x) => x.user_id)));
-    if (userIds.length) {
-      const { data: profs } = await supabase.from("profiles").select("id,username").in("id", userIds);
-      const map = new Map((profs ?? []).map((p) => [p.id, p.username]));
-      appealRows.forEach((x) => { x.user = { username: map.get(x.user_id) ?? x.user_id.slice(0, 8) }; });
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const [r, a, b] = await Promise.all([
+        supabase
+          .from("reports")
+          .select("id, created_at, reason, reason_code, status, post_id, comment_id, reporter_id, mod_notes, evidence_paths, reporter:profiles!reports_reporter_id_fkey(username), reported_user_id")
+          .order("created_at", { ascending: false })
+          .limit(150),
+        supabase
+          .from("report_appeals")
+          .select("id, created_at, status, body, mod_notes, user_id, report_id, evidence_paths")
+          .order("created_at", { ascending: false })
+          .limit(150),
+        supabase
+          .from("blocks")
+          .select("id, created_at, blocker_id, blocked_id, blocker:profiles!blocks_blocker_id_fkey(username), blocked:profiles!blocks_blocked_id_fkey(username)")
+          .order("created_at", { ascending: false })
+          .limit(200),
+      ]);
+      if (r.error) throw r.error;
+      if (a.error) throw a.error;
+      if (b.error) throw b.error;
+      setReports((r.data as unknown as ReportRow[]) || []);
+      const appealRows = (a.data as unknown as AppealRow[]) || [];
+      const userIds = Array.from(new Set(appealRows.map((x) => x.user_id)));
+      if (userIds.length) {
+        const { data: profs } = await supabase.from("profiles").select("id,username").in("id", userIds);
+        const map = new Map((profs ?? []).map((p) => [p.id, p.username]));
+        appealRows.forEach((x) => { x.user = { username: map.get(x.user_id) ?? x.user_id.slice(0, 8) }; });
+      }
+      setAppeals(appealRows);
+      setBlocks((b.data as unknown as BlockRow[]) || []);
+    } catch (e: any) {
+      setLoadError(e?.message ?? "Failed to load moderation queue");
+      toast.error(e?.message ?? "Failed to load moderation queue");
+    } finally {
+      setIsLoading(false);
     }
-    setAppeals(appealRows);
-    setBlocks((b.data as unknown as BlockRow[]) || []);
   };
   useEffect(() => {
     if (isModerator) load();
@@ -213,6 +230,11 @@ export default function AdminModeration() {
       blocks: blocks.length,
     }),
     [reports, appeals, blocks],
+  );
+
+  const visibleReports = useMemo(
+    () => reportStatusFilter === "open" ? reports.filter((r) => r.status === "open") : reports,
+    [reports, reportStatusFilter],
   );
 
   if (loading) return <AppShell><div className="py-20 text-center">Loading…</div></AppShell>;
