@@ -218,10 +218,17 @@ export default function CrownMap() {
     setLoading(true);
     const from = nextPage * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
+    const holder = holderQ.trim().toLowerCase().replace(/^@/, "");
+    // Use an inner join when filtering by holder so pagination doesn't drop matches
+    // that live on later pages. Without `!inner`, the embedded profile filter would
+    // only narrow the embedded select — the parent row would still come back.
+    const joinSpec = holder
+      ? "profile:profiles!crowns_user_id_fkey!inner(username, profile_photo_url)"
+      : "profile:profiles!crowns_user_id_fkey(username, profile_photo_url)";
     let q = supabase
       .from("crowns")
       .select(
-        "region_name, region_type, user_id, post_id, crown_score, category, profile:profiles!crowns_user_id_fkey(username, profile_photo_url)",
+        `region_name, region_type, user_id, post_id, crown_score, category, ${joinSpec}`,
         { count: "exact" },
       )
       .eq("active", true)
@@ -235,12 +242,11 @@ export default function CrownMap() {
     if (mineOnly && user) q = q.eq("user_id", user.id);
     const min = parseFloat(minScore);
     if (!isNaN(min) && min > 0) q = q.gte("crown_score", min);
+    if (holder) q = q.ilike("profile.username", `%${holder}%`);
 
     const { data, count, error } = await q.order("crown_score", { ascending: false }).range(from, to);
 
-    let rows: Row[] = (!error ? ((data as any) || []) : []);
-    const holder = holderQ.trim().toLowerCase().replace(/^@/, "");
-    if (holder) rows = rows.filter((r) => r.profile?.username?.toLowerCase().includes(holder));
+    const rows: Row[] = (!error ? ((data as any) || []) : []);
 
     if (!error) {
       setRegions((prev) => (replace ? rows : [...prev, ...rows]));
