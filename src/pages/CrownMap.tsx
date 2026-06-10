@@ -1351,7 +1351,7 @@ function MapView({
       map.remove();
       mapRef.current = null;
     };
-  }, [token]);
+  }, [token, tokenVersion]);
 
   // Render markers whenever points / mode / category change
   useEffect(() => {
