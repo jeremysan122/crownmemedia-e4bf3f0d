@@ -38,6 +38,8 @@ interface AuthContextValue {
   ageConfirmed: boolean | null;
   needsOnboarding: boolean;
   markOnboarded: () => Promise<void>;
+  onboardingStep: number;
+  setOnboardingStep: (step: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
