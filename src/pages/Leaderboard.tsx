@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CATEGORIES, CATEGORY_LABEL, CrownCategory, formatScore, locationLabel } from "@/lib/crown";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { Crown, MapPin, Users, Globe2, Building2 } from "lucide-react";
+import { Crown, MapPin, Users, Globe2, Building2, Loader2 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import MyRankCard from "@/components/MyRankCard";
 import { rankBadgeLabel } from "@/lib/rankTitle";
@@ -16,6 +16,8 @@ import { POST_SELECT } from "@/lib/postQuery";
 import { trackUsage } from "@/lib/usageTrack";
 import SensitiveThumb from "@/components/SensitiveThumb";
 import { useFeedFilters } from "@/hooks/useFeedFilters";
+
+const PAGE_SIZE = 30;
 
 type Scope = "nearby" | "city" | "state" | "country" | "global" | "following";
 
