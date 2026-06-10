@@ -2751,6 +2751,7 @@ export type Database = {
           email: string | null
           id: string
           onboarded_at: string | null
+          onboarding_step: number
           policies_accepted_at: string | null
           updated_at: string
           welcome_email_sent_at: string | null
@@ -2762,6 +2763,7 @@ export type Database = {
           email?: string | null
           id: string
           onboarded_at?: string | null
+          onboarding_step?: number
           policies_accepted_at?: string | null
           updated_at?: string
           welcome_email_sent_at?: string | null
@@ -2773,6 +2775,7 @@ export type Database = {
           email?: string | null
           id?: string
           onboarded_at?: string | null
+          onboarding_step?: number
           policies_accepted_at?: string | null
           updated_at?: string
           welcome_email_sent_at?: string | null

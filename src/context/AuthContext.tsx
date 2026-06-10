@@ -38,6 +38,8 @@ interface AuthContextValue {
   ageConfirmed: boolean | null;
   needsOnboarding: boolean;
   markOnboarded: () => Promise<void>;
+  onboardingStep: number;
+  setOnboardingStep: (step: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -51,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState<boolean | null>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStepState] = useState(0);
 
   const loadProfileAndRoles = async (uid: string, email?: string | null) => {
     try {
@@ -63,12 +66,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsModerator(!!roles?.some((r) => moderatorRoles.includes(r.role as string)));
       const { data: priv } = await supabase
         .from("profiles_private")
-        .select("age_confirmed, onboarded_at, welcome_email_sent_at")
+        .select("age_confirmed, onboarded_at, welcome_email_sent_at, onboarding_step")
         .eq("id", uid)
         .maybeSingle();
       setAgeConfirmed(priv ? !!priv.age_confirmed : false);
-      const privAny = priv as { onboarded_at?: string | null; welcome_email_sent_at?: string | null } | null;
+      const privAny = priv as { onboarded_at?: string | null; welcome_email_sent_at?: string | null; onboarding_step?: number | null } | null;
       setNeedsOnboarding(!!priv && !privAny?.onboarded_at);
+      setOnboardingStepState(privAny?.onboarding_step ?? 0);
       // Fire welcome email once, after we have a profile and a verified user.
       if (priv && !privAny?.welcome_email_sent_at && email && (prof as Profile | null)) {
         const p = prof as Profile;
@@ -84,8 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }).catch(() => { /* noop — will retry next session */ });
       }
     } catch (err) {
-      // Network hiccup or Supabase error — session remains valid; profile stays
-      // null until the next auth state change triggers a fresh load attempt.
       console.error("[AuthContext] loadProfileAndRoles failed:", err);
     }
   };
@@ -93,18 +95,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const markOnboarded = async () => {
     if (!user) return;
     const stamp = new Date().toISOString();
-    // Upsert so a missing private row can't silently fail the UPDATE and
-    // leave needsOnboarding=true, which would bounce the user back to
-    // /onboarding on the next route guard check.
+    // Use UPDATE (not upsert): the `no_direct_age_or_dob_update` policy's
+    // WITH CHECK compares incoming age_confirmed/dob to existing values, and
+    // an upsert that omits those columns trips the check. The private row is
+    // created at signup, so UPDATE is the right primitive here.
     const { error } = await supabase
       .from("profiles_private")
-      .upsert({ id: user.id, onboarded_at: stamp }, { onConflict: "id" });
+      .update({ onboarded_at: stamp })
+      .eq("id", user.id);
     if (error) {
       console.error("[AuthContext] markOnboarded failed:", error);
       throw error;
     }
     setNeedsOnboarding(false);
   };
+
+  const setOnboardingStep = async (step: number) => {
+    setOnboardingStepState(step);
+    if (!user) return;
+    const { error } = await supabase
+      .from("profiles_private")
+      .update({ onboarding_step: step })
+      .eq("id", user.id);
+    if (error) console.error("[AuthContext] setOnboardingStep failed:", error);
+  };
+
 
   useEffect(() => {
     // Capture ?ref=CODE on first paint regardless of auth state — so deep
@@ -220,7 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signOut, refreshProfile, isModerator, isAdmin, ageConfirmed, needsOnboarding, markOnboarded }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signOut, refreshProfile, isModerator, isAdmin, ageConfirmed, needsOnboarding, markOnboarded, onboardingStep, setOnboardingStep }}>
       {children}
     </AuthContext.Provider>
   );
@@ -238,6 +253,8 @@ const AUTH_FALLBACK: AuthContextValue = {
   ageConfirmed: null,
   needsOnboarding: false,
   markOnboarded: async () => {},
+  onboardingStep: 0,
+  setOnboardingStep: async () => {},
 };
 
 export function useAuth() {

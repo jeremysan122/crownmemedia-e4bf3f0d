@@ -15,9 +15,9 @@ type Suggested = { id: string; username: string; profile_photo_url: string | nul
 
 export default function Onboarding() {
   useSeoMeta({ title: "Getting Started · CrownMe", noIndex: true });
-  const { user, profile, refreshProfile, markOnboarded } = useAuth();
+  const { user, profile, refreshProfile, markOnboarded, onboardingStep, setOnboardingStep } = useAuth();
   const nav = useNavigate();
-  const [step, setStep] = useState<Step>("avatar");
+  const [step, setStep] = useState<Step>(STEPS[Math.min(onboardingStep, STEPS.length - 1)] ?? "avatar");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(profile?.profile_photo_url ?? null);
@@ -27,11 +27,24 @@ export default function Onboarding() {
     typeof Notification !== "undefined" ? Notification.permission : null,
   );
 
+  // When the persisted step loads after mount, jump to it.
+  useEffect(() => {
+    const target = STEPS[Math.min(onboardingStep, STEPS.length - 1)];
+    if (target && target !== step) setStep(target);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboardingStep]);
+
   const goNext = () => {
     const idx = STEPS.indexOf(step);
-    if (idx < STEPS.length - 1) setStep(STEPS[idx + 1]);
-    else finish();
+    if (idx < STEPS.length - 1) {
+      const nextStep = STEPS[idx + 1];
+      setStep(nextStep);
+      setOnboardingStep(idx + 1).catch(() => { /* noop */ });
+    } else {
+      finish();
+    }
   };
+
 
   const finish = async () => {
     setBusy(true);
