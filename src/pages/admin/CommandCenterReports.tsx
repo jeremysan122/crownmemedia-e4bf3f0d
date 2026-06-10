@@ -4,9 +4,10 @@ import { SectionCard, EmptyState, PillBadge, StatTile } from "@/components/admin
 import { ConnectionStatus } from "@/components/admin/cc/ConnectionStatus";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { resolveReport, dismissReport, removePost, removeComment, suspendUser } from "@/lib/admin";
+import { resolveReport, dismissReport, removePost, removeComment, suspendUser, banUser } from "@/lib/admin";
 import { useAdminRoles } from "@/hooks/useAdminRoles";
 import { useRealtimeStatus } from "@/hooks/useRealtimeStatus";
+import { ModerationReasonDialog } from "@/components/admin/ModerationReasonDialog";
 import { toast } from "sonner";
 
 type ReportRow = {
