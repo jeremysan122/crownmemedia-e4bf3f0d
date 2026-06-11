@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Swords, Crown, Search, Share2, Trophy, Sparkles, Clock, MapPin, Check, X, Loader2, Flame, Lock,
 } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CATEGORY_LABEL, CrownCategory, timeUntil, locationLabel } from "@/lib/crown";
 import { useCountdown } from "@/hooks/useCountdown";
