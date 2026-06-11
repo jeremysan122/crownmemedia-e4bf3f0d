@@ -51,6 +51,8 @@ export default function Notifications() {
   const nav = useNavigate();
   const [list, setList] = useState<any[]>([]);
   const [active, setActive] = useState<Group | "all">("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Dedupe by id — defends against any duplicate inserts (realtime + initial load).
   const dedupe = (arr: any[]) => {
