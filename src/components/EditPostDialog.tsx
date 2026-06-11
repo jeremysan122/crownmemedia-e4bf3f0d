@@ -166,7 +166,7 @@ export default function EditPostDialog({
       const trimmedAlts = nextUrls.map((_, i) => (altTexts[i] ?? "").trim().slice(0, 140));
       const editedAt = new Date().toISOString();
 
-      const { data: row, error } = await supabase
+      let query = supabase
         .from("posts")
         .update({
           edited_at: editedAt,
@@ -182,10 +182,24 @@ export default function EditPostDialog({
           state: stateField.trim() || null,
           country: country.trim(),
         } as any)
-        .eq("id", postId)
-        .select("caption, image_url, image_urls, alt_texts, filter, category, city, state, country, edited_at")
+        .eq("id", postId);
+      // Optimistic-concurrency guard: only update if the row hasn't been
+      // edited by another tab/device since this dialog opened. If the row
+      // was edited elsewhere, `updated_at` will no longer match and the
+      // update affects 0 rows — we surface that as a conflict instead of
+      // silently overwriting newer changes.
+      if (initialUpdatedAt) {
+        query = query.eq("updated_at", initialUpdatedAt);
+      }
+      const { data: row, error } = await query
+        .select("caption, image_url, image_urls, alt_texts, filter, category, city, state, country, edited_at, updated_at")
         .maybeSingle();
       if (error) throw error;
+      if (!row && initialUpdatedAt) {
+        trackEvent("post_edit_conflict", { postId });
+        toast.error("This post was edited somewhere else. Close and reopen to load the latest version.");
+        return;
+      }
       trackEvent("post_edited", {
         postId,
         metadata: { changed_image: !!file, filter: nextFilter, recategorized: category !== initialCategory },
