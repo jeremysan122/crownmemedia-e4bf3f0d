@@ -1124,6 +1124,11 @@ function Inbox({ threads, unreadByThread, userId, reload, setThreads, loadMore, 
                   <p className="text-sm font-bold flex items-center gap-2">
                     {isPinned && <Pin size={11} className="text-primary fill-primary" />}
                     @{t.other?.username}
+                    {t.kind === "gift" && unread > 0 && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 h-5 rounded-full bg-gradient-gold text-primary-foreground text-[9px] font-bold uppercase tracking-wide animate-pulse" title="New royal gift">
+                        🎁 Gift
+                      </span>
+                    )}
                     <button
                       type="button"
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleMuteThread(t.otherId); }}
