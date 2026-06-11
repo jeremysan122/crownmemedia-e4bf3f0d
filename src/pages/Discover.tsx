@@ -125,19 +125,43 @@ export default function Discover() {
   const [rising, setRising] = useState<RisingStar[]>([]);
   const [trendingPosts, setTrendingPosts] = useState<TrendingPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
+  const [postsHasMore, setPostsHasMore] = useState(true);
+  const [postsLoadingMore, setPostsLoadingMore] = useState(false);
+  const [postsError, setPostsError] = useState(false);
   const [battles, setBattles] = useState<LiveBattle[]>([]);
   const [battlesLoading, setBattlesLoading] = useState(true);
+  const [battlesHasMore, setBattlesHasMore] = useState(true);
+  const [battlesLoadingMore, setBattlesLoadingMore] = useState(false);
+  const [battlesError, setBattlesError] = useState(false);
   const [suggested, setSuggested] = useState<SuggestedUser[]>([]);
   const [following, setFollowing] = useState<Set<string>>(new Set());
   const [pendingFollow, setPendingFollow] = useState<Set<string>>(new Set());
-  const [nearby, setNearby] = useState<NearbyUser[]>([]);
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+  const [nearby, setNearby] = useState<(NearbyUser & { _coord?: [number, number] | null })[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [radius, setRadius] = useState<RadiusMiles>(() => loadSavedRadius());
+  const [originCoord, setOriginCoord] = useState<[number, number] | null>(null);
+  const [geoSource, setGeoSource] = useState<"gps" | "city" | "state" | "country" | "none">("none");
+  const [geoRequesting, setGeoRequesting] = useState(false);
   const [gifters, setGifters] = useState<TopGifter[]>([]);
   const [search, setSearch] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const POSTS_PAGE = 9;
+  const BATTLES_PAGE = 4;
+
   // Fire once when Discover opens
   useEffect(() => { void trackEvent("discover_opened"); }, []);
+
+  // Load + cache blocked-user ids so they never appear in suggestions / nearby
+  useEffect(() => {
+    if (!user) { setBlockedIds(new Set()); return; }
+    (async () => {
+      const { data } = await supabase.from("blocks").select("blocked_id").eq("blocker_id", user.id);
+      setBlockedIds(new Set(((data as any[]) || []).map((r) => r.blocked_id).filter(Boolean)));
+    })();
+  }, [user?.id]);
 
   const featuredTopics = useMemo(
     () => subs.filter((s) => s.is_featured).slice(0, 8),
