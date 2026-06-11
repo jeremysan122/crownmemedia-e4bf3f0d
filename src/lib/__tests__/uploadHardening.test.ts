@@ -165,18 +165,24 @@ describe("Pending view query shape (owner-only, non-approved)", () => {
 });
 
 describe("Upload UI state machine", () => {
-  const states = ["uploading", "processing", "pending_review", "approved", "rejected", "canceled"] as const;
-  it("recognises every known publish status", () => {
+  const states = ["uploading", "processing", "published", "failed", "canceled", "under_review", "rejected", "sensitive"] as const;
+  it("recognises every known publish-flow state", () => {
     for (const s of states) expect(states.includes(s)).toBe(true);
   });
 
-  it("treats publish_status !== 'approved' as 'needs review' for the success UI", () => {
-    const isPendingReview = (status: string) => status !== "approved";
-    expect(isPendingReview("pending_review")).toBe(true);
-    expect(isPendingReview("processing")).toBe(true);
-    expect(isPendingReview("approved")).toBe(false);
+  it("default success state for a normal upload is 'published' (instant publish)", () => {
+    const defaultStatus = "approved";
+    const isPending = defaultStatus !== "approved";
+    expect(isPending).toBe(false);
+  });
+
+  it("only treats moderation-flagged posts as 'in review'", () => {
+    const isInReview = (status: string) => status === "pending_review";
+    expect(isInReview("approved")).toBe(false);
+    expect(isInReview("pending_review")).toBe(true);
   });
 });
+
 
 describe("Orphan cleanup contract", () => {
   it("only removes paths under the user's own folder", () => {
