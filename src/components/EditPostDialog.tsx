@@ -201,11 +201,30 @@ export default function EditPostDialog({
         toast.error("This post was edited somewhere else. Close and reopen to load the latest version.");
         return;
       }
+      // Safety-affecting fields (caption, media, category, location) move the
+      // post back to pending_review via the `posts_write_edit_audit` trigger.
+      // We additionally kick the moderation edge function client-side so the
+      // re-review queue picks it up immediately — the trigger guarantees the
+      // post is hidden from public surfaces until approved either way.
+      const safetyAffecting =
+        caption.trim() !== (initialCaption ?? "") ||
+        !!file ||
+        category !== initialCategory ||
+        city.trim() !== (initialCity ?? "") ||
+        (stateField.trim() || null) !== (initialState ?? null) ||
+        country.trim() !== (initialCountry ?? "");
+      if (safetyAffecting) {
+        try {
+          await supabase.functions.invoke("moderate-media", {
+            body: { post_id: postId, reason: "edit_recheck" },
+          });
+        } catch { /* non-fatal: trigger already moved row to pending_review */ }
+      }
       trackEvent("post_edited", {
         postId,
-        metadata: { changed_image: !!file, filter: nextFilter, recategorized: category !== initialCategory },
+        metadata: { changed_image: !!file, filter: nextFilter, recategorized: category !== initialCategory, safety_recheck: safetyAffecting },
       });
-      toast.success("Post updated");
+      toast.success(safetyAffecting ? "Saved — pending review after edit" : "Post updated");
       const next = {
         caption: (row?.caption ?? caption) as string,
         image_url: (row?.image_url ?? nextUrls[0]) as string,
@@ -220,6 +239,10 @@ export default function EditPostDialog({
       };
       try {
         window.dispatchEvent(new CustomEvent("post:updated", { detail: { id: postId, ...next } }));
+      } catch { /* noop */ }
+      try {
+        const { broadcastCacheInvalidation } = await import("@/lib/cacheInvalidate");
+        broadcastCacheInvalidation({ kind: safetyAffecting ? "post:moderation_changed" : "post:updated", postId, userId: user.id });
       } catch { /* noop */ }
       onSaved?.(next);
       onOpenChange(false);

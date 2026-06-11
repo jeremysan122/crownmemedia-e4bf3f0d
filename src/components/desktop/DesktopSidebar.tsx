@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Swords, Map, Plus, User, Trophy, Store, MessageCircle, Bell, Settings as SettingsIcon, Clapperboard, Gift, Compass } from "lucide-react";
+import { Home, Swords, Map, Plus, User, Trophy, Store, MessageCircle, Bell, Settings as SettingsIcon, Clapperboard, Gift, Compass, Clock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const items = [
@@ -13,9 +13,10 @@ const items = [
   { to: "/store", label: "Royal Store", icon: Store },
   { to: "/messages", label: "Messages", icon: MessageCircle },
   { to: "/notifications", label: "Notifications", icon: Bell },
+  { to: "/pending", label: "Pending", icon: Clock, authOnly: true },
   { to: "/me", label: "Profile", icon: User },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
-];
+] as const;
 
 interface DesktopSidebarProps {
   onCompose?: () => void;
@@ -23,13 +24,14 @@ interface DesktopSidebarProps {
 
 export default function DesktopSidebar({ onCompose }: DesktopSidebarProps) {
   const loc = useLocation();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const handleCompose = onCompose ?? (() => { window.location.href = "/upload"; });
   const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
+  const visibleItems = items.filter((it) => !("authOnly" in it && it.authOnly) || !!user);
   return (
     <aside className="hidden lg:flex sticky top-[68px] h-[calc(100vh-84px)] w-[260px] shrink-0 flex-col gap-1 pr-2 pt-9">
       <nav className="flex-1 flex flex-col gap-1">
-        {items.map(({ to, label, icon: Icon }) => {
+        {visibleItems.map(({ to, label, icon: Icon }) => {
           const active = loc.pathname === to || (to === "/me" && loc.pathname.startsWith("/u/"));
           return (
             <NavLink

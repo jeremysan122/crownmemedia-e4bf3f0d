@@ -317,6 +317,17 @@ export default function EditProfile() {
 
       await refreshProfile();
 
+      try {
+        const { broadcastCacheInvalidation } = await import("@/lib/cacheInvalidate");
+        const previousUsername = profile?.username ?? undefined;
+        const nextUsername = username.trim().toLowerCase();
+        broadcastCacheInvalidation({ kind: "profile:updated", userId: user.id, username: nextUsername });
+        if (photoFile) broadcastCacheInvalidation({ kind: "profile:avatar_changed", userId: user.id });
+        if (previousUsername && previousUsername !== nextUsername) {
+          broadcastCacheInvalidation({ kind: "profile:username_changed", userId: user.id, username: nextUsername, previousUsername });
+        }
+      } catch { /* noop */ }
+
       toast.success("Profile updated");
       nav(`/u/${username.trim().toLowerCase()}`);
     } catch (error) {
