@@ -585,15 +585,21 @@ export default function Battles() {
                   hub === "all" ? "bg-foreground text-background" : "bg-muted text-foreground"
                 }`}
               >All hubs</button>
-              {mains.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => { setHub(m.slug); setTopic("all"); }}
-                  className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${
-                    hub === m.slug ? "bg-foreground text-background" : "bg-muted text-foreground"
-                  }`}
-                >{m.icon ?? "🏷️"} {m.label}</button>
-              ))}
+              {mains.map((m) => {
+                const IconCmp = m.icon ? (LucideIcons as any)[m.icon] : null;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => { setHub(m.slug); setTopic("all"); }}
+                    className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap inline-flex items-center gap-1.5 ${
+                      hub === m.slug ? "bg-foreground text-background" : "bg-muted text-foreground"
+                    }`}
+                  >
+                    {IconCmp ? <IconCmp size={12} /> : <span aria-hidden>🏷️</span>}
+                    <span>{m.label}</span>
+                  </button>
+                );
+              })}
             </div>
             {hub !== "all" && (
               <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
