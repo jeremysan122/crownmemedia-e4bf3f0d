@@ -72,7 +72,13 @@ type EventName =
   | "discover_people_near_you_profile_clicked"
   | "discover_trending_pagination_loaded"
   | "discover_battles_pagination_loaded"
-  | "discover_search_submitted";
+  | "discover_search_submitted"
+  | "discover_cache_hit"
+  | "discover_cache_miss"
+  | "discover_pagination_failed"
+  | "discover_duplicate_prevented"
+  | "discover_state_restored";
+
 
 async function sha256Hex(input: string): Promise<string> {
   const buf = new TextEncoder().encode(input);
