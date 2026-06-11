@@ -913,6 +913,10 @@ export default function Upload() {
       (window as any).__crownmePendingReview = publishStatus !== "approved";
       await refreshProfile();
       try {
+        const { broadcastCacheInvalidation } = await import("@/lib/cacheInvalidate");
+        broadcastCacheInvalidation({ kind: "post:published", postId: (published as any)?.id, userId: user.id });
+      } catch { /* noop */ }
+      try {
         localStorage.setItem("crownme:feed:tab", "global");
         localStorage.removeItem("crownme:feed:tag");
       } catch { /* noop */ }
