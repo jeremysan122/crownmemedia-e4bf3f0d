@@ -13,7 +13,7 @@ import { fxGiftPreview, fxGiftSend, fxPurchase, fxTap, unlockAudio } from "@/lib
 import DailyDealCard from "@/components/store/DailyDealCard";
 import GiftTargetPicker from "./GiftTargetPicker";
 import GiftDmPicker, { type GiftDmRecipient } from "./GiftDmPicker";
-import { supabase } from "@/integrations/supabase/client";
+
 import { makeGiftIdempotencyKey, useGiftSend } from "@/hooks/useGiftSend";
 import {
   AlertDialog,
