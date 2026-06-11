@@ -52,7 +52,18 @@ type EventName =
   | "share_blocked_hidden"
   | "share_blocked_deleted"
   | "share_blocked_unavailable"
-  | "share_channel_selected";
+  | "share_channel_selected"
+  // Discover page interactions
+  | "discover_opened"
+  | "discover_window_changed"
+  | "discover_refreshed"
+  | "discover_trending_post_impression"
+  | "discover_trending_post_opened"
+  | "discover_battle_preview_opened"
+  | "discover_creator_followed"
+  | "discover_creator_unfollowed"
+  | "discover_nearby_creator_opened"
+  | "discover_search_submitted";
 
 async function sha256Hex(input: string): Promise<string> {
   const buf = new TextEncoder().encode(input);
