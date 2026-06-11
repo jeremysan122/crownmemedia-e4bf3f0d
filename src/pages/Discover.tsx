@@ -280,13 +280,11 @@ export default function Discover() {
     })();
   }, [refreshKey]);
 
-  // ---------- Trending posts (paginated) ----------
+  // ---------- Trending posts (cursor pagination + short-lived cache) ----------
   const fetchTrendingPage = useCallback(
-    async (page: number): Promise<{ rows: TrendingPost[]; hasMore: boolean }> => {
+    async (cursor: PostsCursor): Promise<{ rows: TrendingPost[]; hasMore: boolean; nextCursor: PostsCursor }> => {
       const since = new Date(Date.now() - WINDOW_HOURS[windowSel] * 60 * 60 * 1000).toISOString();
-      const from = page * POSTS_PAGE;
-      const to = from + POSTS_PAGE - 1;
-      const { data, error } = await supabase
+      let q = supabase
         .from("posts")
         .select(
           "id, image_url, image_urls, video_poster_url, media_type, crown_score, caption, user_id, profile:profiles!posts_user_id_fkey(username, profile_photo_url)",
@@ -296,10 +294,18 @@ export default function Discover() {
         .eq("is_archived", false)
         .order("crown_score", { ascending: false })
         .order("id", { ascending: true })
-        .range(from, to);
+        .limit(POSTS_PAGE);
+      // Stable keyset cursor: rows AFTER (score, id) tuple.
+      if (cursor) {
+        q = q.or(`crown_score.lt.${cursor.score},and(crown_score.eq.${cursor.score},id.gt.${cursor.id})`);
+      }
+      const { data, error } = await q;
       if (error) throw error;
-      const rows = ((data as any[]) || []).filter((r) => !blockedIds.has(r.user_id)) as TrendingPost[];
-      return { rows, hasMore: ((data as any[]) || []).length === POSTS_PAGE };
+      const all = ((data as any[]) || []);
+      const rows = all.filter((r) => !blockedIds.has(r.user_id)) as TrendingPost[];
+      const last = all[all.length - 1];
+      const nextCursor = last ? { score: Number(last.crown_score) || 0, id: String(last.id) } : null;
+      return { rows, hasMore: all.length === POSTS_PAGE, nextCursor };
     },
     [windowSel, blockedIds],
   );
@@ -309,12 +315,28 @@ export default function Discover() {
     setPostsLoading(true);
     setPostsError(false);
     setPostsHasMore(true);
+    setPostsCursor(null);
     (async () => {
       try {
-        const { rows, hasMore } = await fetchTrendingPage(0);
+        const cacheKey = makeCacheKey("trending", { user: user?.id ?? "anon", window: windowSel, cursor: "0" });
+        const cached = getCached<{ rows: TrendingPost[]; hasMore: boolean; nextCursor: PostsCursor }>(cacheKey);
+        if (cached) {
+          void trackEvent("discover_cache_hit", { metadata: { section: "trending" } });
+          if (!cancelled) {
+            setTrendingPosts(cached.rows);
+            setPostsHasMore(cached.hasMore);
+            setPostsCursor(cached.nextCursor);
+            setPostsLoading(false);
+            return;
+          }
+        }
+        void trackEvent("discover_cache_miss", { metadata: { section: "trending" } });
+        const r = await fetchTrendingPage(null);
         if (cancelled) return;
-        setTrendingPosts(rows);
-        setPostsHasMore(hasMore);
+        setTrendingPosts(r.rows);
+        setPostsHasMore(r.hasMore);
+        setPostsCursor(r.nextCursor);
+        setCached(cacheKey, "trending", r);
       } catch {
         if (!cancelled) setPostsError(true);
       } finally {
@@ -322,29 +344,35 @@ export default function Discover() {
       }
     })();
     return () => { cancelled = true; };
-  }, [fetchTrendingPage, refreshKey]);
+  }, [fetchTrendingPage, refreshKey, user?.id, windowSel]);
 
   const loadMorePosts = useCallback(async () => {
-    if (postsLoadingMore || !postsHasMore || postsLoading) return;
+    if (postsFetchingRef.current || !postsHasMore || postsLoading) return;
+    postsFetchingRef.current = true;
     setPostsLoadingMore(true);
     setPostsError(false);
     try {
-      const page = Math.floor(trendingPosts.length / POSTS_PAGE);
-      const { rows, hasMore } = await fetchTrendingPage(page);
+      const r = await fetchTrendingPage(postsCursor);
       setTrendingPosts((prev) => {
         const seen = new Set(prev.map((p) => p.id));
-        return [...prev, ...rows.filter((r) => !seen.has(r.id))];
+        const fresh = r.rows.filter((x) => !seen.has(x.id));
+        if (fresh.length !== r.rows.length) {
+          void trackEvent("discover_duplicate_prevented", { metadata: { section: "trending", dropped: r.rows.length - fresh.length } });
+        }
+        return [...prev, ...fresh];
       });
-      setPostsHasMore(hasMore);
-      void trackEvent("discover_trending_pagination_loaded", {
-        metadata: { page: page + 1, count: rows.length },
-      });
+      setPostsHasMore(r.hasMore);
+      setPostsCursor(r.nextCursor);
+      void trackEvent("discover_trending_pagination_loaded", { metadata: { count: r.rows.length } });
     } catch {
       setPostsError(true);
+      void trackEvent("discover_pagination_failed", { metadata: { section: "trending" } });
     } finally {
+      postsFetchingRef.current = false;
       setPostsLoadingMore(false);
     }
-  }, [fetchTrendingPage, postsLoadingMore, postsHasMore, postsLoading, trendingPosts.length]);
+  }, [fetchTrendingPage, postsHasMore, postsLoading, postsCursor]);
+
 
   // Fire one impression event per trending-post id we render (deduped via ref)
   const impressed = useRef<Set<string>>(new Set());
