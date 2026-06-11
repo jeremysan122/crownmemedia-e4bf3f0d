@@ -20,14 +20,23 @@ import GiftLiveFeed from "./GiftLiveFeed";
 import TopGifterCard from "./TopGifterCard";
 import AddShekelsModal from "./AddShekelsModal";
 import QuickSendRail from "./QuickSendRail";
+import GiftRecipientPicker, { type GiftRecipientCandidate } from "./GiftRecipientPicker";
+import GiftConfirmDialog from "./GiftConfirmDialog";
 import { toast } from "sonner";
 import { fxGiftSend, fxPurchase, fxTap, isMuted, setMuted, unlockAudio } from "@/lib/giftFx";
-import { Volume2, VolumeX } from "lucide-react";
+import { Volume2, VolumeX, ArrowLeft } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
+
+interface ExtendedRecipient extends GiftPanelRecipient {
+  displayName?: string;
+  verified?: boolean;
+}
 
 interface GiftPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  recipient: GiftPanelRecipient;
+  /** When omitted, the panel opens with an in-flow recipient picker. */
+  recipient?: ExtendedRecipient;
   postId?: string;
   initialGift?: RoyalGift | null;
   /** Called after a successful send so the parent (e.g. PostCard) can play an anchored animation. */

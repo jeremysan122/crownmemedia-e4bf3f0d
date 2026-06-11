@@ -95,7 +95,15 @@ type EventName =
   | "battle_pagination_retry"
   | "battle_pagination_failed"
   | "battle_no_more_results"
-  | "battle_detail_view";
+  | "battle_detail_view"
+  // Gift purchase + send funnel
+  | "gift_flow_opened"
+  | "gift_recipient_selected"
+  | "gift_send_started"
+  | "gift_sent"
+  | "gift_send_failed"
+  | "gift_insufficient_balance"
+  | "shekels_purchase_started";
 
 
 async function sha256Hex(input: string): Promise<string> {
