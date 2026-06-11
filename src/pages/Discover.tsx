@@ -1253,18 +1253,8 @@ export default function Discover() {
                   )}
                 </h2>
                 <div className="flex items-center gap-2">
-                  <label className="sr-only" htmlFor="nearby-radius">Distance radius</label>
-                  <select
-                    id="nearby-radius"
-                    value={radius}
-                    onChange={(e) => handleRadiusChange(Number(e.target.value) as RadiusMiles)}
-                    className="h-8 px-2 rounded-full border border-border bg-card text-[11px] font-medium text-foreground hover:border-primary/40 focus:border-primary/60 outline-none"
-                    aria-label="People Near You distance radius"
-                  >
-                    {RADIUS_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
+                  <RadiusSelector value={radius} onChange={handleRadiusChange} geoSource={geoSource} />
+
                   <button
                     type="button"
                     onClick={requestPreciseLocation}
