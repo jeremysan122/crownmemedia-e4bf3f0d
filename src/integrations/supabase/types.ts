@@ -4242,6 +4242,7 @@ export type Database = {
       }
       mark_all_messages_read: { Args: never; Returns: number }
       mark_all_notifications_read: { Args: never; Returns: number }
+      mark_dm_gift_seen: { Args: { p_message_id: string }; Returns: undefined }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -4366,6 +4367,15 @@ export type Database = {
           _user_agent: string
         }
         Returns: string
+      }
+      send_dm_gift: {
+        Args: {
+          p_dedupe_key?: string
+          p_gift_id: string
+          p_quantity: number
+          p_recipient_id: string
+        }
+        Returns: Json
       }
       send_royal_gift: {
         Args: {
