@@ -21,8 +21,11 @@ import AcceptBattleDialog from "@/components/battles/AcceptBattleDialog";
 import ShareBattleDialog from "@/components/battles/ShareBattleDialog";
 import TopBattlersWidget from "@/components/battles/TopBattlersWidget";
 import WinnerReveal from "@/components/battles/WinnerReveal";
+import { OfficialResultBadge } from "@/components/battles/OfficialResultBadge";
 import { haptic } from "@/lib/haptics";
 import { trackEvent } from "@/lib/analytics";
+import { isSafeBattleForList } from "@/lib/battlesLogic";
+import { invalidateOfficialResult } from "@/hooks/useOfficialBattleResult";
 import { Play } from "lucide-react";
 import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
 
@@ -92,6 +95,17 @@ export default function Battles() {
   const inFlightVotes = useRef<Set<string>>(new Set());
   /** Battles currently submitting a vote — drives the spinner + disabled state on the vote button. */
   const [submittingVotes, setSubmittingVotes] = useState<Set<string>>(new Set());
+  /** Set of user_ids the viewer has blocked. Battles involving any blocked user are filtered out. */
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!user) { setBlockedIds(new Set()); return; }
+    (async () => {
+      const { data } = await supabase.from("blocks").select("blocked_id").eq("blocker_id", user.id);
+      setBlockedIds(new Set(((data as any[]) || []).map((r) => r.blocked_id)));
+    })();
+  }, [user?.id]);
+
 
   const load = async () => {
     setLoading(true);
@@ -101,7 +115,11 @@ export default function Battles() {
       challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country, main_category_slug, subcategory_slug),
       opponent_post:posts!battles_opponent_post_id_fkey(image_url, category)
     `).order("created_at", { ascending: false }).limit(80);
-    const arr = (data as any[]) || [];
+    const raw = (data as any[]) || [];
+    // Defence-in-depth safety filter: server RLS is the source of truth,
+    // but we also drop hidden/removed/declined/cancelled rows and battles
+    // involving any blocked user before they reach the render layer.
+    const arr = raw.filter((b) => isSafeBattleForList(b as any, { blockedIds }));
 
     // Detect freshly-completed battles (compared to last snapshot)
     const newly = new Set(freshWins);
@@ -109,6 +127,9 @@ export default function Battles() {
       const prev = prevStatusRef.current[b.id];
       if (prev && prev.status !== "completed" && b.status === "completed" && b.winner_id) {
         newly.add(b.id);
+        // A battle just transitioned to ended — drop any cached official
+        // result so the next render fetches the authoritative version.
+        invalidateOfficialResult(b.id);
       }
       prevStatusRef.current[b.id] = { status: b.status, winner: b.winner_id };
     });
@@ -116,6 +137,7 @@ export default function Battles() {
 
     setBattles(arr);
     setLoading(false);
+
 
     if (user) {
       const ids = arr.map((b: any) => b.id);
@@ -129,7 +151,7 @@ export default function Battles() {
     }
   };
 
-  useEffect(() => { load(); }, [user?.id]);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id, blockedIds]);
   useEffect(() => { fetchMainCategories().then(setMains); fetchSubcategories().then(setSubs); }, []);
 
   // Sync filters to URL (shareable deep links)
@@ -168,6 +190,9 @@ export default function Battles() {
         if (prev && prev.status !== "completed" && row.status === "completed" && row.winner_id) {
           setFreshWins((s) => { const n = new Set(s); n.add(row.id); return n; });
         }
+        // Any moderation flip, status change, or winner change invalidates
+        // the cached official result for that battle.
+        invalidateOfficialResult(row.id);
         prevStatusRef.current[row.id] = { status: row.status, winner: row.winner_id };
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "battles" }, () => {
@@ -272,6 +297,20 @@ export default function Battles() {
     } else {
       void trackEvent("battle_vote_success", { metadata: { battle_id: b.id, side: isC ? "challenger" : "opponent" } });
       toast.success("Vote cast 👑");
+      // Reconcile with the authoritative server counts so the displayed
+      // totals match what other voters wrote concurrently, instead of
+      // trusting our optimistic +1 alone.
+      (async () => {
+        const { data: srv } = await supabase
+          .from("battles")
+          .select("challenger_votes, opponent_votes, status, winner_id, ends_at")
+          .eq("id", b.id)
+          .maybeSingle();
+        if (srv) {
+          setBattles((prev) => prev.map((x) => x.id === b.id ? { ...x, ...srv } : x));
+          invalidateOfficialResult(b.id);
+        }
+      })();
     }
   };
 
@@ -461,9 +500,15 @@ export default function Battles() {
           <div className="flex items-center gap-2 shrink-0">
             {isPending && <span className="text-[10px] uppercase font-bold text-accent">Pending</span>}
             {b.status === "active" && b.ends_at && <CountdownPill endsAt={b.ends_at} />}
-            {b.status === "completed" && b.winner_id && (
-              <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-primary"><Trophy size={10} /> {margin}% margin</span>
-            )}
+            {/* Authoritative ended-battle result (RPC) — replaces client-side winner_id reliance.
+                Renders winner / tie / no-winner / loading / retry. Only enabled for ended battles. */}
+            <OfficialResultBadge
+              battleId={b.id}
+              enabled={!live}
+              resolveUsername={(uid) =>
+                uid === b.challenger_id ? b.challenger?.username : uid === b.opponent_id ? b.opponent?.username : null
+              }
+            />
           </div>
         </div>
 
