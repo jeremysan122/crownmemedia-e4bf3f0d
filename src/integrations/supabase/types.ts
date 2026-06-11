@@ -3972,6 +3972,10 @@ export type Database = {
         Args: { _creator_id: string }
         Returns: undefined
       }
+      get_battle_official_result: {
+        Args: { _battle_id: string }
+        Returns: Json
+      }
       get_category_leaderboard: {
         Args: {
           _limit?: number
