@@ -116,6 +116,8 @@ export async function reversePostTakedown(takedownId: string, postId: string) {
   if (e2) throw e2;
   invalidateShareStatus(postId);
 }
+
+export async function removeComment(commentId: string, reason: string) {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) throw new Error("Not authenticated");
 
