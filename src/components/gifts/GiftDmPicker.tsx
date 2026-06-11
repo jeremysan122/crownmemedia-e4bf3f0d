@@ -53,6 +53,7 @@ export default function GiftDmPicker({
 
   useEffect(() => {
     if (!open || !user) return;
+    try { (window as any).analytics?.track?.("dm_gift_picker_opened", { gift_name: giftName }); } catch {}
     let cancelled = false;
     setLoading(true);
 
