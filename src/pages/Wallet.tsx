@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/hooks/useWallet";
 import { SHEKEL, formatShekels } from "@/lib/gifts";
-import { Coins, Zap, Gift, ArrowDownCircle, ArrowUpCircle, Loader2, Crown, Wallet as WalletIcon, Banknote, ShoppingBag, Sparkles } from "lucide-react";
+import { Coins, Zap, Gift, ArrowDownCircle, ArrowUpCircle, Loader2, Crown, Wallet as WalletIcon, Banknote, ShoppingBag, Sparkles, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
