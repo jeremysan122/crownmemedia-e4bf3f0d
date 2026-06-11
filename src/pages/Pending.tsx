@@ -43,15 +43,15 @@ export default function Pending() {
   const load = async () => {
     if (!user) return;
     setError(null);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("posts")
       .select("id, caption, image_url, publish_status, created_at")
       .eq("user_id", user.id)
-      .neq("publish_status" as any, "approved")
+      .neq("publish_status", "approved")
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) { setError(error.message); return; }
-    setRows((data ?? []) as unknown as StatusRow[]);
+    setRows((data ?? []) as StatusRow[]);
   };
 
   useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
