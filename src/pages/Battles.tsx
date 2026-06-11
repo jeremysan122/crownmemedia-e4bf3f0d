@@ -150,7 +150,7 @@ export default function Battles() {
     }
   };
 
-  useEffect(() => { load(); }, [user?.id]);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id, blockedIds]);
   useEffect(() => { fetchMainCategories().then(setMains); fetchSubcategories().then(setSubs); }, []);
 
   // Sync filters to URL (shareable deep links)
