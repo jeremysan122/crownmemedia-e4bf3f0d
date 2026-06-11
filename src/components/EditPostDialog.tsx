@@ -247,7 +247,7 @@ export default function EditPostDialog({
       } catch { /* noop */ }
       try {
         const { broadcastCacheInvalidation } = await import("@/lib/cacheInvalidate");
-        broadcastCacheInvalidation({ kind: safetyAffecting ? "post:moderation_changed" : "post:updated", postId, userId: user.id });
+        broadcastCacheInvalidation({ kind: "post:updated", postId, userId: user.id });
       } catch { /* noop */ }
       onSaved?.(next);
       onOpenChange(false);
