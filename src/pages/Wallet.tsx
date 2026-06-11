@@ -258,17 +258,67 @@ export default function Wallet() {
             <span className="text-[10px] text-muted-foreground">{SHEKELS_PER_USD} {SHEKEL} = $1 · Min ${MIN_PAYOUT_USD}</span>
           </div>
 
-          {!stripeReady && (
+          {/* Eligibility banner — server enforces, this just mirrors the state */}
+          {eligibility.kind === "banned" && (
+            <div className="text-xs bg-destructive/10 border border-destructive/30 text-destructive rounded-lg p-3 flex items-start gap-2">
+              <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+              <span>Your account is banned. Payouts are not available.</span>
+            </div>
+          )}
+          {eligibility.kind === "suspended" && (
+            <div className="text-xs bg-destructive/10 border border-destructive/30 text-destructive rounded-lg p-3 flex items-start gap-2">
+              <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+              <span>Your account is suspended. Payouts are paused until this is resolved.</span>
+            </div>
+          )}
+          {eligibility.kind === "verification_required" && (
+            <div className="rounded-lg bg-gradient-to-br from-gold/10 to-transparent border border-gold/30 p-3 space-y-2">
+              <div className="flex items-start gap-2 text-xs">
+                <ShieldCheck size={14} className="mt-0.5 shrink-0 text-gold" />
+                <div>
+                  <p className="font-semibold text-foreground">Verification required</p>
+                  <p className="text-muted-foreground mt-0.5">You must be verified before receiving payouts. Your shekels keep accumulating in the meantime.</p>
+                </div>
+              </div>
+              <Button asChild size="sm" className="w-full bg-gradient-gold text-primary-foreground">
+                <Link to="/verification">Start verification</Link>
+              </Button>
+            </div>
+          )}
+          {eligibility.kind === "under_review" && (
+            <div className="text-xs bg-primary/10 border border-primary/30 rounded-lg p-3 flex items-start gap-2">
+              <Clock size={14} className="mt-0.5 shrink-0 text-primary" />
+              <div>
+                <p className="font-semibold text-foreground">Verification under review</p>
+                <p className="text-muted-foreground mt-0.5">We'll unlock payouts as soon as your verification is approved.</p>
+              </div>
+            </div>
+          )}
+          {eligibility.kind === "verification_rejected" && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3 space-y-2 text-xs">
+              <div className="flex items-start gap-2">
+                <ShieldAlert size={14} className="mt-0.5 shrink-0 text-destructive" />
+                <div>
+                  <p className="font-semibold text-destructive">Verification was not approved</p>
+                  <p className="text-muted-foreground mt-0.5">You can submit a new verification request to unlock payouts.</p>
+                </div>
+              </div>
+              <Button asChild size="sm" variant="outline" className="w-full">
+                <Link to="/verification">Resubmit verification</Link>
+              </Button>
+            </div>
+          )}
+          {eligibility.kind === "stripe_not_ready" && (
             <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
               Connect your Stripe account in <Link to="/settings" className="text-primary underline">Settings</Link> before you can request payouts.
             </div>
           )}
-          {stripeReady && wallet.totalEarned <= 0 && (
+          {eligibility.kind === "no_balance" && (
             <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
               Receive gifts from other users to start earning Shekels you can cash out.
             </div>
           )}
-          {stripeReady && wallet.totalEarned > 0 && (
+          {(eligibility.kind === "below_minimum" || eligibility.kind === "eligible") && (
             <>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Expected payout</span>
@@ -283,6 +333,11 @@ export default function Wallet() {
                 {canPayout ? `Request payout · $${availablePayoutUsd.toFixed(2)}` : `Need $${MIN_PAYOUT_USD} minimum`}
               </Button>
             </>
+          )}
+          {canPayout && (
+            <p className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+              <ShieldCheck size={10} className="text-emerald-500" /> Verified · eligible for payout
+            </p>
           )}
 
           {payouts.length > 0 && (
