@@ -378,6 +378,7 @@ export default function Settings() {
             { to: "/muted-words", label: "Muted Words", Icon: Filter },
             { to: "/restricted", label: "Restricted Accounts", Icon: UserMinus },
             { to: "/drafts", label: "Drafts", Icon: FileEdit },
+            { to: "/pending", label: "Pending & in review", Icon: CheckCircle2 },
             { to: "/archived", label: "Archived posts", Icon: Archive },
             { to: "/store", label: "Royal Store", Icon: Store },
             { to: "/royal-pass", label: "Royal Pass", Icon: Crown },
