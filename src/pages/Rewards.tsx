@@ -303,15 +303,15 @@ export default function Rewards() {
   return (
     <main className="min-h-screen bg-[#0a0510] pb-28">
       <header className="sticky top-0 z-20 backdrop-blur bg-[#0a0510]/80 border-b border-amber-500/10">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <Link to="/feed" aria-label="Back" className="p-2 -ml-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white"><ArrowLeft className="size-5" /></Link>
-          <h1 className="font-display text-base tracking-[0.3em] text-amber-400">ROYAL VAULT</h1>
+          <h1 className="font-display text-base sm:text-lg tracking-[0.3em] text-amber-400">ROYAL VAULT</h1>
           <Link to="/rewards/history" aria-label="Reward history" className="p-2 -mr-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white"><History className="size-5" /></Link>
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 pt-6">
-        <div className="relative bg-gradient-to-b from-[#1a1033] to-[#0a0510] rounded-[2.5rem] p-5 sm:p-6 border-2 border-amber-500/20 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden space-y-7">
+      <div className="max-w-lg md:max-w-3xl lg:max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+        <div className="relative bg-gradient-to-b from-[#1a1033] to-[#0a0510] rounded-[2.5rem] p-5 sm:p-8 lg:p-10 border-2 border-amber-500/20 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden">
           {/* Background glows */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-amber-500/10 blur-[100px] pointer-events-none" aria-hidden />
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-purple-700/15 blur-[100px] pointer-events-none" aria-hidden />
