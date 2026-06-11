@@ -54,6 +54,53 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // Eligibility gate: account must be verified, not banned, not suspended.
+    // Server-authoritative — never trust the client.
+    const { data: prof, error: profErr } = await admin
+      .from("profiles")
+      .select("verified, is_banned, is_suspended")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profErr || !prof) {
+      console.error("[request-payout] profile read failed:", profErr);
+      return json(500, { error: "Could not read profile" });
+    }
+    if (prof.is_banned) {
+      return json(403, { error: "banned", message: "Banned accounts cannot request payouts." });
+    }
+    if (prof.is_suspended) {
+      return json(403, { error: "suspended", message: "Your account is suspended. Payouts are paused until this is resolved." });
+    }
+    if (!prof.verified) {
+      // Surface whether a verification request is in flight so the UI can
+      // distinguish "verification required" from "under review".
+      const { data: vr } = await admin
+        .from("verification_requests")
+        .select("status")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const vstatus = vr?.status ?? null;
+      // Audit the blocked attempt so finance/admin can investigate.
+      await admin.from("shekel_ledger").insert({
+        user_id: userId,
+        kind: "payout_blocked",
+        shekels_delta: 0,
+        usd_amount: 0,
+        label: "Payout blocked: not verified",
+        metadata: { reason: "not_verified", verification_status: vstatus },
+      });
+      return json(403, {
+        error: "not_verified",
+        message:
+          vstatus === "pending" || vstatus === "more_info_required"
+            ? "Your verification is under review. You can request payouts once it's approved."
+            : "You must be verified before receiving payouts.",
+        verification_status: vstatus,
+      });
+    }
+
     // Connect account must be fully set up
     const { data: ca } = await admin
       .from("connect_accounts")
