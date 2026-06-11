@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Bell, MessageCircle, Search, Plus } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
@@ -6,6 +6,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/hooks/useWallet";
 import { formatScore } from "@/lib/crown";
 import GlobalSearchDialog from "@/components/GlobalSearchDialog";
+import { useUnreadByType } from "@/hooks/useUnreadByType";
+import { useThreadUnread } from "@/hooks/useThreadUnread";
+import { useMutedThreads } from "@/hooks/useMutedThreads";
 
 export default function DesktopHeader() {
   const nav = useNavigate();
@@ -13,6 +16,14 @@ export default function DesktopHeader() {
   const { wallet } = useWallet();
   const [searchOpen, setSearchOpen] = useState(false);
   const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
+  const unread = useUnreadByType();
+  const dmThreads = useThreadUnread();
+  const mutedSet = useMutedThreads();
+  const dmCount = useMemo(
+    () => Object.entries(dmThreads).reduce((a, [oid, n]) => a + (mutedSet.has(oid) ? 0 : (n || 0)), 0),
+    [dmThreads, mutedSet],
+  );
+  const notifCount = Math.max(0, unread.total - unread.dm);
 
   return (
     <header className="hidden lg:block sticky top-0 z-40 glass border-b border-border/50">
@@ -40,11 +51,29 @@ export default function DesktopHeader() {
             <span className="text-gold font-bold">₪</span>
             <span className="font-bold tabular-nums">{formatScore(wallet.shekelBalance)}</span>
           </button>
-          <Link to="/messages" className="size-10 rounded-full hover:bg-secondary/30 flex items-center justify-center text-muted-foreground hover:text-primary transition">
+          <Link
+            to="/messages"
+            className="relative size-10 rounded-full hover:bg-secondary/30 flex items-center justify-center text-muted-foreground hover:text-primary transition"
+            aria-label={`Messages${dmCount ? `, ${dmCount} unread` : ""}`}
+          >
             <MessageCircle size={18} />
+            {dmCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-4 text-center tabular-nums">
+                {dmCount > 99 ? "99+" : dmCount}
+              </span>
+            )}
           </Link>
-          <Link to="/notifications" className="size-10 rounded-full hover:bg-secondary/30 flex items-center justify-center text-muted-foreground hover:text-primary transition">
+          <Link
+            to="/notifications"
+            className="relative size-10 rounded-full hover:bg-secondary/30 flex items-center justify-center text-muted-foreground hover:text-primary transition"
+            aria-label={`Notifications${notifCount ? `, ${notifCount} unread` : ""}`}
+          >
             <Bell size={18} />
+            {notifCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-4 text-center tabular-nums">
+                {notifCount > 99 ? "99+" : notifCount}
+              </span>
+            )}
           </Link>
           <button
             onClick={() => nav("/upload")}

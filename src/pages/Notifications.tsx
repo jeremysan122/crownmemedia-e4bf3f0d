@@ -35,8 +35,12 @@ function classify(n: any): Group {
 
 function targetFor(n: any): string | null {
   const p = n.payload || {};
+  if (typeof p.link === "string" && p.link.startsWith("/")) return p.link;
   if (p.battle_id) return `/battles?b=${p.battle_id}`;
-  if (n.type === "follow" && p.follower_id) return `/u/${p.follower_id}`;
+  if (n.type === "follow") {
+    if (p.follower_username) return `/u/${p.follower_username}`;
+    if (p.follower_id) return `/u/${p.follower_id}`;
+  }
   if (p.post_id) return `/post/${p.post_id}`;
   return null;
 }
@@ -47,6 +51,8 @@ export default function Notifications() {
   const nav = useNavigate();
   const [list, setList] = useState<any[]>([]);
   const [active, setActive] = useState<Group | "all">("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Dedupe by id — defends against any duplicate inserts (realtime + initial load).
   const dedupe = (arr: any[]) => {
@@ -61,15 +67,21 @@ export default function Notifications() {
   };
 
   const refresh = async () => {
-    if (!user) return;
-    const { data } = await supabase
+    if (!user) { setLoading(false); return; }
+    setError(null);
+    const { data, error: err } = await supabase
       .from("notifications")
       .select("*")
       .eq("user_id", user.id)
       .neq("type", "dm")
       .order("created_at", { ascending: false })
       .limit(120);
-    setList(dedupe(data || []));
+    if (err) {
+      setError(err.message || "Could not load notifications");
+    } else {
+      setList(dedupe(data || []));
+    }
+    setLoading(false);
   };
 
   useEffect(() => { refresh();   }, [user?.id]);
@@ -212,7 +224,29 @@ export default function Notifications() {
         </div>
 
         <div className="space-y-2">
-          {visible.map((n) => {
+          {loading && (
+            <div className="space-y-2" aria-busy="true" aria-label="Loading notifications">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="royal-card p-3 flex items-start gap-3 animate-pulse">
+                  <div className="size-5 rounded-full bg-muted/60 shrink-0 mt-0.5" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-2/3 bg-muted/60 rounded" />
+                    <div className="h-2.5 w-1/2 bg-muted/40 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {!loading && error && (
+            <div className="royal-card p-6 text-center space-y-3">
+              <p className="text-sm font-bold text-destructive">Couldn't load notifications</p>
+              <p className="text-xs text-muted-foreground">{error}</p>
+              <Button size="sm" variant="outline" onClick={() => { setLoading(true); refresh(); }}>
+                Try again
+              </Button>
+            </div>
+          )}
+          {!loading && !error && visible.map((n) => {
             const g = classify(n);
             const Icon = GROUPS.find((x) => x.key === g)?.Icon ?? Bell;
             const target = targetFor(n);
@@ -264,7 +298,17 @@ export default function Notifications() {
               </div>
             );
           })}
-          {!visible.length && <p className="text-center text-sm text-muted-foreground py-10">No notifications in this group.</p>}
+          {!loading && !error && !visible.length && (
+            <div className="royal-card p-8 text-center space-y-2">
+              <Bell size={28} className="text-muted-foreground/60 mx-auto" />
+              <p className="text-sm font-bold">No notifications yet</p>
+              <p className="text-xs text-muted-foreground">
+                {active === "all"
+                  ? "When royals interact with your crown, it'll show up here."
+                  : "Nothing in this group yet."}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </AppShell>
