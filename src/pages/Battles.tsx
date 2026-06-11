@@ -22,6 +22,7 @@ import ShareBattleDialog from "@/components/battles/ShareBattleDialog";
 import TopBattlersWidget from "@/components/battles/TopBattlersWidget";
 import WinnerReveal from "@/components/battles/WinnerReveal";
 import { haptic } from "@/lib/haptics";
+import { trackEvent } from "@/lib/analytics";
 import { Play } from "lucide-react";
 import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
 
