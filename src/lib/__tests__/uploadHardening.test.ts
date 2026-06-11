@@ -92,7 +92,7 @@ describe("EditProfile avatar replacement atomicity", () => {
     // Simulate the EditProfile save order.
     await storage.upload();
     await upsert();
-    await storage.remove(["userid/avatar-old.jpg"]);
+    await storage.remove();
 
     expect(order).toEqual(["upload", "upsert", "remove"]);
   });
