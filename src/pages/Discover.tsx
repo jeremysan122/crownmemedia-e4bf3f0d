@@ -156,8 +156,23 @@ export default function Discover() {
   const POSTS_PAGE = 9;
   const BATTLES_PAGE = 4;
 
-  // Fire once when Discover opens
-  useEffect(() => { void trackEvent("discover_opened"); }, []);
+  // Cursor types for stable pagination — last item determines next page bounds.
+  type PostsCursor = { score: number; id: string } | null;
+  type BattlesCursor = { endsAt: string; id: string } | null;
+  const [postsCursor, setPostsCursor] = useState<PostsCursor>(null);
+  const [battlesCursor, setBattlesCursor] = useState<BattlesCursor>(null);
+
+  // In-flight guards prevent duplicate fetches if the sentinel + button race.
+  const postsFetchingRef = useRef(false);
+  const battlesFetchingRef = useRef(false);
+
+  // Fire once when Discover opens; wire realtime cache invalidation.
+  useEffect(() => {
+    void trackEvent("discover_opened");
+    const unwire = wireRealtimeInvalidation();
+    return () => { unwire(); };
+  }, []);
+
 
   // Load + cache blocked-user ids so they never appear in suggestions / nearby
   useEffect(() => {
