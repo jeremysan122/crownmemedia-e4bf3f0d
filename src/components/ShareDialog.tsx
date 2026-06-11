@@ -24,7 +24,7 @@ export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProp
   // caption, category, or username appear immediately in the share card.
   // The hook NEVER sets `deleted` for transient errors — only when the DB
   // confirms the row is missing or is_removed = true.
-  const { post, loading: loadingFresh, deleted, refreshError } = usePostShareData(initialPost, open);
+  const { post, loading: loadingFresh, deleted, hidden, refreshError } = usePostShareData(initialPost, open);
   const { user } = useAuth();
   const { sensitiveMode } = useFeedFilters();
 
