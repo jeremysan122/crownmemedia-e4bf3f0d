@@ -478,7 +478,7 @@ export default function Discover() {
         if (!cancelled) {
           setOriginCoord(origin);
           setGeoSource(source);
-          if (source !== "none" && source !== "city" && source !== "gps") {
+          if (source !== "none" && source !== "city") {
             void trackEvent("discover_people_near_you_geo_fallback_used", {
               metadata: { fallback: source },
             });
