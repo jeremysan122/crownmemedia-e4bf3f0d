@@ -26,6 +26,9 @@ interface Props {
   initialCountry?: string | null;
   initialImageUrls?: string[] | null;
   initialAltTexts?: string[] | null;
+  /** Used as an optimistic-concurrency precondition so two tabs can't silently
+   *  overwrite each other. Pass the `updated_at` you read when opening. */
+  initialUpdatedAt?: string | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSaved?: (next: {
