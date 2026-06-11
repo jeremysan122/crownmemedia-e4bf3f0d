@@ -8,10 +8,15 @@
  *   - "Post deleted" is ONLY set on a confirmed missing row or is_removed=true —
  *     never on transient network / RLS / storage / image-load errors.
  */
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { withCacheBust } from "@/lib/cacheBust";
 import { resolveSensitiveDecision, type SensitiveViewer } from "@/lib/sensitiveVisibility";
+import {
+  getShareStatus,
+  invalidateShareStatus,
+  type ShareStatus,
+} from "@/lib/shareStatusCache";
 
 /** Columns to select on the `posts` table for share rendering. */
 export const POST_SHARE_COLUMNS =
