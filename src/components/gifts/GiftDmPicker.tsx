@@ -185,13 +185,16 @@ export default function GiftDmPicker({
                     )}
                     <button
                       type="button"
-                      onClick={() => onPick({
-                        userId: p.id,
-                        username: p.username,
-                        displayName: p.displayName,
-                        avatarUrl: p.avatarUrl,
-                        verified: p.verified,
-                      })}
+                      onClick={() => {
+                        try { (window as any).analytics?.track?.("dm_gift_recipient_selected", { source: p.source }); } catch {}
+                        onPick({
+                          userId: p.id,
+                          username: p.username,
+                          displayName: p.displayName,
+                          avatarUrl: p.avatarUrl,
+                          verified: p.verified,
+                        });
+                      }}
                       className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-card/70 border border-transparent hover:border-border/60 text-left transition active:scale-[0.99]"
                     >
                       <div className="size-11 rounded-full bg-muted overflow-hidden shrink-0">
