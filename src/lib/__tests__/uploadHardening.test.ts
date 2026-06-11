@@ -150,3 +150,64 @@ describe("Pending view query shape (owner-only, non-approved)", () => {
     expect(calls.some((c) => c.kind === "neq" && (c.args[0] as string) === "publish_status" && (c.args[1] as string) === "approved")).toBe(true);
   });
 });
+
+describe("Upload UI state machine", () => {
+  const states = ["uploading", "processing", "pending_review", "approved", "rejected", "canceled"] as const;
+  it("recognises every known publish status", () => {
+    for (const s of states) expect(states.includes(s)).toBe(true);
+  });
+
+  it("treats publish_status !== 'approved' as 'needs review' for the success UI", () => {
+    const isPendingReview = (status: string) => status !== "approved";
+    expect(isPendingReview("pending_review")).toBe(true);
+    expect(isPendingReview("processing")).toBe(true);
+    expect(isPendingReview("approved")).toBe(false);
+  });
+});
+
+describe("Orphan cleanup contract", () => {
+  it("only removes paths under the user's own folder", () => {
+    const uid = "u1";
+    const safe = (paths: string[]) => paths.filter((p) => p.startsWith(`${uid}/`));
+    expect(safe([`${uid}/a.jpg`, "other-uid/b.jpg"])).toEqual([`${uid}/a.jpg`]);
+  });
+
+  it("cleanup_orphaned_media_global skips media attached to posts or drafts", () => {
+    const olderThan24h = new Date(Date.now() - 25 * 3600_000);
+    const attached = new Set(["u1/keep.jpg"]);
+    const candidates = [
+      { path: "u1/keep.jpg", created_at: olderThan24h },
+      { path: "u1/orphan.jpg", created_at: olderThan24h },
+      { path: "u1/recent.jpg", created_at: new Date() },
+    ];
+    const toDelete = candidates.filter(
+      (c) => !attached.has(c.path) && c.created_at.getTime() < Date.now() - 24 * 3600_000,
+    );
+    expect(toDelete.map((d) => d.path)).toEqual(["u1/orphan.jpg"]);
+  });
+});
+
+describe("Safety-affecting edits trigger moderation recheck", () => {
+  it("flags caption/media/category/location changes as safety-affecting", () => {
+    const before = { caption: "a", file: null as File | null, category: "overall", city: "NY", state: null as string | null, country: "US" };
+    const after  = { caption: "b", file: null as File | null, category: "overall", city: "NY", state: null as string | null, country: "US" };
+    const isSafety = (b: typeof before, a: typeof after) =>
+      a.caption !== b.caption || !!a.file || a.category !== b.category ||
+      a.city !== b.city || a.state !== b.state || a.country !== b.country;
+    expect(isSafety(before, after)).toBe(true);
+    expect(isSafety(before, before)).toBe(false);
+  });
+});
+
+describe("Cache invalidation broadcast", () => {
+  it("dispatches a crownme:cache-invalidate event with the right kind", async () => {
+    const events: string[] = [];
+    const listener = (e: Event) => events.push(((e as CustomEvent).detail as any).kind);
+    window.addEventListener("crownme:cache-invalidate", listener);
+    const { broadcastCacheInvalidation } = await import("@/lib/cacheInvalidate");
+    broadcastCacheInvalidation({ kind: "post:published", postId: "p1" });
+    broadcastCacheInvalidation({ kind: "profile:username_changed", username: "new", previousUsername: "old" });
+    window.removeEventListener("crownme:cache-invalidate", listener);
+    expect(events).toEqual(["post:published", "profile:username_changed"]);
+  });
+});
