@@ -256,12 +256,12 @@ export default function Discover() {
         excludeIds = ((f as any[]) || []).map((r) => r.following_id);
         excludeIds.push(user.id);
       }
-      let q = supabase
+      let q: any = supabase
         .from("profiles")
         .select("id, username, profile_photo_url, bio, crown_score")
         .not("username", "is", null)
         .order("crown_score", { ascending: false })
-        .limit(8);
+        .limit(20);
       if (excludeIds.length > 0) q = q.not("id", "in", `(${excludeIds.join(",")})`);
       const { data } = await q;
       setSuggested(((data as any[]) || []).slice(0, 6));
