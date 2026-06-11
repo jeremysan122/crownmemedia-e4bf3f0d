@@ -4026,6 +4026,10 @@ export type Database = {
         Args: { p_older_than_minutes?: number }
         Returns: number
       }
+      cleanup_orphaned_media_global: {
+        Args: { p_older_than_minutes?: number }
+        Returns: number
+      }
       comments_allowed_on: { Args: { _post: string }; Returns: boolean }
       compute_daily_usage_rollup: { Args: { _d?: string }; Returns: undefined }
       confirm_my_age: { Args: { _dob: string }; Returns: undefined }

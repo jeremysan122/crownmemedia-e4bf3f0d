@@ -47,6 +47,7 @@ const AppealReport = lazy(() => import("./pages/AppealReport"));
 const Invite = lazy(() => import("./pages/Invite"));
 const Drafts = lazy(() => import("./pages/Drafts"));
 const ArchivedPosts = lazy(() => import("./pages/ArchivedPosts"));
+const Pending = lazy(() => import("./pages/Pending"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const PostPage = lazy(() => import("./pages/PostPage"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
@@ -222,6 +223,7 @@ const App = () => (
               <Route path="/invite" element={<ProtectedRoute><Invite /></ProtectedRoute>} />
               <Route path="/drafts" element={<ProtectedRoute><Drafts /></ProtectedRoute>} />
               <Route path="/archived" element={<ProtectedRoute><ArchivedPosts /></ProtectedRoute>} />
+              <Route path="/pending" element={<ProtectedRoute><Pending /></ProtectedRoute>} />
               <Route path="/creator" element={<ProtectedRoute><CreatorProgram /></ProtectedRoute>} />
               <Route path="/admin/creator-program" element={<ProtectedRoute><AdminRoute><AdminCreatorProgram /></AdminRoute></ProtectedRoute>} />
               <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
