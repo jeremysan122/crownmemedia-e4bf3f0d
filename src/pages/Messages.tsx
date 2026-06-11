@@ -977,6 +977,7 @@ function Inbox({ threads, unreadByThread, userId, reload, setThreads, loadMore, 
 
   // ---------- Preview helper ----------
   const previewOf = (t: any): string => {
+    if (t.kind === "gift") return "🎁 Royal gift";
     if (t.body) return t.body;
     if (t.attachment_path) return `📎 ${t.attachment_name || "Attachment"}`;
     if (t.shared_post_id) return "↗ Shared post";
