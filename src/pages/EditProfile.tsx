@@ -67,7 +67,7 @@ type ProfileForm = z.infer<typeof profileSchema>;
 type FieldErrors = Partial<Record<keyof ProfileForm, string>>;
 
 export default function EditProfile() {
-  const { profile, refreshProfile, user } = useAuth();
+  const { profile, refreshProfile, user, loading: authLoading } = useAuth();
   const nav = useNavigate();
 
   const [username, setUsername] = useState(profile?.username || "");
@@ -364,6 +364,50 @@ export default function EditProfile() {
       </p>
     ) : null;
 
+  // Loading / error / signed-out shells — keep the chrome consistent.
+  const showSkeleton = authLoading || (user && !profile);
+  const signedOut = !authLoading && !user;
+  const loadFailed = !authLoading && !!user && !profile && hydrated;
+
+  if (signedOut) {
+    return (
+      <AppShell title="EDIT PROFILE">
+        <div className="px-4 py-10 max-w-md mx-auto text-center space-y-3">
+          <User2 className="text-muted-foreground mx-auto" size={32} />
+          <h1 className="font-display text-xl text-gold">Sign in to edit your profile</h1>
+          <p className="text-sm text-muted-foreground">You need to be signed in to update your royal details.</p>
+          <Button onClick={() => nav("/auth")} className="bg-gradient-gold text-primary-foreground">Sign in</Button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (showSkeleton && !loadFailed) {
+    return (
+      <AppShell title="EDIT PROFILE">
+        <div className="px-4 py-4 max-w-2xl mx-auto space-y-4" aria-busy="true" aria-label="Loading profile">
+          <div className="h-5 w-24 rounded bg-muted/60 animate-pulse" />
+          <div className="h-8 w-48 rounded bg-muted/60 animate-pulse" />
+          <div className="royal-card p-4 space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="h-20 w-20 rounded-full bg-muted/60 animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="h-8 w-32 rounded bg-muted/60 animate-pulse" />
+                <div className="h-3 w-2/3 rounded bg-muted/40 animate-pulse" />
+              </div>
+            </div>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-3 w-20 rounded bg-muted/40 animate-pulse" />
+                <div className="h-10 rounded bg-muted/60 animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell title="EDIT PROFILE">
       <div className="px-4 py-4 space-y-5 max-w-2xl mx-auto">
@@ -375,6 +419,19 @@ export default function EditProfile() {
         >
           <ArrowLeft size={16} /> Back
         </button>
+
+        {loadFailed && (
+          <div className="royal-card p-4 flex items-start gap-3 border-destructive/40 bg-destructive/5">
+            <AlertCircle className="text-destructive shrink-0 mt-0.5" size={16} />
+            <div className="flex-1 min-w-0 space-y-2">
+              <p className="text-sm font-bold">Couldn't load your profile</p>
+              <p className="text-xs text-muted-foreground">Saving changes is disabled until we can re-fetch your details.</p>
+              <Button size="sm" variant="outline" onClick={() => { refreshProfile(); }}>
+                Retry
+              </Button>
+            </div>
+          </div>
+        )}
 
         <header className="flex items-center gap-2">
           <User2 className="text-gold" size={22} />
@@ -694,7 +751,7 @@ export default function EditProfile() {
 
           <Button
             onClick={save}
-            disabled={saving}
+            disabled={saving || loadFailed}
             className="w-full bg-gradient-gold text-primary-foreground"
           >
             <Save size={14} className="mr-1.5" />
