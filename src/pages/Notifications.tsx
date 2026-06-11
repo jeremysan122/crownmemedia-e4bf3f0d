@@ -67,15 +67,21 @@ export default function Notifications() {
   };
 
   const refresh = async () => {
-    if (!user) return;
-    const { data } = await supabase
+    if (!user) { setLoading(false); return; }
+    setError(null);
+    const { data, error: err } = await supabase
       .from("notifications")
       .select("*")
       .eq("user_id", user.id)
       .neq("type", "dm")
       .order("created_at", { ascending: false })
       .limit(120);
-    setList(dedupe(data || []));
+    if (err) {
+      setError(err.message || "Could not load notifications");
+    } else {
+      setList(dedupe(data || []));
+    }
+    setLoading(false);
   };
 
   useEffect(() => { refresh();   }, [user?.id]);
