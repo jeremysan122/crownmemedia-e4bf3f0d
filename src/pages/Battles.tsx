@@ -504,7 +504,7 @@ export default function Battles() {
                 Renders winner / tie / no-winner / loading / retry. Only enabled for ended battles. */}
             <OfficialResultBadge
               battleId={b.id}
-              enabled={done}
+              enabled={!live}
               resolveUsername={(uid) =>
                 uid === b.challenger_id ? b.challenger?.username : uid === b.opponent_id ? b.opponent?.username : null
               }
