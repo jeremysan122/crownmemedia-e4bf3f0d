@@ -384,25 +384,32 @@ export default function Discover() {
     });
   }, [trendingPosts]);
 
-  // ---------- Live battles (paginated) ----------
+  // ---------- Live battles (cursor pagination + cache) ----------
   const fetchBattlesPage = useCallback(
-    async (page: number): Promise<{ rows: LiveBattle[]; hasMore: boolean }> => {
-      const from = page * BATTLES_PAGE;
-      const to = from + BATTLES_PAGE - 1;
-      const { data, error } = await supabase
+    async (cursor: BattlesCursor): Promise<{ rows: LiveBattle[]; hasMore: boolean; nextCursor: BattlesCursor }> => {
+      const nowIso = new Date().toISOString();
+      let q = supabase
         .from("battles")
         .select(
           "id, ends_at, challenger_votes, opponent_votes, challenger_id, opponent_id, challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url), opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url)",
         )
         .in("status", ["active", "pending"])
-        .gt("ends_at", new Date().toISOString())
+        .gt("ends_at", nowIso)
         .order("ends_at", { ascending: true })
-        .range(from, to);
+        .order("id", { ascending: true })
+        .limit(BATTLES_PAGE);
+      if (cursor) {
+        q = q.or(`ends_at.gt.${cursor.endsAt},and(ends_at.eq.${cursor.endsAt},id.gt.${cursor.id})`);
+      }
+      const { data, error } = await q;
       if (error) throw error;
-      const rows = ((data as any[]) || []).filter(
+      const all = ((data as any[]) || []);
+      const rows = all.filter(
         (b) => !blockedIds.has(b.challenger_id) && !blockedIds.has(b.opponent_id),
       ) as LiveBattle[];
-      return { rows, hasMore: ((data as any[]) || []).length === BATTLES_PAGE };
+      const last = all[all.length - 1];
+      const nextCursor = last ? { endsAt: String(last.ends_at), id: String(last.id) } : null;
+      return { rows, hasMore: all.length === BATTLES_PAGE, nextCursor };
     },
     [blockedIds],
   );
@@ -412,12 +419,28 @@ export default function Discover() {
     setBattlesLoading(true);
     setBattlesError(false);
     setBattlesHasMore(true);
+    setBattlesCursor(null);
     (async () => {
       try {
-        const { rows, hasMore } = await fetchBattlesPage(0);
+        const cacheKey = makeCacheKey("battles", { user: user?.id ?? "anon", cursor: "0" });
+        const cached = getCached<{ rows: LiveBattle[]; hasMore: boolean; nextCursor: BattlesCursor }>(cacheKey);
+        if (cached) {
+          void trackEvent("discover_cache_hit", { metadata: { section: "battles" } });
+          if (!cancelled) {
+            setBattles(cached.rows);
+            setBattlesHasMore(cached.hasMore);
+            setBattlesCursor(cached.nextCursor);
+            setBattlesLoading(false);
+            return;
+          }
+        }
+        void trackEvent("discover_cache_miss", { metadata: { section: "battles" } });
+        const r = await fetchBattlesPage(null);
         if (cancelled) return;
-        setBattles(rows);
-        setBattlesHasMore(hasMore);
+        setBattles(r.rows);
+        setBattlesHasMore(r.hasMore);
+        setBattlesCursor(r.nextCursor);
+        setCached(cacheKey, "battles", r);
       } catch {
         if (!cancelled) setBattlesError(true);
       } finally {
@@ -425,29 +448,35 @@ export default function Discover() {
       }
     })();
     return () => { cancelled = true; };
-  }, [fetchBattlesPage, refreshKey]);
+  }, [fetchBattlesPage, refreshKey, user?.id]);
 
   const loadMoreBattles = useCallback(async () => {
-    if (battlesLoadingMore || !battlesHasMore || battlesLoading) return;
+    if (battlesFetchingRef.current || !battlesHasMore || battlesLoading) return;
+    battlesFetchingRef.current = true;
     setBattlesLoadingMore(true);
     setBattlesError(false);
     try {
-      const page = Math.floor(battles.length / BATTLES_PAGE);
-      const { rows, hasMore } = await fetchBattlesPage(page);
+      const r = await fetchBattlesPage(battlesCursor);
       setBattles((prev) => {
         const seen = new Set(prev.map((b) => b.id));
-        return [...prev, ...rows.filter((r) => !seen.has(r.id))];
+        const fresh = r.rows.filter((x) => !seen.has(x.id));
+        if (fresh.length !== r.rows.length) {
+          void trackEvent("discover_duplicate_prevented", { metadata: { section: "battles", dropped: r.rows.length - fresh.length } });
+        }
+        return [...prev, ...fresh];
       });
-      setBattlesHasMore(hasMore);
-      void trackEvent("discover_battles_pagination_loaded", {
-        metadata: { page: page + 1, count: rows.length },
-      });
+      setBattlesHasMore(r.hasMore);
+      setBattlesCursor(r.nextCursor);
+      void trackEvent("discover_battles_pagination_loaded", { metadata: { count: r.rows.length } });
     } catch {
       setBattlesError(true);
+      void trackEvent("discover_pagination_failed", { metadata: { section: "battles" } });
     } finally {
+      battlesFetchingRef.current = false;
       setBattlesLoadingMore(false);
     }
-  }, [fetchBattlesPage, battlesLoadingMore, battlesHasMore, battlesLoading, battles.length]);
+  }, [fetchBattlesPage, battlesHasMore, battlesLoading, battlesCursor]);
+
 
   // Suggested creators — exclude self, blocked, banned, suspended, private
   useEffect(() => {
