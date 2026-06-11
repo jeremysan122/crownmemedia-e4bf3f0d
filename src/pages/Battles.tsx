@@ -89,6 +89,8 @@ export default function Battles() {
   const prevStatusRef = useRef<Record<string, { status: string; winner: string | null }>>({});
   /** Prevents a rapid double-tap from optimistically incrementing twice before the insert resolves. */
   const inFlightVotes = useRef<Set<string>>(new Set());
+  /** Battles currently submitting a vote — drives the spinner + disabled state on the vote button. */
+  const [submittingVotes, setSubmittingVotes] = useState<Set<string>>(new Set());
 
   const load = async () => {
     setLoading(true);
