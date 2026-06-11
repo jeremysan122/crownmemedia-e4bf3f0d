@@ -26,9 +26,10 @@ interface Props {
   initialCountry?: string | null;
   initialImageUrls?: string[] | null;
   initialAltTexts?: string[] | null;
-  /** Used as an optimistic-concurrency precondition so two tabs can't silently
-   *  overwrite each other. Pass the `updated_at` you read when opening. */
-  initialUpdatedAt?: string | null;
+  /** Optimistic-concurrency precondition. Pass the post's `edited_at` you
+   *  read when opening the dialog so two tabs can't silently overwrite each
+   *  other — a stale save is rejected with a conflict toast. */
+  initialEditedAt?: string | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSaved?: (next: {
