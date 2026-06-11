@@ -29,10 +29,15 @@ import AppShell from "@/components/AppShell";
 import { trackEvent } from "@/lib/analytics";
 import { toast } from "@/hooks/use-toast";
 import {
-  RADIUS_OPTIONS, type RadiusMiles, loadSavedRadius, saveRadius,
+  type RadiusMiles, loadSavedRadius, saveRadius,
   withinRadius,
 } from "@/lib/discoverGeo";
 import { lookupGeo } from "@/lib/geoCoords";
+import RadiusSelector from "@/components/discover/RadiusSelector";
+import {
+  makeKey as makeCacheKey, getCached, setCached, wireRealtimeInvalidation,
+} from "@/lib/discoverCache";
+
 
 interface HubStat {
   slug: string;
@@ -151,8 +156,23 @@ export default function Discover() {
   const POSTS_PAGE = 9;
   const BATTLES_PAGE = 4;
 
-  // Fire once when Discover opens
-  useEffect(() => { void trackEvent("discover_opened"); }, []);
+  // Cursor types for stable pagination — last item determines next page bounds.
+  type PostsCursor = { score: number; id: string } | null;
+  type BattlesCursor = { endsAt: string; id: string } | null;
+  const [postsCursor, setPostsCursor] = useState<PostsCursor>(null);
+  const [battlesCursor, setBattlesCursor] = useState<BattlesCursor>(null);
+
+  // In-flight guards prevent duplicate fetches if the sentinel + button race.
+  const postsFetchingRef = useRef(false);
+  const battlesFetchingRef = useRef(false);
+
+  // Fire once when Discover opens; wire realtime cache invalidation.
+  useEffect(() => {
+    void trackEvent("discover_opened");
+    const unwire = wireRealtimeInvalidation();
+    return () => { unwire(); };
+  }, []);
+
 
   // Load + cache blocked-user ids so they never appear in suggestions / nearby
   useEffect(() => {
@@ -260,13 +280,11 @@ export default function Discover() {
     })();
   }, [refreshKey]);
 
-  // ---------- Trending posts (paginated) ----------
+  // ---------- Trending posts (cursor pagination + short-lived cache) ----------
   const fetchTrendingPage = useCallback(
-    async (page: number): Promise<{ rows: TrendingPost[]; hasMore: boolean }> => {
+    async (cursor: PostsCursor): Promise<{ rows: TrendingPost[]; hasMore: boolean; nextCursor: PostsCursor }> => {
       const since = new Date(Date.now() - WINDOW_HOURS[windowSel] * 60 * 60 * 1000).toISOString();
-      const from = page * POSTS_PAGE;
-      const to = from + POSTS_PAGE - 1;
-      const { data, error } = await supabase
+      let q = supabase
         .from("posts")
         .select(
           "id, image_url, image_urls, video_poster_url, media_type, crown_score, caption, user_id, profile:profiles!posts_user_id_fkey(username, profile_photo_url)",
@@ -276,10 +294,18 @@ export default function Discover() {
         .eq("is_archived", false)
         .order("crown_score", { ascending: false })
         .order("id", { ascending: true })
-        .range(from, to);
+        .limit(POSTS_PAGE);
+      // Stable keyset cursor: rows AFTER (score, id) tuple.
+      if (cursor) {
+        q = q.or(`crown_score.lt.${cursor.score},and(crown_score.eq.${cursor.score},id.gt.${cursor.id})`);
+      }
+      const { data, error } = await q;
       if (error) throw error;
-      const rows = ((data as any[]) || []).filter((r) => !blockedIds.has(r.user_id)) as TrendingPost[];
-      return { rows, hasMore: ((data as any[]) || []).length === POSTS_PAGE };
+      const all = ((data as any[]) || []);
+      const rows = all.filter((r) => !blockedIds.has(r.user_id)) as TrendingPost[];
+      const last = all[all.length - 1];
+      const nextCursor = last ? { score: Number(last.crown_score) || 0, id: String(last.id) } : null;
+      return { rows, hasMore: all.length === POSTS_PAGE, nextCursor };
     },
     [windowSel, blockedIds],
   );
@@ -289,12 +315,28 @@ export default function Discover() {
     setPostsLoading(true);
     setPostsError(false);
     setPostsHasMore(true);
+    setPostsCursor(null);
     (async () => {
       try {
-        const { rows, hasMore } = await fetchTrendingPage(0);
+        const cacheKey = makeCacheKey("trending", { user: user?.id ?? "anon", window: windowSel, cursor: "0" });
+        const cached = getCached<{ rows: TrendingPost[]; hasMore: boolean; nextCursor: PostsCursor }>(cacheKey);
+        if (cached) {
+          void trackEvent("discover_cache_hit", { metadata: { section: "trending" } });
+          if (!cancelled) {
+            setTrendingPosts(cached.rows);
+            setPostsHasMore(cached.hasMore);
+            setPostsCursor(cached.nextCursor);
+            setPostsLoading(false);
+            return;
+          }
+        }
+        void trackEvent("discover_cache_miss", { metadata: { section: "trending" } });
+        const r = await fetchTrendingPage(null);
         if (cancelled) return;
-        setTrendingPosts(rows);
-        setPostsHasMore(hasMore);
+        setTrendingPosts(r.rows);
+        setPostsHasMore(r.hasMore);
+        setPostsCursor(r.nextCursor);
+        setCached(cacheKey, "trending", r);
       } catch {
         if (!cancelled) setPostsError(true);
       } finally {
@@ -302,29 +344,35 @@ export default function Discover() {
       }
     })();
     return () => { cancelled = true; };
-  }, [fetchTrendingPage, refreshKey]);
+  }, [fetchTrendingPage, refreshKey, user?.id, windowSel]);
 
   const loadMorePosts = useCallback(async () => {
-    if (postsLoadingMore || !postsHasMore || postsLoading) return;
+    if (postsFetchingRef.current || !postsHasMore || postsLoading) return;
+    postsFetchingRef.current = true;
     setPostsLoadingMore(true);
     setPostsError(false);
     try {
-      const page = Math.floor(trendingPosts.length / POSTS_PAGE);
-      const { rows, hasMore } = await fetchTrendingPage(page);
+      const r = await fetchTrendingPage(postsCursor);
       setTrendingPosts((prev) => {
         const seen = new Set(prev.map((p) => p.id));
-        return [...prev, ...rows.filter((r) => !seen.has(r.id))];
+        const fresh = r.rows.filter((x) => !seen.has(x.id));
+        if (fresh.length !== r.rows.length) {
+          void trackEvent("discover_duplicate_prevented", { metadata: { section: "trending", dropped: r.rows.length - fresh.length } });
+        }
+        return [...prev, ...fresh];
       });
-      setPostsHasMore(hasMore);
-      void trackEvent("discover_trending_pagination_loaded", {
-        metadata: { page: page + 1, count: rows.length },
-      });
+      setPostsHasMore(r.hasMore);
+      setPostsCursor(r.nextCursor);
+      void trackEvent("discover_trending_pagination_loaded", { metadata: { count: r.rows.length } });
     } catch {
       setPostsError(true);
+      void trackEvent("discover_pagination_failed", { metadata: { section: "trending" } });
     } finally {
+      postsFetchingRef.current = false;
       setPostsLoadingMore(false);
     }
-  }, [fetchTrendingPage, postsLoadingMore, postsHasMore, postsLoading, trendingPosts.length]);
+  }, [fetchTrendingPage, postsHasMore, postsLoading, postsCursor]);
+
 
   // Fire one impression event per trending-post id we render (deduped via ref)
   const impressed = useRef<Set<string>>(new Set());
@@ -336,25 +384,32 @@ export default function Discover() {
     });
   }, [trendingPosts]);
 
-  // ---------- Live battles (paginated) ----------
+  // ---------- Live battles (cursor pagination + cache) ----------
   const fetchBattlesPage = useCallback(
-    async (page: number): Promise<{ rows: LiveBattle[]; hasMore: boolean }> => {
-      const from = page * BATTLES_PAGE;
-      const to = from + BATTLES_PAGE - 1;
-      const { data, error } = await supabase
+    async (cursor: BattlesCursor): Promise<{ rows: LiveBattle[]; hasMore: boolean; nextCursor: BattlesCursor }> => {
+      const nowIso = new Date().toISOString();
+      let q = supabase
         .from("battles")
         .select(
           "id, ends_at, challenger_votes, opponent_votes, challenger_id, opponent_id, challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url), opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url)",
         )
         .in("status", ["active", "pending"])
-        .gt("ends_at", new Date().toISOString())
+        .gt("ends_at", nowIso)
         .order("ends_at", { ascending: true })
-        .range(from, to);
+        .order("id", { ascending: true })
+        .limit(BATTLES_PAGE);
+      if (cursor) {
+        q = q.or(`ends_at.gt.${cursor.endsAt},and(ends_at.eq.${cursor.endsAt},id.gt.${cursor.id})`);
+      }
+      const { data, error } = await q;
       if (error) throw error;
-      const rows = ((data as any[]) || []).filter(
+      const all = ((data as any[]) || []);
+      const rows = all.filter(
         (b) => !blockedIds.has(b.challenger_id) && !blockedIds.has(b.opponent_id),
       ) as LiveBattle[];
-      return { rows, hasMore: ((data as any[]) || []).length === BATTLES_PAGE };
+      const last = all[all.length - 1];
+      const nextCursor = last ? { endsAt: String(last.ends_at), id: String(last.id) } : null;
+      return { rows, hasMore: all.length === BATTLES_PAGE, nextCursor };
     },
     [blockedIds],
   );
@@ -364,12 +419,28 @@ export default function Discover() {
     setBattlesLoading(true);
     setBattlesError(false);
     setBattlesHasMore(true);
+    setBattlesCursor(null);
     (async () => {
       try {
-        const { rows, hasMore } = await fetchBattlesPage(0);
+        const cacheKey = makeCacheKey("battles", { user: user?.id ?? "anon", cursor: "0" });
+        const cached = getCached<{ rows: LiveBattle[]; hasMore: boolean; nextCursor: BattlesCursor }>(cacheKey);
+        if (cached) {
+          void trackEvent("discover_cache_hit", { metadata: { section: "battles" } });
+          if (!cancelled) {
+            setBattles(cached.rows);
+            setBattlesHasMore(cached.hasMore);
+            setBattlesCursor(cached.nextCursor);
+            setBattlesLoading(false);
+            return;
+          }
+        }
+        void trackEvent("discover_cache_miss", { metadata: { section: "battles" } });
+        const r = await fetchBattlesPage(null);
         if (cancelled) return;
-        setBattles(rows);
-        setBattlesHasMore(hasMore);
+        setBattles(r.rows);
+        setBattlesHasMore(r.hasMore);
+        setBattlesCursor(r.nextCursor);
+        setCached(cacheKey, "battles", r);
       } catch {
         if (!cancelled) setBattlesError(true);
       } finally {
@@ -377,29 +448,35 @@ export default function Discover() {
       }
     })();
     return () => { cancelled = true; };
-  }, [fetchBattlesPage, refreshKey]);
+  }, [fetchBattlesPage, refreshKey, user?.id]);
 
   const loadMoreBattles = useCallback(async () => {
-    if (battlesLoadingMore || !battlesHasMore || battlesLoading) return;
+    if (battlesFetchingRef.current || !battlesHasMore || battlesLoading) return;
+    battlesFetchingRef.current = true;
     setBattlesLoadingMore(true);
     setBattlesError(false);
     try {
-      const page = Math.floor(battles.length / BATTLES_PAGE);
-      const { rows, hasMore } = await fetchBattlesPage(page);
+      const r = await fetchBattlesPage(battlesCursor);
       setBattles((prev) => {
         const seen = new Set(prev.map((b) => b.id));
-        return [...prev, ...rows.filter((r) => !seen.has(r.id))];
+        const fresh = r.rows.filter((x) => !seen.has(x.id));
+        if (fresh.length !== r.rows.length) {
+          void trackEvent("discover_duplicate_prevented", { metadata: { section: "battles", dropped: r.rows.length - fresh.length } });
+        }
+        return [...prev, ...fresh];
       });
-      setBattlesHasMore(hasMore);
-      void trackEvent("discover_battles_pagination_loaded", {
-        metadata: { page: page + 1, count: rows.length },
-      });
+      setBattlesHasMore(r.hasMore);
+      setBattlesCursor(r.nextCursor);
+      void trackEvent("discover_battles_pagination_loaded", { metadata: { count: r.rows.length } });
     } catch {
       setBattlesError(true);
+      void trackEvent("discover_pagination_failed", { metadata: { section: "battles" } });
     } finally {
+      battlesFetchingRef.current = false;
       setBattlesLoadingMore(false);
     }
-  }, [fetchBattlesPage, battlesLoadingMore, battlesHasMore, battlesLoading, battles.length]);
+  }, [fetchBattlesPage, battlesHasMore, battlesLoading, battlesCursor]);
+
 
   // Suggested creators — exclude self, blocked, banned, suspended, private
   useEffect(() => {
@@ -723,6 +800,61 @@ export default function Discover() {
     io.observe(el);
     return () => io.disconnect();
   }, [loadMoreBattles]);
+
+  // --- Discover state preservation across back-navigation -------------------
+  // We snapshot loaded items + cursor + scroll on unmount and restore on mount
+  // so tapping a post/profile/battle and pressing Back returns the user to the
+  // exact same Discover view. Cache TTL still applies — if data went stale we
+  // refetch lazily, but the snapshot keeps the scroll position intact.
+  const STATE_KEY = "crownme:discover:state:v1";
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    try {
+      const raw = sessionStorage.getItem(STATE_KEY);
+      if (!raw) return;
+      const s = JSON.parse(raw) as {
+        windowSel?: Window; radius?: RadiusMiles; scrollY?: number;
+        trending?: TrendingPost[]; trendingCursor?: PostsCursor; trendingHasMore?: boolean;
+        battles?: LiveBattle[]; battlesCursor?: BattlesCursor; battlesHasMore?: boolean;
+      };
+      if (s.windowSel) setWindowSel(s.windowSel);
+      if (typeof s.radius === "number") setRadius(s.radius as RadiusMiles);
+      if (Array.isArray(s.trending) && s.trending.length > 0) {
+        setTrendingPosts(s.trending);
+        setPostsCursor(s.trendingCursor ?? null);
+        if (typeof s.trendingHasMore === "boolean") setPostsHasMore(s.trendingHasMore);
+        setPostsLoading(false);
+      }
+      if (Array.isArray(s.battles) && s.battles.length > 0) {
+        setBattles(s.battles);
+        setBattlesCursor(s.battlesCursor ?? null);
+        if (typeof s.battlesHasMore === "boolean") setBattlesHasMore(s.battlesHasMore);
+        setBattlesLoading(false);
+      }
+      if (typeof s.scrollY === "number") {
+        // Defer until after first paint so layout is correct.
+        requestAnimationFrame(() => window.scrollTo(0, s.scrollY!));
+      }
+      void trackEvent("discover_state_restored");
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    const save = () => {
+      try {
+        sessionStorage.setItem(STATE_KEY, JSON.stringify({
+          windowSel, radius, scrollY: window.scrollY,
+          trending: trendingPosts.slice(0, 60), trendingCursor: postsCursor, trendingHasMore: postsHasMore,
+          battles: battles.slice(0, 30), battlesCursor: battlesCursor, battlesHasMore: battlesHasMore,
+        }));
+      } catch { /* quota — ignore */ }
+    };
+    window.addEventListener("pagehide", save);
+    return () => { save(); window.removeEventListener("pagehide", save); };
+  }, [windowSel, radius, trendingPosts, postsCursor, postsHasMore, battles, battlesCursor, battlesHasMore]);
+
 
   // --- Pull-to-refresh (touch only, top of scroll) ---------------------------
   const ptrRef = useRef<HTMLDivElement>(null);
@@ -1121,18 +1253,8 @@ export default function Discover() {
                   )}
                 </h2>
                 <div className="flex items-center gap-2">
-                  <label className="sr-only" htmlFor="nearby-radius">Distance radius</label>
-                  <select
-                    id="nearby-radius"
-                    value={radius}
-                    onChange={(e) => handleRadiusChange(Number(e.target.value) as RadiusMiles)}
-                    className="h-8 px-2 rounded-full border border-border bg-card text-[11px] font-medium text-foreground hover:border-primary/40 focus:border-primary/60 outline-none"
-                    aria-label="People Near You distance radius"
-                  >
-                    {RADIUS_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
+                  <RadiusSelector value={radius} onChange={handleRadiusChange} geoSource={geoSource} />
+
                   <button
                     type="button"
                     onClick={requestPreciseLocation}
