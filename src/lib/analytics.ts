@@ -40,7 +40,19 @@ type EventName =
   | "vote_attempted"
   | "vote_success"
   | "vote_failed"
-  | "verification_page_opened";
+  | "verification_page_opened"
+  // ShareDialog funnel — measure friction in the sharing flow
+  | "share_status_cache_hit"
+  | "share_status_cache_miss"
+  | "share_status_refresh_started"
+  | "share_status_refresh_success"
+  | "share_status_refresh_error"
+  | "share_attempted"
+  | "share_success"
+  | "share_blocked_hidden"
+  | "share_blocked_deleted"
+  | "share_blocked_unavailable"
+  | "share_channel_selected";
 
 async function sha256Hex(input: string): Promise<string> {
   const buf = new TextEncoder().encode(input);
