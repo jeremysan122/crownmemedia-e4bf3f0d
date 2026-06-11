@@ -963,12 +963,19 @@ export default function Upload() {
 
   // ────────── Render ──────────
   if (success) {
+    const pending = typeof window !== "undefined" && (window as any).__crownmePendingReview === true;
     return (
       <AppShell title="UPLOAD">
         <div className="flex flex-col items-center justify-center py-32 px-6 text-center animate-scale-in">
           <Crown size={80} className="text-primary animate-crown-pulse mb-6" fill="currentColor" />
-          <h2 className="font-display text-3xl text-gold mb-2">Your crown race has begun</h2>
-          <p className="text-sm text-muted-foreground">Returning to feed…</p>
+          <h2 className="font-display text-3xl text-gold mb-2">
+            {pending ? "Submitted for review" : "Your crown race has begun"}
+          </h2>
+          <p className="text-sm text-muted-foreground max-w-sm">
+            {pending
+              ? "We're checking your post for safety. It'll appear publicly as soon as it's approved — you can already see it in your profile under Pending."
+              : "Returning to feed…"}
+          </p>
         </div>
       </AppShell>
     );
