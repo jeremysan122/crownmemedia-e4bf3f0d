@@ -34,6 +34,7 @@ import { computeReactionTotalsForMessages } from "@/lib/reactionTotals";
 import MessageReactions from "@/components/messages/MessageReactions";
 import DmAttachment from "@/components/messages/DmAttachment";
 import { toast } from "@/hooks/use-toast";
+import GiftReceiptCard from "@/components/messages/GiftReceiptCard";
 
 type Msg = {
   id: string;
