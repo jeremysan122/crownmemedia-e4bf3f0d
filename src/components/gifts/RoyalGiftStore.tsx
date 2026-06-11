@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, TrendingUp, Crown, Send, ShoppingCart, Wallet, Heart, Loader2 } from "lucide-react";
+import { Search, TrendingUp, Crown, Send, ShoppingCart, Wallet, Heart, Loader2, MessageCircle } from "lucide-react";
 import { ROYAL_GIFTS, SHEKEL, formatShekels, shekelToUsd, CATEGORY_TABS, findGift } from "@/lib/gifts";
 import { GiftCategory, RoyalGift } from "@/types/gifts";
 import { useWallet } from "@/hooks/useWallet";
@@ -12,6 +12,8 @@ import { useGiftFavorites } from "@/hooks/useGiftFavorites";
 import { fxGiftPreview, fxGiftSend, fxPurchase, fxTap, unlockAudio } from "@/lib/giftFx";
 import DailyDealCard from "@/components/store/DailyDealCard";
 import GiftTargetPicker from "./GiftTargetPicker";
+import GiftDmPicker, { type GiftDmRecipient } from "./GiftDmPicker";
+import { supabase } from "@/integrations/supabase/client";
 import { makeGiftIdempotencyKey, useGiftSend } from "@/hooks/useGiftSend";
 import {
   AlertDialog,
