@@ -298,7 +298,17 @@ export default function Notifications() {
               </div>
             );
           })}
-          {!visible.length && <p className="text-center text-sm text-muted-foreground py-10">No notifications in this group.</p>}
+          {!loading && !error && !visible.length && (
+            <div className="royal-card p-8 text-center space-y-2">
+              <Bell size={28} className="text-muted-foreground/60 mx-auto" />
+              <p className="text-sm font-bold">No notifications yet</p>
+              <p className="text-xs text-muted-foreground">
+                {active === "all"
+                  ? "When royals interact with your crown, it'll show up here."
+                  : "Nothing in this group yet."}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </AppShell>
