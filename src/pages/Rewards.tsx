@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import CrownLoader from "@/components/CrownLoader";
 import { CrownIcon } from "@/components/CrownIcon";
 import { Flame, Swords, Sparkles, ArrowLeft, History, Loader2 } from "lucide-react";
+import AppShell from "@/components/AppShell";
 import { toast } from "sonner";
 import { haptic } from "@/lib/haptics";
 
@@ -301,8 +302,9 @@ export default function Rewards() {
   const dayReward = (day: number) => day === 7 ? "+100" : `+${10 + (day - 1) * 5}`;
 
   return (
-    <main className="min-h-screen bg-[#0a0510] pb-28">
-      <header className="sticky top-0 z-20 backdrop-blur bg-[#0a0510]/80 border-b border-amber-500/10">
+    <AppShell showHeader={false}>
+    <main className="min-h-screen bg-[#0a0510] pb-28 lg:pb-12">
+      <header className="lg:hidden sticky top-0 z-30 backdrop-blur bg-[#0a0510]/80 border-b border-amber-500/10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <Link to="/feed" aria-label="Back" className="p-2 -ml-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white"><ArrowLeft className="size-5" /></Link>
           <h1 className="font-display text-base sm:text-lg tracking-[0.3em] text-amber-400">ROYAL VAULT</h1>
@@ -539,5 +541,6 @@ export default function Rewards() {
         </div>
       </div>
     </main>
+    </AppShell>
   );
 }
