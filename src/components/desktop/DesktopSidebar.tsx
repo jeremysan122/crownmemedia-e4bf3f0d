@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Swords, Map, Plus, User, Trophy, Store, MessageCircle, Bell, Settings as SettingsIcon, Clapperboard, Gift, Compass } from "lucide-react";
+import { Home, Swords, Map, Plus, User, Trophy, Store, MessageCircle, Bell, Settings as SettingsIcon, Clapperboard, Gift, Compass, Clock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const items = [
@@ -13,9 +13,10 @@ const items = [
   { to: "/store", label: "Royal Store", icon: Store },
   { to: "/messages", label: "Messages", icon: MessageCircle },
   { to: "/notifications", label: "Notifications", icon: Bell },
+  { to: "/pending", label: "Pending", icon: Clock, authOnly: true },
   { to: "/me", label: "Profile", icon: User },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
-];
+] as const;
 
 interface DesktopSidebarProps {
   onCompose?: () => void;
