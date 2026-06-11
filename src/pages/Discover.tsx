@@ -17,6 +17,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   TrendingUp, Crown, Flame, Sparkles, ArrowRight, Star, Zap, Trophy,
   Search, Swords, UserPlus, UserCheck, Gift, ShieldCheck, MapPin, RefreshCw, Loader2,
+  LocateFixed,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCategoryTree } from "@/lib/categories";
@@ -27,6 +28,11 @@ import { useIsRoyalPassUser } from "@/hooks/useIsRoyalPassUser";
 import AppShell from "@/components/AppShell";
 import { trackEvent } from "@/lib/analytics";
 import { toast } from "@/hooks/use-toast";
+import {
+  RADIUS_OPTIONS, type RadiusMiles, loadSavedRadius, saveRadius,
+  withinRadius,
+} from "@/lib/discoverGeo";
+import { lookupGeo } from "@/lib/geoCoords";
 
 interface HubStat {
   slug: string;
@@ -119,19 +125,43 @@ export default function Discover() {
   const [rising, setRising] = useState<RisingStar[]>([]);
   const [trendingPosts, setTrendingPosts] = useState<TrendingPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
+  const [postsHasMore, setPostsHasMore] = useState(true);
+  const [postsLoadingMore, setPostsLoadingMore] = useState(false);
+  const [postsError, setPostsError] = useState(false);
   const [battles, setBattles] = useState<LiveBattle[]>([]);
   const [battlesLoading, setBattlesLoading] = useState(true);
+  const [battlesHasMore, setBattlesHasMore] = useState(true);
+  const [battlesLoadingMore, setBattlesLoadingMore] = useState(false);
+  const [battlesError, setBattlesError] = useState(false);
   const [suggested, setSuggested] = useState<SuggestedUser[]>([]);
   const [following, setFollowing] = useState<Set<string>>(new Set());
   const [pendingFollow, setPendingFollow] = useState<Set<string>>(new Set());
-  const [nearby, setNearby] = useState<NearbyUser[]>([]);
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+  const [nearby, setNearby] = useState<(NearbyUser & { _coord?: [number, number] | null })[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [radius, setRadius] = useState<RadiusMiles>(() => loadSavedRadius());
+  const [originCoord, setOriginCoord] = useState<[number, number] | null>(null);
+  const [geoSource, setGeoSource] = useState<"gps" | "city" | "state" | "country" | "none">("none");
+  const [geoRequesting, setGeoRequesting] = useState(false);
   const [gifters, setGifters] = useState<TopGifter[]>([]);
   const [search, setSearch] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const POSTS_PAGE = 9;
+  const BATTLES_PAGE = 4;
+
   // Fire once when Discover opens
   useEffect(() => { void trackEvent("discover_opened"); }, []);
+
+  // Load + cache blocked-user ids so they never appear in suggestions / nearby
+  useEffect(() => {
+    if (!user) { setBlockedIds(new Set()); return; }
+    (async () => {
+      const { data } = await supabase.from("blocks").select("blocked_id").eq("blocker_id", user.id);
+      setBlockedIds(new Set(((data as any[]) || []).map((r) => r.blocked_id).filter(Boolean)));
+    })();
+  }, [user?.id]);
 
   const featuredTopics = useMemo(
     () => subs.filter((s) => s.is_featured).slice(0, 8),
@@ -230,27 +260,71 @@ export default function Discover() {
     })();
   }, [refreshKey]);
 
-  // Trending posts (varies with window & refreshKey)
-  useEffect(() => {
-    let cancelled = false;
-    setPostsLoading(true);
-    (async () => {
+  // ---------- Trending posts (paginated) ----------
+  const fetchTrendingPage = useCallback(
+    async (page: number): Promise<{ rows: TrendingPost[]; hasMore: boolean }> => {
       const since = new Date(Date.now() - WINDOW_HOURS[windowSel] * 60 * 60 * 1000).toISOString();
-      const { data } = await supabase
+      const from = page * POSTS_PAGE;
+      const to = from + POSTS_PAGE - 1;
+      const { data, error } = await supabase
         .from("posts")
-        .select("id, image_url, image_urls, video_poster_url, media_type, crown_score, caption, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
+        .select(
+          "id, image_url, image_urls, video_poster_url, media_type, crown_score, caption, user_id, profile:profiles!posts_user_id_fkey(username, profile_photo_url)",
+        )
         .gte("created_at", since)
         .eq("is_removed", false)
         .eq("is_archived", false)
         .order("crown_score", { ascending: false })
-        .limit(9);
-      if (!cancelled) {
-        setTrendingPosts((data as any) || []);
-        setPostsLoading(false);
+        .order("id", { ascending: true })
+        .range(from, to);
+      if (error) throw error;
+      const rows = ((data as any[]) || []).filter((r) => !blockedIds.has(r.user_id)) as TrendingPost[];
+      return { rows, hasMore: ((data as any[]) || []).length === POSTS_PAGE };
+    },
+    [windowSel, blockedIds],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    setPostsLoading(true);
+    setPostsError(false);
+    setPostsHasMore(true);
+    (async () => {
+      try {
+        const { rows, hasMore } = await fetchTrendingPage(0);
+        if (cancelled) return;
+        setTrendingPosts(rows);
+        setPostsHasMore(hasMore);
+      } catch {
+        if (!cancelled) setPostsError(true);
+      } finally {
+        if (!cancelled) setPostsLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [windowSel, refreshKey]);
+  }, [fetchTrendingPage, refreshKey]);
+
+  const loadMorePosts = useCallback(async () => {
+    if (postsLoadingMore || !postsHasMore || postsLoading) return;
+    setPostsLoadingMore(true);
+    setPostsError(false);
+    try {
+      const page = Math.floor(trendingPosts.length / POSTS_PAGE);
+      const { rows, hasMore } = await fetchTrendingPage(page);
+      setTrendingPosts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...rows.filter((r) => !seen.has(r.id))];
+      });
+      setPostsHasMore(hasMore);
+      void trackEvent("discover_trending_pagination_loaded", {
+        metadata: { page: page + 1, count: rows.length },
+      });
+    } catch {
+      setPostsError(true);
+    } finally {
+      setPostsLoadingMore(false);
+    }
+  }, [fetchTrendingPage, postsLoadingMore, postsHasMore, postsLoading, trendingPosts.length]);
 
   // Fire one impression event per trending-post id we render (deduped via ref)
   const impressed = useRef<Set<string>>(new Set());
@@ -262,27 +336,72 @@ export default function Discover() {
     });
   }, [trendingPosts]);
 
-  // Live battles (upcoming/active, refresh on pull-to-refresh)
-  useEffect(() => {
-    let cancelled = false;
-    setBattlesLoading(true);
-    (async () => {
-      const { data } = await supabase
+  // ---------- Live battles (paginated) ----------
+  const fetchBattlesPage = useCallback(
+    async (page: number): Promise<{ rows: LiveBattle[]; hasMore: boolean }> => {
+      const from = page * BATTLES_PAGE;
+      const to = from + BATTLES_PAGE - 1;
+      const { data, error } = await supabase
         .from("battles")
-        .select("id, ends_at, challenger_votes, opponent_votes, challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url), opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url)")
+        .select(
+          "id, ends_at, challenger_votes, opponent_votes, challenger_id, opponent_id, challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url), opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url)",
+        )
         .in("status", ["active", "pending"])
         .gt("ends_at", new Date().toISOString())
         .order("ends_at", { ascending: true })
-        .limit(4);
-      if (!cancelled) {
-        setBattles((data as any) || []);
-        setBattlesLoading(false);
+        .range(from, to);
+      if (error) throw error;
+      const rows = ((data as any[]) || []).filter(
+        (b) => !blockedIds.has(b.challenger_id) && !blockedIds.has(b.opponent_id),
+      ) as LiveBattle[];
+      return { rows, hasMore: ((data as any[]) || []).length === BATTLES_PAGE };
+    },
+    [blockedIds],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    setBattlesLoading(true);
+    setBattlesError(false);
+    setBattlesHasMore(true);
+    (async () => {
+      try {
+        const { rows, hasMore } = await fetchBattlesPage(0);
+        if (cancelled) return;
+        setBattles(rows);
+        setBattlesHasMore(hasMore);
+      } catch {
+        if (!cancelled) setBattlesError(true);
+      } finally {
+        if (!cancelled) setBattlesLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [refreshKey]);
+  }, [fetchBattlesPage, refreshKey]);
 
-  // Suggested creators (top crown_score not already followed)
+  const loadMoreBattles = useCallback(async () => {
+    if (battlesLoadingMore || !battlesHasMore || battlesLoading) return;
+    setBattlesLoadingMore(true);
+    setBattlesError(false);
+    try {
+      const page = Math.floor(battles.length / BATTLES_PAGE);
+      const { rows, hasMore } = await fetchBattlesPage(page);
+      setBattles((prev) => {
+        const seen = new Set(prev.map((b) => b.id));
+        return [...prev, ...rows.filter((r) => !seen.has(r.id))];
+      });
+      setBattlesHasMore(hasMore);
+      void trackEvent("discover_battles_pagination_loaded", {
+        metadata: { page: page + 1, count: rows.length },
+      });
+    } catch {
+      setBattlesError(true);
+    } finally {
+      setBattlesLoadingMore(false);
+    }
+  }, [fetchBattlesPage, battlesLoadingMore, battlesHasMore, battlesLoading, battles.length]);
+
+  // Suggested creators — exclude self, blocked, banned, suspended, private
   useEffect(() => {
     (async () => {
       let excludeIds: string[] = [];
@@ -293,63 +412,150 @@ export default function Discover() {
           .select("following_id")
           .eq("follower_id", user.id);
         followingIds = ((f as any[]) || []).map((r) => r.following_id);
-        excludeIds = [...followingIds, user.id];
+        excludeIds = [...followingIds, user.id, ...Array.from(blockedIds)];
       }
       setFollowing(new Set(followingIds));
       let q: any = supabase
         .from("profiles")
         .select("id, username, profile_photo_url, bio, crown_score")
         .not("username", "is", null)
+        .eq("is_banned", false)
+        .eq("is_suspended", false)
+        .eq("is_private", false)
         .order("crown_score", { ascending: false })
         .limit(20);
       if (excludeIds.length > 0) q = q.not("id", "in", `(${excludeIds.join(",")})`);
       const { data } = await q;
       setSuggested(((data as any[]) || []).slice(0, 6));
     })();
-  }, [user, refreshKey]);
+  }, [user, refreshKey, blockedIds]);
 
-  // People near you — match city, fallback to country
+  // ---------- People Near You (radius + geo fallback) ----------
+  // Resolve a viewer origin coord from city/state/country (no precise GPS unless granted).
+  const resolveProfileOrigin = useCallback(
+    (city: string | null, state: string | null, country: string | null): {
+      coord: [number, number] | null;
+      source: "city" | "state" | "country" | "none";
+    } => {
+      if (city) {
+        const c = lookupGeo(city, "city");
+        if (c) return { coord: c, source: "city" };
+      }
+      if (state) {
+        const s = lookupGeo(state, "state");
+        if (s) return { coord: s, source: "state" };
+      }
+      if (country) {
+        const co = lookupGeo(country, "country");
+        if (co) return { coord: co, source: "country" };
+      }
+      return { coord: null, source: "none" };
+    },
+    [],
+  );
+
   useEffect(() => {
-    if (!user) { setNearby([]); return; }
+    if (!user) { setNearby([]); setGeoSource("none"); return; }
     let cancelled = false;
+    setNearbyLoading(true);
     (async () => {
       const { data: me } = await supabase
         .from("profiles")
-        .select("city, country")
+        .select("city, state, country")
         .eq("id", user.id)
         .maybeSingle();
       const city = (me as any)?.city as string | null;
+      const state = (me as any)?.state as string | null;
       const country = (me as any)?.country as string | null;
-      if (!city && !country) { if (!cancelled) setNearby([]); return; }
 
+      // If GPS already granted, keep it; otherwise resolve from profile.
+      let origin = originCoord;
+      let source: typeof geoSource = geoSource;
+      if (!origin || source === "none") {
+        const r = resolveProfileOrigin(city, state, country);
+        origin = r.coord;
+        source = r.source;
+        if (!cancelled) {
+          setOriginCoord(origin);
+          setGeoSource(source);
+          if (source !== "none" && source !== "city") {
+            void trackEvent("discover_people_near_you_geo_fallback_used", {
+              metadata: { fallback: source },
+            });
+          }
+        }
+      }
+
+      // Candidate pool: same country if known, else top creators globally.
       let q: any = supabase
         .from("profiles")
         .select("id, username, profile_photo_url, city, country, crown_score")
         .not("username", "is", null)
         .neq("id", user.id)
+        .eq("is_banned", false)
+        .eq("is_suspended", false)
+        .eq("is_private", false)
         .order("crown_score", { ascending: false })
-        .limit(12);
-      if (city) q = q.eq("city", city);
-      else if (country) q = q.eq("country", country);
+        .limit(60);
+      if (country) q = q.eq("country", country);
       const { data } = await q;
-      let rows = ((data as any[]) || []) as NearbyUser[];
-      // If we used city and got fewer than 4, widen to country.
-      if (city && country && rows.length < 4) {
-        const { data: c } = await supabase
-          .from("profiles")
-          .select("id, username, profile_photo_url, city, country, crown_score")
-          .not("username", "is", null)
-          .neq("id", user.id)
-          .eq("country", country)
-          .order("crown_score", { ascending: false })
-          .limit(12);
-        const seen = new Set(rows.map((r) => r.id));
-        ((c as any[]) || []).forEach((r) => { if (!seen.has(r.id)) rows.push(r); });
+      const blocked = blockedIds;
+      const raw = ((data as any[]) || []).filter((r) => !blocked.has(r.id));
+
+      const enriched = raw.map((r) => {
+        const coord =
+          (r.city && lookupGeo(r.city, "city")) ||
+          (r.country && lookupGeo(r.country, "country")) ||
+          null;
+        return { ...r, _coord: coord } as NearbyUser & { _coord: [number, number] | null };
+      });
+
+      // Apply radius filter only when we know origin.
+      const filtered = origin
+        ? enriched.filter((r) => withinRadius(origin, r._coord, radius))
+        : enriched;
+
+      if (!cancelled) {
+        setNearby(filtered.slice(0, 12));
+        setNearbyLoading(false);
       }
-      if (!cancelled) setNearby(rows.slice(0, 8));
     })();
     return () => { cancelled = true; };
-  }, [user, refreshKey]);
+  }, [user, refreshKey, radius, originCoord, blockedIds, resolveProfileOrigin, geoSource]);
+
+  const requestPreciseLocation = useCallback(() => {
+    if (!("geolocation" in navigator)) {
+      toast({ title: "Location unavailable", description: "Your browser doesn't support location. Showing people from your region instead." });
+      return;
+    }
+    setGeoRequesting(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeoRequesting(false);
+        setOriginCoord([pos.coords.latitude, pos.coords.longitude]);
+        setGeoSource("gps");
+        toast({ title: "Location enabled", description: "Showing people near you." });
+      },
+      () => {
+        setGeoRequesting(false);
+        toast({
+          title: "Location permission off",
+          description: "Showing popular people in your region instead.",
+        });
+        void trackEvent("discover_people_near_you_geo_fallback_used", { metadata: { fallback: "denied" } });
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300_000 },
+    );
+  }, []);
+
+  const handleRadiusChange = (r: RadiusMiles) => {
+    if (r === radius) return;
+    setRadius(r);
+    saveRadius(r);
+    void trackEvent("discover_people_near_you_radius_changed", {
+      metadata: { radius_mi: r, geo_source: geoSource },
+    });
+  };
 
   // Top gifters (last 7d, by total_shekels sent)
   useEffect(() => {
@@ -449,6 +655,74 @@ export default function Discover() {
       setPendingFollow((s) => { const n = new Set(s); n.delete(targetId); return n; });
     }
   };
+
+  // --- Scroll-depth tracking (25/50/75/100), once per session ---------------
+  const depthFired = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    const milestones = [25, 50, 75, 100];
+    const onScroll = () => {
+      const h = document.documentElement;
+      const max = (h.scrollHeight - h.clientHeight) || 1;
+      const pct = Math.round((window.scrollY / max) * 100);
+      for (const m of milestones) {
+        if (pct >= m && !depthFired.current.has(m)) {
+          depthFired.current.add(m);
+          void trackEvent("discover_scroll_depth_reached", { metadata: { depth: m } });
+        }
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // --- Section visibility tracking via IntersectionObserver ----------------
+  const sectionRefs = {
+    trending: useRef<HTMLElement>(null),
+    battles: useRef<HTMLElement>(null),
+    suggested: useRef<HTMLElement>(null),
+    nearby: useRef<HTMLElement>(null),
+    topics: useRef<HTMLElement>(null),
+  };
+  const sectionFired = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (!e.isIntersecting) return;
+          const name = (e.target as HTMLElement).dataset.section;
+          if (!name || sectionFired.current.has(name)) return;
+          sectionFired.current.add(name);
+          void trackEvent("discover_section_viewed", { metadata: { section: name } });
+        });
+      },
+      { threshold: 0.25 },
+    );
+    Object.values(sectionRefs).forEach((r) => { if (r.current) io.observe(r.current); });
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sentinel-driven infinite loading for trending posts and battles
+  const trendingSentinel = useRef<HTMLDivElement>(null);
+  const battlesSentinel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = trendingSentinel.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) void loadMorePosts();
+    }, { rootMargin: "200px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loadMorePosts]);
+  useEffect(() => {
+    const el = battlesSentinel.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) void loadMoreBattles();
+    }, { rootMargin: "200px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loadMoreBattles]);
 
   // --- Pull-to-refresh (touch only, top of scroll) ---------------------------
   const ptrRef = useRef<HTMLDivElement>(null);
@@ -603,7 +877,7 @@ export default function Discover() {
 
           {/* Featured Topics */}
           {featuredTopics.length > 0 && (
-            <section className="mb-8">
+            <section ref={sectionRefs.topics} data-section="topics" className="mb-8">
               <h2 className="font-display text-lg mb-3 flex items-center gap-2">
                 <Star size={16} className="text-primary" />Featured Topics
               </h2>
@@ -631,7 +905,7 @@ export default function Discover() {
           )}
 
           {/* Trending Posts */}
-          <section className="mb-8">
+          <section ref={sectionRefs.trending} data-section="trending_posts" className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-display text-lg flex items-center gap-2">
                 <TrendingUp size={16} className="text-primary" />Trending Posts
@@ -646,35 +920,65 @@ export default function Discover() {
             ) : trendingPosts.length === 0 ? (
               <p className="text-xs text-muted-foreground">No trending posts yet in this window.</p>
             ) : (
-              <div className="grid grid-cols-3 gap-2">
-                {trendingPosts.map((p) => {
-                  const cover = postCover(p);
-                  return (
-                    <Link
-                      key={p.id}
-                      to={`/post/${p.id}`}
-                      onClick={() => void trackEvent("discover_trending_post_opened", { postId: p.id })}
-                      className="relative aspect-square rounded-xl overflow-hidden bg-muted group"
+              <>
+                <div className="grid grid-cols-3 gap-2">
+                  {trendingPosts.map((p) => {
+                    const cover = postCover(p);
+                    return (
+                      <Link
+                        key={p.id}
+                        to={`/post/${p.id}`}
+                        onClick={() => {
+                          void trackEvent("discover_trending_post_opened", { postId: p.id });
+                          void trackEvent("discover_trending_post_clicked", { postId: p.id });
+                        }}
+                        className="relative aspect-square rounded-xl overflow-hidden bg-muted group"
+                      >
+                        {cover && (
+                          <img src={cover} alt={p.caption ?? "Trending post"} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition" />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                        <div className="absolute bottom-1 left-1.5 right-1.5 flex items-center justify-between text-white">
+                          <span className="text-[10px] font-bold truncate">@{p.profile?.username ?? "?"}</span>
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-black/40 px-1.5 py-0.5 rounded-full">
+                            <Crown size={9} fill="currentColor" className="text-gold" />{p.crown_score}
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                  {postsLoadingMore && Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={`pm-${i}`} className="aspect-square" />
+                  ))}
+                </div>
+                <div ref={trendingSentinel} aria-hidden className="h-1" />
+                <div className="flex justify-center mt-3">
+                  {postsError ? (
+                    <button
+                      onClick={loadMorePosts}
+                      className="text-xs px-3 h-8 rounded-full border border-destructive/40 text-destructive hover:bg-destructive/10"
                     >
-                      {cover && (
-                        <img src={cover} alt={p.caption ?? "Trending post"} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition" />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                      <div className="absolute bottom-1 left-1.5 right-1.5 flex items-center justify-between text-white">
-                        <span className="text-[10px] font-bold truncate">@{p.profile?.username ?? "?"}</span>
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-black/40 px-1.5 py-0.5 rounded-full">
-                          <Crown size={9} fill="currentColor" className="text-gold" />{p.crown_score}
-                        </span>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
+                      Couldn't load more — retry
+                    </button>
+                  ) : postsHasMore ? (
+                    <button
+                      onClick={loadMorePosts}
+                      disabled={postsLoadingMore}
+                      className="text-xs px-3 h-8 rounded-full border border-border text-muted-foreground hover:text-primary hover:border-primary/40 inline-flex items-center gap-1.5 disabled:opacity-60"
+                    >
+                      {postsLoadingMore && <Loader2 size={12} className="animate-spin" />}
+                      Load more
+                    </button>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground">No more results</span>
+                  )}
+                </div>
+              </>
             )}
           </section>
 
           {/* Live Battles */}
-          <section className="mb-8">
+          <section ref={sectionRefs.battles} data-section="live_battles" className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-display text-lg flex items-center gap-2">
                 <Swords size={16} className="text-primary" />Live Battles
@@ -688,47 +992,78 @@ export default function Discover() {
             ) : battles.length === 0 ? (
               <p className="text-xs text-muted-foreground">No active battles right now.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {battles.map((b) => {
-                  const total = (b.challenger_votes ?? 0) + (b.opponent_votes ?? 0);
-                  const cPct = total > 0 ? Math.round(((b.challenger_votes ?? 0) / total) * 100) : 50;
-                  return (
-                    <Link
-                      key={b.id}
-                      to={`/battles?b=${b.id}`}
-                      onClick={() => void trackEvent("discover_battle_preview_opened", { metadata: { battle_id: b.id } })}
-                      className="royal-card p-3 hover:border-primary/40 transition"
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {battles.map((b) => {
+                    const total = (b.challenger_votes ?? 0) + (b.opponent_votes ?? 0);
+                    const cPct = total > 0 ? Math.round(((b.challenger_votes ?? 0) / total) * 100) : 50;
+                    return (
+                      <Link
+                        key={b.id}
+                        to={`/battles?b=${b.id}`}
+                        onClick={() => {
+                          void trackEvent("discover_battle_preview_opened", { metadata: { battle_id: b.id } });
+                          void trackEvent("discover_battle_preview_clicked", { metadata: { battle_id: b.id } });
+                        }}
+                        className="royal-card p-3 hover:border-primary/40 transition"
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
+                              {b.challenger?.profile_photo_url && <img src={b.challenger.profile_photo_url} alt="" className="w-full h-full object-cover" />}
+                            </div>
+                            <span className="text-xs font-bold truncate">@{b.challenger?.username ?? "?"}</span>
+                          </div>
+                          <span className="text-[10px] uppercase tracking-widest text-primary font-bold">VS</span>
+                          <div className="flex items-center gap-2 min-w-0 justify-end">
+                            <span className="text-xs font-bold truncate">@{b.opponent?.username ?? "?"}</span>
+                            <div className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
+                              {b.opponent?.profile_photo_url && <img src={b.opponent.profile_photo_url} alt="" className="w-full h-full object-cover" />}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-secondary/50 overflow-hidden flex">
+                          <div className="bg-primary" style={{ width: `${cPct}%` }} />
+                          <div className="bg-accent flex-1" />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1.5">{total} votes · ends {new Date(b.ends_at).toLocaleString()}</p>
+                      </Link>
+                    );
+                  })}
+                  {battlesLoadingMore && Array.from({ length: 2 }).map((_, i) => (
+                    <Skeleton key={`bm-${i}`} className="h-24" />
+                  ))}
+                </div>
+                <div ref={battlesSentinel} aria-hidden className="h-1" />
+                <div className="flex justify-center mt-3">
+                  {battlesError ? (
+                    <button
+                      onClick={loadMoreBattles}
+                      className="text-xs px-3 h-8 rounded-full border border-destructive/40 text-destructive hover:bg-destructive/10"
                     >
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
-                            {b.challenger?.profile_photo_url && <img src={b.challenger.profile_photo_url} alt="" className="w-full h-full object-cover" />}
-                          </div>
-                          <span className="text-xs font-bold truncate">@{b.challenger?.username ?? "?"}</span>
-                        </div>
-                        <span className="text-[10px] uppercase tracking-widest text-primary font-bold">VS</span>
-                        <div className="flex items-center gap-2 min-w-0 justify-end">
-                          <span className="text-xs font-bold truncate">@{b.opponent?.username ?? "?"}</span>
-                          <div className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
-                            {b.opponent?.profile_photo_url && <img src={b.opponent.profile_photo_url} alt="" className="w-full h-full object-cover" />}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-secondary/50 overflow-hidden flex">
-                        <div className="bg-primary" style={{ width: `${cPct}%` }} />
-                        <div className="bg-accent flex-1" />
-                      </div>
-                      <p className="text-[10px] text-muted-foreground mt-1.5">{total} votes · ends {new Date(b.ends_at).toLocaleString()}</p>
-                    </Link>
-                  );
-                })}
-              </div>
+                      Couldn't load more — retry
+                    </button>
+                  ) : battlesHasMore ? (
+                    <button
+                      onClick={loadMoreBattles}
+                      disabled={battlesLoadingMore}
+                      className="text-xs px-3 h-8 rounded-full border border-border text-muted-foreground hover:text-primary hover:border-primary/40 inline-flex items-center gap-1.5 disabled:opacity-60"
+                    >
+                      {battlesLoadingMore && <Loader2 size={12} className="animate-spin" />}
+                      Load more
+                    </button>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground">No more battles</span>
+                  )}
+                </div>
+              </>
             )}
           </section>
 
+
           {/* Suggested Creators */}
           {suggested.length > 0 && (
-            <section className="mb-8">
+            <section ref={sectionRefs.suggested} data-section="suggested_creators" className="mb-8">
               <h2 className="font-display text-lg mb-3 flex items-center gap-2">
                 <UserPlus size={16} className="text-primary" />Suggested Creators
               </h2>
@@ -774,55 +1109,118 @@ export default function Discover() {
           )}
 
           {/* People Near You */}
-          {user && nearby.length > 0 && (
-            <section className="mb-8">
-              <h2 className="font-display text-lg mb-3 flex items-center gap-2">
-                <MapPin size={16} className="text-primary" />People Near You
-                <Link to="/map" className="ml-auto text-[11px] text-muted-foreground hover:text-primary font-normal normal-case">Open map</Link>
-              </h2>
-              <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
-                {nearby.map((n) => {
-                  const isFollowing = following.has(n.id);
-                  const isPending = pendingFollow.has(n.id);
-                  return (
-                    <div key={n.id} className="shrink-0 w-40 royal-card p-3 text-center flex flex-col">
-                      <Link
-                        to={`/profile/${n.username}`}
-                        onClick={() => void trackEvent("discover_nearby_creator_opened", { metadata: { username: n.username } })}
-                        className="block"
-                      >
-                        <div className="size-14 rounded-full bg-muted overflow-hidden mx-auto mb-2">
-                          {n.profile_photo_url && <img src={n.profile_photo_url} alt="" className="w-full h-full object-cover" />}
-                        </div>
-                        <p className="text-xs font-bold truncate">@{n.username}</p>
-                        <p className="text-[10px] text-muted-foreground truncate mb-2">
-                          {[n.city, n.country].filter(Boolean).join(", ") || "Nearby"}
-                        </p>
-                      </Link>
-                      <button
-                        onClick={() => toggleFollow(n.id, n.username)}
-                        disabled={isPending}
-                        aria-pressed={isFollowing}
-                        className={`mt-auto inline-flex items-center justify-center gap-1 h-7 rounded-full text-[11px] font-bold transition disabled:opacity-60 ${
-                          isFollowing
-                            ? "bg-secondary/60 text-foreground border border-border hover:border-destructive/50 hover:text-destructive"
-                            : "bg-gradient-gold text-primary-foreground gold-shadow hover:opacity-95"
-                        }`}
-                      >
-                        {isPending ? (
-                          <Loader2 size={11} className="animate-spin" />
-                        ) : isFollowing ? (
-                          <><UserCheck size={11} /> Following</>
-                        ) : (
-                          <><UserPlus size={11} /> Follow</>
-                        )}
-                      </button>
-                    </div>
-                  );
-                })}
+          {user && (
+            <section ref={sectionRefs.nearby} data-section="people_near_you" className="mb-8">
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <h2 className="font-display text-lg flex items-center gap-2">
+                  <MapPin size={16} className="text-primary" />People Near You
+                  {geoSource !== "none" && geoSource !== "gps" && (
+                    <span className="text-[10px] text-muted-foreground font-normal normal-case">
+                      (from your {geoSource})
+                    </span>
+                  )}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <label className="sr-only" htmlFor="nearby-radius">Distance radius</label>
+                  <select
+                    id="nearby-radius"
+                    value={radius}
+                    onChange={(e) => handleRadiusChange(Number(e.target.value) as RadiusMiles)}
+                    className="h-8 px-2 rounded-full border border-border bg-card text-[11px] font-medium text-foreground hover:border-primary/40 focus:border-primary/60 outline-none"
+                    aria-label="People Near You distance radius"
+                  >
+                    {RADIUS_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={requestPreciseLocation}
+                    disabled={geoRequesting}
+                    aria-label="Use my current location"
+                    className="h-8 px-2 inline-flex items-center gap-1 rounded-full border border-border text-[11px] text-muted-foreground hover:text-primary hover:border-primary/40 disabled:opacity-60"
+                  >
+                    {geoRequesting ? <Loader2 size={11} className="animate-spin" /> : <LocateFixed size={11} />}
+                    {geoSource === "gps" ? "Precise" : "Use location"}
+                  </button>
+                  <Link to="/map" className="text-[11px] text-muted-foreground hover:text-primary">Open map</Link>
+                </div>
               </div>
+              {nearbyLoading ? (
+                <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+                  {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="shrink-0 w-40 h-40" />)}
+                </div>
+              ) : nearby.length === 0 ? (
+                <div className="royal-card p-4 text-center">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    No nearby creators found{radius !== 0 ? ` within ${radius} mi` : ""}.
+                  </p>
+                  <div className="flex justify-center gap-2">
+                    {radius !== 0 && (
+                      <button
+                        onClick={() => handleRadiusChange(0)}
+                        className="text-[11px] h-7 px-3 rounded-full border border-border hover:border-primary/40 hover:text-primary"
+                      >
+                        Try Anywhere nearby
+                      </button>
+                    )}
+                    <button
+                      onClick={requestPreciseLocation}
+                      className="text-[11px] h-7 px-3 rounded-full border border-border hover:border-primary/40 hover:text-primary"
+                    >
+                      Retry location
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+                  {nearby.map((n) => {
+                    const isFollowing = following.has(n.id);
+                    const isPending = pendingFollow.has(n.id);
+                    return (
+                      <div key={n.id} className="shrink-0 w-40 royal-card p-3 text-center flex flex-col">
+                        <Link
+                          to={`/profile/${n.username}`}
+                          onClick={() => {
+                            void trackEvent("discover_nearby_creator_opened", { metadata: { username: n.username } });
+                            void trackEvent("discover_people_near_you_profile_clicked", { metadata: { radius_mi: radius, geo_source: geoSource } });
+                          }}
+                          className="block"
+                        >
+                          <div className="size-14 rounded-full bg-muted overflow-hidden mx-auto mb-2">
+                            {n.profile_photo_url && <img src={n.profile_photo_url} alt="" className="w-full h-full object-cover" />}
+                          </div>
+                          <p className="text-xs font-bold truncate">@{n.username}</p>
+                          <p className="text-[10px] text-muted-foreground truncate mb-2">
+                            {[n.city, n.country].filter(Boolean).join(", ") || "Nearby"}
+                          </p>
+                        </Link>
+                        <button
+                          onClick={() => toggleFollow(n.id, n.username)}
+                          disabled={isPending}
+                          aria-pressed={isFollowing}
+                          className={`mt-auto inline-flex items-center justify-center gap-1 h-7 rounded-full text-[11px] font-bold transition disabled:opacity-60 ${
+                            isFollowing
+                              ? "bg-secondary/60 text-foreground border border-border hover:border-destructive/50 hover:text-destructive"
+                              : "bg-gradient-gold text-primary-foreground gold-shadow hover:opacity-95"
+                          }`}
+                        >
+                          {isPending ? (
+                            <Loader2 size={11} className="animate-spin" />
+                          ) : isFollowing ? (
+                            <><UserCheck size={11} /> Following</>
+                          ) : (
+                            <><UserPlus size={11} /> Follow</>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           )}
+
 
           {/* Top Gifters + Recently Crowned + Rising Stars */}
           <section className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
