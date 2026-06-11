@@ -90,14 +90,18 @@ export interface UsePostShareDataResult<T extends PostShareLike> {
   loading: boolean;
   /** True only when the row is confirmed missing or is_removed. */
   deleted: boolean;
+  /** True when the row exists but the current viewer can't read it (RLS/privacy/block). */
+  hidden: boolean;
   /** True when the refetch failed for a transient reason (network/RLS/etc.). */
   refreshError: boolean;
 }
 
 /**
  * Refetch the freshest post row when `enabled` flips true. Never marks the post
- * deleted on a transient error — only on a clean "row not found" response or an
- * is_removed=true flag.
+ * deleted on a transient error. When the row comes back empty we call the
+ * `get_post_share_status` security-definer RPC to disambiguate three real
+ * outcomes: deleted (row gone), removed (moderated), or hidden (RLS/privacy
+ * blocks the current viewer but the post still exists for others).
  */
 export function usePostShareData<T extends PostShareLike>(
   initial: T,
@@ -106,14 +110,15 @@ export function usePostShareData<T extends PostShareLike>(
   const [post, setPost] = useState<T>(initial);
   const [loading, setLoading] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const [refreshError, setRefreshError] = useState(false);
   const lastIdRef = useRef(initial.id);
 
-  // Reset local state when the underlying post identity changes.
   useEffect(() => {
     if (lastIdRef.current !== initial.id) {
       lastIdRef.current = initial.id;
       setDeleted(false);
+      setHidden(false);
       setRefreshError(false);
     }
     setPost(initial);
@@ -125,36 +130,45 @@ export function usePostShareData<T extends PostShareLike>(
     setLoading(true);
     setRefreshError(false);
     (async () => {
-      const { data, error, status } = await supabase
+      const { data, error } = await supabase
         .from("posts")
         .select(POST_SHARE_COLUMNS)
         .eq("id", initial.id)
         .maybeSingle();
       if (cancelled) return;
-      setLoading(false);
       if (error) {
-        // Transient (network, RLS, schema). Keep last known data, surface a
-        // soft refresh error — never set deleted.
+        setLoading(false);
         setRefreshError(true);
         return;
       }
-      if (!data && status === 200) {
+      if (!data) {
+        // Disambiguate deleted vs hidden-by-RLS via security-definer RPC.
+        const { data: status, error: statusErr } = await supabase.rpc(
+          "get_post_share_status",
+          { _post_id: initial.id },
+        );
+        if (cancelled) return;
+        setLoading(false);
+        if (statusErr) {
+          setRefreshError(true);
+          return;
+        }
+        if (status === "deleted" || status === "removed") setDeleted(true);
+        else if (status === "visible") setHidden(true);
+        return;
+      }
+      setLoading(false);
+      const fresh = data as Partial<T>;
+      if (fresh.is_removed === true) {
         setDeleted(true);
         return;
       }
-      if (data) {
-        const fresh = data as Partial<T>;
-        if (fresh.is_removed === true) {
-          setDeleted(true);
-          return;
-        }
-        setPost((prev) => ({ ...prev, ...fresh }) as T);
-      }
+      setPost((prev) => ({ ...prev, ...fresh }) as T);
     })();
     return () => {
       cancelled = true;
     };
   }, [enabled, initial.id]);
 
-  return { post, loading, deleted, refreshError };
+  return { post, loading, deleted, hidden, refreshError };
 }
