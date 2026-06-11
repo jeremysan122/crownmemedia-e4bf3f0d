@@ -877,7 +877,7 @@ export default function Discover() {
 
           {/* Featured Topics */}
           {featuredTopics.length > 0 && (
-            <section className="mb-8">
+            <section ref={sectionRefs.topics} data-section="topics" className="mb-8">
               <h2 className="font-display text-lg mb-3 flex items-center gap-2">
                 <Star size={16} className="text-primary" />Featured Topics
               </h2>
@@ -905,7 +905,7 @@ export default function Discover() {
           )}
 
           {/* Trending Posts */}
-          <section className="mb-8">
+          <section ref={sectionRefs.trending} data-section="trending_posts" className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-display text-lg flex items-center gap-2">
                 <TrendingUp size={16} className="text-primary" />Trending Posts
@@ -920,35 +920,65 @@ export default function Discover() {
             ) : trendingPosts.length === 0 ? (
               <p className="text-xs text-muted-foreground">No trending posts yet in this window.</p>
             ) : (
-              <div className="grid grid-cols-3 gap-2">
-                {trendingPosts.map((p) => {
-                  const cover = postCover(p);
-                  return (
-                    <Link
-                      key={p.id}
-                      to={`/post/${p.id}`}
-                      onClick={() => void trackEvent("discover_trending_post_opened", { postId: p.id })}
-                      className="relative aspect-square rounded-xl overflow-hidden bg-muted group"
+              <>
+                <div className="grid grid-cols-3 gap-2">
+                  {trendingPosts.map((p) => {
+                    const cover = postCover(p);
+                    return (
+                      <Link
+                        key={p.id}
+                        to={`/post/${p.id}`}
+                        onClick={() => {
+                          void trackEvent("discover_trending_post_opened", { postId: p.id });
+                          void trackEvent("discover_trending_post_clicked", { postId: p.id });
+                        }}
+                        className="relative aspect-square rounded-xl overflow-hidden bg-muted group"
+                      >
+                        {cover && (
+                          <img src={cover} alt={p.caption ?? "Trending post"} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition" />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                        <div className="absolute bottom-1 left-1.5 right-1.5 flex items-center justify-between text-white">
+                          <span className="text-[10px] font-bold truncate">@{p.profile?.username ?? "?"}</span>
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-black/40 px-1.5 py-0.5 rounded-full">
+                            <Crown size={9} fill="currentColor" className="text-gold" />{p.crown_score}
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                  {postsLoadingMore && Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={`pm-${i}`} className="aspect-square" />
+                  ))}
+                </div>
+                <div ref={trendingSentinel} aria-hidden className="h-1" />
+                <div className="flex justify-center mt-3">
+                  {postsError ? (
+                    <button
+                      onClick={loadMorePosts}
+                      className="text-xs px-3 h-8 rounded-full border border-destructive/40 text-destructive hover:bg-destructive/10"
                     >
-                      {cover && (
-                        <img src={cover} alt={p.caption ?? "Trending post"} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition" />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                      <div className="absolute bottom-1 left-1.5 right-1.5 flex items-center justify-between text-white">
-                        <span className="text-[10px] font-bold truncate">@{p.profile?.username ?? "?"}</span>
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-black/40 px-1.5 py-0.5 rounded-full">
-                          <Crown size={9} fill="currentColor" className="text-gold" />{p.crown_score}
-                        </span>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
+                      Couldn't load more — retry
+                    </button>
+                  ) : postsHasMore ? (
+                    <button
+                      onClick={loadMorePosts}
+                      disabled={postsLoadingMore}
+                      className="text-xs px-3 h-8 rounded-full border border-border text-muted-foreground hover:text-primary hover:border-primary/40 inline-flex items-center gap-1.5 disabled:opacity-60"
+                    >
+                      {postsLoadingMore && <Loader2 size={12} className="animate-spin" />}
+                      Load more
+                    </button>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground">No more results</span>
+                  )}
+                </div>
+              </>
             )}
           </section>
 
           {/* Live Battles */}
-          <section className="mb-8">
+          <section ref={sectionRefs.battles} data-section="live_battles" className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-display text-lg flex items-center gap-2">
                 <Swords size={16} className="text-primary" />Live Battles
@@ -962,43 +992,74 @@ export default function Discover() {
             ) : battles.length === 0 ? (
               <p className="text-xs text-muted-foreground">No active battles right now.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {battles.map((b) => {
-                  const total = (b.challenger_votes ?? 0) + (b.opponent_votes ?? 0);
-                  const cPct = total > 0 ? Math.round(((b.challenger_votes ?? 0) / total) * 100) : 50;
-                  return (
-                    <Link
-                      key={b.id}
-                      to={`/battles?b=${b.id}`}
-                      onClick={() => void trackEvent("discover_battle_preview_opened", { metadata: { battle_id: b.id } })}
-                      className="royal-card p-3 hover:border-primary/40 transition"
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {battles.map((b) => {
+                    const total = (b.challenger_votes ?? 0) + (b.opponent_votes ?? 0);
+                    const cPct = total > 0 ? Math.round(((b.challenger_votes ?? 0) / total) * 100) : 50;
+                    return (
+                      <Link
+                        key={b.id}
+                        to={`/battles?b=${b.id}`}
+                        onClick={() => {
+                          void trackEvent("discover_battle_preview_opened", { metadata: { battle_id: b.id } });
+                          void trackEvent("discover_battle_preview_clicked", { metadata: { battle_id: b.id } });
+                        }}
+                        className="royal-card p-3 hover:border-primary/40 transition"
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
+                              {b.challenger?.profile_photo_url && <img src={b.challenger.profile_photo_url} alt="" className="w-full h-full object-cover" />}
+                            </div>
+                            <span className="text-xs font-bold truncate">@{b.challenger?.username ?? "?"}</span>
+                          </div>
+                          <span className="text-[10px] uppercase tracking-widest text-primary font-bold">VS</span>
+                          <div className="flex items-center gap-2 min-w-0 justify-end">
+                            <span className="text-xs font-bold truncate">@{b.opponent?.username ?? "?"}</span>
+                            <div className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
+                              {b.opponent?.profile_photo_url && <img src={b.opponent.profile_photo_url} alt="" className="w-full h-full object-cover" />}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-secondary/50 overflow-hidden flex">
+                          <div className="bg-primary" style={{ width: `${cPct}%` }} />
+                          <div className="bg-accent flex-1" />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1.5">{total} votes · ends {new Date(b.ends_at).toLocaleString()}</p>
+                      </Link>
+                    );
+                  })}
+                  {battlesLoadingMore && Array.from({ length: 2 }).map((_, i) => (
+                    <Skeleton key={`bm-${i}`} className="h-24" />
+                  ))}
+                </div>
+                <div ref={battlesSentinel} aria-hidden className="h-1" />
+                <div className="flex justify-center mt-3">
+                  {battlesError ? (
+                    <button
+                      onClick={loadMoreBattles}
+                      className="text-xs px-3 h-8 rounded-full border border-destructive/40 text-destructive hover:bg-destructive/10"
                     >
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
-                            {b.challenger?.profile_photo_url && <img src={b.challenger.profile_photo_url} alt="" className="w-full h-full object-cover" />}
-                          </div>
-                          <span className="text-xs font-bold truncate">@{b.challenger?.username ?? "?"}</span>
-                        </div>
-                        <span className="text-[10px] uppercase tracking-widest text-primary font-bold">VS</span>
-                        <div className="flex items-center gap-2 min-w-0 justify-end">
-                          <span className="text-xs font-bold truncate">@{b.opponent?.username ?? "?"}</span>
-                          <div className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
-                            {b.opponent?.profile_photo_url && <img src={b.opponent.profile_photo_url} alt="" className="w-full h-full object-cover" />}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-secondary/50 overflow-hidden flex">
-                        <div className="bg-primary" style={{ width: `${cPct}%` }} />
-                        <div className="bg-accent flex-1" />
-                      </div>
-                      <p className="text-[10px] text-muted-foreground mt-1.5">{total} votes · ends {new Date(b.ends_at).toLocaleString()}</p>
-                    </Link>
-                  );
-                })}
-              </div>
+                      Couldn't load more — retry
+                    </button>
+                  ) : battlesHasMore ? (
+                    <button
+                      onClick={loadMoreBattles}
+                      disabled={battlesLoadingMore}
+                      className="text-xs px-3 h-8 rounded-full border border-border text-muted-foreground hover:text-primary hover:border-primary/40 inline-flex items-center gap-1.5 disabled:opacity-60"
+                    >
+                      {battlesLoadingMore && <Loader2 size={12} className="animate-spin" />}
+                      Load more
+                    </button>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground">No more battles</span>
+                  )}
+                </div>
+              </>
             )}
           </section>
+
 
           {/* Suggested Creators */}
           {suggested.length > 0 && (
