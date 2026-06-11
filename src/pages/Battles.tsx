@@ -206,9 +206,13 @@ export default function Battles() {
 
   const vote = async (b: Battle, forUserId: string) => {
     if (!user) { toast.error("Sign in to vote"); return; }
-    if (b.status !== "active") return;
+    if (b.status !== "active") {
+      void trackEvent("battle_vote_blocked_duplicate", { metadata: { battle_id: b.id, reason: "not_active" } });
+      return;
+    }
     if (myVotes[b.id]) {
       haptic("warning");
+      void trackEvent("battle_vote_blocked_duplicate", { metadata: { battle_id: b.id, reason: "already_voted" } });
       toast.info("You already voted on this duel", {
         description: `You backed @${myVotes[b.id] === b.challenger_id ? b.challenger?.username : b.opponent?.username}`,
       });
@@ -219,9 +223,13 @@ export default function Battles() {
       toast.info("Can't vote in your own battle"); return;
     }
 
-    // Guard against rapid double-tap: drop subsequent calls until this vote resolves.
+    // Guard against rapid double-tap / multi-tab race: drop subsequent calls
+    // until this vote resolves. The server-side UNIQUE(battle_id, user_id) is
+    // the source of truth — this is just to keep the UI from racing itself.
     if (inFlightVotes.current.has(b.id)) return;
     inFlightVotes.current.add(b.id);
+    setSubmittingVotes((s) => { const n = new Set(s); n.add(b.id); return n; });
+    void trackEvent("battle_vote_started", { metadata: { battle_id: b.id } });
 
     // optimistic + haptic confirm
     haptic("success");
@@ -234,12 +242,20 @@ export default function Battles() {
     } : x));
     triggerBurst(b.id, isC ? "L" : "R");
 
-    const { error } = await supabase.from("battle_votes").insert({
-      battle_id: b.id, user_id: user.id, voted_for_user_id: forUserId,
-    });
+    // Idempotent insert: if a concurrent tab already wrote the same vote,
+    // the unique-key conflict is silently ignored instead of surfacing as
+    // a duplicate-key error. The optimistic UI stays in place.
+    const { error } = await supabase
+      .from("battle_votes")
+      .upsert(
+        { battle_id: b.id, user_id: user.id, voted_for_user_id: forUserId },
+        { onConflict: "battle_id,user_id", ignoreDuplicates: true },
+      );
     inFlightVotes.current.delete(b.id);
+    setSubmittingVotes((s) => { const n = new Set(s); n.delete(b.id); return n; });
+
     if (error) {
-      // rollback
+      // True failure (network, RLS, etc.) — rollback optimistic state.
       haptic("error");
       setMyVotes((m) => { const { [b.id]: _, ...rest } = m; return rest; });
       setBattles((prev) => prev.map((x) => x.id === b.id ? {
@@ -247,8 +263,13 @@ export default function Battles() {
         challenger_votes: x.challenger_votes - (isC ? 1 : 0),
         opponent_votes: x.opponent_votes - (isC ? 0 : 1),
       } : x));
-      toast.error(error.message.includes("duplicate") ? "Already voted" : error.message);
+      void trackEvent("battle_vote_failed", { metadata: { battle_id: b.id } });
+      // Never surface raw SQL/RLS text to the user.
+      toast.error("Couldn't record your vote. Tap to retry.", {
+        action: { label: "Retry", onClick: () => void vote(b, forUserId) },
+      });
     } else {
+      void trackEvent("battle_vote_success", { metadata: { battle_id: b.id, side: isC ? "challenger" : "opponent" } });
       toast.success("Vote cast 👑");
     }
   };
