@@ -20,27 +20,41 @@ import GiftLiveFeed from "./GiftLiveFeed";
 import TopGifterCard from "./TopGifterCard";
 import AddShekelsModal from "./AddShekelsModal";
 import QuickSendRail from "./QuickSendRail";
+import GiftRecipientPicker, { type GiftRecipientCandidate } from "./GiftRecipientPicker";
+import GiftConfirmDialog from "./GiftConfirmDialog";
 import { toast } from "sonner";
 import { fxGiftSend, fxPurchase, fxTap, isMuted, setMuted, unlockAudio } from "@/lib/giftFx";
-import { Volume2, VolumeX } from "lucide-react";
+import { Volume2, VolumeX, ArrowLeft } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
+
+interface ExtendedRecipient extends GiftPanelRecipient {
+  displayName?: string;
+  verified?: boolean;
+}
 
 interface GiftPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  recipient: GiftPanelRecipient;
+  /** When omitted, the panel opens with an in-flow recipient picker. */
+  recipient?: ExtendedRecipient;
   postId?: string;
   initialGift?: RoyalGift | null;
   /** Called after a successful send so the parent (e.g. PostCard) can play an anchored animation. */
   onSent?: (gift: RoyalGift, quantity: number) => void;
 }
 
-export default function GiftPanel({ isOpen, onClose, recipient, postId, initialGift, onSent }: GiftPanelProps) {
+export default function GiftPanel({ isOpen, onClose, recipient: recipientProp, postId, initialGift, onSent }: GiftPanelProps) {
   const { user } = useAuth();
-  const isSelf = !!user && user.id === recipient.id;
+  const [pickedRecipient, setPickedRecipient] = useState<ExtendedRecipient | null>(null);
+  const recipient = recipientProp ?? pickedRecipient;
+  const needsPicker = !recipient;
+  const isSelf = !!user && !!recipient && user.id === recipient.id;
+
   const [activeCategory, setActiveCategory] = useState<GiftCategory>("popular");
   const [selectedGift, setSelectedGift] = useState<RoyalGift | undefined>();
   const [quantity, setQuantity] = useState<1 | 5 | 10>(1);
   const [showAddShekels, setShowAddShekels] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [status, setStatus] = useState<SendStatus>("idle");
   const [sendingGiftId, setSendingGiftId] = useState<string | undefined>();
   const [muted, setMutedState] = useState<boolean>(() => (typeof window === "undefined" ? false : isMuted()));
@@ -56,10 +70,13 @@ export default function GiftPanel({ isOpen, onClose, recipient, postId, initialG
       refreshWallet();
       setStatus("idle");
       if (initialGift) setSelectedGift(initialGift);
+      trackEvent("gift_flow_opened", { metadata: { has_recipient: !!recipientProp, has_post: !!postId } });
     } else {
       reset();
+      setPickedRecipient(null);
+      setShowConfirm(false);
     }
-  }, [isOpen, refreshWallet, reset, initialGift]);
+  }, [isOpen, refreshWallet, reset, initialGift, recipientProp, postId]);
 
   const totalCost = (selectedGift?.shekelCost ?? 0) * quantity;
   const insufficient = !!selectedGift && totalCost > wallet.shekelBalance;
@@ -72,38 +89,59 @@ export default function GiftPanel({ isOpen, onClose, recipient, postId, initialG
     if (!v) fxTap();
   };
 
-  const handleSend = async () => {
-    if (!selectedGift || isSending) return;
+  const handleRecipientPick = (r: GiftRecipientCandidate) => {
+    setPickedRecipient({
+      id: r.id,
+      username: r.username,
+      displayName: r.displayName,
+      avatarUrl: r.avatarUrl ?? undefined,
+      verified: r.verified,
+    });
+    trackEvent("gift_recipient_selected", { metadata: { source: r.source } });
+  };
+
+  const handleSendIntent = () => {
+    if (!selectedGift || isSending || !recipient) return;
     if (insufficient) {
       fxTap(true);
+      trackEvent("gift_insufficient_balance", { metadata: { gift_id: selectedGift.id, total: totalCost, balance: wallet.shekelBalance } });
       setShowAddShekels(true);
+      trackEvent("shekels_purchase_started");
       return;
     }
+    setShowConfirm(true);
+  };
+
+  const handleConfirmedSend = async () => {
+    if (!selectedGift || isSending || !recipient) return;
     setStatus("sending");
     setSendingGiftId(selectedGift.id);
     fxTap(true);
+    trackEvent("gift_send_started", { metadata: { gift_id: selectedGift.id, quantity, total: totalCost } });
     // Optimistic wallet deduct
     applyDelta(-totalCost, totalCost);
     try {
       await sendGift({ gift: selectedGift, recipientId: recipient.id, postId, quantity });
       registerGiftSend();
-      pinFront(selectedGift.id); // auto-pin most recently used so re-send is one tap
+      pinFront(selectedGift.id);
       fxGiftSend(selectedGift.category);
       setStatus("sent");
+      setShowConfirm(false);
       onSent?.(selectedGift, quantity);
-      // Confirm with server truth
       refreshWallet();
-      // Reset to idle shortly so user can send another
+      trackEvent("gift_sent", { metadata: { gift_id: selectedGift.id, quantity, total: totalCost } });
+      toast.success(`Sent ${quantity}x ${selectedGift.name} to @${recipient.username}`);
       setTimeout(() => {
         setStatus("idle");
         setSendingGiftId(undefined);
       }, 1200);
     } catch (e) {
-      // Roll back optimistic deduction
       applyDelta(totalCost, -totalCost);
       const msg = e instanceof Error ? e.message : "Failed to send gift";
       toast.error(msg);
+      trackEvent("gift_send_failed", { metadata: { gift_id: selectedGift.id, reason: msg.slice(0, 60) } });
       setStatus("failed");
+      setShowConfirm(false);
       setTimeout(() => {
         setStatus("idle");
         setSendingGiftId(undefined);
@@ -113,7 +151,9 @@ export default function GiftPanel({ isOpen, onClose, recipient, postId, initialG
 
   const isMobile = useIsMobile();
 
-  const Body = isSelf ? (
+  const Body = needsPicker ? (
+    <GiftRecipientPicker onPick={handleRecipientPick} onCancel={onClose} />
+  ) : isSelf ? (
     <div className="p-8 text-center space-y-2">
       <p className="font-display text-lg text-gold">You can't gift yourself</p>
       <p className="text-xs text-muted-foreground">
@@ -130,10 +170,20 @@ export default function GiftPanel({ isOpen, onClose, recipient, postId, initialG
       >
         {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
       </button>
+      {/* Allow changing recipient when the picker was used */}
+      {!recipientProp && pickedRecipient && (
+        <button
+          type="button"
+          onClick={() => setPickedRecipient(null)}
+          className="absolute top-3 left-3 z-20 h-9 px-3 rounded-full bg-background/60 hover:bg-background/80 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft size={13} /> Change
+        </button>
+      )}
       <GiftComboMeter count={comboCount} />
-      <GiftPanelHeader username={recipient.username} avatarUrl={recipient.avatarUrl} />
-      <GiftWalletBar balance={wallet.shekelBalance} onAdd={() => setShowAddShekels(true)} />
-      <TopGifterCard recipientId={recipient.id} />
+      <GiftPanelHeader username={recipient!.username} avatarUrl={recipient!.avatarUrl} />
+      <GiftWalletBar balance={wallet.shekelBalance} onAdd={() => { setShowAddShekels(true); trackEvent("shekels_purchase_started"); }} />
+      <TopGifterCard recipientId={recipient!.id} />
       <QuickSendRail onPick={setSelectedGift} selectedId={selectedGift?.id} />
       <GiftLiveFeed postId={postId} />
       <GiftCategoryTabs active={activeCategory} onChange={setActiveCategory} disabled={isSending} />
@@ -150,7 +200,7 @@ export default function GiftPanel({ isOpen, onClose, recipient, postId, initialG
         quantity={quantity}
         status={status}
         insufficient={insufficient}
-        onSend={handleSend}
+        onSend={handleSendIntent}
       />
     </div>
   );
@@ -184,6 +234,17 @@ export default function GiftPanel({ isOpen, onClose, recipient, postId, initialG
             fxPurchase();
           }
         }}
+      />
+
+      <GiftConfirmDialog
+        open={showConfirm}
+        onOpenChange={setShowConfirm}
+        gift={selectedGift ?? null}
+        quantity={quantity}
+        recipient={recipient ?? null}
+        balance={wallet.shekelBalance}
+        sending={isSending}
+        onConfirm={handleConfirmedSend}
       />
     </>
   );
