@@ -751,7 +751,7 @@ export default function EditProfile() {
 
           <Button
             onClick={save}
-            disabled={saving}
+            disabled={saving || loadFailed}
             className="w-full bg-gradient-gold text-primary-foreground"
           >
             <Save size={14} className="mr-1.5" />
