@@ -2362,6 +2362,53 @@ export type Database = {
         }
         Relationships: []
       }
+      post_edits_audit: {
+        Row: {
+          changed_fields: string[]
+          created_at: string
+          editor_user_id: string
+          id: string
+          moderation_impact: boolean
+          new_values: Json
+          post_id: string
+          previous_values: Json
+          request_id: string | null
+          source: string | null
+        }
+        Insert: {
+          changed_fields?: string[]
+          created_at?: string
+          editor_user_id: string
+          id?: string
+          moderation_impact?: boolean
+          new_values?: Json
+          post_id: string
+          previous_values?: Json
+          request_id?: string | null
+          source?: string | null
+        }
+        Update: {
+          changed_fields?: string[]
+          created_at?: string
+          editor_user_id?: string
+          id?: string
+          moderation_impact?: boolean
+          new_values?: Json
+          post_id?: string
+          previous_values?: Json
+          request_id?: string | null
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_edits_audit_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           alt_texts: string[]
@@ -2370,6 +2417,7 @@ export type Database = {
           caption: string | null
           category: Database["public"]["Enums"]["crown_category"]
           city: string | null
+          client_request_id: string | null
           comment_count: number
           content_rating: Database["public"]["Enums"]["content_rating"]
           country: string | null
@@ -2399,6 +2447,7 @@ export type Database = {
           parent_post_id: string | null
           photo_filter: string | null
           pinned_at: string | null
+          publish_status: string
           repost_caption: string | null
           royal_boost_until: string | null
           scheduled_for: string | null
@@ -2423,6 +2472,7 @@ export type Database = {
           caption?: string | null
           category?: Database["public"]["Enums"]["crown_category"]
           city?: string | null
+          client_request_id?: string | null
           comment_count?: number
           content_rating?: Database["public"]["Enums"]["content_rating"]
           country?: string | null
@@ -2452,6 +2502,7 @@ export type Database = {
           parent_post_id?: string | null
           photo_filter?: string | null
           pinned_at?: string | null
+          publish_status?: string
           repost_caption?: string | null
           royal_boost_until?: string | null
           scheduled_for?: string | null
@@ -2476,6 +2527,7 @@ export type Database = {
           caption?: string | null
           category?: Database["public"]["Enums"]["crown_category"]
           city?: string | null
+          client_request_id?: string | null
           comment_count?: number
           content_rating?: Database["public"]["Enums"]["content_rating"]
           country?: string | null
@@ -2505,6 +2557,7 @@ export type Database = {
           parent_post_id?: string | null
           photo_filter?: string | null
           pinned_at?: string | null
+          publish_status?: string
           repost_caption?: string | null
           royal_boost_until?: string | null
           scheduled_for?: string | null
@@ -2538,6 +2591,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profile_change_log: {
+        Row: {
+          change_type: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          change_type: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          change_type?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profile_visits: {
         Row: {
@@ -3948,6 +4022,10 @@ export type Database = {
       capture_db_health_snapshot: { Args: never; Returns: string }
       claim_daily_reward: { Args: never; Returns: Json }
       claim_daily_royal_boost: { Args: { p_post_id: string }; Returns: Json }
+      cleanup_orphaned_media: {
+        Args: { p_older_than_minutes?: number }
+        Returns: number
+      }
       comments_allowed_on: { Args: { _post: string }; Returns: boolean }
       compute_daily_usage_rollup: { Args: { _d?: string }; Returns: undefined }
       confirm_my_age: { Args: { _dob: string }; Returns: undefined }
@@ -4150,7 +4228,75 @@ export type Database = {
         Args: { _kind: string; _user_id: string }
         Returns: boolean
       }
+      profile_change_allowed: {
+        Args: { p_change_type: string; p_max_per_hour?: number }
+        Returns: boolean
+      }
       prune_rank_snapshots: { Args: never; Returns: undefined }
+      publish_post_idempotent: {
+        Args: { p_client_request_id: string; p_payload: Json }
+        Returns: {
+          alt_texts: string[]
+          archived_at: string | null
+          battle_wins: number
+          caption: string | null
+          category: Database["public"]["Enums"]["crown_category"]
+          city: string | null
+          client_request_id: string | null
+          comment_count: number
+          content_rating: Database["public"]["Enums"]["content_rating"]
+          country: string | null
+          created_at: string
+          crown_score: number
+          crown_shield_until: string | null
+          duration_ms: number | null
+          edited_at: string | null
+          filter: string | null
+          filter_type: string | null
+          hashtags: string[]
+          id: string
+          image_url: string
+          image_urls: string[]
+          is_archived: boolean
+          is_removed: boolean
+          is_sensitive: boolean
+          main_category_slug: string | null
+          media_height: number | null
+          media_origin: string | null
+          media_type: string
+          media_width: number | null
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_notes: string | null
+          moderation_status: Database["public"]["Enums"]["moderation_status"]
+          parent_post_id: string | null
+          photo_filter: string | null
+          pinned_at: string | null
+          publish_status: string
+          repost_caption: string | null
+          royal_boost_until: string | null
+          scheduled_for: string | null
+          sensitive_reason: string | null
+          share_count: number
+          spotlight_until: string | null
+          state: string | null
+          subcategory_slug: string | null
+          submission_key: string | null
+          tagged_user_ids: string[]
+          user_id: string
+          video_filter: string | null
+          video_poster_url: string | null
+          video_url: string | null
+          vote_boost_until: string | null
+          vote_count: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "posts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       purchase_boost: {
         Args: {
           p_boost_type: string
