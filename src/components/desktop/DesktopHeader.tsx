@@ -16,6 +16,14 @@ export default function DesktopHeader() {
   const { wallet } = useWallet();
   const [searchOpen, setSearchOpen] = useState(false);
   const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
+  const unread = useUnreadByType();
+  const dmThreads = useThreadUnread();
+  const mutedSet = useMutedThreads();
+  const dmCount = useMemo(
+    () => Object.entries(dmThreads).reduce((a, [oid, n]) => a + (mutedSet.has(oid) ? 0 : (n || 0)), 0),
+    [dmThreads, mutedSet],
+  );
+  const notifCount = Math.max(0, unread.total - unread.dm);
 
   return (
     <header className="hidden lg:block sticky top-0 z-40 glass border-b border-border/50">
