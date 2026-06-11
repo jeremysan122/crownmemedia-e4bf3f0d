@@ -1101,7 +1101,7 @@ function Inbox({ threads, unreadByThread, userId, reload, setThreads, loadMore, 
             reload();
           };
           return (
-            <div key={t.otherId} className={`royal-card flex items-stretch group ${isSelected ? "ring-1 ring-primary" : ""} ${isPinned ? "border-primary/40" : ""}`}>
+            <div key={t.otherId} className={`royal-card flex items-stretch group ${isSelected ? "ring-1 ring-primary" : ""} ${isPinned ? "border-primary/40" : ""} ${t.kind === "gift" && unread > 0 ? "ring-1 ring-amber-400/60 shadow-[0_0_18px_-6px_rgba(251,191,36,0.55)]" : ""}`}>
               {selectMode && (
                 <button
                   type="button"
