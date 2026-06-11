@@ -293,155 +293,246 @@ export default function Rewards() {
     return tomorrow.getTime() - Date.now();
   })();
 
+  // Day mapping for the 7-day track:
+  //   - "claimed" : day index <= number of days already fully claimed in the current cycle
+  //   - "today"   : the next slot to claim (only when not yet claimed today)
+  //   - "locked"  : everything else
+  const cycleDay = streak.current_streak === 0 ? 0 : ((streak.current_streak - 1) % 7) + 1;
+  const fullyClaimedThisCycle = claimedToday ? cycleDay : ((streak.current_streak) % 7);
+  const todaySlot = claimedToday ? null : Math.min(7, fullyClaimedThisCycle + 1);
+  const dayReward = (day: number) => day === 7 ? "+100" : `+${10 + (day - 1) * 5}`;
+
   return (
-    <main className="min-h-screen bg-background pb-28">
-      <header className="sticky top-0 z-10 backdrop-blur bg-background/70 border-b border-border/40">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link to="/feed" aria-label="Back" className="p-2 -ml-2 rounded-full hover:bg-muted"><ArrowLeft className="size-5" /></Link>
-          <h1 className="font-display text-lg tracking-widest">DAILY REWARDS</h1>
-          <Link to="/rewards/history" aria-label="Reward history" className="p-2 -mr-2 rounded-full hover:bg-muted"><History className="size-5" /></Link>
+    <main className="min-h-screen bg-[#0a0510] pb-28">
+      <header className="sticky top-0 z-20 backdrop-blur bg-[#0a0510]/80 border-b border-amber-500/10">
+        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+          <Link to="/feed" aria-label="Back" className="p-2 -ml-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white"><ArrowLeft className="size-5" /></Link>
+          <h1 className="font-display text-base tracking-[0.3em] text-amber-400">ROYAL VAULT</h1>
+          <Link to="/rewards/history" aria-label="Reward history" className="p-2 -mr-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white"><History className="size-5" /></Link>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 pt-6 space-y-6">
-        {/* Streak header */}
-        <Card className="p-5 bg-gradient-to-br from-primary/10 via-background to-background border-primary/30">
-          <div className="flex items-center gap-4">
-            <div className="size-16 rounded-2xl bg-gradient-gold flex items-center justify-center gold-shadow shrink-0">
-              <Flame className="size-8 text-primary-foreground" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Current streak</p>
-              <p className="text-3xl font-display font-bold leading-none">{streak.current_streak} <span className="text-base text-muted-foreground font-normal">day{streak.current_streak === 1 ? "" : "s"}</span></p>
-              <p className="text-xs text-muted-foreground mt-1">Best: {streak.longest_streak} · Total check-ins: {streak.total_claims}</p>
-            </div>
-            <div className="text-right shrink-0">
-              <div className="flex items-center justify-end gap-1 text-sm font-semibold">
-                <Swords className="size-4 text-primary" />
-                <span className="tabular-nums">{tickets}</span>
+      <div className="max-w-lg mx-auto px-4 pt-6">
+        <div className="relative bg-gradient-to-b from-[#1a1033] to-[#0a0510] rounded-[2.5rem] p-5 sm:p-6 border-2 border-amber-500/20 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden space-y-7">
+          {/* Background glows */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-amber-500/10 blur-[100px] pointer-events-none" aria-hidden />
+          <div className="absolute bottom-0 right-0 w-64 h-64 bg-purple-700/15 blur-[100px] pointer-events-none" aria-hidden />
+
+          {/* Header */}
+          <div className="relative text-center space-y-1">
+            <h2 className="font-display text-3xl text-white tracking-tight">Royal Vault</h2>
+            <p className="text-amber-400 text-xs font-semibold tracking-[0.25em] uppercase">Daily Rewards</p>
+          </div>
+
+          {/* Streak summary chips */}
+          <div className="relative grid grid-cols-3 gap-2">
+            <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
+              <div className="flex items-center justify-center gap-1 text-amber-400">
+                <Flame className="size-4" />
+                <span className="text-lg font-bold tabular-nums">{streak.current_streak}</span>
               </div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">tickets</p>
+              <p className="text-[9px] uppercase tracking-widest text-white/50 mt-0.5">Streak</p>
+            </div>
+            <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
+              <p className="text-lg font-bold tabular-nums text-white">{streak.longest_streak}</p>
+              <p className="text-[9px] uppercase tracking-widest text-white/50 mt-0.5">Best</p>
+            </div>
+            <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
+              <div className="flex items-center justify-center gap-1 text-amber-400">
+                <Swords className="size-4" />
+                <span className="text-lg font-bold tabular-nums">{tickets}</span>
+              </div>
+              <p className="text-[9px] uppercase tracking-widest text-white/50 mt-0.5">Tickets</p>
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-7 gap-1.5">
-            {Array.from({ length: 7 }).map((_, i) => {
-              const day = i + 1;
-              const reached = streak.current_streak >= day;
-              const isBonusDay = day === 7;
-              return (
-                <div key={day} className={`relative rounded-lg border text-center py-2 transition ${reached ? "bg-primary/20 border-primary/60" : "bg-muted/30 border-border"} ${isBonusDay ? "ring-1 ring-amber-400/60" : ""}`}>
-                  <div className="text-[10px] text-muted-foreground">Day {day}</div>
-                  <div className={`text-xs font-bold ${reached ? "text-primary" : "text-foreground/60"}`}>
-                    {isBonusDay ? "+10 +🎁" : "+10"}
+          {/* 7-Day Streak Track */}
+          <section className="relative space-y-3" aria-label="7-day streak track">
+            <div className="flex justify-between items-end px-1">
+              <h3 className="text-white font-bold text-sm">7-Day Streak</h3>
+              <span className="text-amber-400 text-[10px] font-bold bg-amber-400/10 px-2 py-1 rounded-full">
+                Day {Math.max(1, cycleDay || todaySlot || 1)} of 7
+              </span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: 6 }).map((_, i) => {
+                const day = i + 1;
+                const isClaimed = day <= fullyClaimedThisCycle;
+                const isToday = todaySlot === day;
+                const reward = dayReward(day);
+                return (
+                  <div
+                    key={day}
+                    className={`relative aspect-square rounded-2xl flex flex-col items-center justify-center space-y-1 transition
+                      ${isClaimed ? "bg-emerald-500/10 border border-emerald-500/30" :
+                        isToday ? "bg-gradient-to-br from-amber-400 to-amber-600 border-2 border-white/30 shadow-[0_0_20px_rgba(251,191,36,0.4)] animate-pulse" :
+                        "bg-white/5 border border-white/10 opacity-60"}`}
+                  >
+                    {isClaimed && (
+                      <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5">
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                      </div>
+                    )}
+                    <span className={`text-[10px] font-bold uppercase ${isClaimed ? "text-emerald-400" : isToday ? "text-white" : "text-white/40"}`}>Day {day}</span>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center
+                      ${isClaimed ? "bg-emerald-400/20" : isToday ? "bg-white/25" : "bg-white/10"}`}>
+                      <div className={`rounded-full
+                        ${isClaimed ? "w-3 h-3 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]" :
+                          isToday ? "w-4 h-4 bg-white" :
+                          "w-3 h-3 bg-white/20"}`} />
+                    </div>
+                    <span className={`text-[10px] font-black ${isClaimed ? "text-emerald-300" : isToday ? "text-white" : "text-white/40"}`}>{reward}</span>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-2 text-center">Every 7th consistent day grants a random bonus (50–200 shekels).</p>
+                );
+              })}
 
+              {/* Day 7 — Grand prize, spans 2 cols */}
+              {(() => {
+                const day = 7;
+                const isClaimed = day <= fullyClaimedThisCycle;
+                const isToday = todaySlot === day;
+                return (
+                  <div className={`col-span-2 relative aspect-[2/1] rounded-2xl bg-gradient-to-br from-[#2a1b4d] to-[#1a1033] border flex items-center justify-between px-4 overflow-hidden
+                    ${isToday ? "border-amber-400/80 shadow-[0_0_24px_rgba(245,158,11,0.4)] animate-pulse" : "border-amber-500/50"}
+                    ${isClaimed ? "opacity-90" : ""}`}>
+                    <div className="absolute inset-0 bg-amber-500/5" aria-hidden />
+                    <div className="relative">
+                      <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">Grand Prize</span>
+                      <span className="text-white font-black text-base leading-tight">DAY 7</span>
+                      <span className="text-[10px] text-white/60 block">+ random bonus</span>
+                    </div>
+                    <div className="relative flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)] flex items-center justify-center">
+                        <CrownIcon className="size-5 text-[#1a1033]" />
+                      </div>
+                      <span className="text-amber-400 font-black text-base">+100</span>
+                    </div>
+                    {isClaimed && (
+                      <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 z-10">
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
 
-          <Button
+            <p className="text-[10px] text-white/40 text-center">
+              Every 7th consistent day grants a random bonus (50–200 shekels).
+            </p>
+          </section>
+
+          {/* Claim CTA */}
+          <button
+            type="button"
             onClick={claim}
             disabled={claiming || claimedToday}
             aria-busy={claiming}
-            className="w-full mt-5 h-12 font-bold tracking-wide bg-gradient-gold text-primary-foreground gold-shadow disabled:opacity-60"
+            className={`w-full group relative py-5 rounded-2xl shadow-[0_10px_30px_rgba(217,119,6,0.3)] transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100
+              ${claimedToday ? "bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-700" : "bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600"}`}
           >
-            {claiming ? (
-              <span className="inline-flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> Claiming…</span>
-            ) : claimedToday
-              ? `Claimed · next in ${Math.max(1, Math.floor(nextClaimMs / 3600000))}h ${Math.max(0, Math.floor((nextClaimMs % 3600000) / 60000))}m`
-              : "Claim today's reward"}
-          </Button>
-        </Card>
+            <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 group-disabled:opacity-0 transition-opacity rounded-2xl" />
+            <span className="relative text-white font-black text-base sm:text-lg tracking-wider uppercase inline-flex items-center justify-center gap-2">
+              {claiming ? (<><Loader2 className="size-4 animate-spin" /> Claiming…</>) :
+                claimedToday ? `Claimed · next in ${Math.max(1, Math.floor(nextClaimMs / 3600000))}h ${Math.max(0, Math.floor((nextClaimMs % 3600000) / 60000))}m` :
+                "Claim Today's Chips"}
+            </span>
+          </button>
 
-        {/* Wheel */}
-        <Card className="p-5 relative overflow-hidden">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <Sparkles className="size-5 text-primary" />
-              <h2 className="font-display text-lg tracking-wide">Royal Spin Wheel</h2>
-            </div>
-            {bonusSpins > 0 && (
-              <span className="text-[10px] uppercase tracking-widest px-2 py-1 rounded-full bg-primary/20 border border-primary/40 text-primary font-bold">
-                +{bonusSpins} bonus
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground mb-5">
-            {!claimedToday
-              ? "Claim your daily reward first to unlock your spin."
-              : canSpin
-                ? (bonusSpins > 0 && spunToday ? "Bonus spin ready — fire away!" : "One free spin available today.")
-                : "You already spun today — come back tomorrow."}
+          <p className="text-[11px] text-white/50 text-center -mt-3">
+            Earn shekels through daily rewards or top up anytime in the store.
           </p>
 
-          <div className="relative flex flex-col items-center">
-            {/* Ambient gold glow ring */}
-            <div className={`absolute inset-0 rounded-full pointer-events-none transition-opacity duration-700 ${spinning || winFlash ? "opacity-100 animate-pulse" : "opacity-50"}`}
-                 style={{ background: "radial-gradient( circle at 50% 50%, hsl(43 95% 60% / 0.35), transparent 60%)" }}
-                 aria-hidden />
+          {/* Royal Spin Wheel */}
+          <section className="relative pt-2 space-y-5" aria-label="Royal spin wheel">
+            <div className="relative flex flex-col items-center">
+              <div className="absolute -top-2 bg-[#1a1033] border border-amber-500/30 px-4 py-1 rounded-full z-10 shadow-lg flex items-center gap-2">
+                <Sparkles className="size-3 text-amber-400" />
+                <span className="text-amber-400 text-xs font-bold uppercase tracking-widest">Royal Spin</span>
+                {bonusSpins > 0 && (
+                  <span className="ml-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300">+{bonusSpins}</span>
+                )}
+              </div>
 
-            {/* Pointer */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
-                 style={{ width: 0, height: 0, borderLeft: "14px solid transparent", borderRight: "14px solid transparent", borderTop: "22px solid hsl(var(--primary))" }}
-                 aria-hidden />
+              <p className="text-[11px] text-white/60 text-center mt-7 mb-3">
+                {!claimedToday
+                  ? "Claim your daily reward first to unlock your spin."
+                  : canSpin
+                    ? (bonusSpins > 0 && spunToday ? "Bonus spin ready — fire away!" : "One free spin available today.")
+                    : "You already spun today — come back tomorrow."}
+              </p>
 
-            <div className="pt-4 relative w-full max-w-[320px] aspect-square">
-              {wheel}
+              <div className="relative w-full max-w-[280px] aspect-square">
+                {/* Pointer */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-20 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
+                     style={{ width: 0, height: 0, borderLeft: "14px solid transparent", borderRight: "14px solid transparent", borderTop: "22px solid hsl(43 95% 60%)" }}
+                     aria-hidden />
+                {wheel}
 
-              {/* Win flourish */}
-              {winFlash && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="absolute inset-0 rounded-full animate-ping bg-primary/20" />
-                  <CrownIcon className="size-20 text-primary animate-[scale-in_0.4s_ease-out] drop-shadow-[0_0_24px_hsl(43_95%_70%/0.9)]" />
-                </div>
-              )}
+                {winFlash && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="absolute inset-0 rounded-full animate-ping bg-amber-400/20" />
+                    <CrownIcon className="size-20 text-amber-400 animate-[scale-in_0.4s_ease-out] drop-shadow-[0_0_24px_hsl(43_95%_70%/0.9)]" />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          <Button
-            onClick={spin}
-            disabled={spinning || !canSpin || prizes.length === 0}
-            aria-busy={spinning}
-            className="w-full mt-5 h-12 font-bold tracking-wide bg-gradient-gold text-primary-foreground gold-shadow disabled:opacity-60 relative overflow-hidden"
-          >
-            <span className="relative z-10 inline-flex items-center gap-2">
-              {spinning && <Loader2 className="size-4 animate-spin" />}
-              {spinning ? "Spinning…" : !claimedToday ? "Locked — claim first" : !canSpin ? "Already spun today" : bonusSpins > 0 && spunToday ? `Use bonus spin (${bonusSpins})` : "Spin the wheel"}
-            </span>
-          </Button>
+            <button
+              type="button"
+              onClick={spin}
+              disabled={spinning || !canSpin || prizes.length === 0}
+              aria-busy={spinning}
+              className="w-full group relative py-4 bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600 rounded-2xl shadow-[0_10px_30px_rgba(217,119,6,0.3)] transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed"
+            >
+              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 group-disabled:opacity-0 transition-opacity rounded-2xl" />
+              <span className="relative text-white font-black text-sm sm:text-base tracking-wider uppercase inline-flex items-center justify-center gap-2">
+                {spinning && <Loader2 className="size-4 animate-spin" />}
+                {spinning ? "Spinning…" :
+                  !claimedToday ? "Locked — claim first" :
+                  !canSpin ? "Already spun today" :
+                  bonusSpins > 0 && spunToday ? `Use bonus spin (${bonusSpins})` :
+                  "Spin the wheel"}
+              </span>
+            </button>
 
-          {lastResult && (
-            <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-primary/15 via-primary/5 to-background border border-primary/40 text-center animate-[fade-in_0.4s_ease-out]">
-              <div className="text-2xl mb-1">{PRIZE_ICON[lastResult.prize_type]}</div>
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">You won</p>
-              <p className="font-display text-xl text-primary">{lastResult.label}</p>
-              <p className="text-xs text-muted-foreground mt-2">{rewardEffect(lastResult.prize_type, lastResult.prize_value)}</p>
-              <Link to="/rewards/history" className="inline-block mt-3 text-[11px] uppercase tracking-widest text-primary hover:underline">View history →</Link>
-            </div>
-          )}
-        </Card>
+            {lastResult && (
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/40 text-center animate-[fade-in_0.4s_ease-out]">
+                <div className="text-3xl mb-1">{PRIZE_ICON[lastResult.prize_type]}</div>
+                <p className="text-[10px] uppercase tracking-widest text-white/50">You won</p>
+                <p className="font-display text-xl text-amber-300">{lastResult.label}</p>
+                <p className="text-xs text-white/60 mt-2">{rewardEffect(lastResult.prize_type, lastResult.prize_value)}</p>
+                <Link to="/rewards/history" className="inline-block mt-3 text-[11px] uppercase tracking-widest text-amber-400 hover:underline">View history →</Link>
+              </div>
+            )}
+          </section>
 
-        {/* Prize odds */}
-        <Card className="p-5">
-          <h3 className="font-semibold mb-3 text-sm tracking-wide uppercase text-muted-foreground">Prize odds</h3>
-          <ul className="space-y-2">
+          {/* Prize odds */}
+          <section className="relative bg-white/5 rounded-2xl p-4 border border-white/10" aria-label="Prize odds">
+            <h3 className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-3 text-center">Prize Probabilities</h3>
             {(() => {
               const total = prizes.reduce((s, p) => s + p.weight, 0) || 1;
-              return prizes.map((p) => (
-                <li key={p.id} className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2">
-                    <span className="inline-block size-3 rounded-sm" style={{ backgroundColor: p.color_hex ?? "#444" }} aria-hidden />
-                    {p.label}
-                  </span>
-                  <span className="text-muted-foreground tabular-nums">{((p.weight / total) * 100).toFixed(1)}%</span>
-                </li>
-              ));
+              return (
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                  {prizes.map((p) => (
+                    <li key={p.id} className="flex justify-between items-center border-b border-white/5 pb-1.5">
+                      <span className="flex items-center gap-2 text-white/80 text-xs">
+                        <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: p.color_hex ?? "#888" }} aria-hidden />
+                        {p.label}
+                      </span>
+                      <span className="text-amber-400 text-xs font-bold tabular-nums">{((p.weight / total) * 100).toFixed(1)}%</span>
+                    </li>
+                  ))}
+                </ul>
+              );
             })()}
-          </ul>
-        </Card>
+          </section>
+
+          <p className="relative text-center text-white/30 text-[10px] uppercase tracking-[0.2em]">
+            Resets daily at 00:00 UTC · Good luck, royal
+          </p>
+        </div>
       </div>
     </main>
   );
