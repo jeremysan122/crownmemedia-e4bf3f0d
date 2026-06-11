@@ -984,17 +984,18 @@ export default function Upload() {
         <div className="flex flex-col items-center justify-center py-32 px-6 text-center animate-scale-in">
           <Crown size={80} className="text-primary animate-crown-pulse mb-6" fill="currentColor" />
           <h2 className="font-display text-3xl text-gold mb-2">
-            {pending ? "Submitted for review" : "Your crown race has begun"}
+            {pending ? "In review" : "Your crown race has begun"}
           </h2>
           <p className="text-sm text-muted-foreground max-w-sm">
             {pending
-              ? "We're checking your post for safety. It'll appear publicly as soon as it's approved — you can already see it in your profile under Pending."
-              : "Returning to feed…"}
+              ? "Moderation flagged this one for a closer look. You'll find it in your Pending list and we'll publish it as soon as it clears."
+              : "Your post is live — returning to feed…"}
           </p>
         </div>
       </AppShell>
     );
   }
+
 
   const canAddMore = photos.length < MAX_PHOTOS;
   const canSubmit = !submitting && !validation;
