@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import CrownLoader from "@/components/CrownLoader";
 import { CrownIcon } from "@/components/CrownIcon";
 import { Flame, Swords, Sparkles, ArrowLeft, History, Loader2 } from "lucide-react";
+import AppShell from "@/components/AppShell";
 import { toast } from "sonner";
 import { haptic } from "@/lib/haptics";
 
