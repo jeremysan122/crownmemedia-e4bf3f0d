@@ -530,8 +530,10 @@ export default function Rewards() {
               );
             })()}
           </section>
+           </div>
+          </div>
 
-          <p className="relative text-center text-white/30 text-[10px] uppercase tracking-[0.2em]">
+          <p className="relative text-center text-white/30 text-[10px] uppercase tracking-[0.2em] mt-7">
             Resets daily at 00:00 UTC · Good luck, royal
           </p>
         </div>
