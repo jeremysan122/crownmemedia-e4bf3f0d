@@ -34,6 +34,7 @@ import { computeReactionTotalsForMessages } from "@/lib/reactionTotals";
 import MessageReactions from "@/components/messages/MessageReactions";
 import DmAttachment from "@/components/messages/DmAttachment";
 import { toast } from "@/hooks/use-toast";
+import GiftReceiptCard from "@/components/messages/GiftReceiptCard";
 
 type Msg = {
   id: string;
@@ -47,6 +48,9 @@ type Msg = {
   attachment_name: string | null;
   attachment_size: number | null;
   attachment_type: string | null;
+  kind?: string | null;
+  gift_transaction_id?: string | null;
+  gift_seen_at?: string | null;
   _pending?: boolean;
   _failed?: boolean;
 };
@@ -615,6 +619,23 @@ export default function Messages() {
           {filteredMessages.map((m) => {
             const mine = m.sender_id === user?.id;
             const myReactions = reactions.filter((r) => r.message_id === m.id);
+            if (m.kind === "gift" && m.gift_transaction_id && user) {
+              return (
+                <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
+                  <GiftReceiptCard
+                    messageId={m.id}
+                    giftTransactionId={m.gift_transaction_id}
+                    mine={mine}
+                    viewerId={user.id}
+                    createdAt={m.created_at}
+                    seenAt={m.gift_seen_at ?? null}
+                  />
+                  {!m._pending && (
+                    <MessageReactions messageId={m.id} reactions={myReactions} onChange={() => {}} />
+                  )}
+                </div>
+              );
+            }
             return (
               <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
                 <div
@@ -956,6 +977,7 @@ function Inbox({ threads, unreadByThread, userId, reload, setThreads, loadMore, 
 
   // ---------- Preview helper ----------
   const previewOf = (t: any): string => {
+    if (t.kind === "gift") return "🎁 Royal gift";
     if (t.body) return t.body;
     if (t.attachment_path) return `📎 ${t.attachment_name || "Attachment"}`;
     if (t.shared_post_id) return "↗ Shared post";
@@ -1079,7 +1101,7 @@ function Inbox({ threads, unreadByThread, userId, reload, setThreads, loadMore, 
             reload();
           };
           return (
-            <div key={t.otherId} className={`royal-card flex items-stretch group ${isSelected ? "ring-1 ring-primary" : ""} ${isPinned ? "border-primary/40" : ""}`}>
+            <div key={t.otherId} className={`royal-card flex items-stretch group ${isSelected ? "ring-1 ring-primary" : ""} ${isPinned ? "border-primary/40" : ""} ${t.kind === "gift" && unread > 0 ? "ring-1 ring-amber-400/60 shadow-[0_0_18px_-6px_rgba(251,191,36,0.55)]" : ""}`}>
               {selectMode && (
                 <button
                   type="button"
@@ -1102,6 +1124,11 @@ function Inbox({ threads, unreadByThread, userId, reload, setThreads, loadMore, 
                   <p className="text-sm font-bold flex items-center gap-2">
                     {isPinned && <Pin size={11} className="text-primary fill-primary" />}
                     @{t.other?.username}
+                    {t.kind === "gift" && unread > 0 && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 h-5 rounded-full bg-gradient-gold text-primary-foreground text-[9px] font-bold uppercase tracking-wide animate-pulse" title="New royal gift">
+                        🎁 Gift
+                      </span>
+                    )}
                     <button
                       type="button"
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleMuteThread(t.otherId); }}

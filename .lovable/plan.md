@@ -1,92 +1,78 @@
-# Category System, Discovery & Competition Upgrade — Phased Plan
+# DM Royal Gifts — Polish + Hardening
 
-The brief touches almost every surface in CrownMe (Upload, Feed, Discover, Battles, Leaderboards, Search, Profile, plus a new ranking/analytics layer). Shipping it in one pass would break existing crowns, rankings, and share cards. I'll break it into 4 phases. Each phase is independently shippable and testable.
+A premium, atomic, real-time DM gifting flow for CrownMe. Scoped to existing gift/messages stack; only edits the surface needed.
 
-We already have foundations from earlier work:
-- `main_categories`, `subcategories`, `category_tags`, `category_follows`, `category_suggestions` tables
-- `posts.main_category_slug` / `posts.subcategory_slug` (backfilled from legacy `CrownCategory`)
-- `CategoryPicker`, `CategoryHub` (`/c/:mainSlug/:subSlug`), `Discover`, `AdminCategories`
-- 15-hub / ~140-topic master list seeded with `legacy_enum` mapping preserved
+## 1. Database & RPC (single migration)
 
-This plan builds on top of that — no destructive migration of existing crowns.
+- Extend `public.messages` with optional metadata so a gift receipt is a first-class message type:
+  - `kind text` (default `'text'`, allowed: `'text' | 'gift'`)
+  - `gift_transaction_id uuid` (nullable, FK → `gift_transactions.id`)
+  - `gift_seen_at timestamptz` (nullable — set when recipient opens thread; gates animation replay)
+- New RPC `public.send_dm_gift(p_gift_id, p_recipient_id, p_quantity, p_dedupe_key)` — `SECURITY DEFINER`, atomic:
+  1. Validate sender ≠ recipient, neither banned/suspended/deleted, no blocks either way, DM allowed (respects existing `can_dm` helper if present, else `messages` RLS check).
+  2. Call existing `private.send_royal_gift` (debits wallet, inserts ledger, creates `gift_transactions` row).
+  3. INSERT into `messages` with `kind='gift'`, `gift_transaction_id`, safe `content` ("🎁 Royal gift sent").
+  4. INSERT `notifications` row (`type='dm_gift'`, payload `{ link: '/messages/<thread>', sender_username, gift_name }`).
+  5. All in one transaction — any failure rolls back the debit.
+  6. Dedupe via `client_dedupe_key` on `gift_transactions` (already unique).
+- New RPC `public.mark_dm_gift_seen(p_message_id)` — recipient-only, sets `gift_seen_at` once.
+- RLS additions:
+  - `messages` already restricts to participants; add WITH CHECK so non-sender cannot insert `kind='gift'` rows directly (only RPC, via `security definer`).
+  - `gift_transactions` SELECT: sender OR receiver (already in place — verify).
+- Realtime: ensure `messages` and `notifications` are in `supabase_realtime` publication.
 
----
+## 2. Client — Sending
 
-## Phase 1 — Upload + Feed Filters (Foundation Hardening)
+- Refactor `src/components/gifts/RoyalGiftStore.tsx` → drop the manual `messages.insert` after RPC; call new `send_dm_gift` RPC with idempotency key from `makeGiftIdempotencyKey()`. Disables the send button while in-flight; on success, navigate to thread.
+- `src/hooks/useGiftSend.ts` → add `sendDmGift` variant reusing the same retry/fatal-classifier + error logging.
+- `src/components/gifts/GiftDmPicker.tsx` → already covers recent/following/search; add:
+  - Followers tab (reuses `fetchFollowerRecipients`).
+  - Disabled-state rendering for blocked/unavailable (filtered server-side already; UI tooltip "Unavailable").
+  - Self filter (already enforced).
 
-**Goal:** Every new post is guaranteed to have a valid (category, topic) pair, and users can filter the Feed by them.
+## 3. Client — Receiving (inbox + thread)
 
-- Upload: enforce required Master Category + Topic via stepped flow; block publish until both set; validate topic belongs to category (server-side trigger).
-- Feed: persistent filter chip bar (All / Hub / Topic). Selection persists in `localStorage` and as URL params. Reactive query — no full refresh.
-- DB: add CHECK trigger ensuring `posts.subcategory_slug` belongs to `posts.main_category_slug`. Backfill any nulls to `royal-crowns / overall`.
+- `src/pages/Messages.tsx`:
+  - Render gift messages with new `GiftReceiptCard` (royal styling: gradient border, crown glow, gift icon, sender chip, name + rarity badge, shekel value, timestamp).
+  - On thread open, call `mark_dm_gift_seen` for each unseen gift message; trigger `GiftAnimationOverlay` once per unseen receipt; "Tap to replay" button after.
+  - Thread list row: crown badge + soft glow when most recent message `kind='gift'` and unread.
+  - Subscribe via existing `useRealtimeChannel` to `messages` inserts for the open thread + the thread-list query; realtime fallback already handled by hook's resync-on-online/visibility.
+- Notification bell: existing `NotificationToaster` handles new `dm_gift` type; ensure deep link `/messages/<thread>` routes correctly.
 
-## Phase 2 — Discover Redesign + Category Detail
+## 4. Analytics
 
-**Goal:** Premium browsing surface; one tap from hub card to topic list.
+- Add `src/lib/analytics.ts` events (or extend existing): `dm_gift_picker_opened`, `_recipient_selected`, `_send_started`, `_send_success`, `_send_failed` (with sanitized error code only), `_received`, `_animation_opened`, `_notification_clicked`. No PII, no balances, no message text.
 
-- Rebuild `Discover.tsx` with sections: Trending Hubs, Trending Topics, Recently Crowned, Rising Stars, Popular Near You (uses existing `profile.country/state/city`), Featured Competitions.
-- Hub cards: icon, gradient, active competitors (7d), post count, trending arrow. Single-tap opens hub page.
-- `CategoryHub` upgrade: show all topics inside the hub as a grid, plus Crown Holder strip, Top Competitors, Recent Winners, Active Battles widget.
+## 5. Tests
 
-## Phase 3 — Leaderboards (Category + Topic, Location + Time scoped)
+- Unit: `src/hooks/__tests__/useGiftSend.test.ts` — extend with `sendDmGift` happy path + dedupe behavior (mocked).
+- E2E (Playwright, `e2e/dm-gift-flow.spec.ts`): sender picks recipient → sends → wallet debited once → receipt visible in thread → recipient sees crown badge + animation on open.
+- RLS test (`src/lib/__tests__/dmGiftRls.test.ts`): third user cannot read sender/recipient gift message, cannot debit other wallet, cannot spoof `sender_id`.
 
-**Goal:** Rankable competition surface.
+## 6. Verification
 
-- New tables:
-  - `category_rankings(period, scope_type, scope_value, main_slug, subcategory_slug, user_id, rank, prev_rank, votes, crown_streak, snapshot_at)`
-  - Index on `(period, scope_type, scope_value, main_slug, subcategory_slug, rank)`.
-- Edge function `snapshot-category-ranks` (cron, hourly): recompute Today/Week/Month/AllTime × Global/Country/State/City for each hub+topic, capped per scope.
-- UI: `/leaderboard/:mainSlug?topic=&scope=&period=` with movement arrows, crown indicators, animated rank changes (Framer Motion).
-- Reuse `useLiveRank` patterns.
+- `supabase--linter` after migration.
+- Targeted vitest run on new/changed tests.
+- Browser walkthrough via Playwright: send gift via DM, verify realtime arrival in second session, verify animation plays once and `mark_dm_gift_seen` sets timestamp.
 
-## Phase 4 — Battles, Search, Profile Integration
+## Files
 
-- **Battles:** add category/topic filter chips + location + sort (Trending/Newest/Most Competitive). Filter `battles` query by participant post category.
-- **Search:** extend search index to return Categories, Topics, Category/Topic Leaderboards, Crown Holders. Update `Search.tsx` result grouping.
-- **Profile:** new `ProfileCategoryRankings` card — top 5 hubs/topics with location-scoped rank (e.g., "Cars #14 in Green Bay"). Pulls from `category_rankings`.
+**New:**
+- `supabase/migrations/<ts>_dm_gift_messages.sql`
+- `src/components/messages/GiftReceiptCard.tsx`
+- `src/hooks/useDmGiftThread.ts` (open-thread seen-marker + animation queue)
+- `e2e/dm-gift-flow.spec.ts`
+- `src/lib/__tests__/dmGiftRls.test.ts`
 
----
+**Edited:**
+- `src/components/gifts/RoyalGiftStore.tsx` (use RPC, remove manual `messages.insert`)
+- `src/components/gifts/GiftDmPicker.tsx` (followers tab, disabled states)
+- `src/hooks/useGiftSend.ts` (`sendDmGift`)
+- `src/pages/Messages.tsx` (gift rendering, badge, realtime)
+- `src/lib/analytics.ts` (new events)
+- `src/hooks/__tests__/useGiftSend.test.ts`
 
-## Technical Details
+## Out of scope
 
-### Validation trigger (Phase 1)
-```sql
-CREATE OR REPLACE FUNCTION validate_post_category() RETURNS trigger AS $$
-BEGIN
-  IF NEW.main_category_slug IS NULL OR NEW.subcategory_slug IS NULL THEN
-    RAISE EXCEPTION 'Posts must have main_category_slug and subcategory_slug';
-  END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM subcategories s
-    JOIN main_categories m ON m.id = s.main_category_id
-    WHERE m.slug = NEW.main_category_slug AND s.slug = NEW.subcategory_slug
-  ) THEN
-    RAISE EXCEPTION 'subcategory_slug % does not belong to main_category_slug %', NEW.subcategory_slug, NEW.main_category_slug;
-  END IF;
-  RETURN NEW;
-END $$ LANGUAGE plpgsql;
-```
-
-### Ranking snapshot strategy (Phase 3)
-- Compute incrementally: only re-rank scopes touched by posts/votes in last hour.
-- `prev_rank` carried forward from previous snapshot row → enables movement arrows without extra writes.
-
-### Files to add/edit (high level)
-- `src/pages/Upload.tsx` — stepped flow + validation
-- `src/pages/Feed.tsx` + new `FeedFilterChips.tsx` — filter chips
-- `src/pages/Discover.tsx` — full rebuild
-- `src/pages/CategoryHub.tsx` — topic grid + widgets
-- `src/pages/CategoryLeaderboard.tsx` (new)
-- `src/pages/Battles.tsx` + filters
-- `src/pages/Search.tsx` — category-aware results
-- `src/components/profile/ProfileCategoryRankings.tsx` (new)
-- `supabase/functions/snapshot-category-ranks/index.ts` (new edge fn)
-- Migrations: validation trigger, `category_rankings` table, indexes
-
----
-
-## Recommendation
-
-Approve **Phase 1 now** so I can land the foundation (required category/topic on every post + feed filters). I'll surface Phases 2–4 for approval one at a time so you can review before each ships.
-
-Reply with **"go phase 1"**, or pick a different starting phase / different scope.
+- Push-notification body changes (existing safe-text path already used).
+- Refund UX beyond "show updated state if `gift_transactions.status` flips" — recipient card reads status from row; no admin UI built here.
