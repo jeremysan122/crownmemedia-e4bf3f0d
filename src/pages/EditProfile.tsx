@@ -67,7 +67,7 @@ type ProfileForm = z.infer<typeof profileSchema>;
 type FieldErrors = Partial<Record<keyof ProfileForm, string>>;
 
 export default function EditProfile() {
-  const { profile, refreshProfile, user } = useAuth();
+  const { profile, refreshProfile, user, loading: authLoading } = useAuth();
   const nav = useNavigate();
 
   const [username, setUsername] = useState(profile?.username || "");
