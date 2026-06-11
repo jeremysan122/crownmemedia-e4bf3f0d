@@ -81,6 +81,40 @@ export default function RoyalGiftStore() {
     }
   };
 
+  const performSendViaDm = async (gift: RoyalGift, target: GiftDmRecipient) => {
+    setSendingDm(true);
+    const total = gift.shekelCost;
+    const idempotencyKey = makeGiftIdempotencyKey();
+    applyDelta(-total, total);
+    try {
+      await sendGift({ gift, recipientId: target.userId, quantity: 1, idempotencyKey });
+      fxGiftSend(gift.category);
+      // Drop a DM line so the gift appears in their inbox conversation too.
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("messages").insert({
+          sender_id: user.id,
+          receiver_id: target.userId,
+          body: `${gift.icon} Sent you a ${gift.name} · ${SHEKEL}${formatShekels(total)}`,
+        });
+      }
+      toast.success(`Sent ${gift.name} to @${target.username}`, {
+        description: `${SHEKEL}${formatShekels(total)} · Opening your conversation…`,
+      });
+      refreshWallet();
+      setDmPickerOpen(false);
+      setPendingGift(null);
+      setPreviewing(null);
+      navigate(`/messages/${target.userId}`);
+    } catch (e) {
+      applyDelta(total, -total);
+      refreshWallet();
+      const msg = e instanceof Error ? e.message : "Gift could not be sent";
+      toast.error("Gift failed to send", { description: msg });
+    } finally {
+      setSendingDm(false);
+    }
+  };
 
   const favoriteGifts = useMemo(
     () => favorites.map((id) => findGift(id)).filter(Boolean) as RoyalGift[],
