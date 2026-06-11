@@ -22,6 +22,7 @@ import ShareBattleDialog from "@/components/battles/ShareBattleDialog";
 import TopBattlersWidget from "@/components/battles/TopBattlersWidget";
 import WinnerReveal from "@/components/battles/WinnerReveal";
 import { haptic } from "@/lib/haptics";
+import { trackEvent } from "@/lib/analytics";
 import { Play } from "lucide-react";
 import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
 
@@ -89,6 +90,8 @@ export default function Battles() {
   const prevStatusRef = useRef<Record<string, { status: string; winner: string | null }>>({});
   /** Prevents a rapid double-tap from optimistically incrementing twice before the insert resolves. */
   const inFlightVotes = useRef<Set<string>>(new Set());
+  /** Battles currently submitting a vote — drives the spinner + disabled state on the vote button. */
+  const [submittingVotes, setSubmittingVotes] = useState<Set<string>>(new Set());
 
   const load = async () => {
     setLoading(true);
@@ -204,9 +207,13 @@ export default function Battles() {
 
   const vote = async (b: Battle, forUserId: string) => {
     if (!user) { toast.error("Sign in to vote"); return; }
-    if (b.status !== "active") return;
+    if (b.status !== "active") {
+      void trackEvent("battle_vote_blocked_duplicate", { metadata: { battle_id: b.id, reason: "not_active" } });
+      return;
+    }
     if (myVotes[b.id]) {
       haptic("warning");
+      void trackEvent("battle_vote_blocked_duplicate", { metadata: { battle_id: b.id, reason: "already_voted" } });
       toast.info("You already voted on this duel", {
         description: `You backed @${myVotes[b.id] === b.challenger_id ? b.challenger?.username : b.opponent?.username}`,
       });
@@ -217,9 +224,13 @@ export default function Battles() {
       toast.info("Can't vote in your own battle"); return;
     }
 
-    // Guard against rapid double-tap: drop subsequent calls until this vote resolves.
+    // Guard against rapid double-tap / multi-tab race: drop subsequent calls
+    // until this vote resolves. The server-side UNIQUE(battle_id, user_id) is
+    // the source of truth — this is just to keep the UI from racing itself.
     if (inFlightVotes.current.has(b.id)) return;
     inFlightVotes.current.add(b.id);
+    setSubmittingVotes((s) => { const n = new Set(s); n.add(b.id); return n; });
+    void trackEvent("battle_vote_started", { metadata: { battle_id: b.id } });
 
     // optimistic + haptic confirm
     haptic("success");
@@ -232,12 +243,20 @@ export default function Battles() {
     } : x));
     triggerBurst(b.id, isC ? "L" : "R");
 
-    const { error } = await supabase.from("battle_votes").insert({
-      battle_id: b.id, user_id: user.id, voted_for_user_id: forUserId,
-    });
+    // Idempotent insert: if a concurrent tab already wrote the same vote,
+    // the unique-key conflict is silently ignored instead of surfacing as
+    // a duplicate-key error. The optimistic UI stays in place.
+    const { error } = await supabase
+      .from("battle_votes")
+      .upsert(
+        { battle_id: b.id, user_id: user.id, voted_for_user_id: forUserId },
+        { onConflict: "battle_id,user_id", ignoreDuplicates: true },
+      );
     inFlightVotes.current.delete(b.id);
+    setSubmittingVotes((s) => { const n = new Set(s); n.delete(b.id); return n; });
+
     if (error) {
-      // rollback
+      // True failure (network, RLS, etc.) — rollback optimistic state.
       haptic("error");
       setMyVotes((m) => { const { [b.id]: _, ...rest } = m; return rest; });
       setBattles((prev) => prev.map((x) => x.id === b.id ? {
@@ -245,8 +264,13 @@ export default function Battles() {
         challenger_votes: x.challenger_votes - (isC ? 1 : 0),
         opponent_votes: x.opponent_votes - (isC ? 0 : 1),
       } : x));
-      toast.error(error.message.includes("duplicate") ? "Already voted" : error.message);
+      void trackEvent("battle_vote_failed", { metadata: { battle_id: b.id } });
+      // Never surface raw SQL/RLS text to the user.
+      toast.error("Couldn't record your vote. Tap to retry.", {
+        action: { label: "Retry", onClick: () => void vote(b, forUserId) },
+      });
     } else {
+      void trackEvent("battle_vote_success", { metadata: { battle_id: b.id, side: isC ? "challenger" : "opponent" } });
       toast.success("Vote cast 👑");
     }
   };
@@ -342,7 +366,8 @@ export default function Battles() {
     const votedSideName = myVote
       ? (myVote === b.challenger_id ? b.challenger?.username : b.opponent?.username)
       : null;
-    const isLocked = !!myVote || (!!isParticipant && live) || !live;
+    const submitting = submittingVotes.has(b.id);
+    const isLocked = !!myVote || submitting || (!!isParticipant && live) || !live;
 
     const Side = ({
       side, profile, post, votes, userId, pct, won,
@@ -351,6 +376,7 @@ export default function Battles() {
       const btn = (
         <button
           disabled={isLocked}
+          aria-busy={submitting}
           onClick={() => vote(b, userId)}
           aria-label={iVoted ? `You voted for @${profile?.username}` : `Vote for @${profile?.username}`}
           className={`relative aspect-square group disabled:cursor-not-allowed overflow-hidden w-full ${
@@ -366,6 +392,12 @@ export default function Battles() {
           {iVoted && (
             <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase shadow-lg flex items-center gap-0.5 animate-fade-in">
               <Check size={9} /> Your vote
+            </div>
+          )}
+
+          {submitting && !iVoted && (
+            <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px] flex items-center justify-center">
+              <Loader2 size={20} className="text-primary animate-spin" />
             </div>
           )}
 

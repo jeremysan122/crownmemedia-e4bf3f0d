@@ -77,7 +77,19 @@ type EventName =
   | "discover_cache_miss"
   | "discover_pagination_failed"
   | "discover_duplicate_prevented"
-  | "discover_state_restored";
+  | "discover_state_restored"
+  // Crown Battles engagement + voting integrity
+  | "battle_list_viewed"
+  | "battle_opened"
+  | "battle_vote_started"
+  | "battle_vote_success"
+  | "battle_vote_failed"
+  | "battle_vote_blocked_duplicate"
+  | "battle_status_changed"
+  | "battle_pagination_loaded"
+  | "battle_pagination_retry"
+  | "battle_pagination_failed"
+  | "battle_no_more_results";
 
 
 async function sha256Hex(input: string): Promise<string> {
