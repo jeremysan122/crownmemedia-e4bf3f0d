@@ -114,7 +114,11 @@ export default function Battles() {
       challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country, main_category_slug, subcategory_slug),
       opponent_post:posts!battles_opponent_post_id_fkey(image_url, category)
     `).order("created_at", { ascending: false }).limit(80);
-    const arr = (data as any[]) || [];
+    const raw = (data as any[]) || [];
+    // Defence-in-depth safety filter: server RLS is the source of truth,
+    // but we also drop hidden/removed/declined/cancelled rows and battles
+    // involving any blocked user before they reach the render layer.
+    const arr = raw.filter((b) => isSafeBattleForList(b as any, { blockedIds }));
 
     // Detect freshly-completed battles (compared to last snapshot)
     const newly = new Set(freshWins);
@@ -122,6 +126,9 @@ export default function Battles() {
       const prev = prevStatusRef.current[b.id];
       if (prev && prev.status !== "completed" && b.status === "completed" && b.winner_id) {
         newly.add(b.id);
+        // A battle just transitioned to ended — drop any cached official
+        // result so the next render fetches the authoritative version.
+        invalidateOfficialResult(b.id);
       }
       prevStatusRef.current[b.id] = { status: b.status, winner: b.winner_id };
     });
@@ -129,6 +136,7 @@ export default function Battles() {
 
     setBattles(arr);
     setLoading(false);
+
 
     if (user) {
       const ids = arr.map((b: any) => b.id);
