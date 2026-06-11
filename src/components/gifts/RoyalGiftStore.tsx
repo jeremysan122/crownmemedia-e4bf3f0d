@@ -87,17 +87,10 @@ export default function RoyalGiftStore() {
     const idempotencyKey = makeGiftIdempotencyKey();
     applyDelta(-total, total);
     try {
-      await sendGift({ gift, recipientId: target.userId, quantity: 1, idempotencyKey });
+      // Server-authoritative: debit + gift_transactions + DM message + recipient notification are atomic.
+      await sendDmGift({ gift, recipientId: target.userId, quantity: 1, idempotencyKey });
+      try { (window as any).analytics?.track?.("dm_gift_send_success", { gift_id: gift.id, rarity: gift.rarity }); } catch {}
       fxGiftSend(gift.category);
-      // Drop a DM line so the gift appears in their inbox conversation too.
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from("messages").insert({
-          sender_id: user.id,
-          receiver_id: target.userId,
-          body: `${gift.icon} Sent you a ${gift.name} · ${SHEKEL}${formatShekels(total)}`,
-        });
-      }
       toast.success(`Sent ${gift.name} to @${target.username}`, {
         description: `${SHEKEL}${formatShekels(total)} · Opening your conversation…`,
       });
@@ -110,6 +103,7 @@ export default function RoyalGiftStore() {
       applyDelta(total, -total);
       refreshWallet();
       const msg = e instanceof Error ? e.message : "Gift could not be sent";
+      try { (window as any).analytics?.track?.("dm_gift_send_failed", { gift_id: gift.id, code: msg.slice(0, 80) }); } catch {}
       toast.error("Gift failed to send", { description: msg });
     } finally {
       setSendingDm(false);
