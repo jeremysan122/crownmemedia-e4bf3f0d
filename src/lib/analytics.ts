@@ -55,14 +55,23 @@ type EventName =
   | "share_channel_selected"
   // Discover page interactions
   | "discover_opened"
+  | "discover_section_viewed"
+  | "discover_scroll_depth_reached"
   | "discover_window_changed"
   | "discover_refreshed"
   | "discover_trending_post_impression"
   | "discover_trending_post_opened"
+  | "discover_trending_post_clicked"
   | "discover_battle_preview_opened"
+  | "discover_battle_preview_clicked"
   | "discover_creator_followed"
   | "discover_creator_unfollowed"
   | "discover_nearby_creator_opened"
+  | "discover_people_near_you_radius_changed"
+  | "discover_people_near_you_geo_fallback_used"
+  | "discover_people_near_you_profile_clicked"
+  | "discover_trending_pagination_loaded"
+  | "discover_battles_pagination_loaded"
   | "discover_search_submitted";
 
 async function sha256Hex(input: string): Promise<string> {
