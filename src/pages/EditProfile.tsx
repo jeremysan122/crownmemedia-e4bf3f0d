@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import CropEditor from "@/components/upload/CropEditor";
+import { trackEvent } from "@/lib/analytics";
 
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 
