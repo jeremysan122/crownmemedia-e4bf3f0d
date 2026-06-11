@@ -145,10 +145,11 @@ export default function GiftReceiptCard({
         </div>
       </div>
 
-      {animateFor && (
+      {animateFor && giftMeta && (
         <GiftAnimationOverlay
-          giftId={animateFor}
-          onComplete={() => setAnimateFor(null)}
+          gift={giftMeta}
+          quantity={tx.quantity}
+          onDone={() => setAnimateFor(null)}
         />
       )}
     </>
