@@ -47,7 +47,7 @@ export default function RoyalGiftStore() {
   const [dmPickerOpen, setDmPickerOpen] = useState(false);
   const [sendingDm, setSendingDm] = useState(false);
   const { pinFront, favorites } = useGiftFavorites();
-  const { sendGift } = useGiftSend();
+  const { sendGift, sendDmGift } = useGiftSend();
 
   const performSend = async (gift: RoyalGift, target: RecentGiftTarget, idempotencyKey = makeGiftIdempotencyKey()): Promise<boolean> => {
     setSending(true);
