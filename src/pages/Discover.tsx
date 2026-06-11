@@ -260,27 +260,71 @@ export default function Discover() {
     })();
   }, [refreshKey]);
 
-  // Trending posts (varies with window & refreshKey)
-  useEffect(() => {
-    let cancelled = false;
-    setPostsLoading(true);
-    (async () => {
+  // ---------- Trending posts (paginated) ----------
+  const fetchTrendingPage = useCallback(
+    async (page: number): Promise<{ rows: TrendingPost[]; hasMore: boolean }> => {
       const since = new Date(Date.now() - WINDOW_HOURS[windowSel] * 60 * 60 * 1000).toISOString();
-      const { data } = await supabase
+      const from = page * POSTS_PAGE;
+      const to = from + POSTS_PAGE - 1;
+      const { data, error } = await supabase
         .from("posts")
-        .select("id, image_url, image_urls, video_poster_url, media_type, crown_score, caption, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
+        .select(
+          "id, image_url, image_urls, video_poster_url, media_type, crown_score, caption, user_id, profile:profiles!posts_user_id_fkey(username, profile_photo_url)",
+        )
         .gte("created_at", since)
         .eq("is_removed", false)
         .eq("is_archived", false)
         .order("crown_score", { ascending: false })
-        .limit(9);
-      if (!cancelled) {
-        setTrendingPosts((data as any) || []);
-        setPostsLoading(false);
+        .order("id", { ascending: true })
+        .range(from, to);
+      if (error) throw error;
+      const rows = ((data as any[]) || []).filter((r) => !blockedIds.has(r.user_id)) as TrendingPost[];
+      return { rows, hasMore: ((data as any[]) || []).length === POSTS_PAGE };
+    },
+    [windowSel, blockedIds],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    setPostsLoading(true);
+    setPostsError(false);
+    setPostsHasMore(true);
+    (async () => {
+      try {
+        const { rows, hasMore } = await fetchTrendingPage(0);
+        if (cancelled) return;
+        setTrendingPosts(rows);
+        setPostsHasMore(hasMore);
+      } catch {
+        if (!cancelled) setPostsError(true);
+      } finally {
+        if (!cancelled) setPostsLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [windowSel, refreshKey]);
+  }, [fetchTrendingPage, refreshKey]);
+
+  const loadMorePosts = useCallback(async () => {
+    if (postsLoadingMore || !postsHasMore || postsLoading) return;
+    setPostsLoadingMore(true);
+    setPostsError(false);
+    try {
+      const page = Math.floor(trendingPosts.length / POSTS_PAGE);
+      const { rows, hasMore } = await fetchTrendingPage(page);
+      setTrendingPosts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...rows.filter((r) => !seen.has(r.id))];
+      });
+      setPostsHasMore(hasMore);
+      void trackEvent("discover_trending_pagination_loaded", {
+        metadata: { page: page + 1, count: rows.length },
+      });
+    } catch {
+      setPostsError(true);
+    } finally {
+      setPostsLoadingMore(false);
+    }
+  }, [fetchTrendingPage, postsLoadingMore, postsHasMore, postsLoading, trendingPosts.length]);
 
   // Fire one impression event per trending-post id we render (deduped via ref)
   const impressed = useRef<Set<string>>(new Set());
@@ -292,27 +336,72 @@ export default function Discover() {
     });
   }, [trendingPosts]);
 
-  // Live battles (upcoming/active, refresh on pull-to-refresh)
-  useEffect(() => {
-    let cancelled = false;
-    setBattlesLoading(true);
-    (async () => {
-      const { data } = await supabase
+  // ---------- Live battles (paginated) ----------
+  const fetchBattlesPage = useCallback(
+    async (page: number): Promise<{ rows: LiveBattle[]; hasMore: boolean }> => {
+      const from = page * BATTLES_PAGE;
+      const to = from + BATTLES_PAGE - 1;
+      const { data, error } = await supabase
         .from("battles")
-        .select("id, ends_at, challenger_votes, opponent_votes, challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url), opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url)")
+        .select(
+          "id, ends_at, challenger_votes, opponent_votes, challenger_id, opponent_id, challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url), opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url)",
+        )
         .in("status", ["active", "pending"])
         .gt("ends_at", new Date().toISOString())
         .order("ends_at", { ascending: true })
-        .limit(4);
-      if (!cancelled) {
-        setBattles((data as any) || []);
-        setBattlesLoading(false);
+        .range(from, to);
+      if (error) throw error;
+      const rows = ((data as any[]) || []).filter(
+        (b) => !blockedIds.has(b.challenger_id) && !blockedIds.has(b.opponent_id),
+      ) as LiveBattle[];
+      return { rows, hasMore: ((data as any[]) || []).length === BATTLES_PAGE };
+    },
+    [blockedIds],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    setBattlesLoading(true);
+    setBattlesError(false);
+    setBattlesHasMore(true);
+    (async () => {
+      try {
+        const { rows, hasMore } = await fetchBattlesPage(0);
+        if (cancelled) return;
+        setBattles(rows);
+        setBattlesHasMore(hasMore);
+      } catch {
+        if (!cancelled) setBattlesError(true);
+      } finally {
+        if (!cancelled) setBattlesLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [refreshKey]);
+  }, [fetchBattlesPage, refreshKey]);
 
-  // Suggested creators (top crown_score not already followed)
+  const loadMoreBattles = useCallback(async () => {
+    if (battlesLoadingMore || !battlesHasMore || battlesLoading) return;
+    setBattlesLoadingMore(true);
+    setBattlesError(false);
+    try {
+      const page = Math.floor(battles.length / BATTLES_PAGE);
+      const { rows, hasMore } = await fetchBattlesPage(page);
+      setBattles((prev) => {
+        const seen = new Set(prev.map((b) => b.id));
+        return [...prev, ...rows.filter((r) => !seen.has(r.id))];
+      });
+      setBattlesHasMore(hasMore);
+      void trackEvent("discover_battles_pagination_loaded", {
+        metadata: { page: page + 1, count: rows.length },
+      });
+    } catch {
+      setBattlesError(true);
+    } finally {
+      setBattlesLoadingMore(false);
+    }
+  }, [fetchBattlesPage, battlesLoadingMore, battlesHasMore, battlesLoading, battles.length]);
+
+  // Suggested creators — exclude self, blocked, banned, suspended, private
   useEffect(() => {
     (async () => {
       let excludeIds: string[] = [];
@@ -323,63 +412,150 @@ export default function Discover() {
           .select("following_id")
           .eq("follower_id", user.id);
         followingIds = ((f as any[]) || []).map((r) => r.following_id);
-        excludeIds = [...followingIds, user.id];
+        excludeIds = [...followingIds, user.id, ...Array.from(blockedIds)];
       }
       setFollowing(new Set(followingIds));
       let q: any = supabase
         .from("profiles")
         .select("id, username, profile_photo_url, bio, crown_score")
         .not("username", "is", null)
+        .eq("is_banned", false)
+        .eq("is_suspended", false)
+        .eq("is_private", false)
         .order("crown_score", { ascending: false })
         .limit(20);
       if (excludeIds.length > 0) q = q.not("id", "in", `(${excludeIds.join(",")})`);
       const { data } = await q;
       setSuggested(((data as any[]) || []).slice(0, 6));
     })();
-  }, [user, refreshKey]);
+  }, [user, refreshKey, blockedIds]);
 
-  // People near you — match city, fallback to country
+  // ---------- People Near You (radius + geo fallback) ----------
+  // Resolve a viewer origin coord from city/state/country (no precise GPS unless granted).
+  const resolveProfileOrigin = useCallback(
+    (city: string | null, state: string | null, country: string | null): {
+      coord: [number, number] | null;
+      source: "city" | "state" | "country" | "none";
+    } => {
+      if (city) {
+        const c = lookupGeo(city, "city");
+        if (c) return { coord: c, source: "city" };
+      }
+      if (state) {
+        const s = lookupGeo(state, "state");
+        if (s) return { coord: s, source: "state" };
+      }
+      if (country) {
+        const co = lookupGeo(country, "country");
+        if (co) return { coord: co, source: "country" };
+      }
+      return { coord: null, source: "none" };
+    },
+    [],
+  );
+
   useEffect(() => {
-    if (!user) { setNearby([]); return; }
+    if (!user) { setNearby([]); setGeoSource("none"); return; }
     let cancelled = false;
+    setNearbyLoading(true);
     (async () => {
       const { data: me } = await supabase
         .from("profiles")
-        .select("city, country")
+        .select("city, state, country")
         .eq("id", user.id)
         .maybeSingle();
       const city = (me as any)?.city as string | null;
+      const state = (me as any)?.state as string | null;
       const country = (me as any)?.country as string | null;
-      if (!city && !country) { if (!cancelled) setNearby([]); return; }
 
+      // If GPS already granted, keep it; otherwise resolve from profile.
+      let origin = originCoord;
+      let source: typeof geoSource = geoSource;
+      if (!origin || source === "none") {
+        const r = resolveProfileOrigin(city, state, country);
+        origin = r.coord;
+        source = r.source;
+        if (!cancelled) {
+          setOriginCoord(origin);
+          setGeoSource(source);
+          if (source !== "none" && source !== "city" && source !== "gps") {
+            void trackEvent("discover_people_near_you_geo_fallback_used", {
+              metadata: { fallback: source },
+            });
+          }
+        }
+      }
+
+      // Candidate pool: same country if known, else top creators globally.
       let q: any = supabase
         .from("profiles")
         .select("id, username, profile_photo_url, city, country, crown_score")
         .not("username", "is", null)
         .neq("id", user.id)
+        .eq("is_banned", false)
+        .eq("is_suspended", false)
+        .eq("is_private", false)
         .order("crown_score", { ascending: false })
-        .limit(12);
-      if (city) q = q.eq("city", city);
-      else if (country) q = q.eq("country", country);
+        .limit(60);
+      if (country) q = q.eq("country", country);
       const { data } = await q;
-      let rows = ((data as any[]) || []) as NearbyUser[];
-      // If we used city and got fewer than 4, widen to country.
-      if (city && country && rows.length < 4) {
-        const { data: c } = await supabase
-          .from("profiles")
-          .select("id, username, profile_photo_url, city, country, crown_score")
-          .not("username", "is", null)
-          .neq("id", user.id)
-          .eq("country", country)
-          .order("crown_score", { ascending: false })
-          .limit(12);
-        const seen = new Set(rows.map((r) => r.id));
-        ((c as any[]) || []).forEach((r) => { if (!seen.has(r.id)) rows.push(r); });
+      const blocked = blockedIds;
+      const raw = ((data as any[]) || []).filter((r) => !blocked.has(r.id));
+
+      const enriched = raw.map((r) => {
+        const coord =
+          (r.city && lookupGeo(r.city, "city")) ||
+          (r.country && lookupGeo(r.country, "country")) ||
+          null;
+        return { ...r, _coord: coord } as NearbyUser & { _coord: [number, number] | null };
+      });
+
+      // Apply radius filter only when we know origin.
+      const filtered = origin
+        ? enriched.filter((r) => withinRadius(origin, r._coord, radius))
+        : enriched;
+
+      if (!cancelled) {
+        setNearby(filtered.slice(0, 12));
+        setNearbyLoading(false);
       }
-      if (!cancelled) setNearby(rows.slice(0, 8));
     })();
     return () => { cancelled = true; };
-  }, [user, refreshKey]);
+  }, [user, refreshKey, radius, originCoord, blockedIds, resolveProfileOrigin, geoSource]);
+
+  const requestPreciseLocation = useCallback(() => {
+    if (!("geolocation" in navigator)) {
+      toast({ title: "Location unavailable", description: "Your browser doesn't support location. Showing people from your region instead." });
+      return;
+    }
+    setGeoRequesting(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeoRequesting(false);
+        setOriginCoord([pos.coords.latitude, pos.coords.longitude]);
+        setGeoSource("gps");
+        toast({ title: "Location enabled", description: "Showing people near you." });
+      },
+      () => {
+        setGeoRequesting(false);
+        toast({
+          title: "Location permission off",
+          description: "Showing popular people in your region instead.",
+        });
+        void trackEvent("discover_people_near_you_geo_fallback_used", { metadata: { fallback: "denied" } });
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300_000 },
+    );
+  }, []);
+
+  const handleRadiusChange = (r: RadiusMiles) => {
+    if (r === radius) return;
+    setRadius(r);
+    saveRadius(r);
+    void trackEvent("discover_people_near_you_radius_changed", {
+      metadata: { radius_mi: r, geo_source: geoSource },
+    });
+  };
 
   // Top gifters (last 7d, by total_shekels sent)
   useEffect(() => {
