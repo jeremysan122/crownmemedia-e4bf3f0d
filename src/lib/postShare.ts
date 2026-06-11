@@ -8,10 +8,15 @@
  *   - "Post deleted" is ONLY set on a confirmed missing row or is_removed=true —
  *     never on transient network / RLS / storage / image-load errors.
  */
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { withCacheBust } from "@/lib/cacheBust";
 import { resolveSensitiveDecision, type SensitiveViewer } from "@/lib/sensitiveVisibility";
+import {
+  getShareStatus,
+  invalidateShareStatus,
+  type ShareStatus,
+} from "@/lib/shareStatusCache";
 
 /** Columns to select on the `posts` table for share rendering. */
 export const POST_SHARE_COLUMNS =
@@ -90,85 +95,135 @@ export interface UsePostShareDataResult<T extends PostShareLike> {
   loading: boolean;
   /** True only when the row is confirmed missing or is_removed. */
   deleted: boolean;
-  /** True when the row exists but the current viewer can't read it (RLS/privacy/block). */
+  /** True when the row exists but the current viewer can't read it. */
   hidden: boolean;
-  /** True when the refetch failed for a transient reason (network/RLS/etc.). */
+  /** True when the refetch failed for a transient reason (network/RPC). */
   refreshError: boolean;
+  /** True when the most recent status resolution served from the cache. */
+  cacheHit: boolean;
+  /** Force-refresh status + post row, bypassing the cache. */
+  refresh: () => Promise<void>;
+}
+
+export interface UsePostShareDataOptions {
+  /** Current viewer id; keys the share-status cache per (post, viewer). */
+  viewerId?: string | null;
+  /** Fires on every status resolution; safe place to emit analytics. */
+  onStatusResolved?: (info: {
+    status: ShareStatus | "visible";
+    fromCache: boolean;
+    error: boolean;
+  }) => void;
 }
 
 /**
- * Refetch the freshest post row when `enabled` flips true. Never marks the post
- * deleted on a transient error. When the row comes back empty we call the
- * `get_post_share_status` security-definer RPC to disambiguate three real
- * outcomes: deleted (row gone), removed (moderated), or hidden (RLS/privacy
- * blocks the current viewer but the post still exists for others).
+ * Refetch the freshest post row when `enabled` flips true. Uses the cached
+ * `get_post_share_status` RPC (via shareStatusCache) to disambiguate
+ * deleted vs hidden-by-RLS so repeated dialog opens don't spam the network.
+ * Stale cache NEVER unblocks sharing — deleted/removed/hidden states are
+ * cached too and continue to disable share buttons.
  */
 export function usePostShareData<T extends PostShareLike>(
   initial: T,
   enabled: boolean,
+  opts: UsePostShareDataOptions = {},
 ): UsePostShareDataResult<T> {
   const [post, setPost] = useState<T>(initial);
   const [loading, setLoading] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [refreshError, setRefreshError] = useState(false);
+  const [cacheHit, setCacheHit] = useState(false);
   const lastIdRef = useRef(initial.id);
+  const onStatusResolvedRef = useRef(opts.onStatusResolved);
+  onStatusResolvedRef.current = opts.onStatusResolved;
+  const viewerId = opts.viewerId ?? null;
 
   useEffect(() => {
     if (lastIdRef.current !== initial.id) {
+      // Bust the outgoing post's cache entry so a stale status can never
+      // leak across two different dialogs in the same session.
+      invalidateShareStatus(lastIdRef.current);
       lastIdRef.current = initial.id;
       setDeleted(false);
       setHidden(false);
       setRefreshError(false);
+      setCacheHit(false);
     }
     setPost(initial);
   }, [initial]);
 
-  useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-    setLoading(true);
-    setRefreshError(false);
-    (async () => {
-      const { data, error } = await supabase
-        .from("posts")
-        .select(POST_SHARE_COLUMNS)
-        .eq("id", initial.id)
-        .maybeSingle();
-      if (cancelled) return;
-      if (error) {
-        setLoading(false);
-        setRefreshError(true);
-        return;
-      }
-      if (!data) {
-        // Disambiguate deleted vs hidden-by-RLS via security-definer RPC.
-        const { data: status, error: statusErr } = await supabase.rpc(
-          "get_post_share_status",
-          { _post_id: initial.id },
-        );
-        if (cancelled) return;
-        setLoading(false);
-        if (statusErr) {
+  const idRef = useRef(initial.id);
+  idRef.current = initial.id;
+
+  const run = useCallback(
+    async (force: boolean) => {
+      const id = idRef.current;
+      setLoading(true);
+      setRefreshError(false);
+      try {
+        const { data, error } = await supabase
+          .from("posts")
+          .select(POST_SHARE_COLUMNS)
+          .eq("id", id)
+          .maybeSingle();
+        if (idRef.current !== id) return;
+        if (error) {
           setRefreshError(true);
+          setCacheHit(false);
+          onStatusResolvedRef.current?.({ status: "visible", fromCache: false, error: true });
           return;
         }
-        if (status === "deleted" || status === "removed") setDeleted(true);
-        else if (status === "visible") setHidden(true);
-        return;
+        if (!data) {
+          const res = await getShareStatus(id, viewerId, { force });
+          if (idRef.current !== id) return;
+          setCacheHit(res.fromCache);
+          if (res.status === "unknown") {
+            setRefreshError(true);
+            onStatusResolvedRef.current?.({ status: "unknown", fromCache: res.fromCache, error: true });
+            return;
+          }
+          if (res.status === "deleted" || res.status === "removed") {
+            setDeleted(true);
+            setHidden(false);
+          } else if (res.status === "visible") {
+            // Row not readable to us but exists for others => hidden by RLS.
+            setHidden(true);
+            setDeleted(false);
+          }
+          onStatusResolvedRef.current?.({ status: res.status, fromCache: res.fromCache, error: false });
+          return;
+        }
+        const fresh = data as Partial<T>;
+        if (fresh.is_removed === true) {
+          setDeleted(true);
+          setHidden(false);
+          invalidateShareStatus(id);
+          onStatusResolvedRef.current?.({ status: "removed", fromCache: false, error: false });
+          return;
+        }
+        setDeleted(false);
+        setHidden(false);
+        setCacheHit(false);
+        setPost((prev) => ({ ...prev, ...fresh }) as T);
+        onStatusResolvedRef.current?.({ status: "visible", fromCache: false, error: false });
+      } finally {
+        if (idRef.current === id) setLoading(false);
       }
-      setLoading(false);
-      const fresh = data as Partial<T>;
-      if (fresh.is_removed === true) {
-        setDeleted(true);
-        return;
-      }
-      setPost((prev) => ({ ...prev, ...fresh }) as T);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled, initial.id]);
+    },
+    [viewerId],
+  );
 
-  return { post, loading, deleted, hidden, refreshError };
+  // Auto-load on enable / post change.
+  useEffect(() => {
+    if (!enabled) return;
+    void run(false);
+  }, [enabled, initial.id, viewerId, run]);
+
+  const refresh = useCallback(async () => {
+    invalidateShareStatus(idRef.current);
+    await run(true);
+  }, [run]);
+
+  return { post, loading, deleted, hidden, refreshError, cacheHit, refresh };
 }
