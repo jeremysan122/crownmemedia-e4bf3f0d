@@ -656,6 +656,74 @@ export default function Discover() {
     }
   };
 
+  // --- Scroll-depth tracking (25/50/75/100), once per session ---------------
+  const depthFired = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    const milestones = [25, 50, 75, 100];
+    const onScroll = () => {
+      const h = document.documentElement;
+      const max = (h.scrollHeight - h.clientHeight) || 1;
+      const pct = Math.round((window.scrollY / max) * 100);
+      for (const m of milestones) {
+        if (pct >= m && !depthFired.current.has(m)) {
+          depthFired.current.add(m);
+          void trackEvent("discover_scroll_depth_reached", { metadata: { depth: m } });
+        }
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // --- Section visibility tracking via IntersectionObserver ----------------
+  const sectionRefs = {
+    trending: useRef<HTMLElement>(null),
+    battles: useRef<HTMLElement>(null),
+    suggested: useRef<HTMLElement>(null),
+    nearby: useRef<HTMLElement>(null),
+    topics: useRef<HTMLElement>(null),
+  };
+  const sectionFired = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (!e.isIntersecting) return;
+          const name = (e.target as HTMLElement).dataset.section;
+          if (!name || sectionFired.current.has(name)) return;
+          sectionFired.current.add(name);
+          void trackEvent("discover_section_viewed", { metadata: { section: name } });
+        });
+      },
+      { threshold: 0.25 },
+    );
+    Object.values(sectionRefs).forEach((r) => { if (r.current) io.observe(r.current); });
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sentinel-driven infinite loading for trending posts and battles
+  const trendingSentinel = useRef<HTMLDivElement>(null);
+  const battlesSentinel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = trendingSentinel.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) void loadMorePosts();
+    }, { rootMargin: "200px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loadMorePosts]);
+  useEffect(() => {
+    const el = battlesSentinel.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) void loadMoreBattles();
+    }, { rootMargin: "200px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loadMoreBattles]);
+
   // --- Pull-to-refresh (touch only, top of scroll) ---------------------------
   const ptrRef = useRef<HTMLDivElement>(null);
   const [pullDist, setPullDist] = useState(0);
