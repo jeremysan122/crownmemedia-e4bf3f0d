@@ -6,8 +6,6 @@ import { walletStore } from "@/stores/walletStore";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { Link } from "react-router-dom";
 import CrownLoader from "@/components/CrownLoader";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { CrownIcon } from "@/components/CrownIcon";
 import { Flame, Swords, Sparkles, ArrowLeft, History, Loader2 } from "lucide-react";
 import { toast } from "sonner";
