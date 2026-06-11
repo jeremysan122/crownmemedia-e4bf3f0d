@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { makeKey, getCached, setCached, invalidateSection, __resetCacheForTests } from "@/lib/discoverCache";
+import { makeKey, getCached, setCached, invalidateSection, invalidateAll, __resetCacheForTests } from "@/lib/discoverCache";
+import { isSafeTrendingPost, isSafeBattle, isSafeNearbyProfile } from "@/lib/discoverPagination";
 
 describe("discoverCache", () => {
   beforeEach(() => __resetCacheForTests());
