@@ -223,6 +223,7 @@ const App = () => (
               <Route path="/invite" element={<ProtectedRoute><Invite /></ProtectedRoute>} />
               <Route path="/drafts" element={<ProtectedRoute><Drafts /></ProtectedRoute>} />
               <Route path="/archived" element={<ProtectedRoute><ArchivedPosts /></ProtectedRoute>} />
+              <Route path="/pending" element={<ProtectedRoute><Pending /></ProtectedRoute>} />
               <Route path="/creator" element={<ProtectedRoute><CreatorProgram /></ProtectedRoute>} />
               <Route path="/admin/creator-program" element={<ProtectedRoute><AdminRoute><AdminCreatorProgram /></AdminRoute></ProtectedRoute>} />
               <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
