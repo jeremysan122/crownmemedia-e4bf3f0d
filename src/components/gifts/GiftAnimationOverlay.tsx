@@ -43,11 +43,13 @@ export default function GiftAnimationOverlay({
   quantity,
   onDone,
   anchored = false,
+  hideText = false,
 }: {
   gift: RoyalGift | null;
   quantity: number;
   onDone: () => void;
   anchored?: boolean;
+  hideText?: boolean;
 }) {
   useEffect(() => {
     if (!gift) return;
@@ -148,12 +150,16 @@ export default function GiftAnimationOverlay({
         <div className={isHeavy ? "animate-[crown-pulse_1.6s_ease-in-out_infinite]" : ""}>
           <GiftIcon animationType={gift.animationType} tier={gift.category} size={heroSize} />
         </div>
-        <p className={`font-display ${titleSize} text-gold mt-3 drop-shadow-[0_4px_20px_hsl(43_90%_55%/0.6)]`}>
-          {gift.name}
-        </p>
-        <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/80 mt-1">
-          {subtitle}
-        </p>
+        {!hideText && (
+          <>
+            <p className={`font-display ${titleSize} text-gold mt-3 drop-shadow-[0_4px_20px_hsl(43_90%_55%/0.6)]`}>
+              {gift.name}
+            </p>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/80 mt-1">
+              {subtitle}
+            </p>
+          </>
+        )}
         {quantity > 1 && (
           <p className="mt-2 inline-block px-3 py-1 rounded-full bg-gradient-gold text-primary-foreground text-sm font-bold">
             ×{quantity}
