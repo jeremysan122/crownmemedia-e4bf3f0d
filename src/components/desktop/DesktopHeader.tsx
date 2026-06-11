@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Bell, MessageCircle, Search, Plus } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
@@ -6,6 +6,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/hooks/useWallet";
 import { formatScore } from "@/lib/crown";
 import GlobalSearchDialog from "@/components/GlobalSearchDialog";
+import { useUnreadByType } from "@/hooks/useUnreadByType";
+import { useThreadUnread } from "@/hooks/useThreadUnread";
+import { useMutedThreads } from "@/hooks/useMutedThreads";
 
 export default function DesktopHeader() {
   const nav = useNavigate();
