@@ -55,9 +55,7 @@ describe("getShareStatus — TTL caching", () => {
   });
 
   it("expired TTL forces a new fetch", async () => {
-    rpc
-      .mockResolvedValueOnce({ data: "visible", error: null })
-      .mockResolvedValueOnce({ data: "removed", error: null });
+    rpc.mockResolvedValueOnce({ data: "removed", error: null });
     __seedShareStatusForTests("p1", "u1", "visible", Date.now() - (SHARE_STATUS_TTL_MS + 5_000));
     const stale = await getShareStatus("p1", "u1");
     expect(stale.fromCache).toBe(false);

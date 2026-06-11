@@ -122,10 +122,14 @@ export async function getShareStatus(
 
   try {
     const status = await inflight;
+    if (status === "unknown") {
+      // Don't cache transient RPC failures — next call must retry.
+      cache.delete(k);
+      return { status, fromCache: false, cachedAt: now };
+    }
     cache.set(k, { status, cachedAt: Date.now() });
     return { status, fromCache: false, cachedAt: Date.now() };
   } catch {
-    // Defensive — the RPC wrapper above already swallows errors.
     cache.delete(k);
     return { status: "unknown", fromCache: false, cachedAt: now };
   }
