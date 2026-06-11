@@ -29,7 +29,7 @@ function makeChain(terminal: unknown = { data: null, error: null }) {
 describe("Upload publish uses publish_post_idempotent (not direct insert)", () => {
   it("calls the RPC with a client_request_id and rejects payloads without one", async () => {
     const rpc = vi.fn().mockResolvedValue({
-      data: { id: "p1", publish_status: "pending_review", created_at: new Date().toISOString() },
+      data: { id: "p1", publish_status: "approved", created_at: new Date().toISOString() },
       error: null,
     });
     const from = vi.fn(() => makeChain());
@@ -48,12 +48,25 @@ describe("Upload publish uses publish_post_idempotent (not direct insert)", () =
     expect(from).not.toHaveBeenCalled();
   });
 
+  it("normal publish returns 'approved' so the post is instantly live", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: { id: "p1", publish_status: "approved", created_at: new Date().toISOString() },
+      error: null,
+    });
+    const { data } = await rpc("publish_post_idempotent", {
+      p_client_request_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      p_payload: { caption: "x" },
+    });
+    expect((data as any).publish_status).toBe("approved");
+  });
+
   it("treats a returned row older than ~5s as a dedup-hit (no duplicate created)", () => {
     const old = new Date(Date.now() - 60_000).toISOString();
     const wasExisting = !!old && Date.now() - new Date(old).getTime() > 5000;
     expect(wasExisting).toBe(true);
   });
 });
+
 
 describe("EditPostDialog optimistic concurrency", () => {
   it("blocks a save when edited_at no longer matches (0 rows updated)", async () => {
