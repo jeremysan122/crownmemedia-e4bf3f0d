@@ -1063,7 +1063,7 @@ export default function Discover() {
 
           {/* Suggested Creators */}
           {suggested.length > 0 && (
-            <section className="mb-8">
+            <section ref={sectionRefs.suggested} data-section="suggested_creators" className="mb-8">
               <h2 className="font-display text-lg mb-3 flex items-center gap-2">
                 <UserPlus size={16} className="text-primary" />Suggested Creators
               </h2>
@@ -1109,55 +1109,118 @@ export default function Discover() {
           )}
 
           {/* People Near You */}
-          {user && nearby.length > 0 && (
-            <section className="mb-8">
-              <h2 className="font-display text-lg mb-3 flex items-center gap-2">
-                <MapPin size={16} className="text-primary" />People Near You
-                <Link to="/map" className="ml-auto text-[11px] text-muted-foreground hover:text-primary font-normal normal-case">Open map</Link>
-              </h2>
-              <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
-                {nearby.map((n) => {
-                  const isFollowing = following.has(n.id);
-                  const isPending = pendingFollow.has(n.id);
-                  return (
-                    <div key={n.id} className="shrink-0 w-40 royal-card p-3 text-center flex flex-col">
-                      <Link
-                        to={`/profile/${n.username}`}
-                        onClick={() => void trackEvent("discover_nearby_creator_opened", { metadata: { username: n.username } })}
-                        className="block"
-                      >
-                        <div className="size-14 rounded-full bg-muted overflow-hidden mx-auto mb-2">
-                          {n.profile_photo_url && <img src={n.profile_photo_url} alt="" className="w-full h-full object-cover" />}
-                        </div>
-                        <p className="text-xs font-bold truncate">@{n.username}</p>
-                        <p className="text-[10px] text-muted-foreground truncate mb-2">
-                          {[n.city, n.country].filter(Boolean).join(", ") || "Nearby"}
-                        </p>
-                      </Link>
-                      <button
-                        onClick={() => toggleFollow(n.id, n.username)}
-                        disabled={isPending}
-                        aria-pressed={isFollowing}
-                        className={`mt-auto inline-flex items-center justify-center gap-1 h-7 rounded-full text-[11px] font-bold transition disabled:opacity-60 ${
-                          isFollowing
-                            ? "bg-secondary/60 text-foreground border border-border hover:border-destructive/50 hover:text-destructive"
-                            : "bg-gradient-gold text-primary-foreground gold-shadow hover:opacity-95"
-                        }`}
-                      >
-                        {isPending ? (
-                          <Loader2 size={11} className="animate-spin" />
-                        ) : isFollowing ? (
-                          <><UserCheck size={11} /> Following</>
-                        ) : (
-                          <><UserPlus size={11} /> Follow</>
-                        )}
-                      </button>
-                    </div>
-                  );
-                })}
+          {user && (
+            <section ref={sectionRefs.nearby} data-section="people_near_you" className="mb-8">
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <h2 className="font-display text-lg flex items-center gap-2">
+                  <MapPin size={16} className="text-primary" />People Near You
+                  {geoSource !== "none" && geoSource !== "gps" && (
+                    <span className="text-[10px] text-muted-foreground font-normal normal-case">
+                      (from your {geoSource})
+                    </span>
+                  )}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <label className="sr-only" htmlFor="nearby-radius">Distance radius</label>
+                  <select
+                    id="nearby-radius"
+                    value={radius}
+                    onChange={(e) => handleRadiusChange(Number(e.target.value) as RadiusMiles)}
+                    className="h-8 px-2 rounded-full border border-border bg-card text-[11px] font-medium text-foreground hover:border-primary/40 focus:border-primary/60 outline-none"
+                    aria-label="People Near You distance radius"
+                  >
+                    {RADIUS_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={requestPreciseLocation}
+                    disabled={geoRequesting}
+                    aria-label="Use my current location"
+                    className="h-8 px-2 inline-flex items-center gap-1 rounded-full border border-border text-[11px] text-muted-foreground hover:text-primary hover:border-primary/40 disabled:opacity-60"
+                  >
+                    {geoRequesting ? <Loader2 size={11} className="animate-spin" /> : <LocateFixed size={11} />}
+                    {geoSource === "gps" ? "Precise" : "Use location"}
+                  </button>
+                  <Link to="/map" className="text-[11px] text-muted-foreground hover:text-primary">Open map</Link>
+                </div>
               </div>
+              {nearbyLoading ? (
+                <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+                  {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="shrink-0 w-40 h-40" />)}
+                </div>
+              ) : nearby.length === 0 ? (
+                <div className="royal-card p-4 text-center">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    No nearby creators found{radius !== 0 ? ` within ${radius} mi` : ""}.
+                  </p>
+                  <div className="flex justify-center gap-2">
+                    {radius !== 0 && (
+                      <button
+                        onClick={() => handleRadiusChange(0)}
+                        className="text-[11px] h-7 px-3 rounded-full border border-border hover:border-primary/40 hover:text-primary"
+                      >
+                        Try Anywhere nearby
+                      </button>
+                    )}
+                    <button
+                      onClick={requestPreciseLocation}
+                      className="text-[11px] h-7 px-3 rounded-full border border-border hover:border-primary/40 hover:text-primary"
+                    >
+                      Retry location
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+                  {nearby.map((n) => {
+                    const isFollowing = following.has(n.id);
+                    const isPending = pendingFollow.has(n.id);
+                    return (
+                      <div key={n.id} className="shrink-0 w-40 royal-card p-3 text-center flex flex-col">
+                        <Link
+                          to={`/profile/${n.username}`}
+                          onClick={() => {
+                            void trackEvent("discover_nearby_creator_opened", { metadata: { username: n.username } });
+                            void trackEvent("discover_people_near_you_profile_clicked", { metadata: { radius_mi: radius, geo_source: geoSource } });
+                          }}
+                          className="block"
+                        >
+                          <div className="size-14 rounded-full bg-muted overflow-hidden mx-auto mb-2">
+                            {n.profile_photo_url && <img src={n.profile_photo_url} alt="" className="w-full h-full object-cover" />}
+                          </div>
+                          <p className="text-xs font-bold truncate">@{n.username}</p>
+                          <p className="text-[10px] text-muted-foreground truncate mb-2">
+                            {[n.city, n.country].filter(Boolean).join(", ") || "Nearby"}
+                          </p>
+                        </Link>
+                        <button
+                          onClick={() => toggleFollow(n.id, n.username)}
+                          disabled={isPending}
+                          aria-pressed={isFollowing}
+                          className={`mt-auto inline-flex items-center justify-center gap-1 h-7 rounded-full text-[11px] font-bold transition disabled:opacity-60 ${
+                            isFollowing
+                              ? "bg-secondary/60 text-foreground border border-border hover:border-destructive/50 hover:text-destructive"
+                              : "bg-gradient-gold text-primary-foreground gold-shadow hover:opacity-95"
+                          }`}
+                        >
+                          {isPending ? (
+                            <Loader2 size={11} className="animate-spin" />
+                          ) : isFollowing ? (
+                            <><UserCheck size={11} /> Following</>
+                          ) : (
+                            <><UserPlus size={11} /> Follow</>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           )}
+
 
           {/* Top Gifters + Recently Crowned + Rising Stars */}
           <section className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
