@@ -94,6 +94,17 @@ export default function Battles() {
   const inFlightVotes = useRef<Set<string>>(new Set());
   /** Battles currently submitting a vote — drives the spinner + disabled state on the vote button. */
   const [submittingVotes, setSubmittingVotes] = useState<Set<string>>(new Set());
+  /** Set of user_ids the viewer has blocked. Battles involving any blocked user are filtered out. */
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!user) { setBlockedIds(new Set()); return; }
+    (async () => {
+      const { data } = await supabase.from("blocks").select("blocked_id").eq("blocker_id", user.id);
+      setBlockedIds(new Set(((data as any[]) || []).map((r) => r.blocked_id)));
+    })();
+  }, [user?.id]);
+
 
   const load = async () => {
     setLoading(true);
