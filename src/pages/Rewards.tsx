@@ -317,13 +317,15 @@ export default function Rewards() {
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-purple-700/15 blur-[100px] pointer-events-none" aria-hidden />
 
           {/* Header */}
-          <div className="relative text-center space-y-1">
-            <h2 className="font-display text-3xl text-white tracking-tight">Royal Vault</h2>
-            <p className="text-amber-400 text-xs font-semibold tracking-[0.25em] uppercase">Daily Rewards</p>
+          <div className="relative text-center space-y-1 mb-7">
+            <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl text-white tracking-tight">Royal Vault</h2>
+            <p className="text-amber-400 text-xs sm:text-sm font-semibold tracking-[0.25em] uppercase">Daily Rewards</p>
           </div>
 
+          <div className="relative grid gap-7 lg:grid-cols-2 lg:gap-10 lg:items-start">
+           <div className="space-y-7">
           {/* Streak summary chips */}
-          <div className="relative grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
               <div className="flex items-center justify-center gap-1 text-amber-400">
                 <Flame className="size-4" />
