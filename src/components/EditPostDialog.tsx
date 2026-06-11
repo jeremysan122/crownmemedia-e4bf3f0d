@@ -201,11 +201,12 @@ export default function EditPostDialog({
         toast.error("This post was edited somewhere else. Close and reopen to load the latest version.");
         return;
       }
-      // Safety-affecting fields (caption, media, category, location) move the
-      // post back to pending_review via the `posts_write_edit_audit` trigger.
-      // We additionally kick the moderation edge function client-side so the
-      // re-review queue picks it up immediately — the trigger guarantees the
-      // post is hidden from public surfaces until approved either way.
+      // Safety-affecting fields (caption, media, category, location) kick the
+      // background moderation edge function so it can re-score the edited
+      // post. Instant-publish model: the post stays live unless moderation
+      // (service_role) decides to move it to pending_review / rejected /
+      // sensitive. Every edit is still recorded in `post_edits_audit` via
+      // the `posts_write_edit_audit` trigger.
       const safetyAffecting =
         caption.trim() !== (initialCaption ?? "") ||
         !!file ||
@@ -215,16 +216,20 @@ export default function EditPostDialog({
         country.trim() !== (initialCountry ?? "");
       if (safetyAffecting) {
         try {
-          await supabase.functions.invoke("moderate-media", {
+          void supabase.functions.invoke("moderate-media", {
             body: { post_id: postId, reason: "edit_recheck" },
           });
-        } catch { /* non-fatal: trigger already moved row to pending_review */ }
+        } catch { /* non-fatal: scheduled scanners pick it up */ }
       }
       trackEvent("post_edited", {
         postId,
         metadata: { changed_image: !!file, filter: nextFilter, recategorized: category !== initialCategory, safety_recheck: safetyAffecting },
       });
-      toast.success(safetyAffecting ? "Saved — pending review after edit" : "Post updated");
+      // We don't know the moderation outcome yet — the post stays live until
+      // moderation says otherwise. Surface a neutral success and let the
+      // background flip do its job (Pending list will show it if demoted).
+      toast.success("Post updated");
+
       const next = {
         caption: (row?.caption ?? caption) as string,
         image_url: (row?.image_url ?? nextUrls[0]) as string,
@@ -242,7 +247,7 @@ export default function EditPostDialog({
       } catch { /* noop */ }
       try {
         const { broadcastCacheInvalidation } = await import("@/lib/cacheInvalidate");
-        broadcastCacheInvalidation({ kind: safetyAffecting ? "post:moderation_changed" : "post:updated", postId, userId: user.id });
+        broadcastCacheInvalidation({ kind: "post:updated", postId, userId: user.id });
       } catch { /* noop */ }
       onSaved?.(next);
       onOpenChange(false);

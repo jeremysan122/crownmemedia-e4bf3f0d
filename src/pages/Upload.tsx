@@ -832,12 +832,14 @@ export default function Upload() {
       ).slice(0, 500);
 
       // ─── Idempotent publish via SECURITY DEFINER RPC ───
-      // The RPC dedupes on (user_id, client_request_id), enforces moderation
-      // gating (forces publish_status to 'pending_review'), and returns the
-      // existing row when a previous attempt with the same key already
-      // succeeded — so refreshes, retries, and multi-tab publishes can't
-      // create duplicates.
-      setUploadStage("Submitting for review…");
+      // Instant-publish model: new posts default to `approved` and appear on
+      // public surfaces immediately. The RPC dedupes on
+      // (user_id, client_request_id) so refreshes, retries, and multi-tab
+      // publishes can't create duplicates. Background moderation
+      // (moderate-media edge function + reports + admin actions) is the only
+      // path that can later flip the post to pending_review / rejected /
+      // sensitive — it runs after publish, not before.
+      setUploadStage("Publishing…");
       const payload = {
         image_url: imageUrls[0],
         image_urls: imageUrls,
@@ -871,8 +873,8 @@ export default function Upload() {
         p_payload: payload as any,
       });
       if (error) throw error;
-      const publishedRow = (published ?? null) as { publish_status?: string; created_at?: string } | null;
-      const publishStatus = publishedRow?.publish_status ?? "pending_review";
+      const publishedRow = (published ?? null) as { id?: string; publish_status?: string; created_at?: string } | null;
+      const publishStatus = publishedRow?.publish_status ?? "approved";
       // If the RPC returned a row older than ~5s, it's a dedup-hit — the post
       // was created on a previous attempt with this same client_request_id.
       const wasExisting = !!publishedRow?.created_at &&
@@ -881,18 +883,27 @@ export default function Upload() {
         metadata: { publishStatus, deduped: wasExisting },
       });
 
-      trackEvent("post_publish_submitted", {
-        metadata: { publishStatus, deduped: wasExisting },
-      });
+      // Kick off background moderation. It runs post-publish — the post is
+      // already live; moderation can later flip it to pending_review,
+      // sensitive, or remove it. Fire-and-forget so we never block the UI.
+      if (publishedRow?.id && !wasExisting) {
+        try {
+          void supabase.functions.invoke("moderate-media", {
+            body: { post_id: publishedRow.id, reason: "post_publish" },
+          });
+        } catch { /* non-fatal: scheduled scanners pick it up */ }
+      }
 
       setUploadProgress(100);
       const statusLabel =
-        publishStatus === "approved" ? "Posted!" :
+        publishStatus === "approved" ? "Published!" :
         publishStatus === "rejected" ? "Rejected" :
-        wasExisting ? "Already submitted" :
-        "Submitted for review";
+        publishStatus === "pending_review" ? "In review" :
+        wasExisting ? "Already published" :
+        "Published!";
       setUploadStage(statusLabel);
       if (wasExisting) trackEvent("post_publish_deduped");
+
       if (tagged.length > 0) {
         trackEvent("post_tagged_people", { metadata: { count: tagged.length } });
       }
@@ -973,17 +984,18 @@ export default function Upload() {
         <div className="flex flex-col items-center justify-center py-32 px-6 text-center animate-scale-in">
           <Crown size={80} className="text-primary animate-crown-pulse mb-6" fill="currentColor" />
           <h2 className="font-display text-3xl text-gold mb-2">
-            {pending ? "Submitted for review" : "Your crown race has begun"}
+            {pending ? "In review" : "Your crown race has begun"}
           </h2>
           <p className="text-sm text-muted-foreground max-w-sm">
             {pending
-              ? "We're checking your post for safety. It'll appear publicly as soon as it's approved — you can already see it in your profile under Pending."
-              : "Returning to feed…"}
+              ? "Moderation flagged this one for a closer look. You'll find it in your Pending list and we'll publish it as soon as it clears."
+              : "Your post is live — returning to feed…"}
           </p>
         </div>
       </AppShell>
     );
   }
+
 
   const canAddMore = photos.length < MAX_PHOTOS;
   const canSubmit = !submitting && !validation;

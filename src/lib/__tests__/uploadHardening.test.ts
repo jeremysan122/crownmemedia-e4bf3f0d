@@ -29,7 +29,7 @@ function makeChain(terminal: unknown = { data: null, error: null }) {
 describe("Upload publish uses publish_post_idempotent (not direct insert)", () => {
   it("calls the RPC with a client_request_id and rejects payloads without one", async () => {
     const rpc = vi.fn().mockResolvedValue({
-      data: { id: "p1", publish_status: "pending_review", created_at: new Date().toISOString() },
+      data: { id: "p1", publish_status: "approved", created_at: new Date().toISOString() },
       error: null,
     });
     const from = vi.fn(() => makeChain());
@@ -48,12 +48,25 @@ describe("Upload publish uses publish_post_idempotent (not direct insert)", () =
     expect(from).not.toHaveBeenCalled();
   });
 
+  it("normal publish returns 'approved' so the post is instantly live", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: { id: "p1", publish_status: "approved", created_at: new Date().toISOString() },
+      error: null,
+    });
+    const { data } = await rpc("publish_post_idempotent", {
+      p_client_request_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      p_payload: { caption: "x" },
+    });
+    expect((data as any).publish_status).toBe("approved");
+  });
+
   it("treats a returned row older than ~5s as a dedup-hit (no duplicate created)", () => {
     const old = new Date(Date.now() - 60_000).toISOString();
     const wasExisting = !!old && Date.now() - new Date(old).getTime() > 5000;
     expect(wasExisting).toBe(true);
   });
 });
+
 
 describe("EditPostDialog optimistic concurrency", () => {
   it("blocks a save when edited_at no longer matches (0 rows updated)", async () => {
@@ -152,18 +165,24 @@ describe("Pending view query shape (owner-only, non-approved)", () => {
 });
 
 describe("Upload UI state machine", () => {
-  const states = ["uploading", "processing", "pending_review", "approved", "rejected", "canceled"] as const;
-  it("recognises every known publish status", () => {
+  const states = ["uploading", "processing", "published", "failed", "canceled", "under_review", "rejected", "sensitive"] as const;
+  it("recognises every known publish-flow state", () => {
     for (const s of states) expect(states.includes(s)).toBe(true);
   });
 
-  it("treats publish_status !== 'approved' as 'needs review' for the success UI", () => {
-    const isPendingReview = (status: string) => status !== "approved";
-    expect(isPendingReview("pending_review")).toBe(true);
-    expect(isPendingReview("processing")).toBe(true);
-    expect(isPendingReview("approved")).toBe(false);
+  it("default success state for a normal upload is 'published' (instant publish)", () => {
+    const defaultStatus = "approved";
+    const isPending = defaultStatus !== "approved";
+    expect(isPending).toBe(false);
+  });
+
+  it("only treats moderation-flagged posts as 'in review'", () => {
+    const isInReview = (status: string) => status === "pending_review";
+    expect(isInReview("approved")).toBe(false);
+    expect(isInReview("pending_review")).toBe(true);
   });
 });
+
 
 describe("Orphan cleanup contract", () => {
   it("only removes paths under the user's own folder", () => {
