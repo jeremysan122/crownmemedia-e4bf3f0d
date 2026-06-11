@@ -235,6 +235,17 @@ export default function GiftPanel({ isOpen, onClose, recipient: recipientProp, p
           }
         }}
       />
+
+      <GiftConfirmDialog
+        open={showConfirm}
+        onOpenChange={setShowConfirm}
+        gift={selectedGift ?? null}
+        quantity={quantity}
+        recipient={recipient ?? null}
+        balance={wallet.shekelBalance}
+        sending={isSending}
+        onConfirm={handleConfirmedSend}
+      />
     </>
   );
 }
