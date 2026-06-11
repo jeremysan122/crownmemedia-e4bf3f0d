@@ -8,6 +8,7 @@
  * not security boundaries.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { invalidateShareStatus } from "@/lib/shareStatusCache";
 
 export type AdminRole =
   | "admin"
@@ -93,6 +94,9 @@ export async function removePost(postId: string, reason: string, notes?: string)
     notes: notes ?? null,
   });
   if (e2) throw e2;
+  // Bust any cached share-status entry so ShareDialog can't keep saying
+  // "visible" until the TTL expires.
+  invalidateShareStatus(postId);
 }
 
 export async function reversePostTakedown(takedownId: string, postId: string) {
@@ -110,9 +114,8 @@ export async function reversePostTakedown(takedownId: string, postId: string) {
     .update({ reversed_at: new Date().toISOString(), reversed_by: u.user.id })
     .eq("id", takedownId);
   if (e2) throw e2;
+  invalidateShareStatus(postId);
 }
-
-export async function removeComment(commentId: string, reason: string) {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) throw new Error("Not authenticated");
 
