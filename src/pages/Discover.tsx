@@ -801,6 +801,61 @@ export default function Discover() {
     return () => io.disconnect();
   }, [loadMoreBattles]);
 
+  // --- Discover state preservation across back-navigation -------------------
+  // We snapshot loaded items + cursor + scroll on unmount and restore on mount
+  // so tapping a post/profile/battle and pressing Back returns the user to the
+  // exact same Discover view. Cache TTL still applies — if data went stale we
+  // refetch lazily, but the snapshot keeps the scroll position intact.
+  const STATE_KEY = "crownme:discover:state:v1";
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    try {
+      const raw = sessionStorage.getItem(STATE_KEY);
+      if (!raw) return;
+      const s = JSON.parse(raw) as {
+        windowSel?: Window; radius?: RadiusMiles; scrollY?: number;
+        trending?: TrendingPost[]; trendingCursor?: PostsCursor; trendingHasMore?: boolean;
+        battles?: LiveBattle[]; battlesCursor?: BattlesCursor; battlesHasMore?: boolean;
+      };
+      if (s.windowSel) setWindowSel(s.windowSel);
+      if (typeof s.radius === "number") setRadius(s.radius as RadiusMiles);
+      if (Array.isArray(s.trending) && s.trending.length > 0) {
+        setTrendingPosts(s.trending);
+        setPostsCursor(s.trendingCursor ?? null);
+        if (typeof s.trendingHasMore === "boolean") setPostsHasMore(s.trendingHasMore);
+        setPostsLoading(false);
+      }
+      if (Array.isArray(s.battles) && s.battles.length > 0) {
+        setBattles(s.battles);
+        setBattlesCursor(s.battlesCursor ?? null);
+        if (typeof s.battlesHasMore === "boolean") setBattlesHasMore(s.battlesHasMore);
+        setBattlesLoading(false);
+      }
+      if (typeof s.scrollY === "number") {
+        // Defer until after first paint so layout is correct.
+        requestAnimationFrame(() => window.scrollTo(0, s.scrollY!));
+      }
+      void trackEvent("discover_state_restored");
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    const save = () => {
+      try {
+        sessionStorage.setItem(STATE_KEY, JSON.stringify({
+          windowSel, radius, scrollY: window.scrollY,
+          trending: trendingPosts.slice(0, 60), trendingCursor: postsCursor, trendingHasMore: postsHasMore,
+          battles: battles.slice(0, 30), battlesCursor: battlesCursor, battlesHasMore: battlesHasMore,
+        }));
+      } catch { /* quota — ignore */ }
+    };
+    window.addEventListener("pagehide", save);
+    return () => { save(); window.removeEventListener("pagehide", save); };
+  }, [windowSel, radius, trendingPosts, postsCursor, postsHasMore, battles, battlesCursor, battlesHasMore]);
+
+
   // --- Pull-to-refresh (touch only, top of scroll) ---------------------------
   const ptrRef = useRef<HTMLDivElement>(null);
   const [pullDist, setPullDist] = useState(0);
