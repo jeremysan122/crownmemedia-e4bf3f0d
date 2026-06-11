@@ -303,27 +303,29 @@ export default function Rewards() {
   return (
     <main className="min-h-screen bg-[#0a0510] pb-28">
       <header className="sticky top-0 z-20 backdrop-blur bg-[#0a0510]/80 border-b border-amber-500/10">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <Link to="/feed" aria-label="Back" className="p-2 -ml-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white"><ArrowLeft className="size-5" /></Link>
-          <h1 className="font-display text-base tracking-[0.3em] text-amber-400">ROYAL VAULT</h1>
+          <h1 className="font-display text-base sm:text-lg tracking-[0.3em] text-amber-400">ROYAL VAULT</h1>
           <Link to="/rewards/history" aria-label="Reward history" className="p-2 -mr-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white"><History className="size-5" /></Link>
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 pt-6">
-        <div className="relative bg-gradient-to-b from-[#1a1033] to-[#0a0510] rounded-[2.5rem] p-5 sm:p-6 border-2 border-amber-500/20 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden space-y-7">
+      <div className="max-w-lg md:max-w-3xl lg:max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+        <div className="relative bg-gradient-to-b from-[#1a1033] to-[#0a0510] rounded-[2.5rem] p-5 sm:p-8 lg:p-10 border-2 border-amber-500/20 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden">
           {/* Background glows */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-amber-500/10 blur-[100px] pointer-events-none" aria-hidden />
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-purple-700/15 blur-[100px] pointer-events-none" aria-hidden />
 
           {/* Header */}
-          <div className="relative text-center space-y-1">
-            <h2 className="font-display text-3xl text-white tracking-tight">Royal Vault</h2>
-            <p className="text-amber-400 text-xs font-semibold tracking-[0.25em] uppercase">Daily Rewards</p>
+          <div className="relative text-center space-y-1 mb-7">
+            <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl text-white tracking-tight">Royal Vault</h2>
+            <p className="text-amber-400 text-xs sm:text-sm font-semibold tracking-[0.25em] uppercase">Daily Rewards</p>
           </div>
 
+          <div className="relative grid gap-7 lg:grid-cols-2 lg:gap-10 lg:items-start">
+           <div className="space-y-7">
           {/* Streak summary chips */}
-          <div className="relative grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
               <div className="flex items-center justify-center gap-1 text-amber-400">
                 <Flame className="size-4" />
@@ -441,7 +443,9 @@ export default function Rewards() {
           <p className="text-[11px] text-white/50 text-center -mt-3">
             Earn shekels through daily rewards or top up anytime in the store.
           </p>
+           </div>
 
+           <div className="space-y-7">
           {/* Royal Spin Wheel */}
           <section className="relative pt-2 space-y-5" aria-label="Royal spin wheel">
             <div className="relative flex flex-col items-center">
@@ -461,7 +465,7 @@ export default function Rewards() {
                     : "You already spun today — come back tomorrow."}
               </p>
 
-              <div className="relative w-full max-w-[280px] aspect-square">
+              <div className="relative w-full max-w-[280px] sm:max-w-[360px] lg:max-w-[420px] aspect-square mx-auto">
                 {/* Pointer */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-20 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
                      style={{ width: 0, height: 0, borderLeft: "14px solid transparent", borderRight: "14px solid transparent", borderTop: "22px solid hsl(43 95% 60%)" }}
@@ -526,8 +530,10 @@ export default function Rewards() {
               );
             })()}
           </section>
+           </div>
+          </div>
 
-          <p className="relative text-center text-white/30 text-[10px] uppercase tracking-[0.2em]">
+          <p className="relative text-center text-white/30 text-[10px] uppercase tracking-[0.2em] mt-7">
             Resets daily at 00:00 UTC · Good luck, royal
           </p>
         </div>
