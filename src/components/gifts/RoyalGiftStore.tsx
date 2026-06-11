@@ -254,25 +254,35 @@ export default function RoyalGiftStore() {
             className="relative w-full max-w-sm royal-card p-6 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <GiftAnimationOverlay
-              gift={previewing}
-              quantity={1}
-              onDone={() => {/* keep open until user closes */}}
-              anchored
-            />
-            <div className="relative z-10 flex flex-col items-center text-center gap-2 pt-24">
-              <p className="font-display text-xl text-gold">{previewing.name}</p>
-              <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                {previewing.rarity} · {previewing.category}
-              </p>
+            {/* Decorative animated backdrop — pointer-events off so buttons stay clickable */}
+            <div className="absolute inset-0 pointer-events-none opacity-60">
+              <GiftAnimationOverlay
+                gift={previewing}
+                quantity={1}
+                onDone={() => {/* keep open until user closes */}}
+                anchored
+                hideText
+              />
+            </div>
+
+            <div className="relative z-10 flex flex-col items-center text-center gap-3">
+              <div className="mt-2">
+                <GiftIcon animationType={previewing.animationType} tier={previewing.category} size="lg" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-display text-2xl text-gold leading-tight">{previewing.name}</p>
+                <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                  {previewing.rarity} · {previewing.category}
+                </p>
+              </div>
               <p className="text-2xl font-bold tabular-nums">
                 <span className="text-gold mr-1">{SHEKEL}</span>
                 {formatShekels(previewing.shekelCost)}
-                <span className="text-xs text-muted-foreground ml-2">
+                <span className="text-xs text-muted-foreground ml-2 font-normal">
                   ${shekelToUsd(previewing.shekelCost).toFixed(2)}
                 </span>
               </p>
-              <div className="flex flex-col gap-2 w-full mt-3">
+              <div className="flex flex-col gap-2 w-full mt-2">
                 <button
                   onClick={async () => {
                     unlockAudio();
@@ -293,7 +303,7 @@ export default function RoyalGiftStore() {
                   <Send size={16} />
                   {`Purchase and send · ${SHEKEL}${formatShekels(previewing.shekelCost)}`}
                 </button>
-                <div className="flex gap-2 w-full">
+                <div className="grid grid-cols-2 gap-2 w-full">
                   <button
                     onClick={() => {
                       fxGiftPreview(previewing!.category);
@@ -301,25 +311,58 @@ export default function RoyalGiftStore() {
                       navigate("/feed");
                       toast.info("Pick a post to send this gift");
                     }}
-                    className="flex-1 h-11 rounded-full bg-secondary/50 border border-secondary/70 text-foreground font-bold text-sm flex items-center justify-center gap-2"
+                    className="h-11 rounded-full bg-secondary/50 border border-secondary/70 text-foreground font-bold text-xs flex items-center justify-center gap-1.5"
                   >
-                    <Send size={16} /> Send on Feed
+                    <Send size={14} /> Send on Feed
                   </button>
                   <button
                     onClick={() => {
-                      setPreviewing(null);
-                      setShowAdd(true);
+                      unlockAudio();
+                      if (!previewing) return;
+                      if (wallet.shekelBalance < previewing.shekelCost) {
+                        fxTap(true);
+                        setShowAdd(true);
+                        return;
+                      }
+                      pinFront(previewing.id);
+                      setPendingGift(previewing);
+                      setDmPickerOpen(true);
                     }}
-                    className="flex-1 h-11 rounded-full bg-card border border-border/60 text-foreground font-bold text-sm flex items-center justify-center gap-2"
+                    className="h-11 rounded-full bg-primary/15 border border-primary/40 text-primary font-bold text-xs flex items-center justify-center gap-1.5"
                   >
-                    <ShoppingCart size={16} /> Add Shekels
+                    <MessageCircle size={14} /> Send via DM
                   </button>
                 </div>
+                <button
+                  onClick={() => {
+                    setPreviewing(null);
+                    setShowAdd(true);
+                  }}
+                  className="w-full h-10 rounded-full bg-card border border-border/60 text-foreground font-semibold text-xs flex items-center justify-center gap-1.5"
+                >
+                  <ShoppingCart size={14} /> Add Shekels
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
+      <GiftDmPicker
+        open={dmPickerOpen && !!pendingGift}
+        onOpenChange={(o) => {
+          if (sendingDm) return;
+          setDmPickerOpen(o);
+          if (!o) setPendingGift(null);
+        }}
+        giftName={pendingGift?.name ?? ""}
+        giftCost={pendingGift?.shekelCost ?? 0}
+        giftIcon={pendingGift?.icon}
+        onPick={(target) => {
+          if (!pendingGift || sendingDm) return;
+          void performSendViaDm(pendingGift, target);
+        }}
+      />
+
       <GiftTargetPicker
         open={targetPickerOpen}
         onOpenChange={setTargetPickerOpen}
