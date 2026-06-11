@@ -920,9 +920,12 @@ export default function Upload() {
     } catch (e) {
       const raw = e instanceof Error ? e.message : "Upload failed";
       const isCancel = raw === "__cancelled__";
-      // Only clean up orphaned files on cancel — for retryable failures, keep
-      // already-uploaded files so the user can retry only the failed photos.
-      if (isCancel && uploaded.length) {
+      // Always clean up orphaned media on failure — the publish RPC is the
+      // sole writer that attaches files to a post, so any uploads still
+      // dangling at this point are guaranteed orphans for this session.
+      // The server-side cleanup_orphaned_media RPC is the fallback safety
+      // net for partial failures the client never gets to handle.
+      if (uploaded.length) {
         try {
           await supabase.storage.from("media").remove(uploaded.map((u) => u.path));
         } catch { /* noop */ }
