@@ -189,6 +189,9 @@ export default function Battles() {
         if (prev && prev.status !== "completed" && row.status === "completed" && row.winner_id) {
           setFreshWins((s) => { const n = new Set(s); n.add(row.id); return n; });
         }
+        // Any moderation flip, status change, or winner change invalidates
+        // the cached official result for that battle.
+        invalidateOfficialResult(row.id);
         prevStatusRef.current[row.id] = { status: row.status, winner: row.winner_id };
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "battles" }, () => {
