@@ -366,7 +366,8 @@ export default function Battles() {
     const votedSideName = myVote
       ? (myVote === b.challenger_id ? b.challenger?.username : b.opponent?.username)
       : null;
-    const isLocked = !!myVote || (!!isParticipant && live) || !live;
+    const submitting = submittingVotes.has(b.id);
+    const isLocked = !!myVote || submitting || (!!isParticipant && live) || !live;
 
     const Side = ({
       side, profile, post, votes, userId, pct, won,
@@ -375,6 +376,7 @@ export default function Battles() {
       const btn = (
         <button
           disabled={isLocked}
+          aria-busy={submitting}
           onClick={() => vote(b, userId)}
           aria-label={iVoted ? `You voted for @${profile?.username}` : `Vote for @${profile?.username}`}
           className={`relative aspect-square group disabled:cursor-not-allowed overflow-hidden w-full ${
@@ -390,6 +392,12 @@ export default function Battles() {
           {iVoted && (
             <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase shadow-lg flex items-center gap-0.5 animate-fade-in">
               <Check size={9} /> Your vote
+            </div>
+          )}
+
+          {submitting && !iVoted && (
+            <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px] flex items-center justify-center">
+              <Loader2 size={20} className="text-primary animate-spin" />
             </div>
           )}
 
