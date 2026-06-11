@@ -43,11 +43,13 @@ export default function GiftAnimationOverlay({
   quantity,
   onDone,
   anchored = false,
+  hideText = false,
 }: {
   gift: RoyalGift | null;
   quantity: number;
   onDone: () => void;
   anchored?: boolean;
+  hideText?: boolean;
 }) {
   useEffect(() => {
     if (!gift) return;
