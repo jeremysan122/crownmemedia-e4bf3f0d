@@ -1152,6 +1152,7 @@ export default function Profile() {
           initialCaption={editingPostData.caption}
           initialCoverUrl={editingPostData.image_url}
           initialFilter={editingPostData.filter}
+          initialEditedAt={editingPostData.edited_at ?? undefined}
           open={!!editingPostId}
           onOpenChange={(o) => { if (!o) { setEditingPostId(null); setEditingPostData(null); } }}
           onSaved={(next) => {
