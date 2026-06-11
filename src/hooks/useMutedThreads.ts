@@ -24,7 +24,7 @@ export function useMutedThreads() {
   useEffect(() => {
     if (!user) return;
     const ch = supabase
-      .channel(`muted-dm-shell-${user.id}`)
+      .channel(`muted-dm-shell-${user.id}-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "muted_dm_threads", filter: `user_id=eq.${user.id}` },
