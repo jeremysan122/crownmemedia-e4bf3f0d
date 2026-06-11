@@ -619,6 +619,23 @@ export default function Messages() {
           {filteredMessages.map((m) => {
             const mine = m.sender_id === user?.id;
             const myReactions = reactions.filter((r) => r.message_id === m.id);
+            if (m.kind === "gift" && m.gift_transaction_id && user) {
+              return (
+                <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
+                  <GiftReceiptCard
+                    messageId={m.id}
+                    giftTransactionId={m.gift_transaction_id}
+                    mine={mine}
+                    viewerId={user.id}
+                    createdAt={m.created_at}
+                    seenAt={m.gift_seen_at ?? null}
+                  />
+                  {!m._pending && (
+                    <MessageReactions messageId={m.id} reactions={myReactions} onChange={() => {}} />
+                  )}
+                </div>
+              );
+            }
             return (
               <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
                 <div
