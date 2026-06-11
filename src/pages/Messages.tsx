@@ -47,6 +47,9 @@ type Msg = {
   attachment_name: string | null;
   attachment_size: number | null;
   attachment_type: string | null;
+  kind?: string | null;
+  gift_transaction_id?: string | null;
+  gift_seen_at?: string | null;
   _pending?: boolean;
   _failed?: boolean;
 };
