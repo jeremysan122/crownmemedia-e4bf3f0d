@@ -28,6 +28,7 @@ const CategoryLeaderboard = lazy(() => import("./pages/CategoryLeaderboard"));
 const Profile = lazy(() => import("./pages/Profile"));
 const CrownMap = lazy(() => import("./pages/CrownMap"));
 const Battles = lazy(() => import("./pages/Battles"));
+const BattleDetail = lazy(() => import("./pages/BattleDetail"));
 const Messages = lazy(() => import("./pages/Messages"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -169,6 +170,7 @@ const App = () => (
               <Route path="/leaderboard/c/:mainSlug" element={<ProtectedRoute><CategoryLeaderboard /></ProtectedRoute>} />
               <Route path="/map" element={<ProtectedRoute><CrownMap /></ProtectedRoute>} />
               <Route path="/battles" element={<ProtectedRoute><Battles /></ProtectedRoute>} />
+              <Route path="/battles/:id" element={<ProtectedRoute><BattleDetail /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/messages/:otherId" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />

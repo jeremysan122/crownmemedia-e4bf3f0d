@@ -89,7 +89,8 @@ type EventName =
   | "battle_pagination_loaded"
   | "battle_pagination_retry"
   | "battle_pagination_failed"
-  | "battle_no_more_results";
+  | "battle_no_more_results"
+  | "battle_detail_view";
 
 
 async function sha256Hex(input: string): Promise<string> {
