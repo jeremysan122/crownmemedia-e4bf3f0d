@@ -881,11 +881,18 @@ export default function Upload() {
         metadata: { publishStatus, deduped: wasExisting },
       });
 
+      trackEvent("post_publish_submitted", {
+        metadata: { publishStatus, deduped: wasExisting },
+      });
+
       setUploadProgress(100);
-      setUploadStage(scheduledFor ? "Scheduled!" : "Posted!");
-      if (scheduledFor) {
-        trackEvent("post_scheduled", { metadata: { when: new Date(scheduledFor).toISOString() } });
-      }
+      const statusLabel =
+        publishStatus === "approved" ? "Posted!" :
+        publishStatus === "rejected" ? "Rejected" :
+        wasExisting ? "Already submitted" :
+        "Submitted for review";
+      setUploadStage(statusLabel);
+      if (wasExisting) trackEvent("post_publish_deduped");
       if (tagged.length > 0) {
         trackEvent("post_tagged_people", { metadata: { count: tagged.length } });
       }
@@ -903,6 +910,7 @@ export default function Upload() {
 
       submissionKeyRef.current = crypto.randomUUID();
       setSuccess(true);
+      (window as any).__crownmePendingReview = publishStatus !== "approved";
       await refreshProfile();
       try {
         localStorage.setItem("crownme:feed:tab", "global");
