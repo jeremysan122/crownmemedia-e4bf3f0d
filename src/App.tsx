@@ -47,6 +47,7 @@ const AppealReport = lazy(() => import("./pages/AppealReport"));
 const Invite = lazy(() => import("./pages/Invite"));
 const Drafts = lazy(() => import("./pages/Drafts"));
 const ArchivedPosts = lazy(() => import("./pages/ArchivedPosts"));
+const Pending = lazy(() => import("./pages/Pending"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const PostPage = lazy(() => import("./pages/PostPage"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
