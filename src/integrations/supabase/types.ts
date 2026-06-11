@@ -1878,7 +1878,10 @@ export type Database = {
           body: string | null
           created_at: string
           delivered_at: string | null
+          gift_seen_at: string | null
+          gift_transaction_id: string | null
           id: string
+          kind: string
           read: boolean
           receiver_id: string
           sender_id: string
@@ -1893,7 +1896,10 @@ export type Database = {
           body?: string | null
           created_at?: string
           delivered_at?: string | null
+          gift_seen_at?: string | null
+          gift_transaction_id?: string | null
           id?: string
+          kind?: string
           read?: boolean
           receiver_id: string
           sender_id: string
@@ -1908,7 +1914,10 @@ export type Database = {
           body?: string | null
           created_at?: string
           delivered_at?: string | null
+          gift_seen_at?: string | null
+          gift_transaction_id?: string | null
           id?: string
+          kind?: string
           read?: boolean
           receiver_id?: string
           sender_id?: string
@@ -1916,6 +1925,20 @@ export type Database = {
           shared_profile_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_gift_transaction_id_fkey"
+            columns: ["gift_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "gift_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_gift_transaction_id_fkey"
+            columns: ["gift_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "gift_transactions_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_receiver_id_fkey"
             columns: ["receiver_id"]
@@ -4444,6 +4467,7 @@ export type Database = {
         | "battle_lost"
         | "dm"
         | "system"
+        | "dm_gift"
       ranking_period: "day" | "week" | "month" | "all"
       ranking_scope: "global" | "country" | "state" | "city"
       region_type: "city" | "state" | "country" | "global"
@@ -4662,6 +4686,7 @@ export const Constants = {
         "battle_lost",
         "dm",
         "system",
+        "dm_gift",
       ],
       ranking_period: ["day", "week", "month", "all"],
       ranking_scope: ["global", "country", "state", "city"],
