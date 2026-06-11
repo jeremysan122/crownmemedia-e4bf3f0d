@@ -21,6 +21,7 @@ import AcceptBattleDialog from "@/components/battles/AcceptBattleDialog";
 import ShareBattleDialog from "@/components/battles/ShareBattleDialog";
 import TopBattlersWidget from "@/components/battles/TopBattlersWidget";
 import WinnerReveal from "@/components/battles/WinnerReveal";
+import { OfficialResultBadge } from "@/components/battles/OfficialResultBadge";
 import { haptic } from "@/lib/haptics";
 import { trackEvent } from "@/lib/analytics";
 import { isSafeBattleForList } from "@/lib/battlesLogic";
@@ -499,9 +500,15 @@ export default function Battles() {
           <div className="flex items-center gap-2 shrink-0">
             {isPending && <span className="text-[10px] uppercase font-bold text-accent">Pending</span>}
             {b.status === "active" && b.ends_at && <CountdownPill endsAt={b.ends_at} />}
-            {b.status === "completed" && b.winner_id && (
-              <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-primary"><Trophy size={10} /> {margin}% margin</span>
-            )}
+            {/* Authoritative ended-battle result (RPC) — replaces client-side winner_id reliance.
+                Renders winner / tie / no-winner / loading / retry. Only enabled for ended battles. */}
+            <OfficialResultBadge
+              battleId={b.id}
+              enabled={done}
+              resolveUsername={(uid) =>
+                uid === b.challenger_id ? b.challenger?.username : uid === b.opponent_id ? b.opponent?.username : null
+              }
+            />
           </div>
         </div>
 
