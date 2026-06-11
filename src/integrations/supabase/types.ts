@@ -4094,6 +4094,7 @@ export type Database = {
           vote_type: string
         }[]
       }
+      get_post_share_status: { Args: { _post_id: string }; Returns: string }
       get_post_vote_stats: { Args: { _post_id: string }; Returns: Json }
       get_user_liked_post_ids: {
         Args: { _limit?: number; _user_id: string }
