@@ -29,7 +29,7 @@ import AppShell from "@/components/AppShell";
 import { trackEvent } from "@/lib/analytics";
 import { toast } from "@/hooks/use-toast";
 import {
-  RADIUS_OPTIONS, type RadiusMiles, loadSavedRadius, saveRadius,
+  type RadiusMiles, loadSavedRadius, saveRadius,
   withinRadius,
 } from "@/lib/discoverGeo";
 import { lookupGeo } from "@/lib/geoCoords";
