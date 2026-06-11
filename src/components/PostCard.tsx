@@ -1036,6 +1036,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           initialCountry={liveCountry}
           initialImageUrls={liveImageUrls ?? undefined}
           initialAltTexts={liveAltTexts ?? undefined}
+          initialEditedAt={liveEditedAt ?? undefined}
           open={editOpen}
           onOpenChange={setEditOpen}
           onSaved={(next) => {

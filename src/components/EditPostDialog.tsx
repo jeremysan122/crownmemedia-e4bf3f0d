@@ -26,6 +26,10 @@ interface Props {
   initialCountry?: string | null;
   initialImageUrls?: string[] | null;
   initialAltTexts?: string[] | null;
+  /** Optimistic-concurrency precondition. Pass the post's `edited_at` you
+   *  read when opening the dialog so two tabs can't silently overwrite each
+   *  other — a stale save is rejected with a conflict toast. */
+  initialEditedAt?: string | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSaved?: (next: {
@@ -58,6 +62,7 @@ export default function EditPostDialog({
   initialCountry,
   initialImageUrls,
   initialAltTexts,
+  initialEditedAt,
   open,
   onOpenChange,
   onSaved,
@@ -162,7 +167,7 @@ export default function EditPostDialog({
       const trimmedAlts = nextUrls.map((_, i) => (altTexts[i] ?? "").trim().slice(0, 140));
       const editedAt = new Date().toISOString();
 
-      const { data: row, error } = await supabase
+      let query = supabase
         .from("posts")
         .update({
           edited_at: editedAt,
@@ -178,10 +183,24 @@ export default function EditPostDialog({
           state: stateField.trim() || null,
           country: country.trim(),
         } as any)
-        .eq("id", postId)
+        .eq("id", postId);
+      // Optimistic-concurrency guard: only update if the row's edited_at
+      // still matches what we read when the dialog opened. If another
+      // tab/device edited the post meanwhile the trigger will have bumped
+      // edited_at, the predicate misses, and the update affects 0 rows —
+      // we surface that as a conflict instead of silently overwriting.
+      if (initialEditedAt) {
+        query = query.eq("edited_at", initialEditedAt);
+      }
+      const { data: row, error } = await query
         .select("caption, image_url, image_urls, alt_texts, filter, category, city, state, country, edited_at")
         .maybeSingle();
       if (error) throw error;
+      if (!row && initialEditedAt) {
+        trackEvent("post_edit_conflict", { postId });
+        toast.error("This post was edited somewhere else. Close and reopen to load the latest version.");
+        return;
+      }
       trackEvent("post_edited", {
         postId,
         metadata: { changed_image: !!file, filter: nextFilter, recategorized: category !== initialCategory },

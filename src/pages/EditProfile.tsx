@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import CropEditor from "@/components/upload/CropEditor";
+import { trackEvent } from "@/lib/analytics";
 
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -230,14 +231,27 @@ export default function EditProfile() {
     setSaving(true);
 
     let uploadedAvatarPath: string | null = null;
+    // Capture the previous avatar storage path so we can delete it only after
+    // a successful profile update — never delete on failure.
+    const previousAvatarUrl = profile?.profile_photo_url ?? null;
+    const previousAvatarPath = (() => {
+      if (!previousAvatarUrl) return null;
+      // Only delete files we own — strip everything up to `/avatars/` and
+      // require the path to start with this user's id.
+      const m = previousAvatarUrl.match(/\/avatars\/(.+)$/);
+      if (!m) return null;
+      const p = decodeURIComponent(m[1]);
+      return p.startsWith(`${user.id}/`) ? p : null;
+    })();
 
     try {
       const uid = user.id;
-      let photoUrl = profile?.profile_photo_url ?? null;
+      let photoUrl = previousAvatarUrl;
 
       if (photoFile) {
         const ext = AVATAR_EXT_BY_MIME[photoFile.type] || "jpg";
-        const path = `${uid}/avatar-${Date.now()}.${ext}`;
+        // Collision-safe: user folder + UUID + timestamp.
+        const path = `${uid}/avatar-${crypto.randomUUID()}-${Date.now()}.${ext}`;
 
         const { error: uploadError } = await supabase.storage
           .from("avatars")
@@ -280,6 +294,16 @@ export default function EditProfile() {
 
       if (profileError) throw profileError;
 
+      // Profile row now points at the new avatar — safe to delete the old
+      // one. Storage RLS only allows the owner to remove their own paths,
+      // so this can never affect another user's avatar.
+      if (photoFile && uploadedAvatarPath && previousAvatarPath && previousAvatarPath !== uploadedAvatarPath) {
+        try {
+          await supabase.storage.from("avatars").remove([previousAvatarPath]);
+        } catch { /* non-fatal: leaves an orphan blob but profile is correct */ }
+        trackEvent("avatar_replaced");
+      }
+
       // Email change → Supabase sends a confirmation link to the NEW address.
       // The change only takes effect once the user clicks that link.
       if (email && email.trim().toLowerCase() !== (user.email || "").toLowerCase()) {
@@ -296,16 +320,21 @@ export default function EditProfile() {
       toast.success("Profile updated");
       nav(`/u/${username.trim().toLowerCase()}`);
     } catch (error) {
+      // Profile update failed — clean up the just-uploaded avatar so it
+      // doesn't linger as an orphan. Leave the previous avatar untouched.
       if (uploadedAvatarPath) {
         await supabase.storage.from("avatars").remove([uploadedAvatarPath]).catch(() => {});
       }
 
       const message = getErrorMessage(error);
 
-      if (/duplicate key|unique|profiles_username|username/i.test(message)) {
+      if (/rate.?limit|too many|profile_change/i.test(message)) {
+        trackEvent("profile_change_rate_limited");
+        toast.error("You're changing your profile too quickly. Please wait a bit and try again.");
+      } else if (/duplicate key|unique|profiles_username|username/i.test(message)) {
         toast.error("That username is already taken. Please choose another one.");
       } else if (/row-level security|permission denied|policy/i.test(message)) {
-        toast.error("Profile update blocked by Supabase permissions. Check your profiles and avatars RLS policies.");
+        toast.error("Profile update blocked by permissions. Please refresh and try again.");
       } else if (/bucket|avatars|storage/i.test(message)) {
         toast.error(`Avatar upload failed: ${message}`);
       } else {
@@ -315,6 +344,7 @@ export default function EditProfile() {
       setSaving(false);
     }
   };
+
 
   const FieldErr = ({ name }: { name: keyof ProfileForm }) =>
     liveErrors[name] ? (
