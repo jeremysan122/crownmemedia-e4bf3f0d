@@ -17,6 +17,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   TrendingUp, Crown, Flame, Sparkles, ArrowRight, Star, Zap, Trophy,
   Search, Swords, UserPlus, UserCheck, Gift, ShieldCheck, MapPin, RefreshCw, Loader2,
+  LocateFixed,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCategoryTree } from "@/lib/categories";
@@ -27,6 +28,11 @@ import { useIsRoyalPassUser } from "@/hooks/useIsRoyalPassUser";
 import AppShell from "@/components/AppShell";
 import { trackEvent } from "@/lib/analytics";
 import { toast } from "@/hooks/use-toast";
+import {
+  RADIUS_OPTIONS, type RadiusMiles, loadSavedRadius, saveRadius,
+  withinRadius,
+} from "@/lib/discoverGeo";
+import { lookupGeo } from "@/lib/geoCoords";
 
 interface HubStat {
   slug: string;
