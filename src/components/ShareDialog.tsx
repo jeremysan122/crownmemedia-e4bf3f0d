@@ -24,7 +24,7 @@ export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProp
   // caption, category, or username appear immediately in the share card.
   // The hook NEVER sets `deleted` for transient errors — only when the DB
   // confirms the row is missing or is_removed = true.
-  const { post, loading: loadingFresh, deleted, refreshError } = usePostShareData(initialPost, open);
+  const { post, loading: loadingFresh, deleted, hidden, refreshError } = usePostShareData(initialPost, open);
   const { user } = useAuth();
   const { sensitiveMode } = useFeedFilters();
 
@@ -66,18 +66,23 @@ export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-sm sm:max-w-md bg-card border-border max-h-[90dvh] overflow-y-auto">
+      <DialogContent data-testid="share-dialog" className="w-[calc(100vw-2rem)] max-w-sm sm:max-w-md bg-card border-border max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-gold">Share to your kingdom</DialogTitle>
         </DialogHeader>
 
         {deleted ? (
-          <div className="rounded-2xl bg-muted/30 border border-border p-6 text-center my-2">
+          <div data-testid="share-card-unavailable" className="rounded-2xl bg-muted/30 border border-border p-6 text-center my-2">
             <p className="text-sm font-semibold">Post no longer available</p>
             <p className="text-xs text-muted-foreground mt-1">This post has been removed and can't be shared.</p>
           </div>
+        ) : hidden ? (
+          <div data-testid="share-card-hidden" className="rounded-2xl bg-muted/30 border border-border p-6 text-center my-2">
+            <p className="text-sm font-semibold">You can't view this post</p>
+            <p className="text-xs text-muted-foreground mt-1">It exists but is private or restricted for your account.</p>
+          </div>
         ) : (
-          <div className="rounded-2xl overflow-hidden bg-gradient-royal border border-primary/40 px-3 sm:px-5 pt-4 sm:pt-5 pb-4 my-2 relative">
+          <div data-testid="share-card" className="rounded-2xl overflow-hidden bg-gradient-royal border border-primary/40 px-3 sm:px-5 pt-4 sm:pt-5 pb-4 my-2 relative">
             <div className="flex flex-col items-center text-center mb-3 sm:mb-4 px-1">
               <BrandLogo size={72} priority className="sm:!w-[88px] sm:!h-[88px] drop-shadow-[0_4px_18px_hsl(43_95%_60%/0.35)]" />
               <p className="mt-2 text-[10px] leading-tight sm:text-xs sm:leading-snug text-muted-foreground/90 italic whitespace-nowrap">
@@ -87,7 +92,7 @@ export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProp
 
             <div className="aspect-square rounded-xl overflow-hidden mb-3 ring-1 ring-primary/20 relative bg-muted/20">
               {previewImg && (
-                <img key={previewImg} loading="lazy" src={previewImg} alt="" crossOrigin="anonymous" className="w-full h-full object-cover" />
+                <img data-testid="share-card-image" key={previewImg} loading="lazy" src={previewImg} alt="" crossOrigin="anonymous" className="w-full h-full object-cover" />
               )}
               {loadingFresh && (
                 <div className="absolute top-2 right-2 bg-black/40 backdrop-blur rounded-full p-1.5">
@@ -95,13 +100,13 @@ export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProp
                 </div>
               )}
             </div>
-            <p className="text-sm font-bold mb-1 truncate">@{post.profile.username}</p>
+            <p data-testid="share-card-username" className="text-sm font-bold mb-1 truncate">@{post.profile.username}</p>
             <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
               Competing for {CATEGORY_LABEL[post.category]} in {locationLabel(post)}
             </p>
             <p className="font-display text-xs text-primary tracking-wide">Earn the crown. Defend the throne.</p>
             {refreshError && (
-              <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <div data-testid="share-card-refresh-error" className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
                 <AlertCircle size={11} />
                 <span>Unable to refresh post right now — showing last known version.</span>
               </div>
@@ -110,16 +115,16 @@ export function ShareDialog({ open, onOpenChange, post: initialPost }: ShareProp
         )}
 
         <div className="grid grid-cols-4 gap-2">
-          <Button variant="outline" size="sm" disabled={deleted} onClick={() => open_url(`https://www.instagram.com/`)} className="flex-col h-16">
+          <Button data-testid="share-instagram" variant="outline" size="sm" disabled={deleted || hidden} onClick={() => open_url(`https://www.instagram.com/`)} className="flex-col h-16">
             <Instagram size={20} /><span className="text-[10px]">Instagram</span>
           </Button>
-          <Button variant="outline" size="sm" disabled={deleted} onClick={() => open_url(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`)} className="flex-col h-16">
+          <Button data-testid="share-twitter" variant="outline" size="sm" disabled={deleted || hidden} onClick={() => open_url(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`)} className="flex-col h-16">
             <Twitter size={20} /><span className="text-[10px]">X</span>
           </Button>
-          <Button variant="outline" size="sm" disabled={deleted} onClick={() => open_url(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`)} className="flex-col h-16">
+          <Button data-testid="share-facebook" variant="outline" size="sm" disabled={deleted || hidden} onClick={() => open_url(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`)} className="flex-col h-16">
             <Facebook size={20} /><span className="text-[10px]">Facebook</span>
           </Button>
-          <Button variant="outline" size="sm" disabled={deleted} onClick={copy} className="flex-col h-16">
+          <Button data-testid="share-copy" variant="outline" size="sm" disabled={deleted || hidden} onClick={copy} className="flex-col h-16">
             <Copy size={20} /><span className="text-[10px]">Copy</span>
           </Button>
         </div>
