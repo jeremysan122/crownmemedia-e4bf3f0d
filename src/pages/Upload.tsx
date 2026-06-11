@@ -825,15 +825,20 @@ export default function Upload() {
       }
 
       const filterId = filter === "none" ? null : filter;
-      // Append picker tags as hashtags in the caption so the DB hashtag-extract
-      // trigger picks them up. Skip any tags that already appear.
       const captionLc = caption.toLowerCase();
       const extraTags = pickerVal.tags.filter((t) => !captionLc.includes(`#${t}`));
       const finalCaption = (
         extraTags.length > 0 ? `${caption}${caption ? " " : ""}${extraTags.map((t) => `#${t}`).join(" ")}` : caption
       ).slice(0, 500);
-      const { error } = await supabase.from("posts").insert({
-        user_id: user.id,
+
+      // ─── Idempotent publish via SECURITY DEFINER RPC ───
+      // The RPC dedupes on (user_id, client_request_id), enforces moderation
+      // gating (forces publish_status to 'pending_review'), and returns the
+      // existing row when a previous attempt with the same key already
+      // succeeded — so refreshes, retries, and multi-tab publishes can't
+      // create duplicates.
+      setUploadStage("Submitting for review…");
+      const payload = {
         image_url: imageUrls[0],
         image_urls: imageUrls,
         caption: finalCaption,
@@ -845,33 +850,36 @@ export default function Upload() {
         video_url: videoUrl,
         video_poster_url: videoPosterUrl,
         duration_ms: durationMs,
-        // Legacy single-column filter (back-compat readers).
         filter: filterId,
-        // New Royal Filter System columns.
         photo_filter: mode === "photo" ? filterId : null,
         video_filter: mode === "video" ? filterId : null,
         filter_type: filterId ? mode : null,
-        alt_texts: mode === "photo" ? photos.map((p, i) => (p.alt.trim() || autoAlts[i] || "")).slice(0, imageUrls.length) : [],
-        // Server-enforced 1080×1080 — see posts_validate_dimensions trigger.
+        alt_texts: mode === "photo"
+          ? photos.map((p, i) => (p.alt.trim() || autoAlts[i] || "")).slice(0, imageUrls.length)
+          : [],
         media_width: 1080,
         media_height: 1080,
-        // Idempotency — duplicate submits hit a unique-violation we treat as success.
-        submission_key: submissionKeyRef.current,
-        scheduled_for: scheduledFor ? new Date(scheduledFor).toISOString() : null,
         tagged_user_ids: tagged.map((t) => t.id),
         media_origin: mode === "photo" ? (photos[0]?.origin ?? "gallery") : (video?.origin ?? "gallery"),
         is_sensitive: isSensitive,
         sensitive_reason: isSensitive ? (sensitiveReason.trim().slice(0, 120) || null) : null,
-        // New category system — written alongside the legacy enum.
         main_category_slug: derivedMain?.slug ?? null,
         subcategory_slug: derivedSub?.slug ?? null,
-      } as any);
-      if (error) {
-        // 23505 = unique_violation on (user_id, submission_key) → already posted.
-        // Treat as success so double-taps don't surface a scary error.
-        const code = (error as { code?: string }).code;
-        if (code !== "23505") throw error;
-      }
+      };
+      const { data: published, error } = await supabase.rpc("publish_post_idempotent" as any, {
+        p_client_request_id: submissionKeyRef.current,
+        p_payload: payload as any,
+      });
+      if (error) throw error;
+      const publishedRow = (published ?? null) as { publish_status?: string; created_at?: string } | null;
+      const publishStatus = publishedRow?.publish_status ?? "pending_review";
+      // If the RPC returned a row older than ~5s, it's a dedup-hit — the post
+      // was created on a previous attempt with this same client_request_id.
+      const wasExisting = !!publishedRow?.created_at &&
+        Date.now() - new Date(publishedRow.created_at).getTime() > 5000;
+      trackEvent("post_publish_submitted", {
+        metadata: { publishStatus, deduped: wasExisting },
+      });
 
       setUploadProgress(100);
       setUploadStage(scheduledFor ? "Scheduled!" : "Posted!");
