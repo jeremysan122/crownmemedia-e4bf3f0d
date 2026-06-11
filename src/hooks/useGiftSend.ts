@@ -126,5 +126,36 @@ export function useGiftSend() {
     throw lastErr instanceof Error ? lastErr : new Error(msg);
   };
 
-  return { sendGift, isSending, error };
+  const sendDmGift = async ({ gift, recipientId, quantity, idempotencyKey, maxRetries = 2 }: Omit<SendArgs, "postId">): Promise<{ success: boolean; transaction_id: string; message_id: string; total?: number; deduped?: boolean }> => {
+    setIsSending(true);
+    setError(null);
+    let lastErr: unknown = null;
+    const dedupeKey = idempotencyKey ?? makeGiftIdempotencyKey();
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const { data, error: rpcError } = await supabase.rpc("send_dm_gift", {
+          p_gift_id: gift.id,
+          p_recipient_id: recipientId,
+          p_quantity: quantity,
+          p_dedupe_key: dedupeKey,
+        } as never);
+        if (rpcError) throw rpcError;
+        setIsSending(false);
+        return data as { success: boolean; transaction_id: string; message_id: string; total?: number; deduped?: boolean };
+      } catch (e: unknown) {
+        lastErr = e;
+        const msg = errorMessage(e);
+        await logGiftFailure(`dm-attempt-${attempt}`, e, { giftId: gift.id, recipientId, quantity, attempt, dedupeKey });
+        if (isFatal(msg) || attempt === maxRetries) break;
+        await sleep(350 * Math.pow(2.5, attempt));
+      }
+    }
+    const msg = errorMessage(lastErr);
+    setError(msg);
+    setIsSending(false);
+    throw lastErr instanceof Error ? lastErr : new Error(msg);
+  };
+
+  return { sendGift, sendDmGift, isSending, error };
 }
