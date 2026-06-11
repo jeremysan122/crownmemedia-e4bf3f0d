@@ -33,6 +33,11 @@ import {
   withinRadius,
 } from "@/lib/discoverGeo";
 import { lookupGeo } from "@/lib/geoCoords";
+import RadiusSelector from "@/components/discover/RadiusSelector";
+import {
+  makeKey as makeCacheKey, getCached, setCached, wireRealtimeInvalidation,
+} from "@/lib/discoverCache";
+
 
 interface HubStat {
   slug: string;
