@@ -61,6 +61,7 @@ export default function EditPostDialog({
   initialCountry,
   initialImageUrls,
   initialAltTexts,
+  initialUpdatedAt,
   open,
   onOpenChange,
   onSaved,
