@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/hooks/useWallet";
 import { SHEKEL, formatShekels } from "@/lib/gifts";
-import { Coins, Zap, Gift, ArrowDownCircle, ArrowUpCircle, Loader2, Crown, Wallet as WalletIcon, Banknote, ShoppingBag, Sparkles } from "lucide-react";
+import { Coins, Zap, Gift, ArrowDownCircle, ArrowUpCircle, Loader2, Crown, Wallet as WalletIcon, Banknote, ShoppingBag, Sparkles, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -81,6 +81,24 @@ function formatDate(s: string) {
   });
 }
 
+type VerStatus = "pending" | "approved" | "rejected" | "more_info_required" | null;
+interface ProfileFlags {
+  verified: boolean;
+  is_banned: boolean;
+  is_suspended: boolean;
+}
+
+type Eligibility =
+  | { kind: "banned" }
+  | { kind: "suspended" }
+  | { kind: "verification_required" }
+  | { kind: "under_review" }
+  | { kind: "verification_rejected" }
+  | { kind: "stripe_not_ready" }
+  | { kind: "no_balance" }
+  | { kind: "below_minimum" }
+  | { kind: "eligible" };
+
 export default function Wallet() {
   const { user } = useAuth();
   const { wallet } = useWallet();
@@ -88,13 +106,15 @@ export default function Wallet() {
   const [boosts, setBoosts] = useState<ActiveBoost[]>([]);
   const [payouts, setPayouts] = useState<PayoutRow[]>([]);
   const [connect, setConnect] = useState<ConnectAccount | null>(null);
+  const [profile, setProfile] = useState<ProfileFlags | null>(null);
+  const [verStatus, setVerStatus] = useState<VerStatus>(null);
   const [loading, setLoading] = useState(true);
   const [requestingPayout, setRequestingPayout] = useState(false);
   const [, setTick] = useState(0);
 
   const reload = async () => {
     if (!user) return;
-    const [ledger, activeBoosts, payoutRows, connectRow] = await Promise.all([
+    const [ledger, activeBoosts, payoutRows, connectRow, profileRow, verRow] = await Promise.all([
       supabase.from("shekel_ledger").select("*").order("created_at", { ascending: false }).limit(200),
       supabase.from("boosts").select("id, boost_type, expires_at, started_at")
         .eq("user_id", user.id).eq("active", true).order("expires_at", { ascending: true }),
@@ -102,6 +122,9 @@ export default function Wallet() {
         .eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
       supabase.from("connect_accounts").select("charges_enabled, payouts_enabled, details_submitted")
         .eq("user_id", user.id).maybeSingle(),
+      supabase.from("profiles").select("verified, is_banned, is_suspended").eq("id", user.id).maybeSingle(),
+      supabase.from("verification_requests").select("status").eq("user_id", user.id)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
     setRows((ledger.data as LedgerRow[]) || []);
     setBoosts(((activeBoosts.data as ActiveBoost[]) || []).filter(
@@ -109,6 +132,8 @@ export default function Wallet() {
     ));
     setPayouts((payoutRows.data as PayoutRow[]) || []);
     setConnect((connectRow.data as ConnectAccount) || null);
+    setProfile((profileRow.data as ProfileFlags) || null);
+    setVerStatus(((verRow.data as { status: VerStatus } | null)?.status) ?? null);
   };
 
   useEffect(() => {
@@ -141,7 +166,24 @@ export default function Wallet() {
   const availablePayoutUsd = availablePayoutShekels / SHEKELS_PER_USD;
 
   const stripeReady = !!connect?.charges_enabled && !!connect?.payouts_enabled && !!connect?.details_submitted;
-  const canPayout = stripeReady && availablePayoutShekels >= MIN_SHEKELS_PAYOUT;
+
+  // Server-authoritative checks are duplicated in /functions/request-payout — this
+  // is only the UI gate so disabled states and CTAs render correctly.
+  const eligibility: Eligibility = useMemo(() => {
+    if (profile?.is_banned) return { kind: "banned" };
+    if (profile?.is_suspended) return { kind: "suspended" };
+    if (!profile?.verified) {
+      if (verStatus === "pending" || verStatus === "more_info_required") return { kind: "under_review" };
+      if (verStatus === "rejected") return { kind: "verification_rejected" };
+      return { kind: "verification_required" };
+    }
+    if (!stripeReady) return { kind: "stripe_not_ready" };
+    if (availablePayoutShekels <= 0) return { kind: "no_balance" };
+    if (availablePayoutShekels < MIN_SHEKELS_PAYOUT) return { kind: "below_minimum" };
+    return { kind: "eligible" };
+  }, [profile, verStatus, stripeReady, availablePayoutShekels]);
+
+  const canPayout = eligibility.kind === "eligible";
 
   const requestPayout = async () => {
     setRequestingPayout(true);
@@ -216,17 +258,67 @@ export default function Wallet() {
             <span className="text-[10px] text-muted-foreground">{SHEKELS_PER_USD} {SHEKEL} = $1 · Min ${MIN_PAYOUT_USD}</span>
           </div>
 
-          {!stripeReady && (
+          {/* Eligibility banner — server enforces, this just mirrors the state */}
+          {eligibility.kind === "banned" && (
+            <div className="text-xs bg-destructive/10 border border-destructive/30 text-destructive rounded-lg p-3 flex items-start gap-2">
+              <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+              <span>Your account is banned. Payouts are not available.</span>
+            </div>
+          )}
+          {eligibility.kind === "suspended" && (
+            <div className="text-xs bg-destructive/10 border border-destructive/30 text-destructive rounded-lg p-3 flex items-start gap-2">
+              <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+              <span>Your account is suspended. Payouts are paused until this is resolved.</span>
+            </div>
+          )}
+          {eligibility.kind === "verification_required" && (
+            <div className="rounded-lg bg-gradient-to-br from-gold/10 to-transparent border border-gold/30 p-3 space-y-2">
+              <div className="flex items-start gap-2 text-xs">
+                <ShieldCheck size={14} className="mt-0.5 shrink-0 text-gold" />
+                <div>
+                  <p className="font-semibold text-foreground">Verification required</p>
+                  <p className="text-muted-foreground mt-0.5">You must be verified before receiving payouts. Your shekels keep accumulating in the meantime.</p>
+                </div>
+              </div>
+              <Button asChild size="sm" className="w-full bg-gradient-gold text-primary-foreground">
+                <Link to="/verification">Start verification</Link>
+              </Button>
+            </div>
+          )}
+          {eligibility.kind === "under_review" && (
+            <div className="text-xs bg-primary/10 border border-primary/30 rounded-lg p-3 flex items-start gap-2">
+              <Clock size={14} className="mt-0.5 shrink-0 text-primary" />
+              <div>
+                <p className="font-semibold text-foreground">Verification under review</p>
+                <p className="text-muted-foreground mt-0.5">We'll unlock payouts as soon as your verification is approved.</p>
+              </div>
+            </div>
+          )}
+          {eligibility.kind === "verification_rejected" && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3 space-y-2 text-xs">
+              <div className="flex items-start gap-2">
+                <ShieldAlert size={14} className="mt-0.5 shrink-0 text-destructive" />
+                <div>
+                  <p className="font-semibold text-destructive">Verification was not approved</p>
+                  <p className="text-muted-foreground mt-0.5">You can submit a new verification request to unlock payouts.</p>
+                </div>
+              </div>
+              <Button asChild size="sm" variant="outline" className="w-full">
+                <Link to="/verification">Resubmit verification</Link>
+              </Button>
+            </div>
+          )}
+          {eligibility.kind === "stripe_not_ready" && (
             <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
               Connect your Stripe account in <Link to="/settings" className="text-primary underline">Settings</Link> before you can request payouts.
             </div>
           )}
-          {stripeReady && wallet.totalEarned <= 0 && (
+          {eligibility.kind === "no_balance" && (
             <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
               Receive gifts from other users to start earning Shekels you can cash out.
             </div>
           )}
-          {stripeReady && wallet.totalEarned > 0 && (
+          {(eligibility.kind === "below_minimum" || eligibility.kind === "eligible") && (
             <>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Expected payout</span>
@@ -241,6 +333,11 @@ export default function Wallet() {
                 {canPayout ? `Request payout · $${availablePayoutUsd.toFixed(2)}` : `Need $${MIN_PAYOUT_USD} minimum`}
               </Button>
             </>
+          )}
+          {canPayout && (
+            <p className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+              <ShieldCheck size={10} className="text-emerald-500" /> Verified · eligible for payout
+            </p>
           )}
 
           {payouts.length > 0 && (
