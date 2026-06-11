@@ -224,7 +224,29 @@ export default function Notifications() {
         </div>
 
         <div className="space-y-2">
-          {visible.map((n) => {
+          {loading && (
+            <div className="space-y-2" aria-busy="true" aria-label="Loading notifications">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="royal-card p-3 flex items-start gap-3 animate-pulse">
+                  <div className="size-5 rounded-full bg-muted/60 shrink-0 mt-0.5" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-2/3 bg-muted/60 rounded" />
+                    <div className="h-2.5 w-1/2 bg-muted/40 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {!loading && error && (
+            <div className="royal-card p-6 text-center space-y-3">
+              <p className="text-sm font-bold text-destructive">Couldn't load notifications</p>
+              <p className="text-xs text-muted-foreground">{error}</p>
+              <Button size="sm" variant="outline" onClick={() => { setLoading(true); refresh(); }}>
+                Try again
+              </Button>
+            </div>
+          )}
+          {!loading && !error && visible.map((n) => {
             const g = classify(n);
             const Icon = GROUPS.find((x) => x.key === g)?.Icon ?? Bell;
             const target = targetFor(n);
