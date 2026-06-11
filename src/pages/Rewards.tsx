@@ -443,7 +443,9 @@ export default function Rewards() {
           <p className="text-[11px] text-white/50 text-center -mt-3">
             Earn shekels through daily rewards or top up anytime in the store.
           </p>
+           </div>
 
+           <div className="space-y-7">
           {/* Royal Spin Wheel */}
           <section className="relative pt-2 space-y-5" aria-label="Royal spin wheel">
             <div className="relative flex flex-col items-center">
