@@ -296,6 +296,20 @@ export default function Battles() {
     } else {
       void trackEvent("battle_vote_success", { metadata: { battle_id: b.id, side: isC ? "challenger" : "opponent" } });
       toast.success("Vote cast 👑");
+      // Reconcile with the authoritative server counts so the displayed
+      // totals match what other voters wrote concurrently, instead of
+      // trusting our optimistic +1 alone.
+      (async () => {
+        const { data: srv } = await supabase
+          .from("battles")
+          .select("challenger_votes, opponent_votes, status, winner_id, ends_at")
+          .eq("id", b.id)
+          .maybeSingle();
+        if (srv) {
+          setBattles((prev) => prev.map((x) => x.id === b.id ? { ...x, ...srv } : x));
+          invalidateOfficialResult(b.id);
+        }
+      })();
     }
   };
 
