@@ -431,9 +431,19 @@ export default function Verification() {
               <ShieldCheck className="h-4 w-4" />
               <span className="font-bold">Standard — Free</span>
             </div>
-            <p className="text-sm text-muted-foreground">Free, but requires 100k+ followers OR an established brand / public figure / journalist.</p>
+            <p className="text-sm text-muted-foreground">Auto-approved once you hit 10k+ followers and complete the checklist below.</p>
           </label>
         </RadioGroup>
+
+        {plan === "standard" && (
+          <StandardEligibilityCard
+            progress={progress}
+            loading={progressLoading}
+            claiming={claimingStandard}
+            onRefresh={refreshProgress}
+            onClaim={claimStandard}
+          />
+        )}
         {plan === "subscription" && (
           <Button
             type="button"
