@@ -127,8 +127,10 @@ export default function GiftDmPicker({
     const partners = threads.map((t) => t.partner);
     const partnerIds = new Set(partners.map((p) => p.id));
     const extra = following.filter((f) => !partnerIds.has(f.id));
-    return [...partners, ...extra];
-  }, [threads, following, searchResults, query]);
+    // "follower" mode surfaces followed creators first; "dm" mode keeps
+    // recent conversations on top so quick re-sends are one tap.
+    return mode === "follower" ? [...extra, ...partners] : [...partners, ...extra];
+  }, [threads, following, searchResults, query, mode]);
 
   const hasQuery = query.trim().length >= 2;
 
