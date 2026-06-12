@@ -99,6 +99,7 @@ export default function RoyalGiftStore() {
       });
       refreshWallet();
       setDmPickerOpen(false);
+      setFollowerPickerOpen(false);
       setPendingGift(null);
       setPreviewing(null);
       navigate(`/messages/${target.userId}`);
