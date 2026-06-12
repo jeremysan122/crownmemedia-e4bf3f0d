@@ -118,6 +118,26 @@ export default function RoyalGiftStore() {
     () => favorites.map((id) => findGift(id)).filter(Boolean) as RoyalGift[],
     [favorites],
   );
+
+  /**
+   * Close the preview Dialog first, then open the next picker after the
+   * Radix exit animation finishes. This guarantees only one modal/backdrop
+   * is mounted at a time so we never get stacked overlays, doubled focus
+   * traps, or stuck scroll locks. Honors prefers-reduced-motion.
+   */
+  const transitionPreviewToPicker = useCallback(
+    (gift: RoyalGift, openPicker: (v: boolean) => void) => {
+      pinFront(gift.id);
+      setPendingGift(gift);
+      setPreviewing(null);
+      const reduced =
+        typeof window !== "undefined" &&
+        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      const delay = reduced ? 0 : 180;
+      window.setTimeout(() => openPicker(true), delay);
+    },
+    [pinFront],
+  );
   const trending = useMemo(() => ROYAL_GIFTS.filter((g) => g.trending), []);
   const topPicks = useMemo(() => ROYAL_GIFTS.filter((g) => g.topPick), []);
 
