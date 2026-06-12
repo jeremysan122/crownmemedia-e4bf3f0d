@@ -35,6 +35,7 @@ export default function GiftDmPicker({
   giftName,
   giftCost,
   giftIcon,
+  mode = "dm",
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -42,6 +43,9 @@ export default function GiftDmPicker({
   giftName: string;
   giftCost: number;
   giftIcon?: string;
+  /** "dm" surfaces recent chats first, "follower" surfaces the user's
+   *  following list first (used by the "Send to Follower" button). */
+  mode?: "dm" | "follower";
 }) {
   const { user } = useAuth();
   const [threads, setThreads] = useState<ThreadRow[]>([]);
