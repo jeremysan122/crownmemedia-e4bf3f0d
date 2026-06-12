@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import CrownLoader from "@/components/CrownLoader";
+import RetryState from "@/components/states/RetryState";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { ArrowLeft, MessageCircle, Share2, Volume2, VolumeX, Heart } from "lucide-react";
 import { CrownIcon } from "@/components/CrownIcon";
 import { toast } from "sonner";
