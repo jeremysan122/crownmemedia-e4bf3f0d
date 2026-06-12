@@ -364,6 +364,28 @@ export default function RoyalGiftStore() {
         }}
       />
 
+      {/* Send to Follower — same recipient picker, but biases the user's
+          following list to the top so casual gifting from the store is a
+          single tap on a creator you follow. Falls through to username
+          search for anyone outside that list. */}
+      <GiftDmPicker
+        mode="follower"
+        open={followerPickerOpen && !!pendingGift}
+        onOpenChange={(o) => {
+          if (sendingDm) return;
+          setFollowerPickerOpen(o);
+          if (!o) setPendingGift(null);
+        }}
+        giftName={pendingGift?.name ?? ""}
+        giftCost={pendingGift?.shekelCost ?? 0}
+        giftIcon={pendingGift?.icon}
+        onPick={(target) => {
+          if (!pendingGift || sendingDm) return;
+          setFollowerPickerOpen(false);
+          void performSendViaDm(pendingGift, target);
+        }}
+      />
+
       <GiftTargetPicker
         open={targetPickerOpen}
         onOpenChange={setTargetPickerOpen}
