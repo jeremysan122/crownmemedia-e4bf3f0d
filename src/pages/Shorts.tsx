@@ -374,6 +374,24 @@ export default function Shorts() {
         variant={isDesktop ? "side" : "sheet"}
       />
 
+      <DmSharePicker
+        open={!!dmShareScroll}
+        onOpenChange={(o) => { if (!o) setDmShareScroll(null); }}
+        title="Send Scroll via DM"
+        onPick={async (r) => {
+          const scroll = dmShareScroll;
+          if (!scroll) return;
+          try {
+            await sendDmShare({ recipientId: r.userId, kind: "post_share", postId: scroll.id });
+            toast.success(`Scroll sent to @${r.username}`);
+            setDmShareScroll(null);
+            nav(`/messages/${r.userId}`);
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Couldn't send Scroll");
+          }
+        }}
+      />
+
     </main>
   );
 }
