@@ -326,9 +326,10 @@ export default function RoyalGiftStore() {
                         setShowAdd(true);
                         return;
                       }
-                      pinFront(previewing.id);
-                      setPendingGift(previewing);
-                      setDmPickerOpen(true);
+                       pinFront(previewing.id);
+                       setPendingGift(previewing);
+                       setPreviewing(null);
+                       setDmPickerOpen(true);
                     }}
                     className="h-11 rounded-full bg-primary/15 border border-primary/40 text-primary font-bold text-xs flex items-center justify-center gap-1.5"
                   >
