@@ -1,6 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Copy, Instagram, Twitter, Facebook, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Copy, Instagram, Twitter, Facebook, Loader2, AlertCircle, RefreshCw, MessageCircle } from "lucide-react";
+import DmSharePicker, { type DmShareRecipient } from "@/components/messages/DmSharePicker";
+import { sendDmShare } from "@/lib/dmShare";
 import BrandLogo from "./BrandLogo";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
