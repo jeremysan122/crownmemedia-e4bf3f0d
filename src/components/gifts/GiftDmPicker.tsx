@@ -181,17 +181,30 @@ export default function GiftDmPicker({
             </div>
           ) : (
             <>
-              {!hasQuery && threads.length > 0 && (
+              {!hasQuery && mode === "follower" && following.length > 0 && (
+                <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                  <UserPlus size={10} /> People you follow
+                </p>
+              )}
+              {!hasQuery && mode === "dm" && threads.length > 0 && (
                 <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Recent chats</p>
               )}
               {list.map((p, i) => {
-                const isFollowing = !hasQuery && i >= threads.length;
+                const followerStart = mode === "follower" ? 0 : threads.length;
+                const dmFollowerStart = threads.length;
+                const showFollowDivider =
+                  !hasQuery && mode === "dm" && i === dmFollowerStart && following.length > 0;
+                const showChatDivider =
+                  !hasQuery && mode === "follower" && i === following.length && threads.length > 0;
                 return (
                   <div key={p.id}>
-                    {isFollowing && i === threads.length && (
+                    {showFollowDivider && (
                       <p className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                         <UserPlus size={10} /> People you follow
                       </p>
+                    )}
+                    {showChatDivider && (
+                      <p className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Recent chats</p>
                     )}
                     <button
                       type="button"
