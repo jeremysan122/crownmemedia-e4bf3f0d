@@ -2443,6 +2443,7 @@ export type Database = {
           client_request_id: string | null
           comment_count: number
           content_rating: Database["public"]["Enums"]["content_rating"]
+          content_type: string
           country: string | null
           created_at: string
           crown_score: number
@@ -2498,6 +2499,7 @@ export type Database = {
           client_request_id?: string | null
           comment_count?: number
           content_rating?: Database["public"]["Enums"]["content_rating"]
+          content_type?: string
           country?: string | null
           created_at?: string
           crown_score?: number
@@ -2553,6 +2555,7 @@ export type Database = {
           client_request_id?: string | null
           comment_count?: number
           content_rating?: Database["public"]["Enums"]["content_rating"]
+          content_type?: string
           country?: string | null
           created_at?: string
           crown_score?: number
@@ -4273,6 +4276,7 @@ export type Database = {
           client_request_id: string | null
           comment_count: number
           content_rating: Database["public"]["Enums"]["content_rating"]
+          content_type: string
           country: string | null
           created_at: string
           crown_score: number

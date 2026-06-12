@@ -85,9 +85,15 @@ export default function Upload() {
   const cloudDraftId = searchParams.get("draft");
   const [savingDraft, setSavingDraft] = useState(false);
 
-  const [mode, setMode] = useState<Mode>("photo");
+  // Post vs Scroll: separates the main feed (Post) from the vertical Scrolls
+  // surface. `?type=scroll` deep-links into Scroll creation from the Profile
+  // empty state. Picking Scroll forces video mode (vertical 9:16, ≤30s).
+  const initialContentType = (searchParams.get("type") === "scroll" ? "scroll" : "post") as "post" | "scroll";
+  const [contentType, setContentType] = useState<"post" | "scroll">(initialContentType);
+  const [mode, setMode] = useState<Mode>(initialContentType === "scroll" ? "video" : "photo");
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [video, setVideo] = useState<PickedVideo | null>(null);
+
   const [caption, setCaption] = useState("");
   const [category, setCategory] = useState<CrownCategory>("overall");
   const [city, setCity] = useState(profile?.city || "");
@@ -867,7 +873,9 @@ export default function Upload() {
         sensitive_reason: isSensitive ? (sensitiveReason.trim().slice(0, 120) || null) : null,
         main_category_slug: derivedMain?.slug ?? null,
         subcategory_slug: derivedSub?.slug ?? null,
+        content_type: contentType,
       };
+
       const { data: published, error } = await supabase.rpc("publish_post_idempotent" as any, {
         p_client_request_id: submissionKeyRef.current,
         p_payload: payload as any,
@@ -1142,12 +1150,36 @@ export default function Upload() {
           </div>
         )}
 
-        {/* Mode toggle */}
+        {/* Post vs Scroll selector — determines content_type and the allowed
+            sizing/mode. Picking Scroll forces video and surfaces the 9:16 hint. */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setContentType("post")}
+            className={`h-12 rounded-lg text-left px-3 border transition ${contentType === "post" ? "bg-gradient-gold text-primary-foreground border-transparent gold-shadow" : "bg-card/60 border-border text-muted-foreground"}`}
+            aria-pressed={contentType === "post"}
+          >
+            <div className="text-xs font-bold uppercase tracking-widest">Post</div>
+            <div className="text-[10px] opacity-80">Feed & profile · 1:1 or 4:5</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setContentType("scroll"); setMode("video"); }}
+            className={`h-12 rounded-lg text-left px-3 border transition ${contentType === "scroll" ? "bg-gradient-gold text-primary-foreground border-transparent gold-shadow" : "bg-card/60 border-border text-muted-foreground"}`}
+            aria-pressed={contentType === "scroll"}
+          >
+            <div className="text-xs font-bold uppercase tracking-widest">Scroll</div>
+            <div className="text-[10px] opacity-80">Vertical 9:16 · up to 30s</div>
+          </button>
+        </div>
+
+        {/* Mode toggle — Photos is hidden for Scrolls (scrolls are video-only). */}
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => setMode("photo")}
-            className={`h-10 rounded-lg text-xs font-bold uppercase tracking-widest border transition ${mode === "photo" ? "bg-gradient-gold text-primary-foreground border-transparent gold-shadow" : "bg-card/60 border-border text-muted-foreground"}`}
+            disabled={contentType === "scroll"}
+            className={`h-10 rounded-lg text-xs font-bold uppercase tracking-widest border transition disabled:opacity-40 disabled:cursor-not-allowed ${mode === "photo" ? "bg-gradient-gold text-primary-foreground border-transparent gold-shadow" : "bg-card/60 border-border text-muted-foreground"}`}
           >
             Photos
           </button>
@@ -1159,6 +1191,7 @@ export default function Upload() {
             Video · 30s
           </button>
         </div>
+
 
         {/* Capture / upload */}
         {mode === "photo" ? (
