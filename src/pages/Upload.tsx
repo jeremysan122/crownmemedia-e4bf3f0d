@@ -85,9 +85,15 @@ export default function Upload() {
   const cloudDraftId = searchParams.get("draft");
   const [savingDraft, setSavingDraft] = useState(false);
 
-  const [mode, setMode] = useState<Mode>("photo");
+  // Post vs Scroll: separates the main feed (Post) from the vertical Scrolls
+  // surface. `?type=scroll` deep-links into Scroll creation from the Profile
+  // empty state. Picking Scroll forces video mode (vertical 9:16, ≤30s).
+  const initialContentType = (searchParams.get("type") === "scroll" ? "scroll" : "post") as "post" | "scroll";
+  const [contentType, setContentType] = useState<"post" | "scroll">(initialContentType);
+  const [mode, setMode] = useState<Mode>(initialContentType === "scroll" ? "video" : "photo");
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [video, setVideo] = useState<PickedVideo | null>(null);
+
   const [caption, setCaption] = useState("");
   const [category, setCategory] = useState<CrownCategory>("overall");
   const [city, setCity] = useState(profile?.city || "");
@@ -867,7 +873,9 @@ export default function Upload() {
         sensitive_reason: isSensitive ? (sensitiveReason.trim().slice(0, 120) || null) : null,
         main_category_slug: derivedMain?.slug ?? null,
         subcategory_slug: derivedSub?.slug ?? null,
+        content_type: contentType,
       };
+
       const { data: published, error } = await supabase.rpc("publish_post_idempotent" as any, {
         p_client_request_id: submissionKeyRef.current,
         p_payload: payload as any,
