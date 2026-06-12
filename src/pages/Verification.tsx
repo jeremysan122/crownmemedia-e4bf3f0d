@@ -374,7 +374,7 @@ export default function Verification() {
           <li>• Account must be <span className="text-foreground">authentic</span> — represents a real person, brand, or registered business.</li>
           <li>• Account must be <span className="text-foreground">unique</span> — only one verified account per person or entity (language-specific accounts excepted).</li>
           <li>• Account must be <span className="text-foreground">complete</span> — public profile, bio, profile photo, and recent activity.</li>
-          <li>• Account must be <span className="text-foreground">notable</span> — featured in multiple news sources, OR 100k+ external followers, OR a recognized brand / public figure / journalist.</li>
+          <li>• Account must be <span className="text-foreground">active on CrownMe</span> — at least 10,000 CrownMe followers plus the activity requirements in the progress card above (battles won, crowns held, votes received, posts published).</li>
           <li>• Account must follow the <Link to="/legal/community-guidelines" className="text-primary hover:underline">Community Guidelines</Link> and <Link to="/legal/terms" className="text-primary hover:underline">Terms of Service</Link>.</li>
         </ul>
       </Card>

@@ -147,7 +147,7 @@ export default function Settings() {
               {(profile as any)?.verified && <CheckCircle2 size={14} className="fill-sky-500 text-background" />}
             </div>
             <div className="text-[11px] text-muted-foreground">
-              {(profile as any)?.verified ? "Manage your verification" : "Standard (100k+ followers) or $1.99/mo fast-track"}
+              {(profile as any)?.verified ? "Manage your verification" : "Standard (10,000 followers) or $1.99/mo fast-track"}
             </div>
           </div>
           <ChevronRight size={16} className="text-muted-foreground" />
