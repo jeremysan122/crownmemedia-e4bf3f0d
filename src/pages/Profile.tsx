@@ -6,7 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Crown, MessageCircle, Settings as SettingsIcon, Share2, Edit3, Camera, Image as ImageIcon, Swords, Heart, Plus, Trash2, Sparkles, Search, Flag, Move, Check, X, MoreVertical, Bookmark, BarChart3, Zap, Pin, PinOff, Archive } from "lucide-react";
+import { Crown, MessageCircle, Settings as SettingsIcon, Share2, Edit3, Camera, Image as ImageIcon, Swords, Heart, Plus, Trash2, Sparkles, Search, Flag, Move, Check, X, MoreVertical, Bookmark, BarChart3, Zap, Pin, PinOff, Archive, Play } from "lucide-react";
+import { filterByContentType } from "@/lib/contentType";
+
 import EditPostDialog from "@/components/EditPostDialog";
 import PostInsightsDialog from "@/components/PostInsightsDialog";
 import CrownLoader from "@/components/CrownLoader";
