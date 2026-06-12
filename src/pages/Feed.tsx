@@ -285,6 +285,12 @@ export default function Feed() {
       .from("posts")
       .select("*, profile:profiles!posts_user_id_fkey(username, profile_photo_url, crowns_held, gender, hide_likes, hide_comments, hide_views, verified)")
       .eq("is_removed", false)
+      // Main feed shows posts only. Vertical Scrolls live on /shorts under
+      // their own immersive surface — mixing them into the grid feed makes
+      // for a broken layout. Legacy rows that were inserted before
+      // `content_type` existed (image rows backfilled as 'post', video rows
+      // backfilled as 'scroll') route correctly via the backfill migration.
+      .eq("content_type", "post")
       .order(orderColumn, { ascending: false })
       .order("id", { ascending: false })
       .limit(PAGE_SIZE);
@@ -306,6 +312,7 @@ export default function Feed() {
     }
     return q;
   }, [catFilter, hubSlug, topicSlug, tagFilter, sinceIso, tab, profile?.city, profile?.state, orderColumn]);
+
 
   // INITIAL / FILTER-CHANGE LOAD
   useEffect(() => {
