@@ -1,78 +1,42 @@
-# DM Royal Gifts — Polish + Hardening
+This is a large multi-area change. I'll ship it in clearly-scoped slices so each is reviewable and the app stays green between them. Say "go" after any slice and I'll continue with the next.
 
-A premium, atomic, real-time DM gifting flow for CrownMe. Scoped to existing gift/messages stack; only edits the surface needed.
+## Slice 1 — Verification copy: 10k everywhere, not 100k
+- `src/pages/Settings.tsx`: "Standard (100k+ followers) or $1.99/mo fast-track" → "Standard (10,000 followers) or $1.99/mo fast-track".
+- `src/pages/Verification.tsx`: rewrite the requirements bullet so it says "10,000 CrownMe followers + activity requirements" instead of "100k+ external followers". Keep the $1.99/mo fast-track copy intact.
+- Sanity-check the existing Standard Verification progress card already says "At least 10,000 followers" — yes, confirmed in the screenshot.
 
-## 1. Database & RPC (single migration)
+## Slice 2 — Expand Standard Verification eligibility (server-side)
+Migration to extend `verification_eligibility_progress` and `request_standard_verification` with new performance checks:
+- `followers` ≥ 10,000 (existing)
+- `profile_photo`, `bio ≥ 20 chars`, `account_age ≥ 30d`, `good_standing` (existing)
+- `posts_or_scrolls` ≥ 25 (was 5)
+- `battles_won` ≥ 25 — counted from `battles` where winner = user
+- `crowns_held` ≥ 10 — from `crowns` (active)
+- `votes_received` ≥ 50,000 — sum across the user's posts/battles
+- `email_verified` — `auth.users.email_confirmed_at IS NOT NULL`
+- `phone_verified` — only enforced when phone verification is enabled in `platform_settings`
+- `no_serious_recent_violations` — no active `user_strikes` of severity 'severe' in last 90d
+Update `src/lib/verificationEligibility.ts` `EligibilityCheckKey` union + `CHECK_ORDER` and the test fixture in `verificationEligibility.test.ts`. UI in `Verification.tsx` already renders rows dynamically via `orderedChecks`, so new keys appear automatically with progress bars.
+Add a helper line in the UI: "Standard Verification is earned through activity. Paid Verification ($1.99/mo) is optional."
 
-- Extend `public.messages` with optional metadata so a gift receipt is a first-class message type:
-  - `kind text` (default `'text'`, allowed: `'text' | 'gift'`)
-  - `gift_transaction_id uuid` (nullable, FK → `gift_transactions.id`)
-  - `gift_seen_at timestamptz` (nullable — set when recipient opens thread; gates animation replay)
-- New RPC `public.send_dm_gift(p_gift_id, p_recipient_id, p_quantity, p_dedupe_key)` — `SECURITY DEFINER`, atomic:
-  1. Validate sender ≠ recipient, neither banned/suspended/deleted, no blocks either way, DM allowed (respects existing `can_dm` helper if present, else `messages` RLS check).
-  2. Call existing `private.send_royal_gift` (debits wallet, inserts ledger, creates `gift_transactions` row).
-  3. INSERT into `messages` with `kind='gift'`, `gift_transaction_id`, safe `content` ("🎁 Royal gift sent").
-  4. INSERT `notifications` row (`type='dm_gift'`, payload `{ link: '/messages/<thread>', sender_username, gift_name }`).
-  5. All in one transaction — any failure rolls back the debit.
-  6. Dedupe via `client_dedupe_key` on `gift_transactions` (already unique).
-- New RPC `public.mark_dm_gift_seen(p_message_id)` — recipient-only, sets `gift_seen_at` once.
-- RLS additions:
-  - `messages` already restricts to participants; add WITH CHECK so non-sender cannot insert `kind='gift'` rows directly (only RPC, via `security definer`).
-  - `gift_transactions` SELECT: sender OR receiver (already in place — verify).
-- Realtime: ensure `messages` and `notifications` are in `supabase_realtime` publication.
+## Slice 3 — Scrolls DM share button
+- Add a DM action to the Shorts action rail (`src/pages/Shorts.tsx`) next to crown/comment/share.
+- Reuse `DmSharePicker` (already built) wired to `sendDmShare({ kind: "post_share", postId })` — Scrolls are posts of type "video", so the existing `post_share` path covers it. `SharedPostMessage` already renders the unavailable fallback.
+- Add a vitest covering: button presence on scroll rail, picker opens, send calls RPC with correct args.
 
-## 2. Client — Sending
+## Slice 4 — Gift modal: fix "Send via DM" + replace "Send on Feed" with "Send to Follower"
+- `RoyalGiftStore.tsx` already wires "Send via DM" → `GiftDmPicker` → `performSendViaDm`. I'll audit the picker for: recent chats + following + followers + username search, avatar/display name/verified badge, block + self-gift + unavailable-user filters. Patch any gap.
+- Replace the "Send on Feed" button with **"Send to Follower"** that opens `GiftTargetPicker` configured to load the sender's following list first and expose a username search (extend the picker, not navigate to /feed).
+- Disabled states for blocked / banned / private / unavailable recipients.
+- Vitest: send-via-dm flow, send-to-follower flow, search outside following, self-gift blocked, blocked-user blocked, insufficient funds opens Add Shekels, single wallet debit on double-tap (idempotency key already covers this — keep regression test).
 
-- Refactor `src/components/gifts/RoyalGiftStore.tsx` → drop the manual `messages.insert` after RPC; call new `send_dm_gift` RPC with idempotency key from `makeGiftIdempotencyKey()`. Disables the send button while in-flight; on success, navigate to thread.
-- `src/hooks/useGiftSend.ts` → add `sendDmGift` variant reusing the same retry/fatal-classifier + error logging.
-- `src/components/gifts/GiftDmPicker.tsx` → already covers recent/following/search; add:
-  - Followers tab (reuses `fetchFollowerRecipients`).
-  - Disabled-state rendering for blocked/unavailable (filtered server-side already; UI tooltip "Unavailable").
-  - Self filter (already enforced).
+## Slice 5 — Notifications & inbox polish + final pass
+- Confirm `send_dm_share` and `send_dm_gift` insert the recipient notification + the realtime message; add polling fallback hook if the user is on `/messages` with realtime down (reuse `useRealtimeFallbackPoll`).
+- Manual verification: deep-link from notification to the right thread, mark as read on open.
 
-## 3. Client — Receiving (inbox + thread)
+## Tech notes (for me, not the user)
+- All new eligibility data must be computed inside the SECURITY DEFINER RPC — never trust client counts.
+- `votes_received` is the hot column; cap the SUM with a single aggregate over `posts.vote_count` (already materialized) to keep the RPC fast.
+- `phone_verified` only enforced when `platform_settings.phone_verification_enabled = true`; otherwise the check is omitted from `checks` so it doesn't block users.
 
-- `src/pages/Messages.tsx`:
-  - Render gift messages with new `GiftReceiptCard` (royal styling: gradient border, crown glow, gift icon, sender chip, name + rarity badge, shekel value, timestamp).
-  - On thread open, call `mark_dm_gift_seen` for each unseen gift message; trigger `GiftAnimationOverlay` once per unseen receipt; "Tap to replay" button after.
-  - Thread list row: crown badge + soft glow when most recent message `kind='gift'` and unread.
-  - Subscribe via existing `useRealtimeChannel` to `messages` inserts for the open thread + the thread-list query; realtime fallback already handled by hook's resync-on-online/visibility.
-- Notification bell: existing `NotificationToaster` handles new `dm_gift` type; ensure deep link `/messages/<thread>` routes correctly.
-
-## 4. Analytics
-
-- Add `src/lib/analytics.ts` events (or extend existing): `dm_gift_picker_opened`, `_recipient_selected`, `_send_started`, `_send_success`, `_send_failed` (with sanitized error code only), `_received`, `_animation_opened`, `_notification_clicked`. No PII, no balances, no message text.
-
-## 5. Tests
-
-- Unit: `src/hooks/__tests__/useGiftSend.test.ts` — extend with `sendDmGift` happy path + dedupe behavior (mocked).
-- E2E (Playwright, `e2e/dm-gift-flow.spec.ts`): sender picks recipient → sends → wallet debited once → receipt visible in thread → recipient sees crown badge + animation on open.
-- RLS test (`src/lib/__tests__/dmGiftRls.test.ts`): third user cannot read sender/recipient gift message, cannot debit other wallet, cannot spoof `sender_id`.
-
-## 6. Verification
-
-- `supabase--linter` after migration.
-- Targeted vitest run on new/changed tests.
-- Browser walkthrough via Playwright: send gift via DM, verify realtime arrival in second session, verify animation plays once and `mark_dm_gift_seen` sets timestamp.
-
-## Files
-
-**New:**
-- `supabase/migrations/<ts>_dm_gift_messages.sql`
-- `src/components/messages/GiftReceiptCard.tsx`
-- `src/hooks/useDmGiftThread.ts` (open-thread seen-marker + animation queue)
-- `e2e/dm-gift-flow.spec.ts`
-- `src/lib/__tests__/dmGiftRls.test.ts`
-
-**Edited:**
-- `src/components/gifts/RoyalGiftStore.tsx` (use RPC, remove manual `messages.insert`)
-- `src/components/gifts/GiftDmPicker.tsx` (followers tab, disabled states)
-- `src/hooks/useGiftSend.ts` (`sendDmGift`)
-- `src/pages/Messages.tsx` (gift rendering, badge, realtime)
-- `src/lib/analytics.ts` (new events)
-- `src/hooks/__tests__/useGiftSend.test.ts`
-
-## Out of scope
-
-- Push-notification body changes (existing safe-text path already used).
-- Refund UX beyond "show updated state if `gift_transactions.status` flips" — recipient card reads status from row; no admin UI built here.
+Ready to start with **Slice 1**?
