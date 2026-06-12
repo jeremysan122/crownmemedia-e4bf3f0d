@@ -749,7 +749,7 @@ export default function Battles() {
                   (featured && !query ? active.slice(1) : active).map((b) => <Card key={b.id} b={b} live />)}
               </div>
               {!loading && !active.length && (
-                <EmptyState title="No active duels" body="The arena is quiet. Be the first to throw down a challenge."
+                <EmptyState title="No active battles" body="You do not have any active battles right now."
                   cta={<Button onClick={() => setChallengeOpen(true)} className="bg-gradient-gold text-primary-foreground gold-shadow"><Swords size={14} /> Start a battle</Button>} />
               )}
             </TabsContent>
@@ -759,16 +759,16 @@ export default function Battles() {
                 {pendingForMe.map((b) => <Card key={b.id} b={b} live={false} />)}
               </div>
               {!pendingForMe.length && (
-                <EmptyState title="No pending invites" body="When someone challenges you, you can accept and pick your weapon here." />
+                <EmptyState title="No pending battles" body="You do not have any pending battles." />
               )}
             </TabsContent>
 
             <TabsContent value="mine" className="mt-3">
               <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
-                {mine.map((b) => <Card key={b.id} b={b} live={b.status === "active"} />)}
+                {mine.map((b) => <Card key={b.id} b={b} live={b.status === "active" && !isEnded(b)} />)}
               </div>
               {!mine.length && (
-                <EmptyState title="You haven't fought yet" body="Throw down a challenge and start building your reign."
+                <EmptyState title="Nothing in the last 30 days" body="You have not joined or created any battles in the last 30 days."
                   cta={<Button onClick={() => setChallengeOpen(true)} className="bg-gradient-gold text-primary-foreground gold-shadow"><Swords size={14} /> Challenge a royal</Button>} />
               )}
             </TabsContent>
@@ -778,7 +778,7 @@ export default function Battles() {
                 {done.map((b) => <Card key={b.id} b={b} live={false} />)}
               </div>
               {!done.length && (
-                <EmptyState title="No completed battles yet" body="Crown wins will appear here once duels end." />
+                <EmptyState title="No past battles yet" body="Battles older than 30 days will appear here once you have some." />
               )}
             </TabsContent>
           </Tabs>
