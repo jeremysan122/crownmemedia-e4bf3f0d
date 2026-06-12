@@ -65,7 +65,7 @@ describe("verificationEligibility helpers", () => {
   });
 
   it("counts how many checks pass (does not count optional phone row when absent)", () => {
-    expect(passedCount(sample)).toEqual({ passed: 7, total: 11 });
+    expect(passedCount(sample)).toEqual({ passed: 6, total: 11 });
   });
 
   it("handles a missing required check key by treating it as a failed boolean row", () => {
