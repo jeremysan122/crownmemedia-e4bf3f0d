@@ -60,9 +60,17 @@ const CHECK_ORDER: EligibilityCheckKey[] = [
   "phone_verified",
 ];
 
-/** Stable order so the UI doesn't reshuffle between renders. */
+/** Stable order so the UI doesn't reshuffle between renders. Optional
+ *  checks (currently `phone_verified`) are omitted when the server didn't
+ *  return them, so the row only appears when the platform enforces it. */
+const OPTIONAL_CHECKS: EligibilityCheckKey[] = ["phone_verified"];
+
 export function orderedChecks(p: EligibilityProgress): Array<{ key: EligibilityCheckKey } & EligibilityCheck> {
-  return CHECK_ORDER.map((k) => ({ key: k, ...(p.checks?.[k] ?? { pass: false, label: k }) }));
+  return CHECK_ORDER.flatMap((k) => {
+    const c = p.checks?.[k];
+    if (!c && OPTIONAL_CHECKS.includes(k)) return [];
+    return [{ key: k, ...(c ?? { pass: false, label: k }) }];
+  });
 }
 
 /**
