@@ -23,12 +23,14 @@ interface ShareProps {
   source?: string;
 }
 
-type Channel = "instagram" | "x" | "facebook" | "copy_link";
+type Channel = "instagram" | "x" | "facebook" | "copy_link" | "dm";
 
 export function ShareDialog({ open, onOpenChange, post: initialPost, source }: ShareProps) {
   const { user } = useAuth();
   const { sensitiveMode } = useFeedFilters();
   const [retrying, setRetrying] = useState(false);
+  const [dmPickerOpen, setDmPickerOpen] = useState(false);
+  const [sendingDm, setSendingDm] = useState(false);
   // Preserve the user's last-selected channel across refresh/retry — only
   // reset when the underlying post changes.
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
