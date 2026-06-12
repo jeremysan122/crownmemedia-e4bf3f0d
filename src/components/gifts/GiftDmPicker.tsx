@@ -230,7 +230,12 @@ export default function GiftDmPicker({
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold truncate">{p.displayName || p.username}</p>
+                        <p className="text-sm font-semibold truncate flex items-center gap-1">
+                          <span className="truncate">{p.displayName || p.username}</span>
+                          {p.verified && (
+                            <span className="inline-flex shrink-0 size-3.5 rounded-full bg-sky-500 text-white items-center justify-center text-[9px] font-black" aria-label="Verified">✓</span>
+                          )}
+                        </p>
                         <p className="text-xs text-muted-foreground truncate">@{p.username}</p>
                       </div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-primary opacity-80">Send →</span>
