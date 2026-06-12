@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, TrendingUp, Crown, Send, ShoppingCart, Wallet, Heart, Loader2, MessageCircle } from "lucide-react";
+import { Search, TrendingUp, Crown, Send, ShoppingCart, Wallet, Heart, Loader2, MessageCircle, UserPlus } from "lucide-react";
 import { ROYAL_GIFTS, SHEKEL, formatShekels, shekelToUsd, CATEGORY_TABS, findGift } from "@/lib/gifts";
 import { GiftCategory, RoyalGift } from "@/types/gifts";
 import { useWallet } from "@/hooks/useWallet";
