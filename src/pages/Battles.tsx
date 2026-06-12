@@ -370,12 +370,31 @@ export default function Battles() {
   // A battle is "done" if it's marked completed OR its end time has passed
   // (covers the small window before the backend flips status).
   const now = Date.now();
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
   const isEnded = (b: Battle) =>
-    b.status === "completed" || (!!b.ends_at && new Date(b.ends_at).getTime() <= now);
-  const active = filteredAll.filter((b) => b.status === "active" && !isEnded(b));
-  const pendingForMe = filteredAll.filter((b) => b.status === "pending" && b.opponent_id === user?.id);
-  const mine = filteredAll.filter((b) => b.challenger_id === user?.id || b.opponent_id === user?.id);
-  const done = filteredAll.filter(isEnded);
+    b.status === "completed" || b.status === "declined" || b.status === "cancelled" ||
+    (!!b.ends_at && new Date(b.ends_at).getTime() <= now);
+  // Scope: a battle "belongs to" the signed-in user when they are challenger or opponent.
+  // Personal tabs (Active/Pending/Mine/Past) NEVER show battles the viewer isn't part of.
+  const isMine = (b: Battle) => !!user && (b.challenger_id === user.id || b.opponent_id === user.id);
+  const battleTimeMs = (b: Battle) => {
+    const t = b.ends_at ? new Date(b.ends_at).getTime() : 0;
+    return Number.isFinite(t) && t > 0 ? t : new Date(b.created_at).getTime();
+  };
+  const active = filteredAll.filter((b) => isMine(b) && b.status === "active" && !isEnded(b));
+  // Pending = anything connected to me that hasn't started yet: pending invites I owe a
+  // response on, plus any pending battle I created and am awaiting acceptance for.
+  const pendingForMe = filteredAll.filter((b) => isMine(b) && b.status === "pending");
+  // Mine = my battles from the last 30 days, any status, newest first.
+  const mine = filteredAll
+    .filter((b) => isMine(b) && (now - battleTimeMs(b)) <= THIRTY_DAYS_MS)
+    .slice()
+    .sort((a, b) => battleTimeMs(b) - battleTimeMs(a));
+  // Past = my ended battles older than 30 days.
+  const done = filteredAll
+    .filter((b) => isMine(b) && isEnded(b) && (now - battleTimeMs(b)) > THIRTY_DAYS_MS)
+    .slice()
+    .sort((a, b) => battleTimeMs(b) - battleTimeMs(a));
 
   const featured = active[0];
 
