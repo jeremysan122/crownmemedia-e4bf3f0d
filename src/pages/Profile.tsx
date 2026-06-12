@@ -660,12 +660,54 @@ export default function Profile() {
             {(() => {
               const showLiked = isMe || (prof.liked_posts_public ?? true);
               const showSaved = isMe;
-              const colCount = 3 + (showLiked ? 1 : 0) + (showSaved ? 1 : 0);
-              const colsClass = colCount === 5 ? "grid-cols-5" : colCount === 4 ? "grid-cols-4" : "grid-cols-3";
+              // +1 for the new Scrolls tab. Profile now separates normal Posts
+              // from vertical Scrolls (shorts/reels) per the content-type split.
+              const colCount = 4 + (showLiked ? 1 : 0) + (showSaved ? 1 : 0);
+              const colsClass = colCount === 6 ? "grid-cols-6" : colCount === 5 ? "grid-cols-5" : "grid-cols-4";
+              const imagePosts = filterByContentType(posts as any, "post") as typeof posts;
+              const scrollPosts = filterByContentType(posts as any, "scroll") as typeof posts;
+              const renderTile = (p: typeof posts[number], showPlay: boolean) => (
+                <div key={p.id} className="aspect-square bg-muted overflow-hidden relative rounded-md lg:rounded-xl group">
+                  <button
+                    type="button"
+                    onClick={() => openPostDetail(p.id)}
+                    className="absolute inset-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
+                    aria-label="Open post"
+                  >
+                    <img
+                      src={(showPlay && p.video_poster_url) ? p.video_poster_url : p.image_url}
+                      className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]"
+                      style={isValidFilter(p.filter) && p.filter && p.filter !== "none" ? { filter: cssFor(p.filter as any) } : undefined}
+                      alt=""
+                    />
+                    <SensitiveThumb blurred={shouldBlurThumb(p)} />
+                  </button>
+                  {showPlay && (
+                    <div className="absolute top-1 left-1 glass rounded-full p-1 pointer-events-none">
+                      <Play size={10} fill="currentColor" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-1 right-1 glass px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1 pointer-events-none">
+                    <Crown size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
+                  </div>
+                  {isMe && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); openPostMenu(p.id, e.currentTarget); }}
+                      className="absolute top-1 right-1 z-20 glass rounded-full p-1 opacity-90 hover:opacity-100"
+                      aria-label="Post actions"
+                      aria-expanded={openMenuId === p.id}
+                    >
+                      <MoreVertical size={12} />
+                    </button>
+                  )}
+                </div>
+              );
               return (
             <Tabs value={tab} onValueChange={setTab} className="mt-5">
               <TabsList className={`grid w-full ${colsClass}`}>
                 <TabsTrigger value="posts" className="text-xs gap-1"><ImageIcon size={12} /> Posts</TabsTrigger>
+                <TabsTrigger value="scrolls" className="text-xs gap-1"><Play size={12} /> Scrolls</TabsTrigger>
                 <TabsTrigger value="crowns" className="text-xs gap-1"><Crown size={12} /> Crowns</TabsTrigger>
                 <TabsTrigger value="battles" className="text-xs gap-1"><Swords size={12} /> Battles</TabsTrigger>
                 {showLiked && <TabsTrigger value="liked" className="text-xs gap-1"><Heart size={12} /> Liked</TabsTrigger>}
@@ -673,44 +715,9 @@ export default function Profile() {
               </TabsList>
 
               <TabsContent value="posts" className="mt-3">
-                {posts.length > 0 ? (
+                {imagePosts.length > 0 ? (
                   <div className="grid grid-cols-3 gap-1 lg:gap-2">
-                    {posts.map((p) => (
-                      <div key={p.id} className="aspect-square bg-muted overflow-hidden relative rounded-md lg:rounded-xl group">
-                        <button
-                          type="button"
-                          onClick={() => openPostDetail(p.id)}
-                          className="absolute inset-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
-                          aria-label="Open post"
-                        >
-                          <img
-                            src={p.image_url}
-                            className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]"
-                            style={isValidFilter(p.filter) && p.filter && p.filter !== "none" ? { filter: cssFor(p.filter as any) } : undefined}
-                            alt=""
-                          />
-                          <SensitiveThumb blurred={shouldBlurThumb(p)} />
-                        </button>
-                        <div className="absolute bottom-1 right-1 glass px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1 pointer-events-none">
-                          <Crown size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
-                        </div>
-                        {isMe && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              openPostMenu(p.id, e.currentTarget);
-                            }}
-                            className="absolute top-1 right-1 z-20 glass rounded-full p-1 opacity-90 hover:opacity-100"
-                            aria-label="Post actions"
-                            aria-expanded={openMenuId === p.id}
-                          >
-                            <MoreVertical size={12} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                    {imagePosts.map((p) => renderTile(p, false))}
                   </div>
                 ) : (
                   <EmptyState
@@ -721,6 +728,23 @@ export default function Profile() {
                   />
                 )}
               </TabsContent>
+
+              <TabsContent value="scrolls" className="mt-3">
+                {scrollPosts.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-1 lg:gap-2">
+                    {scrollPosts.map((p) => renderTile(p, true))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<Play size={28} className="text-muted-foreground" />}
+                    title={isMe ? "Share your first Scroll" : "No scrolls yet"}
+                    body={isMe ? "Record a vertical 9:16 short for the Scrolls feed." : "This royal hasn't shared any scrolls yet."}
+                    cta={isMe ? { label: "Create Scroll", icon: <Plus size={14} />, onClick: () => nav("/upload?type=scroll") } : undefined}
+                  />
+                )}
+              </TabsContent>
+
+
 
               <TabsContent value="crowns" className="mt-3">
                 {crowns.length > 0 ? (
