@@ -370,12 +370,31 @@ export default function Battles() {
   // A battle is "done" if it's marked completed OR its end time has passed
   // (covers the small window before the backend flips status).
   const now = Date.now();
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
   const isEnded = (b: Battle) =>
-    b.status === "completed" || (!!b.ends_at && new Date(b.ends_at).getTime() <= now);
-  const active = filteredAll.filter((b) => b.status === "active" && !isEnded(b));
-  const pendingForMe = filteredAll.filter((b) => b.status === "pending" && b.opponent_id === user?.id);
-  const mine = filteredAll.filter((b) => b.challenger_id === user?.id || b.opponent_id === user?.id);
-  const done = filteredAll.filter(isEnded);
+    b.status === "completed" || b.status === "declined" || b.status === "cancelled" ||
+    (!!b.ends_at && new Date(b.ends_at).getTime() <= now);
+  // Scope: a battle "belongs to" the signed-in user when they are challenger or opponent.
+  // Personal tabs (Active/Pending/Mine/Past) NEVER show battles the viewer isn't part of.
+  const isMine = (b: Battle) => !!user && (b.challenger_id === user.id || b.opponent_id === user.id);
+  const battleTimeMs = (b: Battle) => {
+    const t = b.ends_at ? new Date(b.ends_at).getTime() : 0;
+    return Number.isFinite(t) && t > 0 ? t : new Date(b.created_at).getTime();
+  };
+  const active = filteredAll.filter((b) => isMine(b) && b.status === "active" && !isEnded(b));
+  // Pending = anything connected to me that hasn't started yet: pending invites I owe a
+  // response on, plus any pending battle I created and am awaiting acceptance for.
+  const pendingForMe = filteredAll.filter((b) => isMine(b) && b.status === "pending");
+  // Mine = my battles from the last 30 days, any status, newest first.
+  const mine = filteredAll
+    .filter((b) => isMine(b) && (now - battleTimeMs(b)) <= THIRTY_DAYS_MS)
+    .slice()
+    .sort((a, b) => battleTimeMs(b) - battleTimeMs(a));
+  // Past = my ended battles older than 30 days.
+  const done = filteredAll
+    .filter((b) => isMine(b) && isEnded(b) && (now - battleTimeMs(b)) > THIRTY_DAYS_MS)
+    .slice()
+    .sort((a, b) => battleTimeMs(b) - battleTimeMs(a));
 
   const featured = active[0];
 
@@ -730,7 +749,7 @@ export default function Battles() {
                   (featured && !query ? active.slice(1) : active).map((b) => <Card key={b.id} b={b} live />)}
               </div>
               {!loading && !active.length && (
-                <EmptyState title="No active duels" body="The arena is quiet. Be the first to throw down a challenge."
+                <EmptyState title="No active battles" body="You do not have any active battles right now."
                   cta={<Button onClick={() => setChallengeOpen(true)} className="bg-gradient-gold text-primary-foreground gold-shadow"><Swords size={14} /> Start a battle</Button>} />
               )}
             </TabsContent>
@@ -740,16 +759,16 @@ export default function Battles() {
                 {pendingForMe.map((b) => <Card key={b.id} b={b} live={false} />)}
               </div>
               {!pendingForMe.length && (
-                <EmptyState title="No pending invites" body="When someone challenges you, you can accept and pick your weapon here." />
+                <EmptyState title="No pending battles" body="You do not have any pending battles." />
               )}
             </TabsContent>
 
             <TabsContent value="mine" className="mt-3">
               <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
-                {mine.map((b) => <Card key={b.id} b={b} live={b.status === "active"} />)}
+                {mine.map((b) => <Card key={b.id} b={b} live={b.status === "active" && !isEnded(b)} />)}
               </div>
               {!mine.length && (
-                <EmptyState title="You haven't fought yet" body="Throw down a challenge and start building your reign."
+                <EmptyState title="Nothing in the last 30 days" body="You have not joined or created any battles in the last 30 days."
                   cta={<Button onClick={() => setChallengeOpen(true)} className="bg-gradient-gold text-primary-foreground gold-shadow"><Swords size={14} /> Challenge a royal</Button>} />
               )}
             </TabsContent>
@@ -759,7 +778,7 @@ export default function Battles() {
                 {done.map((b) => <Card key={b.id} b={b} live={false} />)}
               </div>
               {!done.length && (
-                <EmptyState title="No completed battles yet" body="Crown wins will appear here once duels end." />
+                <EmptyState title="No past battles yet" body="Battles older than 30 days will appear here once you have some." />
               )}
             </TabsContent>
           </Tabs>
