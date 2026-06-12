@@ -575,8 +575,16 @@ export default function Upload() {
       if (t < Date.now() + 60_000) return "Schedule at least 1 minute in the future";
       if (t > Date.now() + 1000 * 60 * 60 * 24 * 60) return "Schedule within the next 60 days";
     }
+    // Post vs Scroll: enforce surface-specific media rules client-side. The
+    // publish RPC re-validates content_type independently — this is UX only.
+    const ctErr = validateUploadSelection(contentType, mode, {
+      width: null,
+      height: null,
+      durationMs: mode === "video" ? (video?.durationMs ?? null) : null,
+    });
+    if (ctErr) return ctErr;
     return null;
-  }, [mode, photos, video, city, country, scheduledFor, pickerVal.mainSlug, pickerVal.subSlug, derivedSub, derivedMain]);
+  }, [mode, photos, video, city, country, scheduledFor, pickerVal.mainSlug, pickerVal.subSlug, derivedSub, derivedMain, contentType]);
 
   const cancelUpload = () => {
     cancelledRef.current = true;
