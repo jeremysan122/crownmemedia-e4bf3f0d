@@ -301,14 +301,20 @@ export default function RoyalGiftStore() {
                 <div className="grid grid-cols-2 gap-2 w-full">
                   <button
                     onClick={() => {
-                      fxGiftPreview(previewing!.category);
-                      setPreviewing(null);
-                      navigate("/feed");
-                      toast.info("Pick a post to send this gift");
+                      unlockAudio();
+                      if (!previewing) return;
+                      if (wallet.shekelBalance < previewing.shekelCost) {
+                        fxTap(true);
+                        setShowAdd(true);
+                        return;
+                      }
+                      pinFront(previewing.id);
+                      setPendingGift(previewing);
+                      setFollowerPickerOpen(true);
                     }}
                     className="h-11 rounded-full bg-secondary/50 border border-secondary/70 text-foreground font-bold text-xs flex items-center justify-center gap-1.5"
                   >
-                    <Send size={14} /> Send on Feed
+                    <UserPlus size={14} /> Send to Follower
                   </button>
                   <button
                     onClick={() => {
