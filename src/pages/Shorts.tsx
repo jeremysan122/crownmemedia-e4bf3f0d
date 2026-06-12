@@ -321,6 +321,18 @@ export default function Shorts() {
                 </button>
 
                 <button
+                  type="button"
+                  onClick={() => setDmShareScroll(p)}
+                  aria-label="Send this scroll via DM"
+                  className="flex flex-col items-center gap-1 active:scale-95 transition"
+                >
+                  <span className="size-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
+                    <Send className="size-6" />
+                  </span>
+                  <span className="text-xs font-semibold">Send</span>
+                </button>
+
+                <button
                   onClick={() => share(p)}
                   aria-label="Share"
                   className="flex flex-col items-center gap-1"
