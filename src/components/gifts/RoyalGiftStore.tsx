@@ -308,9 +308,10 @@ export default function RoyalGiftStore() {
                         setShowAdd(true);
                         return;
                       }
-                      pinFront(previewing.id);
-                      setPendingGift(previewing);
-                      setFollowerPickerOpen(true);
+                       pinFront(previewing.id);
+                       setPendingGift(previewing);
+                       setPreviewing(null);
+                       setFollowerPickerOpen(true);
                     }}
                     className="h-11 rounded-full bg-secondary/50 border border-secondary/70 text-foreground font-bold text-xs flex items-center justify-center gap-1.5"
                   >
