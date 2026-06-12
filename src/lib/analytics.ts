@@ -103,7 +103,18 @@ type EventName =
   | "gift_sent"
   | "gift_send_failed"
   | "gift_insufficient_balance"
-  | "shekels_purchase_started";
+  | "shekels_purchase_started"
+  // DM gifting funnel — privacy-safe (no recipient ids, no balances, no message text)
+  | "dm_gift_picker_opened"
+  | "dm_gift_recipient_selected"
+  | "dm_gift_send_started"
+  | "dm_gift_send_success"
+  | "dm_gift_send_failed"
+  | "dm_gift_received"
+  | "dm_gift_notification_delivered"
+  | "dm_gift_notification_clicked"
+  | "dm_gift_animation_opened"
+  | "dm_gift_realtime_fallback_used";
 
 
 async function sha256Hex(input: string): Promise<string> {
