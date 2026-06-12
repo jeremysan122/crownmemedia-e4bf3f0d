@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import CrownLoader from "@/components/CrownLoader";
+import RetryState from "@/components/states/RetryState";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { ArrowLeft, MessageCircle, Share2, Volume2, VolumeX, Heart } from "lucide-react";
 import { CrownIcon } from "@/components/CrownIcon";
 import { toast } from "sonner";
@@ -36,6 +38,8 @@ export default function Shorts() {
 
   const [items, setItems] = useState<Short[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
   const [muted, setMuted] = useState(true);
   const [endReached, setEndReached] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -78,15 +82,27 @@ export default function Shorts() {
   }, [sensitiveMode, user?.id]);
 
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
+  const loadInitial = useCallback(async () => {
+    setLoadError(null);
+    try {
       const first = await loadPage();
       setItems(first);
       setEndReached(first.length < PAGE_SIZE);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Couldn't load scrolls");
+    } finally {
       setLoading(false);
-    })();
+      setRetrying(false);
+    }
   }, [loadPage]);
+
+  useEffect(() => {
+    setLoading(true);
+    void loadInitial();
+  }, [loadInitial]);
+
+  // Preserve scroll position when returning from a post detail / comments.
+  useScrollRestoration("shorts:feed", containerRef, { ready: !loading && items.length > 0 });
 
   useEffect(() => { trackUsage("scrolls_opened"); }, []);
 
@@ -188,6 +204,18 @@ export default function Shorts() {
   }
 
   if (loading) return <CrownLoader label="Loading scrolls…" />;
+  if (loadError) {
+    return (
+      <main className="fixed inset-0 bg-black text-white flex items-center justify-center p-6">
+        <RetryState
+          title="Couldn't load scrolls"
+          message={loadError}
+          retrying={retrying}
+          onRetry={() => { setRetrying(true); void loadInitial(); }}
+        />
+      </main>
+    );
+  }
 
   return (
     <main className="fixed inset-0 bg-black text-white">
