@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,19 @@ import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { ShieldCheck, Crown, Upload, Loader2, ArrowLeft, CheckCircle2, Lock, Clock, FileText, Eye, MessageCircle } from "lucide-react";
+import { ShieldCheck, Crown, Upload, Loader2, ArrowLeft, CheckCircle2, Lock, Clock, FileText, Eye, MessageCircle, Sparkles, Circle } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  fetchEligibilityProgress,
+  requestStandardVerification,
+  orderedChecks,
+  checkFraction,
+  passedCount,
+  type EligibilityProgress,
+} from "@/lib/verificationEligibility";
 
 type Plan = "standard" | "subscription";
 type Category = "creator" | "brand" | "public_figure" | "business" | "journalist";
@@ -76,6 +85,57 @@ export default function Verification() {
   const [verifiedAt, setVerifiedAt] = useState<string | null>(null);
   const [verificationCategory, setVerificationCategory] = useState<string | null>(null);
   const [verificationPlan, setVerificationPlan] = useState<Plan | null>(null);
+  // Standard auto-eligibility progress — fetched lazily when the user picks
+  // the free path so we don't waste a round-trip for paid-only users.
+  const [progress, setProgress] = useState<EligibilityProgress | null>(null);
+  const [progressLoading, setProgressLoading] = useState(false);
+  const [claimingStandard, setClaimingStandard] = useState(false);
+
+  const refreshProgress = useCallback(async () => {
+    if (!user) return;
+    setProgressLoading(true);
+    try {
+      const p = await fetchEligibilityProgress(user.id);
+      setProgress(p);
+    } catch (e: any) {
+      console.warn("verification eligibility fetch failed", e);
+    } finally {
+      setProgressLoading(false);
+    }
+  }, [user]);
+
+  // Fetch the progress doc whenever the user lands on the Standard path so
+  // the checklist always reflects current follower / posts counts.
+  useEffect(() => {
+    if (plan === "standard" && user && !progress && !progressLoading) {
+      void refreshProgress();
+    }
+  }, [plan, user, progress, progressLoading, refreshProgress]);
+
+  const claimStandard = async () => {
+    if (!user) return;
+    setClaimingStandard(true);
+    try {
+      const res = await requestStandardVerification();
+      if (res.status === "approved") {
+        toast.success("You're verified! The blue checkmark is live across CrownMe.");
+        setVerified(true);
+        setVerifiedAt(new Date().toISOString());
+        setVerificationPlan("standard");
+      } else if (res.status === "already_verified") {
+        toast.info("You're already verified.");
+        setVerified(true);
+      } else {
+        setProgress(res.progress);
+        toast.error("Not yet eligible — keep building toward each requirement below.");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not submit verification");
+    } finally {
+      setClaimingStandard(false);
+    }
+  };
+
 
   useEffect(() => {
     if (!user) return;
@@ -371,9 +431,19 @@ export default function Verification() {
               <ShieldCheck className="h-4 w-4" />
               <span className="font-bold">Standard — Free</span>
             </div>
-            <p className="text-sm text-muted-foreground">Free, but requires 100k+ followers OR an established brand / public figure / journalist.</p>
+            <p className="text-sm text-muted-foreground">Auto-approved once you hit 10k+ followers and complete the checklist below.</p>
           </label>
         </RadioGroup>
+
+        {plan === "standard" && (
+          <StandardEligibilityCard
+            progress={progress}
+            loading={progressLoading}
+            claiming={claimingStandard}
+            onRefresh={refreshProgress}
+            onClaim={claimStandard}
+          />
+        )}
         {plan === "subscription" && (
           <Button
             type="button"
@@ -397,54 +467,61 @@ export default function Verification() {
           </Button>
         )}
 
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="v-legal">Legal name *</Label>
-            <Input id="v-legal" value={legalName} onChange={(e) => setLegalName(e.target.value)} maxLength={120} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="v-cat">Category *</Label>
-            <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
-              <SelectTrigger id="v-cat"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(CATEGORY_LABEL).map(([k, l]) => (
-                  <SelectItem key={k} value={k}>{l}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {(category === "brand" || category === "business") && (
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="v-brand">Brand / business name *</Label>
-              <Input id="v-brand" value={brandName} onChange={(e) => setBrandName(e.target.value)} maxLength={120} />
+        {/* Manual review form — only the paid Subscription path uses this.
+            Standard is auto-approved via the checklist above and doesn't
+            require ID/selfie/business documents. */}
+        {plan === "subscription" && (
+          <>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="v-legal">Legal name *</Label>
+                <Input id="v-legal" value={legalName} onChange={(e) => setLegalName(e.target.value)} maxLength={120} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="v-cat">Category *</Label>
+                <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
+                  <SelectTrigger id="v-cat"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(CATEGORY_LABEL).map(([k, l]) => (
+                      <SelectItem key={k} value={k}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(category === "brand" || category === "business") && (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="v-brand">Brand / business name *</Label>
+                  <Input id="v-brand" value={brandName} onChange={(e) => setBrandName(e.target.value)} maxLength={120} />
+                </div>
+              )}
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="v-web">Official website (optional)</Label>
+                <Input id="v-web" type="url" placeholder="https://" value={website} onChange={(e) => setWebsite(e.target.value)} />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="v-fol">Total external followers (across platforms)</Label>
+                <Input id="v-fol" type="number" min={0} value={followerCount} onChange={(e) => setFollowerCount(e.target.value)} placeholder="e.g. 250000" />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="v-reason">Why should you be verified? *</Label>
+                <Textarea id="v-reason" rows={4} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Tell us about your audience, your work, and any notable mentions or accomplishments." maxLength={1000} />
+              </div>
             </div>
-          )}
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="v-web">Official website (optional)</Label>
-            <Input id="v-web" type="url" placeholder="https://" value={website} onChange={(e) => setWebsite(e.target.value)} />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="v-fol">Total external followers (across platforms)</Label>
-            <Input id="v-fol" type="number" min={0} value={followerCount} onChange={(e) => setFollowerCount(e.target.value)} placeholder="e.g. 250000" />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="v-reason">Why should you be verified? *</Label>
-            <Textarea id="v-reason" rows={4} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Tell us about your audience, your work, and any notable mentions or accomplishments." maxLength={1000} />
-          </div>
-        </div>
 
-        <div className="grid sm:grid-cols-3 gap-4 pt-2">
-          <FileSlot label="Government ID *" file={idFile} onFile={setIdFile} accept="image/*,application/pdf" />
-          <FileSlot label="Live selfie *" file={selfieFile} onFile={setSelfieFile} accept="image/*" capture />
-          {(category === "brand" || category === "business") && (
-            <FileSlot label="Business document *" file={bizFile} onFile={setBizFile} accept="image/*,application/pdf" />
-          )}
-        </div>
+            <div className="grid sm:grid-cols-3 gap-4 pt-2">
+              <FileSlot label="Government ID *" file={idFile} onFile={setIdFile} accept="image/*,application/pdf" />
+              <FileSlot label="Live selfie *" file={selfieFile} onFile={setSelfieFile} accept="image/*" capture />
+              {(category === "brand" || category === "business") && (
+                <FileSlot label="Business document *" file={bizFile} onFile={setBizFile} accept="image/*,application/pdf" />
+              )}
+            </div>
 
-        <Button onClick={submit} disabled={submitting || !legalName || !reason || !idFile || !selfieFile} size="lg" className="w-full">
-          {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting…</> : "Submit verification request"}
-        </Button>
-        <p className="text-xs text-muted-foreground">Your documents are stored privately and visible only to CrownMe trust & safety reviewers.</p>
+            <Button onClick={submit} disabled={submitting || !legalName || !reason || !idFile || !selfieFile} size="lg" className="w-full">
+              {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting…</> : "Submit verification request"}
+            </Button>
+            <p className="text-xs text-muted-foreground">Your documents are stored privately and visible only to CrownMe trust & safety reviewers.</p>
+          </>
+        )}
       </Card>
     </div>
   );
@@ -468,5 +545,114 @@ function FileSlot({ label, file, onFile, accept, capture }: {
         onChange={(e) => onFile(e.target.files?.[0] ?? null)}
       />
     </label>
+  );
+}
+
+/**
+ * Live progress checklist for the free Standard verification path.
+ *
+ * Every check from `verification_eligibility_progress` becomes a row with:
+ * - a pass/fail icon
+ * - the human label
+ * - for numeric checks (followers, posts, account age) a small progress
+ *   bar and `current / required` count so the user can see how close they
+ *   are. Followers especially is the moment-of-truth metric for the 10k
+ *   threshold and we never want it hidden.
+ *
+ * The "Claim verification" button is disabled until every check passes; the
+ * server re-validates eligibility inside `request_standard_verification`
+ * so a stale UI can't ever auto-approve someone who lost a requirement.
+ */
+function StandardEligibilityCard({
+  progress, loading, claiming, onRefresh, onClaim,
+}: {
+  progress: EligibilityProgress | null;
+  loading: boolean;
+  claiming: boolean;
+  onRefresh: () => void;
+  onClaim: () => void;
+}) {
+  if (loading && !progress) {
+    return (
+      <Card className="p-5 flex items-center gap-3 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Checking your eligibility…
+      </Card>
+    );
+  }
+  if (!progress) {
+    return (
+      <Card className="p-5 space-y-3">
+        <p className="text-sm text-muted-foreground">We couldn't load your eligibility checklist.</p>
+        <Button variant="outline" size="sm" onClick={onRefresh}>Retry</Button>
+      </Card>
+    );
+  }
+  const rows = orderedChecks(progress);
+  const { passed, total } = passedCount(progress);
+  const overallPct = Math.round((passed / total) * 100);
+
+  return (
+    <Card className="p-5 space-y-4 border-primary/30">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-semibold uppercase tracking-wide">Standard verification progress</h3>
+        </div>
+        <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={onRefresh}>
+          {loading ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{passed} of {total} requirements met</span>
+          <span>{overallPct}%</span>
+        </div>
+        <Progress value={overallPct} className="h-2" />
+      </div>
+      <ul className="space-y-3">
+        {rows.map((c) => {
+          const frac = checkFraction(c);
+          const showBar = typeof c.current === "number" && typeof c.required === "number";
+          return (
+            <li key={c.key} className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  {c.pass
+                    ? <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                    : <Circle className="h-4 w-4 text-muted-foreground shrink-0" />}
+                  <span className={c.pass ? "text-foreground" : "text-muted-foreground"}>{c.label}</span>
+                </div>
+                {showBar && (
+                  <span className="text-xs tabular-nums text-muted-foreground shrink-0">
+                    {(c.current ?? 0).toLocaleString()} / {(c.required ?? 0).toLocaleString()}
+                  </span>
+                )}
+              </div>
+              {showBar && (
+                <Progress value={Math.round(frac * 100)} className="h-1.5" />
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="space-y-2">
+        <Button
+          size="lg"
+          className="w-full"
+          disabled={!progress.eligible || claiming}
+          onClick={onClaim}
+        >
+          {claiming
+            ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting…</>
+            : progress.eligible
+              ? <><ShieldCheck className="h-4 w-4 mr-2" /> Claim free verification</>
+              : "Complete every requirement to claim"}
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          Standard verification is auto-approved when every check passes. Not ready yet? You can also
+          subscribe to fast-track via the $1.99/mo path above.
+        </p>
+      </div>
+    </Card>
   );
 }

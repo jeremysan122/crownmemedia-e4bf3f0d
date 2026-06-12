@@ -4362,6 +4362,7 @@ export type Database = {
         Returns: undefined
       }
       request_account_deletion: { Args: never; Returns: Json }
+      request_standard_verification: { Args: never; Returns: Json }
       royal_pass_daily_boost_status: { Args: never; Returns: Json }
       save_push_subscription: {
         Args: {
@@ -4411,6 +4412,10 @@ export type Database = {
         Returns: string
       }
       update_my_dob: { Args: { _dob: string }; Returns: undefined }
+      verification_eligibility_progress: {
+        Args: { _user_id?: string }
+        Returns: Json
+      }
       verify_web_push_trigger_secret: {
         Args: { _secret: string }
         Returns: boolean
