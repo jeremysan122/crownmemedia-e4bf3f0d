@@ -540,3 +540,112 @@ function FileSlot({ label, file, onFile, accept, capture }: {
     </label>
   );
 }
+
+/**
+ * Live progress checklist for the free Standard verification path.
+ *
+ * Every check from `verification_eligibility_progress` becomes a row with:
+ * - a pass/fail icon
+ * - the human label
+ * - for numeric checks (followers, posts, account age) a small progress
+ *   bar and `current / required` count so the user can see how close they
+ *   are. Followers especially is the moment-of-truth metric for the 10k
+ *   threshold and we never want it hidden.
+ *
+ * The "Claim verification" button is disabled until every check passes; the
+ * server re-validates eligibility inside `request_standard_verification`
+ * so a stale UI can't ever auto-approve someone who lost a requirement.
+ */
+function StandardEligibilityCard({
+  progress, loading, claiming, onRefresh, onClaim,
+}: {
+  progress: EligibilityProgress | null;
+  loading: boolean;
+  claiming: boolean;
+  onRefresh: () => void;
+  onClaim: () => void;
+}) {
+  if (loading && !progress) {
+    return (
+      <Card className="p-5 flex items-center gap-3 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Checking your eligibility…
+      </Card>
+    );
+  }
+  if (!progress) {
+    return (
+      <Card className="p-5 space-y-3">
+        <p className="text-sm text-muted-foreground">We couldn't load your eligibility checklist.</p>
+        <Button variant="outline" size="sm" onClick={onRefresh}>Retry</Button>
+      </Card>
+    );
+  }
+  const rows = orderedChecks(progress);
+  const { passed, total } = passedCount(progress);
+  const overallPct = Math.round((passed / total) * 100);
+
+  return (
+    <Card className="p-5 space-y-4 border-primary/30">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-semibold uppercase tracking-wide">Standard verification progress</h3>
+        </div>
+        <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={onRefresh}>
+          {loading ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{passed} of {total} requirements met</span>
+          <span>{overallPct}%</span>
+        </div>
+        <Progress value={overallPct} className="h-2" />
+      </div>
+      <ul className="space-y-3">
+        {rows.map((c) => {
+          const frac = checkFraction(c);
+          const showBar = typeof c.current === "number" && typeof c.required === "number";
+          return (
+            <li key={c.key} className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  {c.pass
+                    ? <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                    : <Circle className="h-4 w-4 text-muted-foreground shrink-0" />}
+                  <span className={c.pass ? "text-foreground" : "text-muted-foreground"}>{c.label}</span>
+                </div>
+                {showBar && (
+                  <span className="text-xs tabular-nums text-muted-foreground shrink-0">
+                    {(c.current ?? 0).toLocaleString()} / {(c.required ?? 0).toLocaleString()}
+                  </span>
+                )}
+              </div>
+              {showBar && (
+                <Progress value={Math.round(frac * 100)} className="h-1.5" />
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="space-y-2">
+        <Button
+          size="lg"
+          className="w-full"
+          disabled={!progress.eligible || claiming}
+          onClick={onClaim}
+        >
+          {claiming
+            ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting…</>
+            : progress.eligible
+              ? <><ShieldCheck className="h-4 w-4 mr-2" /> Claim free verification</>
+              : "Complete every requirement to claim"}
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          Standard verification is auto-approved when every check passes. Not ready yet? You can also
+          subscribe to fast-track via the $1.99/mo path above.
+        </p>
+      </div>
+    </Card>
+  );
+}
