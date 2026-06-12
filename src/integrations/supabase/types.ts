@@ -4382,6 +4382,17 @@ export type Database = {
         }
         Returns: Json
       }
+      send_dm_share: {
+        Args: {
+          p_body?: string
+          p_dedupe_key?: string
+          p_kind: string
+          p_post_id?: string
+          p_profile_id?: string
+          p_recipient_id: string
+        }
+        Returns: Json
+      }
       send_royal_gift: {
         Args: {
           p_dedupe_key?: string

@@ -35,6 +35,7 @@ import MessageReactions from "@/components/messages/MessageReactions";
 import DmAttachment from "@/components/messages/DmAttachment";
 import { toast } from "@/hooks/use-toast";
 import GiftReceiptCard from "@/components/messages/GiftReceiptCard";
+import SharedPostMessage from "@/components/messages/SharedPostMessage";
 
 type Msg = {
   id: string;
@@ -51,6 +52,8 @@ type Msg = {
   kind?: string | null;
   gift_transaction_id?: string | null;
   gift_seen_at?: string | null;
+  shared_post_id?: string | null;
+  shared_profile_id?: string | null;
   _pending?: boolean;
   _failed?: boolean;
 };
@@ -629,6 +632,22 @@ export default function Messages() {
                     viewerId={user.id}
                     createdAt={m.created_at}
                     seenAt={m.gift_seen_at ?? null}
+                  />
+                  {!m._pending && (
+                    <MessageReactions messageId={m.id} reactions={myReactions} onChange={() => {}} />
+                  )}
+                </div>
+              );
+            }
+            if ((m.kind === "post_share" || m.kind === "profile_share") && (m.shared_post_id || m.shared_profile_id)) {
+              return (
+                <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
+                  <SharedPostMessage
+                    kind={m.kind as "post_share" | "profile_share"}
+                    postId={m.shared_post_id}
+                    profileId={m.shared_profile_id}
+                    body={m.body}
+                    mine={mine}
                   />
                   {!m._pending && (
                     <MessageReactions messageId={m.id} reactions={myReactions} onChange={() => {}} />

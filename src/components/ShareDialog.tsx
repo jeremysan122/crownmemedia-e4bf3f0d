@@ -1,6 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Copy, Instagram, Twitter, Facebook, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Copy, Instagram, Twitter, Facebook, Loader2, AlertCircle, RefreshCw, MessageCircle } from "lucide-react";
+import DmSharePicker, { type DmShareRecipient } from "@/components/messages/DmSharePicker";
+import { sendDmShare } from "@/lib/dmShare";
 import BrandLogo from "./BrandLogo";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,12 +23,14 @@ interface ShareProps {
   source?: string;
 }
 
-type Channel = "instagram" | "x" | "facebook" | "copy_link";
+type Channel = "instagram" | "x" | "facebook" | "copy_link" | "dm";
 
 export function ShareDialog({ open, onOpenChange, post: initialPost, source }: ShareProps) {
   const { user } = useAuth();
   const { sensitiveMode } = useFeedFilters();
   const [retrying, setRetrying] = useState(false);
+  const [dmPickerOpen, setDmPickerOpen] = useState(false);
+  const [sendingDm, setSendingDm] = useState(false);
   // Preserve the user's last-selected channel across refresh/retry — only
   // reset when the underlying post changes.
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
@@ -253,7 +257,11 @@ export function ShareDialog({ open, onOpenChange, post: initialPost, source }: S
           </div>
         )}
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
+          <Button data-testid="share-dm" data-selected={selectedChannel === "dm"} variant="outline" size="sm" disabled={!shareable || !user || sendingDm} onClick={() => { if (!shareable) { recordBlock("dm"); return; } recordAttempt("dm"); setDmPickerOpen(true); }} className="flex-col h-16">
+            {sendingDm ? <Loader2 size={20} className="animate-spin" /> : <MessageCircle size={20} />}
+            <span className="text-[10px]">DM</span>
+          </Button>
           <Button data-testid="share-instagram" data-selected={selectedChannel === "instagram"} variant="outline" size="sm" disabled={!shareable} onClick={() => open_url(`https://www.instagram.com/`, "instagram")} className="flex-col h-16">
             <Instagram size={20} /><span className="text-[10px]">Instagram</span>
           </Button>
@@ -267,6 +275,28 @@ export function ShareDialog({ open, onOpenChange, post: initialPost, source }: S
             <Copy size={20} /><span className="text-[10px]">Copy</span>
           </Button>
         </div>
+
+        <DmSharePicker
+          open={dmPickerOpen}
+          onOpenChange={setDmPickerOpen}
+          title="Share post via DM"
+          subtitle={`@${post.profile.username} · ${CATEGORY_LABEL[post.category]}`}
+          onPick={async (r: DmShareRecipient) => {
+            setDmPickerOpen(false);
+            if (!shareable) { toast.error("Post unavailable"); return; }
+            setSendingDm(true);
+            try {
+              const res = await sendDmShare({ recipientId: r.userId, kind: "post_share", postId: post.id });
+              await incrementShare("dm");
+              toast.success(res.deduped ? `Already sent to @${r.username}` : `Sent to @${r.username}`);
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : "Couldn't send";
+              toast.error(msg);
+            } finally {
+              setSendingDm(false);
+            }
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
