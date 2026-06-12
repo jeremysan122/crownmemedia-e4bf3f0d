@@ -452,7 +452,15 @@ export default function Profile() {
   return (
     <AppShell>
       {/* Cover banner — visible on all sizes */}
-      <div className="relative h-32 sm:h-40 lg:h-52 rounded-none lg:rounded-2xl overflow-hidden bg-gradient-royal border-b lg:border border-border mb-[-40px] sm:mb-[-48px] lg:mb-[-64px]">
+      <div
+        data-testid="profile-cover"
+        className="relative h-32 sm:h-40 lg:h-52 rounded-none lg:rounded-2xl overflow-hidden bg-gradient-royal border-b lg:border border-border mb-[-40px] sm:mb-[-48px] lg:mb-[-64px]"
+        style={{
+          paddingTop: "env(safe-area-inset-top, 0px)",
+          paddingLeft: "env(safe-area-inset-left, 0px)",
+          paddingRight: "env(safe-area-inset-right, 0px)",
+        }}
+      >
         {prof.banner_url ? (
           <img
             src={prof.banner_url}
@@ -470,10 +478,14 @@ export default function Profile() {
         {isMe && (
           <>
             <input ref={bannerInput} type="file" accept="image/*" hidden onChange={onBannerPick} />
-            <div className="absolute top-2 right-2 flex gap-1.5">
+            <div
+              className="absolute top-2 right-2 flex gap-1.5 z-20"
+              style={{ top: "max(0.5rem, env(safe-area-inset-top, 0px))", right: "max(0.5rem, env(safe-area-inset-right, 0px))" }}
+            >
               {reframing ? (
                 <>
                   <button
+                    data-testid="cover-edit-save"
                     onClick={async () => {
                       if (!user) return;
                       const { error } = await supabase.from("profiles").update({ banner_position_y: draftPosY } as any).eq("id", user.id);
@@ -482,19 +494,20 @@ export default function Profile() {
                       setReframing(false);
                       toast.success("Cover reframed");
                     }}
-                    className="glass rounded-full p-2 hover:bg-background/80"
+                    className="glass rounded-full p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-background/80"
                     aria-label="Save reframe"
                     title="Save"
                   >
-                    <Check size={14} />
+                    <Check size={16} />
                   </button>
                   <button
+                    data-testid="cover-edit-cancel"
                     onClick={() => { setDraftPosY(prof.banner_position_y ?? 50); setReframing(false); }}
-                    className="glass rounded-full p-2 hover:bg-background/80"
+                    className="glass rounded-full p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-background/80"
                     aria-label="Cancel reframe"
                     title="Cancel"
                   >
-                    <X size={14} />
+                    <X size={16} />
                   </button>
                 </>
               ) : (
@@ -534,18 +547,34 @@ export default function Profile() {
               )}
             </div>
             {reframing && (
-              <div className="absolute bottom-2 left-24 right-2 lg:left-40 flex items-center gap-2 glass rounded-full px-3 py-1.5">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Reframe</span>
+              <div
+                data-testid="cover-reframe-slider"
+                className="absolute left-2 right-2 sm:left-3 sm:right-3 flex items-center gap-3 glass rounded-full px-4 py-2 z-20 shadow-lg"
+                style={{
+                  top: "calc(max(0.5rem, env(safe-area-inset-top, 0px)) + 3.25rem)",
+                  left: "max(0.5rem, env(safe-area-inset-left, 0px))",
+                  right: "max(0.5rem, env(safe-area-inset-right, 0px))",
+                }}
+              >
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">Reframe</span>
                 <input
                   type="range"
                   min={0}
                   max={100}
                   value={draftPosY}
                   onChange={(e) => setDraftPosY(Number(e.target.value))}
-                  className="flex-1 accent-primary"
-                  aria-label="Vertical position"
+                  onKeyDown={(e) => {
+                    if (e.key === "Home") { e.preventDefault(); setDraftPosY(0); }
+                    else if (e.key === "End") { e.preventDefault(); setDraftPosY(100); }
+                  }}
+                  className="flex-1 accent-primary cursor-pointer h-11 touch-none"
+                  style={{ WebkitAppearance: "none", background: "transparent" }}
+                  aria-label="Vertical cover position"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={draftPosY}
                 />
-                <span className="text-[10px] tabular-nums w-8 text-right">{draftPosY}%</span>
+                <span className="text-[10px] tabular-nums w-9 text-right shrink-0">{draftPosY}%</span>
               </div>
             )}
           </>
@@ -555,7 +584,7 @@ export default function Profile() {
 
       <div className="px-4 lg:px-6 py-4 lg:relative">
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-          <div className={`self-start w-fit ${prof.crowns_held > 0 ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${royalPassActive ? "ring-2 ring-gold rounded-full p-0.5" : ""} ${(profileGlowActive || royalPassActive) ? "profile-glow" : ""}`}>
+          <div data-testid="profile-avatar" className={`self-start w-fit ${prof.crowns_held > 0 ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${royalPassActive ? "ring-2 ring-gold rounded-full p-0.5" : ""} ${(profileGlowActive || royalPassActive) ? "profile-glow" : ""}`}>
             <div className="size-20 lg:size-32 rounded-full overflow-hidden bg-muted ring-2 ring-border relative">
               {prof.profile_photo_url && (
                 <img
