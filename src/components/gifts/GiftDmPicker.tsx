@@ -146,8 +146,12 @@ export default function GiftDmPicker({
           <div className="flex items-center gap-2">
             {giftIcon && <span className="text-2xl" aria-hidden>{giftIcon}</span>}
             <div className="min-w-0">
-              <p className="font-display text-lg text-gold truncate">Send {giftName} via DM</p>
-              <p className="text-xs text-muted-foreground">Costs ₪{giftCost.toLocaleString()} · they'll get a chat + notification</p>
+              <p className="font-display text-lg text-gold truncate">
+                {mode === "follower" ? `Send ${giftName} to a follower` : `Send ${giftName} via DM`}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Costs ₪{giftCost.toLocaleString()} · they'll get a chat + notification
+              </p>
             </div>
           </div>
           <label className="relative block">
