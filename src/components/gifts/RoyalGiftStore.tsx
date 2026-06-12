@@ -45,6 +45,7 @@ export default function RoyalGiftStore() {
   const [confirming, setConfirming] = useState(false);
   const [sending, setSending] = useState(false);
   const [dmPickerOpen, setDmPickerOpen] = useState(false);
+  const [followerPickerOpen, setFollowerPickerOpen] = useState(false);
   const [sendingDm, setSendingDm] = useState(false);
   const { pinFront, favorites } = useGiftFavorites();
   const { sendGift, sendDmGift } = useGiftSend();
