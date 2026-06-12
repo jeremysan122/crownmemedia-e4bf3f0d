@@ -20,12 +20,18 @@ export type EligibilityCheckKey =
   | "bio"
   | "account_age"
   | "posts"
-  | "good_standing";
+  | "battles_won"
+  | "crowns_held"
+  | "votes_received"
+  | "good_standing"
+  | "no_serious_violations"
+  | "email_verified"
+  | "phone_verified";
 
 export interface EligibilityCheck {
   pass: boolean;
   label: string;
-  /** Present for numeric checks (followers, account_age, posts). */
+  /** Present for numeric checks (followers, account_age, posts, battles_won, crowns_held, votes_received). */
   current?: number;
   required?: number;
 }
@@ -33,21 +39,38 @@ export interface EligibilityCheck {
 export interface EligibilityProgress {
   verified: boolean;
   eligible: boolean;
-  checks: Record<EligibilityCheckKey, EligibilityCheck>;
+  checks: Partial<Record<EligibilityCheckKey, EligibilityCheck>>;
 }
 
+// Stable rendering order. `phone_verified` only appears when the platform
+// has phone verification enabled — `orderedChecks` skips it if the server
+// didn't return that key.
 const CHECK_ORDER: EligibilityCheckKey[] = [
   "followers",
   "profile_photo",
   "bio",
   "account_age",
   "posts",
+  "battles_won",
+  "crowns_held",
+  "votes_received",
   "good_standing",
+  "no_serious_violations",
+  "email_verified",
+  "phone_verified",
 ];
 
-/** Stable order so the UI doesn't reshuffle between renders. */
+/** Stable order so the UI doesn't reshuffle between renders. Optional
+ *  checks (currently `phone_verified`) are omitted when the server didn't
+ *  return them, so the row only appears when the platform enforces it. */
+const OPTIONAL_CHECKS: EligibilityCheckKey[] = ["phone_verified"];
+
 export function orderedChecks(p: EligibilityProgress): Array<{ key: EligibilityCheckKey } & EligibilityCheck> {
-  return CHECK_ORDER.map((k) => ({ key: k, ...(p.checks?.[k] ?? { pass: false, label: k }) }));
+  return CHECK_ORDER.flatMap((k) => {
+    const c = p.checks?.[k];
+    if (!c && OPTIONAL_CHECKS.includes(k)) return [];
+    return [{ key: k, ...(c ?? { pass: false, label: k }) }];
+  });
 }
 
 /**

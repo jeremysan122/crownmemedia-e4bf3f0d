@@ -649,8 +649,10 @@ function StandardEligibilityCard({
               : "Complete every requirement to claim"}
         </Button>
         <p className="text-xs text-muted-foreground">
-          Standard verification is auto-approved when every check passes. Not ready yet? You can also
-          subscribe to fast-track via the $1.99/mo path above.
+          Standard Verification is <span className="text-foreground">earned through CrownMe activity</span> —
+          battles won, crowns held, votes received, posts published, and 10,000+ followers. It's auto-approved
+          the moment every requirement passes. Not ready yet? Paid Verification is optional at $1.99/month
+          via the fast-track path above.
         </p>
       </div>
     </Card>
