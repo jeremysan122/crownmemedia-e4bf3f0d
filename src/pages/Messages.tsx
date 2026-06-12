@@ -35,6 +35,7 @@ import MessageReactions from "@/components/messages/MessageReactions";
 import DmAttachment from "@/components/messages/DmAttachment";
 import { toast } from "@/hooks/use-toast";
 import GiftReceiptCard from "@/components/messages/GiftReceiptCard";
+import SharedPostMessage from "@/components/messages/SharedPostMessage";
 
 type Msg = {
   id: string;
