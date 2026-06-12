@@ -204,6 +204,18 @@ export default function Shorts() {
   }
 
   if (loading) return <CrownLoader label="Loading scrolls…" />;
+  if (loadError) {
+    return (
+      <main className="fixed inset-0 bg-black text-white flex items-center justify-center p-6">
+        <RetryState
+          title="Couldn't load scrolls"
+          message={loadError}
+          retrying={retrying}
+          onRetry={() => { setRetrying(true); void loadInitial(); }}
+        />
+      </main>
+    );
+  }
 
   return (
     <main className="fixed inset-0 bg-black text-white">
