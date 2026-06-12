@@ -19,6 +19,7 @@ import { cssFor, isValidFilter } from "@/lib/filters";
 import { toast } from "sonner";
 import { useSeoMeta, buildProfileOgImage } from "@/hooks/useSeoMeta";
 import { trackUsage } from "@/lib/usageTrack";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import PostDetailDialog from "@/components/PostDetailDialog";
 import type { FeedPost } from "@/components/PostCard";
 import SensitiveThumb from "@/components/SensitiveThumb";
@@ -428,6 +429,19 @@ export default function Profile() {
       setBannerUploading(false);
     }
   };
+
+  // Restore window scroll when returning to this profile/tab (e.g. back from a post).
+  // Keyed by username+tab so each tab keeps its own offset.
+  useScrollRestoration(`profile:${targetUsername ?? "self"}:${tab}`, null, {
+    ready: !!prof && (
+      tab === "posts" ? posts.length > 0 :
+      tab === "scrolls" ? posts.length > 0 :
+      tab === "crowns" ? crowns.length >= 0 :
+      tab === "battles" ? battles.length >= 0 :
+      tab === "liked" ? liked.length >= 0 :
+      tab === "saved" ? saved.length >= 0 : true
+    ),
+  });
 
   if (!prof) {
     return <AppShell><CrownLoader fullscreen={false} label="Loading royal profile…" /></AppShell>;
