@@ -639,6 +639,22 @@ export default function Messages() {
                 </div>
               );
             }
+            if ((m.kind === "post_share" || m.kind === "profile_share") && (m.shared_post_id || m.shared_profile_id)) {
+              return (
+                <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
+                  <SharedPostMessage
+                    kind={m.kind as "post_share" | "profile_share"}
+                    postId={m.shared_post_id}
+                    profileId={m.shared_profile_id}
+                    body={m.body}
+                    mine={mine}
+                  />
+                  {!m._pending && (
+                    <MessageReactions messageId={m.id} reactions={myReactions} onChange={() => {}} />
+                  )}
+                </div>
+              );
+            }
             return (
               <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
                 <div
