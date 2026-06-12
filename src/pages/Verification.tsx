@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,19 @@ import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { ShieldCheck, Crown, Upload, Loader2, ArrowLeft, CheckCircle2, Lock, Clock, FileText, Eye, MessageCircle } from "lucide-react";
+import { ShieldCheck, Crown, Upload, Loader2, ArrowLeft, CheckCircle2, Lock, Clock, FileText, Eye, MessageCircle, Sparkles, Circle } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  fetchEligibilityProgress,
+  requestStandardVerification,
+  orderedChecks,
+  checkFraction,
+  passedCount,
+  type EligibilityProgress,
+} from "@/lib/verificationEligibility";
 
 type Plan = "standard" | "subscription";
 type Category = "creator" | "brand" | "public_figure" | "business" | "journalist";
