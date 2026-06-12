@@ -109,12 +109,23 @@ export default function Battles() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("battles").select(`*,
+    // Personal tabs (Active/Pending/Mine/Past) only ever show battles the
+    // signed-in user is part of. Scope server-side so the page never even
+    // receives unrelated public battles — RLS still enforces this, but
+    // this also keeps payload small and avoids leaking via cache.
+    let q = supabase.from("battles").select(`*,
       challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url),
       opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url),
       challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country, main_category_slug, subcategory_slug),
       opponent_post:posts!battles_opponent_post_id_fkey(image_url, category)
-    `).order("created_at", { ascending: false }).limit(80);
+    `).order("created_at", { ascending: false }).limit(120);
+    if (user) {
+      q = q.or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`);
+    } else {
+      // Signed-out viewers have no personal battles to see.
+      setBattles([]); setLoading(false); return;
+    }
+    const { data } = await q;
     const raw = (data as any[]) || [];
     // Defence-in-depth safety filter: server RLS is the source of truth,
     // but we also drop hidden/removed/declined/cancelled rows and battles
