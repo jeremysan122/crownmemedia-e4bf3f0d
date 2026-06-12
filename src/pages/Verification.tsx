@@ -85,6 +85,57 @@ export default function Verification() {
   const [verifiedAt, setVerifiedAt] = useState<string | null>(null);
   const [verificationCategory, setVerificationCategory] = useState<string | null>(null);
   const [verificationPlan, setVerificationPlan] = useState<Plan | null>(null);
+  // Standard auto-eligibility progress — fetched lazily when the user picks
+  // the free path so we don't waste a round-trip for paid-only users.
+  const [progress, setProgress] = useState<EligibilityProgress | null>(null);
+  const [progressLoading, setProgressLoading] = useState(false);
+  const [claimingStandard, setClaimingStandard] = useState(false);
+
+  const refreshProgress = useCallback(async () => {
+    if (!user) return;
+    setProgressLoading(true);
+    try {
+      const p = await fetchEligibilityProgress(user.id);
+      setProgress(p);
+    } catch (e: any) {
+      console.warn("verification eligibility fetch failed", e);
+    } finally {
+      setProgressLoading(false);
+    }
+  }, [user]);
+
+  // Fetch the progress doc whenever the user lands on the Standard path so
+  // the checklist always reflects current follower / posts counts.
+  useEffect(() => {
+    if (plan === "standard" && user && !progress && !progressLoading) {
+      void refreshProgress();
+    }
+  }, [plan, user, progress, progressLoading, refreshProgress]);
+
+  const claimStandard = async () => {
+    if (!user) return;
+    setClaimingStandard(true);
+    try {
+      const res = await requestStandardVerification();
+      if (res.status === "approved") {
+        toast.success("You're verified! The blue checkmark is live across CrownMe.");
+        setVerified(true);
+        setVerifiedAt(new Date().toISOString());
+        setVerificationPlan("standard");
+      } else if (res.status === "already_verified") {
+        toast.info("You're already verified.");
+        setVerified(true);
+      } else {
+        setProgress(res.progress);
+        toast.error("Not yet eligible — keep building toward each requirement below.");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not submit verification");
+    } finally {
+      setClaimingStandard(false);
+    }
+  };
+
 
   useEffect(() => {
     if (!user) return;
