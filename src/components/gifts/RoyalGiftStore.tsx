@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, TrendingUp, Crown, Send, ShoppingCart, Wallet, Heart, Loader2, MessageCircle } from "lucide-react";
+import { Search, TrendingUp, Crown, Send, ShoppingCart, Wallet, Heart, Loader2, MessageCircle, UserPlus } from "lucide-react";
 import { ROYAL_GIFTS, SHEKEL, formatShekels, shekelToUsd, CATEGORY_TABS, findGift } from "@/lib/gifts";
 import { GiftCategory, RoyalGift } from "@/types/gifts";
 import { useWallet } from "@/hooks/useWallet";
@@ -45,6 +45,7 @@ export default function RoyalGiftStore() {
   const [confirming, setConfirming] = useState(false);
   const [sending, setSending] = useState(false);
   const [dmPickerOpen, setDmPickerOpen] = useState(false);
+  const [followerPickerOpen, setFollowerPickerOpen] = useState(false);
   const [sendingDm, setSendingDm] = useState(false);
   const { pinFront, favorites } = useGiftFavorites();
   const { sendGift, sendDmGift } = useGiftSend();
@@ -300,14 +301,20 @@ export default function RoyalGiftStore() {
                 <div className="grid grid-cols-2 gap-2 w-full">
                   <button
                     onClick={() => {
-                      fxGiftPreview(previewing!.category);
-                      setPreviewing(null);
-                      navigate("/feed");
-                      toast.info("Pick a post to send this gift");
+                      unlockAudio();
+                      if (!previewing) return;
+                      if (wallet.shekelBalance < previewing.shekelCost) {
+                        fxTap(true);
+                        setShowAdd(true);
+                        return;
+                      }
+                      pinFront(previewing.id);
+                      setPendingGift(previewing);
+                      setFollowerPickerOpen(true);
                     }}
                     className="h-11 rounded-full bg-secondary/50 border border-secondary/70 text-foreground font-bold text-xs flex items-center justify-center gap-1.5"
                   >
-                    <Send size={14} /> Send on Feed
+                    <UserPlus size={14} /> Send to Follower
                   </button>
                   <button
                     onClick={() => {
@@ -353,6 +360,28 @@ export default function RoyalGiftStore() {
         giftIcon={pendingGift?.icon}
         onPick={(target) => {
           if (!pendingGift || sendingDm) return;
+          void performSendViaDm(pendingGift, target);
+        }}
+      />
+
+      {/* Send to Follower — same recipient picker, but biases the user's
+          following list to the top so casual gifting from the store is a
+          single tap on a creator you follow. Falls through to username
+          search for anyone outside that list. */}
+      <GiftDmPicker
+        mode="follower"
+        open={followerPickerOpen && !!pendingGift}
+        onOpenChange={(o) => {
+          if (sendingDm) return;
+          setFollowerPickerOpen(o);
+          if (!o) setPendingGift(null);
+        }}
+        giftName={pendingGift?.name ?? ""}
+        giftCost={pendingGift?.shekelCost ?? 0}
+        giftIcon={pendingGift?.icon}
+        onPick={(target) => {
+          if (!pendingGift || sendingDm) return;
+          setFollowerPickerOpen(false);
           void performSendViaDm(pendingGift, target);
         }}
       />

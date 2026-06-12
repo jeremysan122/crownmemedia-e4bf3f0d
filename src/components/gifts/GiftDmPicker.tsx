@@ -35,6 +35,7 @@ export default function GiftDmPicker({
   giftName,
   giftCost,
   giftIcon,
+  mode = "dm",
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -42,6 +43,9 @@ export default function GiftDmPicker({
   giftName: string;
   giftCost: number;
   giftIcon?: string;
+  /** "dm" surfaces recent chats first, "follower" surfaces the user's
+   *  following list first (used by the "Send to Follower" button). */
+  mode?: "dm" | "follower";
 }) {
   const { user } = useAuth();
   const [threads, setThreads] = useState<ThreadRow[]>([]);
@@ -123,8 +127,10 @@ export default function GiftDmPicker({
     const partners = threads.map((t) => t.partner);
     const partnerIds = new Set(partners.map((p) => p.id));
     const extra = following.filter((f) => !partnerIds.has(f.id));
-    return [...partners, ...extra];
-  }, [threads, following, searchResults, query]);
+    // "follower" mode surfaces followed creators first; "dm" mode keeps
+    // recent conversations on top so quick re-sends are one tap.
+    return mode === "follower" ? [...extra, ...partners] : [...partners, ...extra];
+  }, [threads, following, searchResults, query, mode]);
 
   const hasQuery = query.trim().length >= 2;
 
@@ -140,8 +146,12 @@ export default function GiftDmPicker({
           <div className="flex items-center gap-2">
             {giftIcon && <span className="text-2xl" aria-hidden>{giftIcon}</span>}
             <div className="min-w-0">
-              <p className="font-display text-lg text-gold truncate">Send {giftName} via DM</p>
-              <p className="text-xs text-muted-foreground">Costs ₪{giftCost.toLocaleString()} · they'll get a chat + notification</p>
+              <p className="font-display text-lg text-gold truncate">
+                {mode === "follower" ? `Send ${giftName} to a follower` : `Send ${giftName} via DM`}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Costs ₪{giftCost.toLocaleString()} · they'll get a chat + notification
+              </p>
             </div>
           </div>
           <label className="relative block">
@@ -171,17 +181,30 @@ export default function GiftDmPicker({
             </div>
           ) : (
             <>
-              {!hasQuery && threads.length > 0 && (
+              {!hasQuery && mode === "follower" && following.length > 0 && (
+                <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                  <UserPlus size={10} /> People you follow
+                </p>
+              )}
+              {!hasQuery && mode === "dm" && threads.length > 0 && (
                 <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Recent chats</p>
               )}
               {list.map((p, i) => {
-                const isFollowing = !hasQuery && i >= threads.length;
+                const followerStart = mode === "follower" ? 0 : threads.length;
+                const dmFollowerStart = threads.length;
+                const showFollowDivider =
+                  !hasQuery && mode === "dm" && i === dmFollowerStart && following.length > 0;
+                const showChatDivider =
+                  !hasQuery && mode === "follower" && i === following.length && threads.length > 0;
                 return (
                   <div key={p.id}>
-                    {isFollowing && i === threads.length && (
+                    {showFollowDivider && (
                       <p className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                         <UserPlus size={10} /> People you follow
                       </p>
+                    )}
+                    {showChatDivider && (
+                      <p className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Recent chats</p>
                     )}
                     <button
                       type="button"
@@ -207,7 +230,12 @@ export default function GiftDmPicker({
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold truncate">{p.displayName || p.username}</p>
+                        <p className="text-sm font-semibold truncate flex items-center gap-1">
+                          <span className="truncate">{p.displayName || p.username}</span>
+                          {p.verified && (
+                            <span className="inline-flex shrink-0 size-3.5 rounded-full bg-sky-500 text-white items-center justify-center text-[9px] font-black" aria-label="Verified">✓</span>
+                          )}
+                        </p>
                         <p className="text-xs text-muted-foreground truncate">@{p.username}</p>
                       </div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-primary opacity-80">Send →</span>
