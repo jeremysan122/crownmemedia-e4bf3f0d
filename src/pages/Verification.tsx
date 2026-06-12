@@ -467,54 +467,61 @@ export default function Verification() {
           </Button>
         )}
 
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="v-legal">Legal name *</Label>
-            <Input id="v-legal" value={legalName} onChange={(e) => setLegalName(e.target.value)} maxLength={120} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="v-cat">Category *</Label>
-            <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
-              <SelectTrigger id="v-cat"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(CATEGORY_LABEL).map(([k, l]) => (
-                  <SelectItem key={k} value={k}>{l}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {(category === "brand" || category === "business") && (
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="v-brand">Brand / business name *</Label>
-              <Input id="v-brand" value={brandName} onChange={(e) => setBrandName(e.target.value)} maxLength={120} />
+        {/* Manual review form — only the paid Subscription path uses this.
+            Standard is auto-approved via the checklist above and doesn't
+            require ID/selfie/business documents. */}
+        {plan === "subscription" && (
+          <>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="v-legal">Legal name *</Label>
+                <Input id="v-legal" value={legalName} onChange={(e) => setLegalName(e.target.value)} maxLength={120} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="v-cat">Category *</Label>
+                <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
+                  <SelectTrigger id="v-cat"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(CATEGORY_LABEL).map(([k, l]) => (
+                      <SelectItem key={k} value={k}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(category === "brand" || category === "business") && (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="v-brand">Brand / business name *</Label>
+                  <Input id="v-brand" value={brandName} onChange={(e) => setBrandName(e.target.value)} maxLength={120} />
+                </div>
+              )}
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="v-web">Official website (optional)</Label>
+                <Input id="v-web" type="url" placeholder="https://" value={website} onChange={(e) => setWebsite(e.target.value)} />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="v-fol">Total external followers (across platforms)</Label>
+                <Input id="v-fol" type="number" min={0} value={followerCount} onChange={(e) => setFollowerCount(e.target.value)} placeholder="e.g. 250000" />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="v-reason">Why should you be verified? *</Label>
+                <Textarea id="v-reason" rows={4} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Tell us about your audience, your work, and any notable mentions or accomplishments." maxLength={1000} />
+              </div>
             </div>
-          )}
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="v-web">Official website (optional)</Label>
-            <Input id="v-web" type="url" placeholder="https://" value={website} onChange={(e) => setWebsite(e.target.value)} />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="v-fol">Total external followers (across platforms)</Label>
-            <Input id="v-fol" type="number" min={0} value={followerCount} onChange={(e) => setFollowerCount(e.target.value)} placeholder="e.g. 250000" />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="v-reason">Why should you be verified? *</Label>
-            <Textarea id="v-reason" rows={4} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Tell us about your audience, your work, and any notable mentions or accomplishments." maxLength={1000} />
-          </div>
-        </div>
 
-        <div className="grid sm:grid-cols-3 gap-4 pt-2">
-          <FileSlot label="Government ID *" file={idFile} onFile={setIdFile} accept="image/*,application/pdf" />
-          <FileSlot label="Live selfie *" file={selfieFile} onFile={setSelfieFile} accept="image/*" capture />
-          {(category === "brand" || category === "business") && (
-            <FileSlot label="Business document *" file={bizFile} onFile={setBizFile} accept="image/*,application/pdf" />
-          )}
-        </div>
+            <div className="grid sm:grid-cols-3 gap-4 pt-2">
+              <FileSlot label="Government ID *" file={idFile} onFile={setIdFile} accept="image/*,application/pdf" />
+              <FileSlot label="Live selfie *" file={selfieFile} onFile={setSelfieFile} accept="image/*" capture />
+              {(category === "brand" || category === "business") && (
+                <FileSlot label="Business document *" file={bizFile} onFile={setBizFile} accept="image/*,application/pdf" />
+              )}
+            </div>
 
-        <Button onClick={submit} disabled={submitting || !legalName || !reason || !idFile || !selfieFile} size="lg" className="w-full">
-          {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting…</> : "Submit verification request"}
-        </Button>
-        <p className="text-xs text-muted-foreground">Your documents are stored privately and visible only to CrownMe trust & safety reviewers.</p>
+            <Button onClick={submit} disabled={submitting || !legalName || !reason || !idFile || !selfieFile} size="lg" className="w-full">
+              {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting…</> : "Submit verification request"}
+            </Button>
+            <p className="text-xs text-muted-foreground">Your documents are stored privately and visible only to CrownMe trust & safety reviewers.</p>
+          </>
+        )}
       </Card>
     </div>
   );
