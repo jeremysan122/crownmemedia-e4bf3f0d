@@ -52,6 +52,8 @@ type Msg = {
   kind?: string | null;
   gift_transaction_id?: string | null;
   gift_seen_at?: string | null;
+  shared_post_id?: string | null;
+  shared_profile_id?: string | null;
   _pending?: boolean;
   _failed?: boolean;
 };
