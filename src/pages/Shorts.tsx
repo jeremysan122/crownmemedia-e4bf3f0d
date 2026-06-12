@@ -82,15 +82,27 @@ export default function Shorts() {
   }, [sensitiveMode, user?.id]);
 
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
+  const loadInitial = useCallback(async () => {
+    setLoadError(null);
+    try {
       const first = await loadPage();
       setItems(first);
       setEndReached(first.length < PAGE_SIZE);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Couldn't load scrolls");
+    } finally {
       setLoading(false);
-    })();
+      setRetrying(false);
+    }
   }, [loadPage]);
+
+  useEffect(() => {
+    setLoading(true);
+    void loadInitial();
+  }, [loadInitial]);
+
+  // Preserve scroll position when returning from a post detail / comments.
+  useScrollRestoration("shorts:feed", containerRef, { ready: !loading && items.length > 0 });
 
   useEffect(() => { trackUsage("scrolls_opened"); }, []);
 
