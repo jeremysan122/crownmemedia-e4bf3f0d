@@ -534,7 +534,7 @@ export default function Profile() {
               )}
             </div>
             {reframing && (
-              <div className="absolute bottom-2 left-2 right-2 flex items-center gap-2 glass rounded-full px-3 py-1.5">
+              <div className="absolute bottom-2 left-24 right-2 lg:left-40 flex items-center gap-2 glass rounded-full px-3 py-1.5">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Reframe</span>
                 <input
                   type="range"
