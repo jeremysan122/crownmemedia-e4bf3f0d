@@ -93,7 +93,7 @@ export default function SharedPostMessage({ kind, postId, profileId, body, mine 
       );
     }
     const p = post!;
-    const isVid = isScroll({ content_type: p.content_type, video_url: p.video_url });
+    const isVid = isScroll({ content_type: p.content_type, media_type: p.video_url ? "video" : null });
     return (
       <Link to={`/p/${p.id}`} className={`${wrapBase} block w-64`}>
         <div className="aspect-square bg-muted relative">
