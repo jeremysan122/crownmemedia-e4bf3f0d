@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Swords, Crown, Search, Share2, Trophy, Sparkles, Clock, MapPin, Check, X, Loader2, Flame, Lock,
+  Swords, Crown, Search, Share2, Sparkles, Clock, MapPin, Check, Loader2, Flame, Lock, RotateCw,
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -28,6 +28,19 @@ import { isSafeBattleForList } from "@/lib/battlesLogic";
 import { invalidateOfficialResult } from "@/hooks/useOfficialBattleResult";
 import { Play } from "lucide-react";
 import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
+import {
+  appendDedup,
+  emptyPerTab,
+  loadPersistedState,
+  nextCursor,
+  PAGE_SIZE,
+  savePersistedState,
+  tabPredicate,
+  TAB_KEYS,
+  type BattleCursor,
+  type PersistedTabState,
+  type TabKey,
+} from "@/lib/battlesPagination";
 
 interface Battle {
   id: string;
@@ -63,6 +76,17 @@ function CountdownPill({ endsAt }: { endsAt: string }) {
   );
 }
 
+const SELECT_COLS = `*,
+  challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url),
+  opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url),
+  challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country, main_category_slug, subcategory_slug),
+  opponent_post:posts!battles_opponent_post_id_fkey(image_url, category)
+`;
+
+/** Max server pages to chain inside one Load More click before yielding back
+ * to the user (avoids walking the whole table when a tab's predicate matches rarely). */
+const MAX_AUTO_CHAIN = 4;
+
 export default function Battles() {
   useSeoMeta({
     title: "Battles · CrownMe",
@@ -72,31 +96,41 @@ export default function Battles() {
   const { user } = useAuth();
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
-  const [battles, setBattles] = useState<Battle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [myVotes, setMyVotes] = useState<Record<string, string>>({}); // battleId -> votedFor
+
+  // ---- Filters (search/sort/category/region/hub/topic) ----
   const [query, setQuery] = useState(params.get("q") || "");
   const [region, setRegion] = useState<string>(params.get("region") || "all");
   const [category, setCategory] = useState<string>(params.get("category") || "all");
   const [sort, setSort] = useState<string>(params.get("sort") || "hot");
-  const [tab, setTab] = useState(params.get("tab") || "active");
+  const [tab, setTab] = useState<TabKey>(((params.get("tab") as TabKey) || "active"));
   const [hub, setHub] = useState<string>(params.get("hub") || "all");
   const [topic, setTopic] = useState<string>(params.get("topic") || "all");
   const [mains, setMains] = useState<MainCategory[]>([]);
   const [subs, setSubs] = useState<Subcategory[]>([]);
+
+  // ---- Per-tab pagination state (stable keyset cursor) ----
+  const [perTab, setPerTab] = useState<Record<TabKey, PersistedTabState<Battle>>>(() => emptyPerTab<Battle>());
+  const [tabLoading, setTabLoading] = useState<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false });
+  const [tabError, setTabError] = useState<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false });
+  // Tracks in-flight load() calls per tab so rapid double-clicks coalesce instead of duplicating fetches.
+  const inFlightLoad = useRef<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false });
+  const [initialHydrating, setInitialHydrating] = useState(true);
+  const restoredRef = useRef(false);
+
+  // ---- Other UI state ----
+  const [myVotes, setMyVotes] = useState<Record<string, string>>({});
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [acceptBattle, setAcceptBattle] = useState<Battle | null>(null);
   const [shareBattle, setShareBattle] = useState<Battle | null>(null);
-  const [burstMap, setBurstMap] = useState<Record<string, string>>({}); // battleId -> side voted
+  const [burstMap, setBurstMap] = useState<Record<string, string>>({});
   const burstTimers = useRef<Record<string, any>>({});
-  const [freshWins, setFreshWins] = useState<Set<string>>(new Set()); // battles that just completed in this session
+  const [freshWins, setFreshWins] = useState<Set<string>>(new Set());
   const prevStatusRef = useRef<Record<string, { status: string; winner: string | null }>>({});
-  /** Prevents a rapid double-tap from optimistically incrementing twice before the insert resolves. */
   const inFlightVotes = useRef<Set<string>>(new Set());
-  /** Battles currently submitting a vote — drives the spinner + disabled state on the vote button. */
   const [submittingVotes, setSubmittingVotes] = useState<Set<string>>(new Set());
-  /** Set of user_ids the viewer has blocked. Battles involving any blocked user are filtered out. */
   const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+  // Scroll restoration — capture pending scrollY across hydration so we can apply it after the first render with rows.
+  const pendingScrollY = useRef<number | null>(null);
 
   useEffect(() => {
     if (!user) { setBlockedIds(new Set()); return; }
@@ -106,66 +140,194 @@ export default function Battles() {
     })();
   }, [user?.id]);
 
-
-  const load = async () => {
-    setLoading(true);
-    // Personal tabs (Active/Pending/Mine/Past) only ever show battles the
-    // signed-in user is part of. Scope server-side so the page never even
-    // receives unrelated public battles — RLS still enforces this, but
-    // this also keeps payload small and avoids leaking via cache.
-    let q = supabase.from("battles").select(`*,
-      challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url),
-      opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url),
-      challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country, main_category_slug, subcategory_slug),
-      opponent_post:posts!battles_opponent_post_id_fkey(image_url, category)
-    `).order("created_at", { ascending: false }).limit(120);
-    if (user) {
-      q = q.or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`);
-    } else {
-      // Signed-out viewers have no personal battles to see.
-      setBattles([]); setLoading(false); return;
+  // ---- Fetch one page for a specific tab using its own cursor ----
+  // All four tabs share the same underlying user-scoped server ordering
+  // (`(challenger_id=me OR opponent_id=me) ORDER BY created_at DESC, id DESC`)
+  // but maintain independent cursors so paginating one tab never moves
+  // another tab's pointer. Each fetched row is routed via `tabPredicate`
+  // into the requesting tab; rows that belong to other tabs are discarded
+  // for this call (those tabs fetch their own pages with their own cursor).
+  const fetchPage = useCallback(async (forTab: TabKey, cursor: BattleCursor | null): Promise<{
+    rows: Battle[]; nextCur: BattleCursor | null; exhausted: boolean;
+  }> => {
+    if (!user) return { rows: [], nextCur: null, exhausted: true };
+    let q = supabase
+      .from("battles")
+      .select(SELECT_COLS)
+      .or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(PAGE_SIZE);
+    if (cursor) {
+      // Strict keyset: created_at < cur.createdAt OR (created_at = cur.createdAt AND id < cur.id)
+      q = q.or(
+        `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
+      );
     }
-    const { data } = await q;
+    const { data, error } = await q;
+    if (error) throw error;
     const raw = (data as any[]) || [];
-    // Defence-in-depth safety filter: server RLS is the source of truth,
-    // but we also drop hidden/removed/declined/cancelled rows and battles
-    // involving any blocked user before they reach the render layer.
-    const arr = raw.filter((b) => isSafeBattleForList(b as any, { blockedIds }));
+    // Defence-in-depth safety filter — RLS is the source of truth, but we
+    // also drop hidden/removed/declined/cancelled rows and blocked users
+    // before they reach state, even after rehydration from sessionStorage.
+    const safe = raw.filter((b) => isSafeBattleForList(b as any, { blockedIds }));
+    const nowMs = Date.now();
+    const matched = safe.filter((b) => tabPredicate(forTab, b as any, user.id, nowMs)) as Battle[];
+    const cur = nextCursor(raw, PAGE_SIZE);
+    return { rows: matched, nextCur: cur, exhausted: cur === null };
+  }, [user?.id, blockedIds]);
 
-    // Detect freshly-completed battles (compared to last snapshot)
-    const newly = new Set(freshWins);
-    arr.forEach((b: any) => {
-      const prev = prevStatusRef.current[b.id];
-      if (prev && prev.status !== "completed" && b.status === "completed" && b.winner_id) {
-        newly.add(b.id);
-        // A battle just transitioned to ended — drop any cached official
-        // result so the next render fetches the authoritative version.
-        invalidateOfficialResult(b.id);
+  // Load (initial or "load more") for a tab. Coalesces concurrent calls,
+  // chains up to MAX_AUTO_CHAIN server pages when the tab predicate matches
+  // nothing on the first page (so users don't see an idle Load More button
+  // that "did nothing" when most of their battles are e.g. all Past).
+  const loadTab = useCallback(async (forTab: TabKey, opts: { reset?: boolean } = {}) => {
+    if (!user) return;
+    if (inFlightLoad.current[forTab]) return;
+    inFlightLoad.current[forTab] = true;
+    setTabLoading((s) => ({ ...s, [forTab]: true }));
+    setTabError((s) => ({ ...s, [forTab]: false }));
+    try {
+      let cursor = opts.reset ? null : perTab[forTab].cursor;
+      let appendedCount = 0;
+      let exhausted = false;
+      let workingRows: Battle[] = opts.reset ? [] : perTab[forTab].rows;
+      for (let i = 0; i < MAX_AUTO_CHAIN; i++) {
+        const { rows, nextCur, exhausted: ex } = await fetchPage(forTab, cursor);
+        const { merged } = appendDedup(workingRows, rows);
+        appendedCount += merged.length - workingRows.length;
+        workingRows = merged;
+        cursor = nextCur;
+        exhausted = ex;
+        if (ex) break;
+        if (appendedCount > 0) break; // got at least one usable row → yield to user
       }
-      prevStatusRef.current[b.id] = { status: b.status, winner: b.winner_id };
-    });
-    if (newly.size !== freshWins.size) setFreshWins(newly);
+      setPerTab((s) => ({
+        ...s,
+        [forTab]: { rows: workingRows, cursor, exhausted },
+      }));
 
-    setBattles(arr);
-    setLoading(false);
-
-
-    if (user) {
-      const ids = arr.map((b: any) => b.id);
-      if (ids.length) {
-        const { data: votes } = await supabase.from("battle_votes")
-          .select("battle_id, voted_for_user_id").eq("user_id", user.id).in("battle_id", ids);
-        const map: Record<string, string> = {};
-        (votes || []).forEach((v: any) => { map[v.battle_id] = v.voted_for_user_id; });
-        setMyVotes(map);
+      // Hydrate votes for newly-loaded battles only.
+      const newIds = workingRows.slice(opts.reset ? 0 : perTab[forTab].rows.length).map((b) => b.id);
+      if (newIds.length) {
+        const { data: votes } = await supabase
+          .from("battle_votes")
+          .select("battle_id, voted_for_user_id")
+          .eq("user_id", user.id)
+          .in("battle_id", newIds);
+        if (votes && votes.length) {
+          setMyVotes((m) => {
+            const next = { ...m };
+            (votes as any[]).forEach((v) => { next[v.battle_id] = v.voted_for_user_id; });
+            return next;
+          });
+        }
       }
+    } catch (e) {
+      console.error("[battles] loadTab failed", forTab, e);
+      setTabError((s) => ({ ...s, [forTab]: true }));
+    } finally {
+      inFlightLoad.current[forTab] = false;
+      setTabLoading((s) => ({ ...s, [forTab]: false }));
     }
-  };
+  }, [user?.id, perTab, fetchPage]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id, blockedIds]);
+  // ---- Initial mount: restore from sessionStorage or fetch fresh ----
+  useEffect(() => {
+    if (!user) { setInitialHydrating(false); return; }
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    const restored = loadPersistedState<Battle>(user.id);
+    if (restored) {
+      setTab(restored.tab);
+      setQuery(restored.filters.query);
+      setRegion(restored.filters.region);
+      setCategory(restored.filters.category);
+      setSort(restored.filters.sort);
+      setHub(restored.filters.hub);
+      setTopic(restored.filters.topic);
+      // Re-apply safety filter on rehydrated rows so a row that became
+      // unsafe while the user was away can never re-appear from cache.
+      const filtered: Record<TabKey, PersistedTabState<Battle>> = emptyPerTab<Battle>();
+      for (const k of TAB_KEYS) {
+        const t = restored.perTab[k];
+        filtered[k] = {
+          rows: t.rows.filter((b) => isSafeBattleForList(b as any, { blockedIds })),
+          cursor: t.cursor,
+          exhausted: t.exhausted,
+        };
+      }
+      setPerTab(filtered);
+      pendingScrollY.current = restored.scrollY;
+      setInitialHydrating(false);
+    } else {
+      setInitialHydrating(false);
+      // Fresh load for the initial tab.
+      const initial = (params.get("tab") as TabKey) || "active";
+      void loadTab(initial, { reset: true });
+    }
+  }, [user?.id]);
+
+  // ---- Auto-load the active tab the first time it's viewed ----
+  useEffect(() => {
+    if (initialHydrating || !user) return;
+    const t = perTab[tab];
+    if (t.rows.length === 0 && !t.exhausted && !tabLoading[tab] && !tabError[tab]) {
+      void loadTab(tab, { reset: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, user?.id, initialHydrating]);
+
   useEffect(() => { fetchMainCategories().then(setMains); fetchSubcategories().then(setSubs); }, []);
 
-  // Sync filters to URL (shareable deep links)
+  // ---- Apply scroll restoration once rows are on screen ----
+  useEffect(() => {
+    if (pendingScrollY.current == null) return;
+    if (perTab[tab].rows.length === 0) return;
+    const y = pendingScrollY.current;
+    pendingScrollY.current = null;
+    requestAnimationFrame(() => window.scrollTo({ top: y, behavior: "auto" }));
+  }, [tab, perTab]);
+
+  // ---- Persist state on every meaningful change (debounced) ----
+  useEffect(() => {
+    if (!user || initialHydrating) return;
+    const handle = window.setTimeout(() => {
+      savePersistedState<Battle>({
+        savedAt: Date.now(),
+        viewerId: user.id,
+        tab,
+        filters: { query, region, category, sort, hub, topic },
+        perTab,
+        scrollY: window.scrollY,
+      });
+    }, 200);
+    return () => window.clearTimeout(handle);
+  }, [user?.id, initialHydrating, tab, query, region, category, sort, hub, topic, perTab]);
+
+  // ---- Save scroll position before navigating away ----
+  useEffect(() => {
+    if (!user) return;
+    const save = () => {
+      savePersistedState<Battle>({
+        savedAt: Date.now(),
+        viewerId: user.id,
+        tab,
+        filters: { query, region, category, sort, hub, topic },
+        perTab,
+        scrollY: window.scrollY,
+      });
+    };
+    window.addEventListener("pagehide", save);
+    document.addEventListener("visibilitychange", save);
+    return () => {
+      save();
+      window.removeEventListener("pagehide", save);
+      document.removeEventListener("visibilitychange", save);
+    };
+  }, [user?.id, tab, query, region, category, sort, hub, topic, perTab]);
+
+  // ---- URL sync for shareable deep links ----
   useEffect(() => {
     const next = new URLSearchParams(params);
     const setOrDel = (k: string, v: string, def: string) => {
@@ -184,54 +346,71 @@ export default function Battles() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, region, category, sort, query, hub, topic]);
 
-  // Realtime subscription on battles + battle_votes.
-  // - battles UPDATE: surgical merge of payload.new into the existing row (no full reload),
-  //   and detect a fresh status transition into "completed" so WinnerReveal fires confetti live.
-  // - battles INSERT: prepend the new row (kept light — full hydration of related profiles/posts
-  //   comes from a background load so the row is not stuck without media).
-  // - battles DELETE: remove the row.
-  // - battle_votes INSERT: merge +1 onto the relevant side, but ignore the voter's own event
-  //   because vote() already applied the optimistic increment (avoids +2 double-count).
+  // ---- Realtime: mutate any matching row across every tab's loaded rows ----
+  const updateRowEverywhere = useCallback((id: string, patch: (b: Battle) => Battle) => {
+    setPerTab((s) => {
+      const next = { ...s };
+      for (const k of TAB_KEYS) {
+        const idx = next[k].rows.findIndex((b) => b.id === id);
+        if (idx >= 0) {
+          const rows = next[k].rows.slice();
+          rows[idx] = patch(rows[idx]);
+          next[k] = { ...next[k], rows };
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  const removeRowEverywhere = useCallback((id: string) => {
+    setPerTab((s) => {
+      const next = { ...s };
+      for (const k of TAB_KEYS) {
+        if (next[k].rows.some((b) => b.id === id)) {
+          next[k] = { ...next[k], rows: next[k].rows.filter((b) => b.id !== id) };
+        }
+      }
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
+    if (!user) return;
     const ch = supabase.channel("battles-live")
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "battles" }, (payload: any) => {
         const row = payload.new as Battle;
-        setBattles((prev) => prev.map((b) => b.id === row.id ? { ...b, ...row } : b));
+        updateRowEverywhere(row.id, (b) => ({ ...b, ...row }));
         const prev = prevStatusRef.current[row.id];
         if (prev && prev.status !== "completed" && row.status === "completed" && row.winner_id) {
           setFreshWins((s) => { const n = new Set(s); n.add(row.id); return n; });
         }
-        // Any moderation flip, status change, or winner change invalidates
-        // the cached official result for that battle.
         invalidateOfficialResult(row.id);
         prevStatusRef.current[row.id] = { status: row.status, winner: row.winner_id };
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "battles" }, () => {
-        // New battles need related profiles/posts joined — a single targeted reload is cheaper
-        // and rarer than an UPDATE flood, and it avoids rendering a row with null relations.
-        load();
+        // A brand-new battle was created. Refresh the current tab from cursor=null
+        // so it can land at the top without breaking other tabs' cursors.
+        void loadTab(tab, { reset: true });
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "battles" }, (payload: any) => {
         const id = (payload.old as { id?: string } | null)?.id;
-        if (id) setBattles((prev) => prev.filter((b) => b.id !== id));
+        if (id) removeRowEverywhere(id);
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "battle_votes" }, (payload: any) => {
-        // Skip the voter's own event — vote() already applied an optimistic increment.
         if (user && payload.new.user_id === user.id) return;
-        setBattles((prev) => prev.map((b) => {
-          if (b.id !== payload.new.battle_id) return b;
+        updateRowEverywhere(payload.new.battle_id, (b) => {
           const isC = payload.new.voted_for_user_id === b.challenger_id;
           return {
             ...b,
             challenger_votes: b.challenger_votes + (isC ? 1 : 0),
             opponent_votes: b.opponent_votes + (isC ? 0 : 1),
           };
-        }));
+        });
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, tab]);
 
   const triggerBurst = (battleId: string, side: string) => {
     setBurstMap((m) => ({ ...m, [battleId]: side }));
@@ -260,28 +439,21 @@ export default function Battles() {
       toast.info("Can't vote in your own battle"); return;
     }
 
-    // Guard against rapid double-tap / multi-tab race: drop subsequent calls
-    // until this vote resolves. The server-side UNIQUE(battle_id, user_id) is
-    // the source of truth — this is just to keep the UI from racing itself.
     if (inFlightVotes.current.has(b.id)) return;
     inFlightVotes.current.add(b.id);
     setSubmittingVotes((s) => { const n = new Set(s); n.add(b.id); return n; });
     void trackEvent("battle_vote_started", { metadata: { battle_id: b.id } });
 
-    // optimistic + haptic confirm
     haptic("success");
     const isC = forUserId === b.challenger_id;
     setMyVotes((m) => ({ ...m, [b.id]: forUserId }));
-    setBattles((prev) => prev.map((x) => x.id === b.id ? {
+    updateRowEverywhere(b.id, (x) => ({
       ...x,
       challenger_votes: x.challenger_votes + (isC ? 1 : 0),
       opponent_votes: x.opponent_votes + (isC ? 0 : 1),
-    } : x));
+    }));
     triggerBurst(b.id, isC ? "L" : "R");
 
-    // Idempotent insert: if a concurrent tab already wrote the same vote,
-    // the unique-key conflict is silently ignored instead of surfacing as
-    // a duplicate-key error. The optimistic UI stays in place.
     const { error } = await supabase
       .from("battle_votes")
       .upsert(
@@ -292,25 +464,20 @@ export default function Battles() {
     setSubmittingVotes((s) => { const n = new Set(s); n.delete(b.id); return n; });
 
     if (error) {
-      // True failure (network, RLS, etc.) — rollback optimistic state.
       haptic("error");
       setMyVotes((m) => { const { [b.id]: _, ...rest } = m; return rest; });
-      setBattles((prev) => prev.map((x) => x.id === b.id ? {
+      updateRowEverywhere(b.id, (x) => ({
         ...x,
         challenger_votes: x.challenger_votes - (isC ? 1 : 0),
         opponent_votes: x.opponent_votes - (isC ? 0 : 1),
-      } : x));
+      }));
       void trackEvent("battle_vote_failed", { metadata: { battle_id: b.id } });
-      // Never surface raw SQL/RLS text to the user.
       toast.error("Couldn't record your vote. Tap to retry.", {
         action: { label: "Retry", onClick: () => void vote(b, forUserId) },
       });
     } else {
       void trackEvent("battle_vote_success", { metadata: { battle_id: b.id, side: isC ? "challenger" : "opponent" } });
       toast.success("Vote cast 👑");
-      // Reconcile with the authoritative server counts so the displayed
-      // totals match what other voters wrote concurrently, instead of
-      // trusting our optimistic +1 alone.
       (async () => {
         const { data: srv } = await supabase
           .from("battles")
@@ -318,26 +485,25 @@ export default function Battles() {
           .eq("id", b.id)
           .maybeSingle();
         if (srv) {
-          setBattles((prev) => prev.map((x) => x.id === b.id ? { ...x, ...srv } : x));
+          updateRowEverywhere(b.id, (x) => ({ ...x, ...srv } as Battle));
           invalidateOfficialResult(b.id);
         }
       })();
     }
   };
 
-  /** Replays the winner reveal animation (confetti + glow) for a completed battle. */
   const replayReveal = (battleId: string) => {
     haptic("medium");
-    // Remove first so React unmounts WinnerReveal, then re-add to retrigger fresh=true effect.
     setFreshWins((s) => { const next = new Set(s); next.delete(battleId); return next; });
     setTimeout(() => {
       setFreshWins((s) => { const next = new Set(s); next.add(battleId); return next; });
     }, 60);
   };
 
-  // Filtering + sorting
-  const filteredAll = useMemo(() => {
-    let arr = battles.slice();
+  // ---- Post-filter and sort the *current tab's* loaded rows ----
+  const currentRows = perTab[tab].rows;
+  const filteredCurrent = useMemo(() => {
+    let arr = currentRows.slice();
     const q = query.trim().toLowerCase();
     if (q) {
       arr = arr.filter((b) => {
@@ -352,16 +518,6 @@ export default function Battles() {
     if (category !== "all") arr = arr.filter((b) => b.challenger_post?.category === category);
     if (hub !== "all") arr = arr.filter((b) => b.challenger_post?.main_category_slug === hub);
     if (topic !== "all") arr = arr.filter((b) => b.challenger_post?.subcategory_slug === topic);
-    if (sort === "competitive") {
-      arr.sort((a, b) => {
-        const ta = a.challenger_votes + a.opponent_votes;
-        const tb = b.challenger_votes + b.opponent_votes;
-        const ma = Math.abs(a.challenger_votes - a.opponent_votes) / Math.max(ta, 1);
-        const mb = Math.abs(b.challenger_votes - b.opponent_votes) / Math.max(tb, 1);
-        // Smaller margin first, then more votes
-        return ma - mb || tb - ta;
-      });
-    }
     if (region !== "all") {
       arr = arr.filter((b) => {
         const p = b.challenger_post;
@@ -371,53 +527,41 @@ export default function Battles() {
         return !!f;
       });
     }
-    if (sort === "hot") arr.sort((a, b) => (b.challenger_votes + b.opponent_votes) - (a.challenger_votes + a.opponent_votes));
-    else if (sort === "newest") arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    else if (sort === "ending") arr.sort((a, b) => (new Date(a.ends_at || 0).getTime() || Infinity) - (new Date(b.ends_at || 0).getTime() || Infinity));
-    else if (sort === "votes") arr.sort((a, b) => (b.challenger_votes + b.opponent_votes) - (a.challenger_votes + a.opponent_votes));
+    if (sort === "competitive") {
+      arr.sort((a, b) => {
+        const ta = a.challenger_votes + a.opponent_votes;
+        const tb = b.challenger_votes + b.opponent_votes;
+        const ma = Math.abs(a.challenger_votes - a.opponent_votes) / Math.max(ta, 1);
+        const mb = Math.abs(b.challenger_votes - b.opponent_votes) / Math.max(tb, 1);
+        return ma - mb || tb - ta;
+      });
+    } else if (sort === "hot" || sort === "votes") {
+      arr.sort((a, b) => (b.challenger_votes + b.opponent_votes) - (a.challenger_votes + a.opponent_votes));
+    } else if (sort === "newest") {
+      arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    } else if (sort === "ending") {
+      arr.sort((a, b) => (new Date(a.ends_at || 0).getTime() || Infinity) - (new Date(b.ends_at || 0).getTime() || Infinity));
+    }
     return arr;
-  }, [battles, query, category, region, sort, user, hub, topic]);
+  }, [currentRows, query, category, region, sort, hub, topic]);
 
-  // A battle is "done" if it's marked completed OR its end time has passed
-  // (covers the small window before the backend flips status).
   const now = Date.now();
-  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
   const isEnded = (b: Battle) =>
     b.status === "completed" || b.status === "declined" || b.status === "cancelled" ||
     (!!b.ends_at && new Date(b.ends_at).getTime() <= now);
-  // Scope: a battle "belongs to" the signed-in user when they are challenger or opponent.
-  // Personal tabs (Active/Pending/Mine/Past) NEVER show battles the viewer isn't part of.
-  const isMine = (b: Battle) => !!user && (b.challenger_id === user.id || b.opponent_id === user.id);
-  const battleTimeMs = (b: Battle) => {
-    const t = b.ends_at ? new Date(b.ends_at).getTime() : 0;
-    return Number.isFinite(t) && t > 0 ? t : new Date(b.created_at).getTime();
-  };
-  const active = filteredAll.filter((b) => isMine(b) && b.status === "active" && !isEnded(b));
-  // Pending = anything connected to me that hasn't started yet: pending invites I owe a
-  // response on, plus any pending battle I created and am awaiting acceptance for.
-  const pendingForMe = filteredAll.filter((b) => isMine(b) && b.status === "pending");
-  // Mine = my battles from the last 30 days, any status, newest first.
-  const mine = filteredAll
-    .filter((b) => isMine(b) && (now - battleTimeMs(b)) <= THIRTY_DAYS_MS)
-    .slice()
-    .sort((a, b) => battleTimeMs(b) - battleTimeMs(a));
-  // Past = my ended battles older than 30 days.
-  const done = filteredAll
-    .filter((b) => isMine(b) && isEnded(b) && (now - battleTimeMs(b)) > THIRTY_DAYS_MS)
-    .slice()
-    .sort((a, b) => battleTimeMs(b) - battleTimeMs(a));
 
-  const featured = active[0];
+  const activeRows = tab === "active" ? filteredCurrent : [];
+  const featured = activeRows[0];
 
   // Deep link ?b=xxx → scroll/highlight
   useEffect(() => {
     const id = params.get("b");
-    if (id && battles.some((b) => b.id === id)) {
+    if (id && currentRows.some((b) => b.id === id)) {
       setTimeout(() => {
         document.getElementById(`battle-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 200);
     }
-  }, [params, battles]);
+  }, [params, currentRows]);
 
   const Card = ({ b, live, featured: feat = false }: { b: Battle; live: boolean; featured?: boolean }) => {
     const total = b.challenger_votes + b.opponent_votes || 1;
@@ -497,7 +641,6 @@ export default function Battles() {
         </button>
       );
 
-      // Wrap in tooltip when user already voted, to show which side they backed
       if (myVote) {
         return (
           <Tooltip>
@@ -513,7 +656,6 @@ export default function Battles() {
 
     return (
       <div id={`battle-${b.id}`} className={`royal-card overflow-hidden animate-fade-in ${feat ? "border-primary/40 gold-shadow" : ""}`}>
-        {/* Top meta strip */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 text-[10px]">
           <div className="flex items-center gap-2 min-w-0">
             {cat && (
@@ -530,8 +672,6 @@ export default function Battles() {
           <div className="flex items-center gap-2 shrink-0">
             {isPending && <span className="text-[10px] uppercase font-bold text-accent">Pending</span>}
             {b.status === "active" && b.ends_at && <CountdownPill endsAt={b.ends_at} />}
-            {/* Authoritative ended-battle result (RPC) — replaces client-side winner_id reliance.
-                Renders winner / tie / no-winner / loading / retry. Only enabled for ended battles. */}
             <OfficialResultBadge
               battleId={b.id}
               enabled={!live}
@@ -551,7 +691,6 @@ export default function Battles() {
             </div>
           </div>
 
-          {/* WON / LOST / DRAW banner — only for ended battles */}
           {(() => {
             if (!isEnded(b)) return null;
             const isParticipantUser = !!user && (user.id === b.challenger_id || user.id === b.opponent_id);
@@ -583,14 +722,11 @@ export default function Battles() {
           })()}
         </div>
 
-
-        {/* Vote bar */}
         <div className="h-1.5 bg-muted/40 flex">
           <div className="bg-gradient-gold transition-all duration-500" style={{ width: `${cPct}%` }} />
           <div className="bg-accent/70 transition-all duration-500" style={{ width: `${oPct}%` }} />
         </div>
 
-        {/* Action row */}
         <div className="p-2 flex items-center justify-between gap-2">
           <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
             <Flame size={10} /> {b.challenger_votes + b.opponent_votes} votes
@@ -633,6 +769,77 @@ export default function Battles() {
     </div>
   );
 
+  /**
+   * Bottom-of-list pagination controls: loading spinner, retry on failure,
+   * or "No more battles". Layout reserves a fixed minimum height so the
+   * page doesn't jump while loading more.
+   */
+  const PaginationFooter = ({ forTab }: { forTab: TabKey }) => {
+    const t = perTab[forTab];
+    const loading = tabLoading[forTab];
+    const error = tabError[forTab];
+    if (t.rows.length === 0) return null;
+    return (
+      <div className="min-h-[56px] flex items-center justify-center mt-4">
+        {loading && (
+          <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 size={14} className="animate-spin" /> Loading more battles…
+          </div>
+        )}
+        {!loading && error && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void loadTab(forTab)}
+            className="text-xs"
+            aria-label="Retry loading more battles"
+          >
+            <RotateCw size={12} /> Couldn't load — Retry
+          </Button>
+        )}
+        {!loading && !error && t.exhausted && (
+          <span className="text-[11px] text-muted-foreground uppercase tracking-wider">No more battles</span>
+        )}
+        {!loading && !error && !t.exhausted && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void loadTab(forTab)}
+            className="text-xs"
+          >
+            Load more
+          </Button>
+        )}
+      </div>
+    );
+  };
+
+  const TabBody = ({ forTab, rows, live }: { forTab: TabKey; rows: Battle[]; live: boolean | ((b: Battle) => boolean) }) => {
+    const t = perTab[forTab];
+    const loading = tabLoading[forTab];
+    const error = tabError[forTab];
+    const firstLoad = loading && t.rows.length === 0;
+    const liveFor = (b: Battle) => (typeof live === "function" ? (live as any)(b) : live);
+    return (
+      <>
+        <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
+          {firstLoad
+            ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+            : rows.map((b) => <Card key={b.id} b={b} live={liveFor(b)} />)}
+        </div>
+        {!loading && error && t.rows.length === 0 && (
+          <div className="royal-card p-6 text-center my-4">
+            <p className="text-sm text-muted-foreground mb-3">Couldn't load battles.</p>
+            <Button size="sm" variant="outline" onClick={() => void loadTab(forTab, { reset: true })}>
+              <RotateCw size={12} /> Retry
+            </Button>
+          </div>
+        )}
+        <PaginationFooter forTab={forTab} />
+      </>
+    );
+  };
+
   return (
     <TooltipProvider delayDuration={150}>
     <AppShell title="BATTLES">
@@ -649,7 +856,6 @@ export default function Battles() {
             </Button>
           </div>
 
-          {/* Search & filters */}
           <div className="space-y-2 mb-4">
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -685,7 +891,6 @@ export default function Battles() {
               </Select>
             </div>
 
-            {/* Hub + Topic chips (Phase 4) */}
             <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
               <button
                 onClick={() => { setHub("all"); setTopic("all"); }}
@@ -730,7 +935,7 @@ export default function Battles() {
             )}
           </div>
 
-          {/* Featured */}
+          {/* Featured (Active tab only, no search) */}
           {featured && tab === "active" && !query && (
             <div className="mb-5">
               <div className="flex items-center gap-2 mb-2">
@@ -741,13 +946,15 @@ export default function Battles() {
             </div>
           )}
 
-          <Tabs value={tab} onValueChange={setTab}>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
             <TabsList className="w-full grid grid-cols-4 h-9">
               <TabsTrigger value="active" className="text-xs">Active</TabsTrigger>
               <TabsTrigger value="pending" className="text-xs relative">
                 Pending
-                {pendingForMe.length > 0 && (
-                  <span className="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold">{pendingForMe.length}</span>
+                {perTab.pending.rows.length > 0 && (
+                  <span className="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold">
+                    {perTab.pending.rows.length}
+                  </span>
                 )}
               </TabsTrigger>
               <TabsTrigger value="mine" className="text-xs">Mine</TabsTrigger>
@@ -755,47 +962,53 @@ export default function Battles() {
             </TabsList>
 
             <TabsContent value="active" className="mt-3">
-              <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
-                {loading ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />) :
-                  (featured && !query ? active.slice(1) : active).map((b) => <Card key={b.id} b={b} live />)}
-              </div>
-              {!loading && !active.length && (
+              <TabBody forTab="active" rows={featured && !query ? activeRows.slice(1) : activeRows} live />
+              {!tabLoading.active && !tabError.active && activeRows.length === 0 && (
                 <EmptyState title="No active battles" body="You do not have any active battles right now."
                   cta={<Button onClick={() => setChallengeOpen(true)} className="bg-gradient-gold text-primary-foreground gold-shadow"><Swords size={14} /> Start a battle</Button>} />
               )}
             </TabsContent>
 
             <TabsContent value="pending" className="mt-3">
-              <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
-                {pendingForMe.map((b) => <Card key={b.id} b={b} live={false} />)}
-              </div>
-              {!pendingForMe.length && (
+              <TabBody forTab="pending" rows={tab === "pending" ? filteredCurrent : []} live={false} />
+              {!tabLoading.pending && !tabError.pending && perTab.pending.rows.length === 0 && (
                 <EmptyState title="No pending battles" body="You do not have any pending battles." />
               )}
             </TabsContent>
 
             <TabsContent value="mine" className="mt-3">
-              <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
-                {mine.map((b) => <Card key={b.id} b={b} live={b.status === "active" && !isEnded(b)} />)}
-              </div>
-              {!mine.length && (
+              <TabBody
+                forTab="mine"
+                rows={tab === "mine" ? filteredCurrent.slice().sort((a, b) => {
+                  const ta = a.ends_at ? new Date(a.ends_at).getTime() : new Date(a.created_at).getTime();
+                  const tb = b.ends_at ? new Date(b.ends_at).getTime() : new Date(b.created_at).getTime();
+                  return tb - ta;
+                }) : []}
+                live={(b) => b.status === "active" && !isEnded(b)}
+              />
+              {!tabLoading.mine && !tabError.mine && perTab.mine.rows.length === 0 && (
                 <EmptyState title="Nothing in the last 30 days" body="You have not joined or created any battles in the last 30 days."
                   cta={<Button onClick={() => setChallengeOpen(true)} className="bg-gradient-gold text-primary-foreground gold-shadow"><Swords size={14} /> Challenge a royal</Button>} />
               )}
             </TabsContent>
 
             <TabsContent value="done" className="mt-3">
-              <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
-                {done.map((b) => <Card key={b.id} b={b} live={false} />)}
-              </div>
-              {!done.length && (
+              <TabBody
+                forTab="done"
+                rows={tab === "done" ? filteredCurrent.slice().sort((a, b) => {
+                  const ta = a.ends_at ? new Date(a.ends_at).getTime() : new Date(a.created_at).getTime();
+                  const tb = b.ends_at ? new Date(b.ends_at).getTime() : new Date(b.created_at).getTime();
+                  return tb - ta;
+                }) : []}
+                live={false}
+              />
+              {!tabLoading.done && !tabError.done && perTab.done.rows.length === 0 && (
                 <EmptyState title="No past battles yet" body="Battles older than 30 days will appear here once you have some." />
               )}
             </TabsContent>
           </Tabs>
         </div>
 
-        {/* Right rail (desktop) */}
         <aside className="hidden lg:block space-y-4">
           <TopBattlersWidget />
           <div className="royal-card p-4">
@@ -810,7 +1023,7 @@ export default function Battles() {
         </aside>
       </div>
 
-      <ChallengeDialog open={challengeOpen} onOpenChange={setChallengeOpen} onCreated={load} />
+      <ChallengeDialog open={challengeOpen} onOpenChange={setChallengeOpen} onCreated={() => void loadTab(tab, { reset: true })} />
       <AcceptBattleDialog
         open={!!acceptBattle}
         onOpenChange={(o) => !o && setAcceptBattle(null)}
@@ -819,7 +1032,7 @@ export default function Battles() {
           challenger_post: acceptBattle.challenger_post as any,
           challenger: acceptBattle.challenger,
         } : null}
-        onResolved={load}
+        onResolved={() => void loadTab(tab, { reset: true })}
       />
       {shareBattle && (
         <ShareBattleDialog
