@@ -46,6 +46,7 @@ export default function Shorts() {
   const [endReached, setEndReached] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
+  const [dmShareScroll, setDmShareScroll] = useState<Short | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   // Desktop ≥1024px → right-side comments panel; below → bottom slide-up sheet.
   const [isDesktop, setIsDesktop] = useState(() =>
