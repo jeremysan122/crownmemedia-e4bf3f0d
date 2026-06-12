@@ -38,6 +38,8 @@ export default function Shorts() {
 
   const [items, setItems] = useState<Short[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
   const [muted, setMuted] = useState(true);
   const [endReached, setEndReached] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
