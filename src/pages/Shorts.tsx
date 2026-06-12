@@ -6,7 +6,9 @@ import { useSeoMeta } from "@/hooks/useSeoMeta";
 import CrownLoader from "@/components/CrownLoader";
 import RetryState from "@/components/states/RetryState";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
-import { ArrowLeft, MessageCircle, Share2, Volume2, VolumeX, Heart } from "lucide-react";
+import { ArrowLeft, MessageCircle, Share2, Volume2, VolumeX, Heart, Send } from "lucide-react";
+import DmSharePicker from "@/components/messages/DmSharePicker";
+import { sendDmShare } from "@/lib/dmShare";
 import { CrownIcon } from "@/components/CrownIcon";
 import { toast } from "sonner";
 import { fetchShortsPage } from "@/lib/postQuery";
@@ -44,6 +46,7 @@ export default function Shorts() {
   const [endReached, setEndReached] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
+  const [dmShareScroll, setDmShareScroll] = useState<Short | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   // Desktop ≥1024px → right-side comments panel; below → bottom slide-up sheet.
   const [isDesktop, setIsDesktop] = useState(() =>
@@ -318,6 +321,18 @@ export default function Shorts() {
                 </button>
 
                 <button
+                  type="button"
+                  onClick={() => setDmShareScroll(p)}
+                  aria-label="Send this scroll via DM"
+                  className="flex flex-col items-center gap-1 active:scale-95 transition"
+                >
+                  <span className="size-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
+                    <Send className="size-6" />
+                  </span>
+                  <span className="text-xs font-semibold">Send</span>
+                </button>
+
+                <button
                   onClick={() => share(p)}
                   aria-label="Share"
                   className="flex flex-col items-center gap-1"
@@ -357,6 +372,24 @@ export default function Shorts() {
         postId={commentsPostId}
         onClose={() => setCommentsPostId(null)}
         variant={isDesktop ? "side" : "sheet"}
+      />
+
+      <DmSharePicker
+        open={!!dmShareScroll}
+        onOpenChange={(o) => { if (!o) setDmShareScroll(null); }}
+        title="Send Scroll via DM"
+        onPick={async (r) => {
+          const scroll = dmShareScroll;
+          if (!scroll) return;
+          try {
+            await sendDmShare({ recipientId: r.userId, kind: "post_share", postId: scroll.id });
+            toast.success(`Scroll sent to @${r.username}`);
+            setDmShareScroll(null);
+            nav(`/messages/${r.userId}`);
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Couldn't send Scroll");
+          }
+        }}
       />
 
     </main>
