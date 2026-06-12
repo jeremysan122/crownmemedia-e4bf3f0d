@@ -19,6 +19,7 @@ import { cssFor, isValidFilter } from "@/lib/filters";
 import { toast } from "sonner";
 import { useSeoMeta, buildProfileOgImage } from "@/hooks/useSeoMeta";
 import { trackUsage } from "@/lib/usageTrack";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import PostDetailDialog from "@/components/PostDetailDialog";
 import type { FeedPost } from "@/components/PostCard";
 import SensitiveThumb from "@/components/SensitiveThumb";
