@@ -59,7 +59,7 @@ export async function sendDmShare(args: DmShareArgs): Promise<DmShareResult> {
         p_dedupe_key: dedupeKey,
       } as never);
       if (error) throw error;
-      return data as DmShareResult;
+      return data as unknown as DmShareResult;
     } catch (e) {
       lastErr = e;
       const msg = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
