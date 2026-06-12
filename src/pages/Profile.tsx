@@ -71,7 +71,7 @@ export default function Profile() {
   const nav = useNavigate();
   const [prof, setProf] = useState<ProfileFull | null>(null);
   const [crownVoteTotal, setCrownVoteTotal] = useState<number>(0);
-  const [posts, setPosts] = useState<{ id: string; image_url: string; crown_score: number; filter: string | null; pinned_at?: string | null; is_sensitive?: boolean | null }[]>([]);
+  const [posts, setPosts] = useState<{ id: string; image_url: string; crown_score: number; filter: string | null; pinned_at?: string | null; is_sensitive?: boolean | null; content_type?: string | null; media_type?: string | null; video_poster_url?: string | null }[]>([]);
   const [crowns, setCrowns] = useState<{ id: string; title: string; region_name: string; active: boolean; category: string }[]>([]);
   const [liked, setLiked] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null }[]>([]);
   const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null }[]>([]);
@@ -146,7 +146,7 @@ export default function Profile() {
       const pid = (p as any).id;
 
       const [{ data: ps, error: psErr }, { data: cs }, { data: rs }] = await Promise.all([
-        supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at, is_sensitive").eq("user_id", pid).eq("is_removed", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
+        supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at, is_sensitive, content_type, media_type, video_poster_url").eq("user_id", pid).eq("is_removed", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
         supabase.from("crowns").select("id, title, region_name, active, category").eq("user_id", pid).order("started_at", { ascending: false }).limit(40),
         supabase.from("user_roles").select("role").eq("user_id", pid),
       ]);
