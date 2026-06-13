@@ -29,27 +29,27 @@ const COPY: Record<string, { name: string; description: string }> = {
   // Shekel bundles
   price_1TSNoeK87HQxUc0wrVXLLZtc: {
     name: "Starter Pouch",
-    description: "Get 500 Shekels to spend on boosts, gifts, and battle entries. Perfect for trying out the marketplace.",
+    description: "Get 500 Shekels to send Royal Gifts to other members. Perfect for trying out the gift store.",
   },
   price_1TSNpXK87HQxUc0wrXKPu0GY: {
     name: "Royal Bag",
-    description: "Get 1,100 Shekels — 10% bonus value. Stock up to send gifts and unlock daily boosts.",
+    description: "Get 1,100 Shekels — 10% bonus value. Stock up to send more Royal Gifts.",
   },
   price_1TSNqTK87HQxUc0wm3AxeXvF: {
     name: "Noble Chest",
-    description: "Get 3,000 Shekels — 20% bonus value. Fuel your climb up the throne with serious firepower.",
+    description: "Get 3,000 Shekels — 20% bonus value. Send bigger gifts to the creators you love.",
   },
   price_1TSNrIK87HQxUc0wV3IWkgpH: {
     name: "Crown Vault",
-    description: "Get 6,500 Shekels — 30% bonus value. Dominate the leaderboard and outspend the competition.",
+    description: "Get 6,500 Shekels — 30% bonus value. Send premium Royal Gifts and combo sends.",
   },
   price_1TSNsCK87HQxUc0wgzwK8RBl: {
     name: "King's Hoard",
-    description: "Get 14,000 Shekels — 40% bonus value. The royal stockpile for serious throne contenders.",
+    description: "Get 14,000 Shekels — 40% bonus value. The royal stockpile for serious gifters.",
   },
   price_1TSNtkK87HQxUc0w7dlzGmqN: {
     name: "Empire Treasury",
-    description: "Get 38,000 Shekels — 50% bonus value. The ultimate war chest for empire builders.",
+    description: "Get 38,000 Shekels — 50% bonus value. The ultimate gift-giving war chest.",
   },
   // Boosts
   price_1TSNvDK87HQxUc0waYA8LjNN: {
