@@ -301,7 +301,7 @@ export default function Auth() {
     return (
       <div className="min-h-screen flex flex-col px-6 py-10 bg-gradient-royal">
         <Link to="/" className="flex flex-col items-center gap-2 mb-6 mx-auto" aria-label="CrownMe home">
-          <BrandLogo size={88} priority glow />
+          <BrandLogo size={88} priority />
         </Link>
         <div className="flex-1 max-w-sm w-full mx-auto animate-fade-in text-center">
           <div className="size-16 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center mx-auto mb-5">
@@ -336,7 +336,7 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex flex-col px-6 py-10 bg-gradient-royal">
       <Link to="/" className="flex flex-col items-center gap-2 mb-6 mx-auto" aria-label="CrownMe home">
-        <BrandLogo size={88} priority glow />
+        <BrandLogo size={88} priority />
       </Link>
 
       <div className="flex-1 max-w-sm w-full mx-auto animate-fade-in">
