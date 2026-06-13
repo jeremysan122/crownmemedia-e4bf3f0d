@@ -11,7 +11,7 @@ import CrownLoader from "@/components/CrownLoader";
 
 // Eager: critical first-paint routes
 import Splash from "./pages/Splash";
-import AgeGate from "./pages/AgeGate";
+
 import VerifyAge from "./pages/VerifyAge";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
