@@ -55,7 +55,7 @@ export default function Splash() {
 
       <div className="w-full max-w-sm space-y-3 animate-slide-up">
         <Button asChild size="lg" className="w-full h-14 bg-gradient-gold text-primary-foreground font-bold tracking-widest gold-shadow hover:opacity-95">
-          <Link to="/age-gate">SIGN UP</Link>
+          <Link to="/auth?mode=signup">SIGN UP</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="w-full h-14 border-primary/40 bg-card/40 text-foreground font-bold tracking-widest hover:bg-card/70">
           <Link to="/auth?mode=login">LOG IN</Link>

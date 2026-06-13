@@ -11,7 +11,7 @@ import CrownLoader from "@/components/CrownLoader";
 
 // Eager: critical first-paint routes
 import Splash from "./pages/Splash";
-import AgeGate from "./pages/AgeGate";
+
 import VerifyAge from "./pages/VerifyAge";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -141,7 +141,7 @@ const App = () => (
             <LegalConsentGate>
             <Routes>
               <Route path="/" element={<Splash />} />
-              <Route path="/age-gate" element={<AgeGate />} />
+              
               {/* /verify-age must NOT be wrapped in ProtectedRoute — that wrapper redirects
                   unconfirmed users here, which would cause a loop. The page itself checks auth. */}
               <Route path="/verify-age" element={<VerifyAge />} />
