@@ -111,8 +111,12 @@ export default function GiftReceiptCard({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="size-14 rounded-2xl bg-background/70 border border-border/60 flex items-center justify-center text-3xl shrink-0">
-            <span aria-hidden>{icon}</span>
+          <div className="size-14 rounded-2xl bg-background/70 border border-border/60 flex items-center justify-center shrink-0 overflow-hidden">
+            {giftMeta ? (
+              <GiftIcon animationType={giftMeta.animationType} tier={giftMeta.category} size="md" animated={false} />
+            ) : (
+              <Gift size={28} className="text-muted-foreground" />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-display text-base text-foreground truncate">{tx.gift_name}</p>
