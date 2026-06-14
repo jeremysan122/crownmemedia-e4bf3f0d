@@ -226,7 +226,7 @@ export default function GiftPanel({ isOpen, onClose, recipient: recipientProp, p
               <DialogTitle>Send a gift</DialogTitle>
               <DialogDescription>Choose a royal gift to send.</DialogDescription>
             </VisuallyHidden>
-            <div className="max-h-[88vh] overflow-y-auto scrollbar-none">{Body}</div>
+            {Body}
           </DialogContent>
         </Dialog>
       )}
