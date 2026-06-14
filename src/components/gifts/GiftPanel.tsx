@@ -161,7 +161,7 @@ export default function GiftPanel({ isOpen, onClose, recipient: recipientProp, p
       </p>
     </div>
   ) : (
-    <div className="relative">
+    <div className="relative flex flex-col max-h-[92vh] sm:max-h-[88vh]">
       <button
         type="button"
         onClick={toggleMuted}
@@ -181,27 +181,33 @@ export default function GiftPanel({ isOpen, onClose, recipient: recipientProp, p
         </button>
       )}
       <GiftComboMeter count={comboCount} />
-      <GiftPanelHeader username={recipient!.username} avatarUrl={recipient!.avatarUrl} />
-      <GiftWalletBar balance={wallet.shekelBalance} onAdd={() => { setShowAddShekels(true); trackEvent("shekels_purchase_started"); }} />
-      <TopGifterCard recipientId={recipient!.id} />
-      <QuickSendRail onPick={setSelectedGift} selectedId={selectedGift?.id} />
-      <GiftLiveFeed postId={postId} />
-      <GiftCategoryTabs active={activeCategory} onChange={setActiveCategory} disabled={isSending} />
-      <GiftGrid
-        category={activeCategory}
-        selectedId={selectedGift?.id}
-        onSelect={setSelectedGift}
-        sendingGiftId={sendingGiftId}
-        disabled={isSending}
-      />
-      <GiftMultiplierBar quantity={quantity} onChange={setQuantity} disabled={isSending} />
-      <GiftSendButton
-        gift={selectedGift}
-        quantity={quantity}
-        status={status}
-        insufficient={insufficient}
-        onSend={handleSendIntent}
-      />
+      {/* Scrollable middle region — everything except the pinned send bar */}
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-none">
+        <GiftPanelHeader username={recipient!.username} avatarUrl={recipient!.avatarUrl} />
+        <GiftWalletBar balance={wallet.shekelBalance} onAdd={() => { setShowAddShekels(true); trackEvent("shekels_purchase_started"); }} />
+        <TopGifterCard recipientId={recipient!.id} />
+        <QuickSendRail onPick={setSelectedGift} selectedId={selectedGift?.id} />
+        <GiftLiveFeed postId={postId} />
+        <GiftCategoryTabs active={activeCategory} onChange={setActiveCategory} disabled={isSending} />
+        <GiftGrid
+          category={activeCategory}
+          selectedId={selectedGift?.id}
+          onSelect={setSelectedGift}
+          sendingGiftId={sendingGiftId}
+          disabled={isSending}
+        />
+      </div>
+      {/* Pinned send bar — always reachable without scrolling */}
+      <div className="shrink-0 sticky bottom-0 z-10 bg-gradient-card/95 backdrop-blur border-t border-border/40 shadow-[0_-8px_24px_-12px_hsl(var(--background)/0.8)]">
+        <GiftMultiplierBar quantity={quantity} onChange={setQuantity} disabled={isSending} />
+        <GiftSendButton
+          gift={selectedGift}
+          quantity={quantity}
+          status={status}
+          insufficient={insufficient}
+          onSend={handleSendIntent}
+        />
+      </div>
     </div>
   );
 
@@ -220,7 +226,7 @@ export default function GiftPanel({ isOpen, onClose, recipient: recipientProp, p
               <DialogTitle>Send a gift</DialogTitle>
               <DialogDescription>Choose a royal gift to send.</DialogDescription>
             </VisuallyHidden>
-            <div className="max-h-[88vh] overflow-y-auto scrollbar-none">{Body}</div>
+            {Body}
           </DialogContent>
         </Dialog>
       )}
