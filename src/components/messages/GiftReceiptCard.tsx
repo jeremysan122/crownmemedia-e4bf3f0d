@@ -3,6 +3,7 @@ import { Crown, Gift, RotateCw, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { timeAgo } from "@/lib/crown";
 import { findGift } from "@/lib/gifts";
+import { GiftIcon } from "@/components/gifts/GiftIcon";
 import GiftAnimationOverlay from "@/components/gifts/GiftAnimationOverlay";
 import type { GiftTransactionRow } from "@/types/gifts";
 
