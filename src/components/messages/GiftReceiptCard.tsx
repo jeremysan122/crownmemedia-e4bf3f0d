@@ -90,9 +90,8 @@ export default function GiftReceiptCard({
   }
 
   const giftMeta = findGift(tx.gift_id);
-  const icon = giftMeta?.icon ?? "🎁";
-  const rarity = giftMeta?.rarity ?? "common";
   const refunded = (tx.status && tx.status !== "completed") || false;
+  const rarity = giftMeta?.rarity ?? "common";
 
   return (
     <>
