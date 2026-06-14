@@ -18,7 +18,7 @@ export default function GiftGrid({
   const gifts = giftsByCategory(category);
   return (
     <div
-      className={`px-5 grid grid-cols-3 gap-2.5 pb-4 max-h-[42vh] overflow-y-auto scrollbar-none ${
+      className={`px-5 grid grid-cols-3 gap-2.5 pb-4 ${
         disabled ? "pointer-events-none opacity-60" : ""
       }`}
     >
