@@ -408,7 +408,7 @@ export default function Rewards() {
                       <div className="w-9 h-9 rounded-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)] flex items-center justify-center">
                         <CrownIcon className="size-5 text-[#1a1033]" />
                       </div>
-                      <span className="text-amber-400 font-black text-base">+100</span>
+                      <span className="text-amber-400 font-black text-base">up to +100</span>
                     </div>
                     {isClaimed && (
                       <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 z-10">
