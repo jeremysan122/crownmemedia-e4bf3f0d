@@ -299,7 +299,7 @@ export default function Rewards() {
   const cycleDay = streak.current_streak === 0 ? 0 : ((streak.current_streak - 1) % 7) + 1;
   const fullyClaimedThisCycle = claimedToday ? cycleDay : ((streak.current_streak) % 7);
   const todaySlot = claimedToday ? null : Math.min(7, fullyClaimedThisCycle + 1);
-  const dayReward = (day: number) => day === 7 ? "+100" : `+${10 + (day - 1) * 5}`;
+  const dayReward = (day: number) => day === 7 ? "up to +100" : "+10";
 
   return (
     <AppShell showHeader={false}>
@@ -408,7 +408,7 @@ export default function Rewards() {
                       <div className="w-9 h-9 rounded-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)] flex items-center justify-center">
                         <CrownIcon className="size-5 text-[#1a1033]" />
                       </div>
-                      <span className="text-amber-400 font-black text-base">+100</span>
+                      <span className="text-amber-400 font-black text-base">up to +100</span>
                     </div>
                     {isClaimed && (
                       <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 z-10">
@@ -421,7 +421,7 @@ export default function Rewards() {
             </div>
 
             <p className="text-[10px] text-white/40 text-center">
-              Every 7th consistent day grants a random bonus (50–200 shekels).
+              Earn 10 shekels every day. On Day 7, claim a random bonus of up to 100 shekels.
             </p>
           </section>
 
