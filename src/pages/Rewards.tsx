@@ -421,7 +421,7 @@ export default function Rewards() {
             </div>
 
             <p className="text-[10px] text-white/40 text-center">
-              Every 7th consistent day grants a random bonus (50–200 shekels).
+              Earn 10 shekels every day. On Day 7, claim a random bonus of up to 100 shekels.
             </p>
           </section>
 
