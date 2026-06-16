@@ -38,7 +38,7 @@ export default function Splash() {
             width={512}
             height={512}
             decoding="async"
-            className="relative w-full h-full object-contain drop-shadow-[0_0_30px_hsl(43_90%_55%/0.45)]"
+            className="relative w-full h-full object-contain"
           />
         </div>
         <h1 className="sr-only">CrownMe Media — a social photo competition community for adults 18+</h1>
