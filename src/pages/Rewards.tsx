@@ -299,7 +299,7 @@ export default function Rewards() {
   const cycleDay = streak.current_streak === 0 ? 0 : ((streak.current_streak - 1) % 7) + 1;
   const fullyClaimedThisCycle = claimedToday ? cycleDay : ((streak.current_streak) % 7);
   const todaySlot = claimedToday ? null : Math.min(7, fullyClaimedThisCycle + 1);
-  const dayReward = (day: number) => day === 7 ? "+100" : `+${10 + (day - 1) * 5}`;
+  const dayReward = (day: number) => day === 7 ? "up to +100" : "+10";
 
   return (
     <AppShell showHeader={false}>
