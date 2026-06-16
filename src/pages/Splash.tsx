@@ -5,7 +5,6 @@ import { useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import CrownLoader from "@/components/CrownLoader";
-import { getRememberedBottomTab } from "@/components/BottomNav";
 
 export default function Splash() {
   const nav = useNavigate();
@@ -22,10 +21,8 @@ export default function Splash() {
       try { localStorage.setItem("crownme_invite_ref", ref.trim().toUpperCase()); } catch { /* noop */ }
     }
     if (!loading && user) {
-      // Restore the last bottom-nav tab on returning visits (tablet/mobile),
-      // falling back to the feed when nothing has been remembered yet.
-      const remembered = getRememberedBottomTab();
-      nav(remembered ?? "/feed", { replace: true });
+      // Always land on the feed on login/return — per product decision.
+      nav("/feed", { replace: true });
     }
   }, [user, loading, nav, params]);
 
