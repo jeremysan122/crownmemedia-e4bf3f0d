@@ -73,6 +73,7 @@ export default function Auth() {
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [checkInbox, setCheckInbox] = useState<string | null>(null);
   const [magicSending, setMagicSending] = useState(false);
+  const [signupStep, setSignupStep] = useState<1 | 2>(1);
   const usernameTimer = useRef<number | null>(null);
 
   const pwScore = useMemo(() => scorePassword(form.password), [form.password]);
