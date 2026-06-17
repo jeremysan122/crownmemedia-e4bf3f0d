@@ -29,9 +29,9 @@ export default function Splash() {
   if (loading) return <CrownLoader label="Preparing your throne…" />;
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-between px-6 py-12 bg-gradient-royal">
-      <div className="flex-1 flex flex-col items-center justify-center text-center">
-        <div className="relative mb-8 animate-scale-in size-72">
+    <main className="min-h-[100svh] flex flex-col items-center justify-center px-6 py-8 bg-gradient-royal">
+      <div className="flex flex-col items-center text-center w-full max-w-sm">
+        <div className="relative animate-scale-in size-56 sm:size-64">
           <img
             src={logo}
             alt="CrownMe Media"
@@ -42,34 +42,35 @@ export default function Splash() {
           />
         </div>
         <h1 className="sr-only">CrownMe Media — a social photo competition community for adults 18+</h1>
-        <p className="font-display text-base text-muted-foreground tracking-wider animate-fade-in" style={{ animationDelay: "0.15s" }}>
+        <p className="font-display text-base text-muted-foreground tracking-wider animate-fade-in mt-2" style={{ animationDelay: "0.15s" }}>
           Earn the crown.
         </p>
         <p className="font-display text-base text-muted-foreground tracking-wider animate-fade-in" style={{ animationDelay: "0.3s" }}>
           Defend the throne.
         </p>
-      </div>
 
-      <div className="w-full max-w-sm space-y-3 animate-slide-up">
-        <Button asChild size="lg" className="w-full h-14 bg-gradient-gold text-primary-foreground font-bold tracking-widest gold-shadow hover:opacity-95">
-          <Link to="/auth?mode=signup">SIGN UP</Link>
-        </Button>
-        <Button asChild variant="outline" size="lg" className="w-full h-14 border-primary/40 bg-card/40 text-foreground font-bold tracking-widest hover:bg-card/70">
-          <Link to="/auth?mode=login">LOG IN</Link>
-        </Button>
-        <p className="text-center text-xs text-muted-foreground pt-2 flex items-center justify-center gap-x-2 gap-y-1 flex-wrap">
-          <Link to="/conduct" className="hover:text-primary transition">Conduct</Link>
-          <span aria-hidden>·</span>
-          <Link to="/privacy" className="hover:text-primary transition">Privacy</Link>
-          <span aria-hidden>·</span>
-          <Link to="/terms" className="hover:text-primary transition">Terms</Link>
-          <span aria-hidden>·</span>
-          <a href="mailto:support@crownmemedia.com" className="hover:text-primary transition">Contact</a>
-        </p>
-        <p className="text-center text-[10px] text-muted-foreground/60">
-          © {new Date().getFullYear()} CrownMe Media. All rights reserved.
-        </p>
+        <div className="w-full space-y-3 animate-slide-up mt-6">
+          <Button asChild size="lg" className="w-full h-14 bg-gradient-gold text-primary-foreground font-bold tracking-widest gold-shadow hover:opacity-95">
+            <Link to="/auth?mode=signup">SIGN UP</Link>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="w-full h-14 border-primary/40 bg-card/40 text-foreground font-bold tracking-widest hover:bg-card/70">
+            <Link to="/auth?mode=login">LOG IN</Link>
+          </Button>
+          <p className="text-center text-xs text-muted-foreground pt-1 flex items-center justify-center gap-x-2 gap-y-1 flex-wrap">
+            <Link to="/conduct" className="hover:text-primary transition">Conduct</Link>
+            <span aria-hidden>·</span>
+            <Link to="/privacy" className="hover:text-primary transition">Privacy</Link>
+            <span aria-hidden>·</span>
+            <Link to="/terms" className="hover:text-primary transition">Terms</Link>
+            <span aria-hidden>·</span>
+            <a href="mailto:support@crownmemedia.com" className="hover:text-primary transition">Contact</a>
+          </p>
+          <p className="text-center text-[10px] text-muted-foreground/60">
+            © {new Date().getFullYear()} CrownMe Media. All rights reserved.
+          </p>
+        </div>
       </div>
     </main>
   );
 }
+
