@@ -16,6 +16,11 @@ import { trackEvent } from "@/lib/analytics";
 import { scorePassword } from "@/lib/passwordStrength";
 import { isReservedUsername } from "@/lib/reservedUsernames";
 import { COUNTRIES } from "@/lib/countries";
+import {
+  validateStep1, validateStep2, firstErrorKey,
+  STEP1_ORDER, STEP2_ORDER, type SignupErrors,
+} from "@/lib/signupValidation";
+import { cn } from "@/lib/utils";
 
 const signupSchema = z.object({
   email: z.string().trim().email("Invalid email").max(255),
