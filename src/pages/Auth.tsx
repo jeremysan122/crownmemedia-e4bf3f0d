@@ -394,24 +394,72 @@ export default function Auth() {
       </Link>
 
       <div className="flex-1 max-w-sm w-full mx-auto animate-fade-in">
-        <div className="flex items-baseline justify-between mb-3">
-          <div>
-            <h1 className="font-display text-2xl text-gold leading-tight">
-              {mode === "signup" ? (signupStep === 1 ? "Claim your throne" : "Almost there") : "Welcome back"}
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              {mode === "signup"
-                ? (signupStep === 1 ? "Step 1 of 2 — your account" : "Step 2 of 2 — your profile")
-                : "Continue your reign"}
-            </p>
-          </div>
-          {mode === "signup" && (
-            <div className="flex gap-1" aria-hidden>
-              <span className={`h-1.5 w-6 rounded-full ${signupStep >= 1 ? "bg-gold" : "bg-muted"}`} />
-              <span className={`h-1.5 w-6 rounded-full ${signupStep >= 2 ? "bg-gold" : "bg-muted"}`} />
-            </div>
-          )}
+        <div className="mb-3">
+          <h1 className="font-display text-xl sm:text-2xl text-gold leading-tight">
+            {mode === "signup" ? (signupStep === 1 ? "Claim your throne" : "Almost there") : "Welcome back"}
+          </h1>
+          <p className="text-[11px] sm:text-xs text-muted-foreground">
+            {mode === "signup"
+              ? (signupStep === 1 ? "Step 1 of 2 — your account" : "Step 2 of 2 — your profile")
+              : "Continue your reign"}
+          </p>
         </div>
+
+        {mode === "signup" && (
+          <nav aria-label="Signup progress" className="mb-4">
+            <ol className="flex items-center gap-2">
+              {([
+                { n: 1 as const, label: "Account" },
+                { n: 2 as const, label: "Profile" },
+              ]).map((s, i) => {
+                const done = signupStep > s.n;
+                const active = signupStep === s.n;
+                return (
+                  <li key={s.n} className="flex items-center gap-2 flex-1">
+                    <div
+                      aria-current={active ? "step" : undefined}
+                      className={cn(
+                        "flex items-center gap-2 transition-all duration-300",
+                        active ? "opacity-100" : done ? "opacity-90" : "opacity-50",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex items-center justify-center size-6 rounded-full text-[11px] font-bold border transition-all duration-300",
+                          active
+                            ? "bg-gradient-gold text-primary-foreground border-gold gold-shadow scale-110"
+                            : done
+                              ? "bg-gold/20 text-gold border-gold/60"
+                              : "bg-muted/40 text-muted-foreground border-border",
+                        )}
+                      >
+                        {done ? <Check className="size-3.5" aria-hidden /> : s.n}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-[11px] font-semibold tracking-wide uppercase",
+                          active ? "text-gold" : done ? "text-foreground" : "text-muted-foreground",
+                        )}
+                      >
+                        {s.label}
+                      </span>
+                    </div>
+                    {i === 0 && (
+                      <span className="flex-1 h-px bg-border relative overflow-hidden" aria-hidden>
+                        <span
+                          className={cn(
+                            "absolute inset-y-0 left-0 bg-gradient-gold transition-all duration-500",
+                            signupStep >= 2 ? "w-full" : "w-0",
+                          )}
+                        />
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+        )}
 
         <form
           className="space-y-2.5"
