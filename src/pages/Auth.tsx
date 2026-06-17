@@ -16,6 +16,11 @@ import { trackEvent } from "@/lib/analytics";
 import { scorePassword } from "@/lib/passwordStrength";
 import { isReservedUsername } from "@/lib/reservedUsernames";
 import { COUNTRIES } from "@/lib/countries";
+import {
+  validateStep1, validateStep2, firstErrorKey,
+  STEP1_ORDER, STEP2_ORDER, type SignupErrors,
+} from "@/lib/signupValidation";
+import { cn } from "@/lib/utils";
 
 const signupSchema = z.object({
   email: z.string().trim().email("Invalid email").max(255),
@@ -74,6 +79,29 @@ export default function Auth() {
   const [checkInbox, setCheckInbox] = useState<string | null>(null);
   const [magicSending, setMagicSending] = useState(false);
   const [signupStep, setSignupStep] = useState<1 | 2>(1);
+  const [errors, setErrors] = useState<SignupErrors>({});
+  const fieldRefs = useRef<Record<string, HTMLElement | null>>({});
+  const setFieldRef = (name: string) => (el: HTMLElement | null) => {
+    fieldRefs.current[name] = el;
+  };
+  const focusFirstError = (errs: SignupErrors, step: 1 | 2) => {
+    const key = firstErrorKey(errs, step === 1 ? STEP1_ORDER : STEP2_ORDER);
+    if (!key) return;
+    // requestAnimationFrame ensures the field exists (esp. after step switch)
+    requestAnimationFrame(() => {
+      const el = fieldRefs.current[key];
+      if (el && typeof (el as HTMLElement).focus === "function") {
+        (el as HTMLElement).focus({ preventScroll: false });
+      }
+    });
+  };
+  const clearFieldError = (field: keyof SignupErrors) => {
+    setErrors((e) => {
+      if (!e[field]) return e;
+      const { [field]: _omit, ...rest } = e;
+      return rest;
+    });
+  };
   const usernameTimer = useRef<number | null>(null);
 
   const pwScore = useMemo(() => scorePassword(form.password), [form.password]);
@@ -157,15 +185,24 @@ export default function Auth() {
   };
 
   const advanceToStep2 = () => {
-    const email = form.email.trim();
-    if (!/^.+@.+\..+$/.test(email)) { toast.error("Enter a valid email"); return; }
-    if (form.password.length < 8) { toast.error("Password must be at least 8 characters"); return; }
-    if (form.password !== form.confirmPassword) { toast.error("Passwords don't match"); return; }
-    if (pwScore.score < 2) { toast.error("Choose a stronger password"); return; }
-    if (!form.username || usernameStatus === "invalid") { toast.error("Choose a valid username"); return; }
-    if (usernameStatus === "taken") { toast.error("That username is already taken"); return; }
-    if (usernameStatus === "reserved") { toast.error("That username is reserved"); return; }
+    const errs = validateStep1({
+      email: form.email,
+      password: form.password,
+      confirmPassword: form.confirmPassword,
+      username: form.username,
+      passwordScore: pwScore.score,
+      usernameStatus,
+    });
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      focusFirstError(errs, 1);
+      return;
+    }
     setSignupStep(2);
+    // Reset scroll & focus to first step-2 field for a clean transition.
+    requestAnimationFrame(() => {
+      fieldRefs.current["first_name"]?.focus();
+    });
   };
 
   const handle = async () => {
@@ -173,29 +210,33 @@ export default function Auth() {
     setUnverifiedEmail(null);
     try {
       if (mode === "signup") {
+        const step1Errs = validateStep1({
+          email: form.email, password: form.password, confirmPassword: form.confirmPassword,
+          username: form.username, passwordScore: pwScore.score, usernameStatus,
+        });
+        const step2Errs = validateStep2({
+          first_name: form.first_name, last_name: form.last_name, dob: form.dob,
+          gender: form.gender, country: form.country, state: form.state, city: form.city,
+          policiesOk,
+        });
+        const allErrs: SignupErrors = { ...step1Errs, ...step2Errs };
+        setErrors(allErrs);
+        if (Object.keys(step1Errs).length > 0) {
+          setSignupStep(1);
+          focusFirstError(step1Errs, 1);
+          return;
+        }
+        if (Object.keys(step2Errs).length > 0) {
+          if (step2Errs.dob && /18 or older/i.test(step2Errs.dob)) {
+            trackEvent("age_gate_blocked_underage", { metadata: { source: "auth_signup" } });
+          }
+          focusFirstError(step2Errs, 2);
+          return;
+        }
         const parsed = signupSchema.safeParse(form);
         if (!parsed.success) {
+          // Shouldn't happen — validators are stricter than the schema — but guard.
           toast.error(parsed.error.errors[0].message);
-          return;
-        }
-        if (form.password !== form.confirmPassword) {
-          toast.error("Passwords don't match");
-          return;
-        }
-        if (pwScore.score < 2) {
-          toast.error("Choose a stronger password");
-          return;
-        }
-        if (usernameStatus === "taken") { toast.error("That username is already taken"); return; }
-        if (usernameStatus === "reserved") { toast.error("That username is reserved"); return; }
-        if (usernameStatus === "invalid") { toast.error("Invalid username"); return; }
-        if (calculateAge(parsed.data.dob) < 18) {
-          trackEvent("age_gate_blocked_underage", { metadata: { source: "auth_signup" } });
-          toast.error("You must be 18 or older to register.");
-          return;
-        }
-        if (!policiesOk) {
-          toast.error("Please accept the Terms, Privacy Policy, and Community Guidelines.");
           return;
         }
         try { sessionStorage.setItem("crownme_age_confirmed", "true"); sessionStorage.setItem("crownme_dob", parsed.data.dob); } catch { /* noop */ }
@@ -353,24 +394,72 @@ export default function Auth() {
       </Link>
 
       <div className="flex-1 max-w-sm w-full mx-auto animate-fade-in">
-        <div className="flex items-baseline justify-between mb-3">
-          <div>
-            <h1 className="font-display text-2xl text-gold leading-tight">
-              {mode === "signup" ? (signupStep === 1 ? "Claim your throne" : "Almost there") : "Welcome back"}
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              {mode === "signup"
-                ? (signupStep === 1 ? "Step 1 of 2 — your account" : "Step 2 of 2 — your profile")
-                : "Continue your reign"}
-            </p>
-          </div>
-          {mode === "signup" && (
-            <div className="flex gap-1" aria-hidden>
-              <span className={`h-1.5 w-6 rounded-full ${signupStep >= 1 ? "bg-gold" : "bg-muted"}`} />
-              <span className={`h-1.5 w-6 rounded-full ${signupStep >= 2 ? "bg-gold" : "bg-muted"}`} />
-            </div>
-          )}
+        <div className="mb-3">
+          <h1 className="font-display text-xl sm:text-2xl text-gold leading-tight">
+            {mode === "signup" ? (signupStep === 1 ? "Claim your throne" : "Almost there") : "Welcome back"}
+          </h1>
+          <p className="text-[11px] sm:text-xs text-muted-foreground">
+            {mode === "signup"
+              ? (signupStep === 1 ? "Step 1 of 2 — your account" : "Step 2 of 2 — your profile")
+              : "Continue your reign"}
+          </p>
         </div>
+
+        {mode === "signup" && (
+          <nav aria-label="Signup progress" className="mb-4">
+            <ol className="flex items-center gap-2">
+              {([
+                { n: 1 as const, label: "Account" },
+                { n: 2 as const, label: "Profile" },
+              ]).map((s, i) => {
+                const done = signupStep > s.n;
+                const active = signupStep === s.n;
+                return (
+                  <li key={s.n} className="flex items-center gap-2 flex-1">
+                    <div
+                      aria-current={active ? "step" : undefined}
+                      className={cn(
+                        "flex items-center gap-2 transition-all duration-300",
+                        active ? "opacity-100" : done ? "opacity-90" : "opacity-50",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex items-center justify-center size-6 rounded-full text-[11px] font-bold border transition-all duration-300",
+                          active
+                            ? "bg-gradient-gold text-primary-foreground border-gold gold-shadow scale-110"
+                            : done
+                              ? "bg-gold/20 text-gold border-gold/60"
+                              : "bg-muted/40 text-muted-foreground border-border",
+                        )}
+                      >
+                        {done ? <Check className="size-3.5" aria-hidden /> : s.n}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-[11px] font-semibold tracking-wide uppercase",
+                          active ? "text-gold" : done ? "text-foreground" : "text-muted-foreground",
+                        )}
+                      >
+                        {s.label}
+                      </span>
+                    </div>
+                    {i === 0 && (
+                      <span className="flex-1 h-px bg-border relative overflow-hidden" aria-hidden>
+                        <span
+                          className={cn(
+                            "absolute inset-y-0 left-0 bg-gradient-gold transition-all duration-500",
+                            signupStep >= 2 ? "w-full" : "w-0",
+                          )}
+                        />
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+        )}
 
         <form
           className="space-y-2.5"
@@ -386,14 +475,20 @@ export default function Auth() {
             <Label htmlFor="auth-email">Email</Label>
             <Input
               id="auth-email"
+              ref={setFieldRef("email")}
               name="email"
               type="email"
               autoComplete="email"
               value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="h-12 bg-input"
+              onChange={(e) => { setForm({ ...form, email: e.target.value }); clearFieldError("email"); }}
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? "auth-email-err" : undefined}
+              className={cn("h-11 bg-input", errors.email && "border-destructive focus-visible:ring-destructive")}
               placeholder="you@royal.com"
             />
+            {errors.email && (
+              <p id="auth-email-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.email}</p>
+            )}
           </div>
 
           <div className={mode === "signup" && signupStep === 2 ? "hidden" : ""}>
@@ -424,14 +519,17 @@ export default function Auth() {
             <div className="relative">
               <Input
                 id="auth-password"
+                ref={setFieldRef("password")}
                 name="password"
                 type={showPw ? "text" : "password"}
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                onChange={(e) => { setForm({ ...form, password: e.target.value }); clearFieldError("password"); }}
                 onKeyDown={onPwKey}
                 onKeyUp={onPwKey}
-                className="h-12 bg-input pr-11"
+                aria-invalid={!!errors.password}
+                aria-describedby={errors.password ? "auth-password-err" : undefined}
+                className={cn("h-11 bg-input pr-11", errors.password && "border-destructive focus-visible:ring-destructive")}
                 placeholder="••••••••"
               />
               <button
@@ -443,6 +541,9 @@ export default function Auth() {
                 {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
+            {errors.password && (
+              <p id="auth-password-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.password}</p>
+            )}
             {capsOn && (
               <p className="text-[11px] text-orange-400 mt-1 flex items-center gap-1">
                 <AlertTriangle className="size-3" /> Caps Lock is on
@@ -474,12 +575,15 @@ export default function Auth() {
               <div className="relative">
                 <Input
                   id="auth-confirm"
+                  ref={setFieldRef("confirmPassword")}
                   name="confirmPassword"
                   type={showConfirmPw ? "text" : "password"}
                   autoComplete="new-password"
                   value={form.confirmPassword}
-                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                  className="h-11 bg-input pr-11"
+                  onChange={(e) => { setForm({ ...form, confirmPassword: e.target.value }); clearFieldError("confirmPassword"); }}
+                  aria-invalid={!!errors.confirmPassword}
+                  aria-describedby={errors.confirmPassword ? "auth-confirm-err" : undefined}
+                  className={cn("h-11 bg-input pr-11", errors.confirmPassword && "border-destructive focus-visible:ring-destructive")}
                   placeholder="Repeat password"
                 />
                 <button
@@ -491,7 +595,9 @@ export default function Auth() {
                   {showConfirmPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
-              {form.confirmPassword.length > 0 && (
+              {errors.confirmPassword ? (
+                <p id="auth-confirm-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.confirmPassword}</p>
+              ) : form.confirmPassword.length > 0 && (
                 <p className={`text-[11px] mt-1 flex items-center gap-1 ${pwMatch ? "text-emerald-400" : "text-destructive"}`}>
                   {pwMatch ? <Check className="size-3" /> : <X className="size-3" />}
                   {pwMatch ? "Passwords match" : "Passwords don't match"}
@@ -507,10 +613,13 @@ export default function Auth() {
               <div className="relative">
                 <Input
                   id="auth-username"
+                  ref={setFieldRef("username")}
                   name="username"
                   value={form.username}
-                  onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
-                  className="h-11 bg-input pr-10"
+                  onChange={(e) => { setForm({ ...form, username: e.target.value.toLowerCase() }); clearFieldError("username"); }}
+                  aria-invalid={!!errors.username || usernameStatus === "taken" || usernameStatus === "reserved" || usernameStatus === "invalid"}
+                  aria-describedby={errors.username ? "auth-username-err" : undefined}
+                  className={cn("h-11 bg-input pr-10", (errors.username || usernameStatus === "taken" || usernameStatus === "reserved" || usernameStatus === "invalid") && "border-destructive focus-visible:ring-destructive")}
                   placeholder="kingname"
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -519,23 +628,56 @@ export default function Auth() {
                   {(usernameStatus === "taken" || usernameStatus === "reserved" || usernameStatus === "invalid") && <X className="size-4 text-destructive" />}
                 </div>
               </div>
-              {usernameStatus === "taken" && <p className="text-[11px] text-destructive mt-1">That username is taken</p>}
-              {usernameStatus === "reserved" && <p className="text-[11px] text-destructive mt-1">That username is reserved</p>}
-              {usernameStatus === "invalid" && <p className="text-[11px] text-destructive mt-1">3–24 chars · letters, numbers, _ .</p>}
-              {usernameStatus === "available" && <p className="text-[11px] text-emerald-400 mt-1">Available 👑</p>}
+              {errors.username ? (
+                <p id="auth-username-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.username}</p>
+              ) : (
+                <>
+                  {usernameStatus === "taken" && <p className="text-[11px] text-destructive mt-1">That username is taken</p>}
+                  {usernameStatus === "reserved" && <p className="text-[11px] text-destructive mt-1">That username is reserved</p>}
+                  {usernameStatus === "invalid" && <p className="text-[11px] text-destructive mt-1">3–24 chars · letters, numbers, _ .</p>}
+                  {usernameStatus === "available" && <p className="text-[11px] text-emerald-400 mt-1">Available 👑</p>}
+                </>
+              )}
             </div>
           )}
 
           {mode === "signup" && (
-            <div className={signupStep === 1 ? "hidden" : "space-y-2.5"}>
+            <div
+              key={`step2-${signupStep}`}
+              className={signupStep === 1 ? "hidden" : "space-y-2.5 animate-fade-in"}
+            >
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <Label htmlFor="auth-first-name">First name</Label>
-                  <Input id="auth-first-name" name="first_name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className="h-11 bg-input" placeholder="Jane" autoComplete="given-name" />
+                  <Input
+                    id="auth-first-name"
+                    ref={setFieldRef("first_name")}
+                    name="first_name"
+                    value={form.first_name}
+                    onChange={(e) => { setForm({ ...form, first_name: e.target.value }); clearFieldError("first_name"); }}
+                    aria-invalid={!!errors.first_name}
+                    aria-describedby={errors.first_name ? "auth-first-name-err" : undefined}
+                    className={cn("h-11 bg-input", errors.first_name && "border-destructive focus-visible:ring-destructive")}
+                    placeholder="Jane"
+                    autoComplete="given-name"
+                  />
+                  {errors.first_name && <p id="auth-first-name-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.first_name}</p>}
                 </div>
                 <div>
                   <Label htmlFor="auth-last-name">Last name</Label>
-                  <Input id="auth-last-name" name="last_name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className="h-11 bg-input" placeholder="Doe" autoComplete="family-name" />
+                  <Input
+                    id="auth-last-name"
+                    ref={setFieldRef("last_name")}
+                    name="last_name"
+                    value={form.last_name}
+                    onChange={(e) => { setForm({ ...form, last_name: e.target.value }); clearFieldError("last_name"); }}
+                    aria-invalid={!!errors.last_name}
+                    aria-describedby={errors.last_name ? "auth-last-name-err" : undefined}
+                    className={cn("h-11 bg-input", errors.last_name && "border-destructive focus-visible:ring-destructive")}
+                    placeholder="Doe"
+                    autoComplete="family-name"
+                  />
+                  {errors.last_name && <p id="auth-last-name-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.last_name}</p>}
                 </div>
               </div>
 
@@ -544,22 +686,29 @@ export default function Auth() {
                   <Label htmlFor="auth-dob">Date of birth</Label>
                   <Input
                     id="auth-dob"
+                    ref={setFieldRef("dob")}
                     name="dob"
                     type="date"
                     value={form.dob}
                     max={new Date().toISOString().slice(0, 10)}
-                    onChange={(e) => setForm({ ...form, dob: e.target.value })}
-                    className="h-11 bg-input"
+                    onChange={(e) => { setForm({ ...form, dob: e.target.value }); clearFieldError("dob"); }}
+                    aria-invalid={!!errors.dob}
+                    aria-describedby={errors.dob ? "auth-dob-err" : undefined}
+                    className={cn("h-11 bg-input", errors.dob && "border-destructive focus-visible:ring-destructive")}
                   />
+                  {errors.dob && <p id="auth-dob-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.dob}</p>}
                 </div>
                 <div>
                   <Label htmlFor="auth-gender">Gender</Label>
                   <select
                     id="auth-gender"
+                    ref={setFieldRef("gender")}
                     name="gender"
                     value={form.gender}
-                    onChange={(e) => setForm({ ...form, gender: e.target.value as typeof form.gender })}
-                    className="h-11 w-full rounded-md bg-input border border-input px-3 text-sm"
+                    onChange={(e) => { setForm({ ...form, gender: e.target.value as typeof form.gender }); clearFieldError("gender"); }}
+                    aria-invalid={!!errors.gender}
+                    aria-describedby={errors.gender ? "auth-gender-err" : undefined}
+                    className={cn("h-11 w-full rounded-md bg-input border border-input px-3 text-sm", errors.gender && "border-destructive")}
                   >
                     <option value="">Select…</option>
                     <option value="male">Male</option>
@@ -567,6 +716,7 @@ export default function Auth() {
                     <option value="non_binary">Non-binary</option>
                     <option value="prefer_not_to_say">Prefer not to say</option>
                   </select>
+                  {errors.gender && <p id="auth-gender-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.gender}</p>}
                 </div>
               </div>
 
@@ -574,24 +724,52 @@ export default function Auth() {
                 <Label htmlFor="auth-country">Country</Label>
                 <select
                   id="auth-country"
+                  ref={setFieldRef("country")}
                   name="country"
                   value={form.country}
-                  onChange={(e) => setForm({ ...form, country: e.target.value })}
-                  className="h-11 w-full rounded-md bg-input border border-input px-3 text-sm"
+                  onChange={(e) => { setForm({ ...form, country: e.target.value }); clearFieldError("country"); }}
+                  aria-invalid={!!errors.country}
+                  aria-describedby={errors.country ? "auth-country-err" : undefined}
+                  className={cn("h-11 w-full rounded-md bg-input border border-input px-3 text-sm", errors.country && "border-destructive")}
                 >
                   <option value="">Select country…</option>
                   {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
+                {errors.country && <p id="auth-country-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.country}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <Label htmlFor="auth-state">State / Region</Label>
-                  <Input id="auth-state" name="state" autoComplete="address-level1" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="h-11 bg-input" placeholder="Georgia" />
+                  <Input
+                    id="auth-state"
+                    ref={setFieldRef("state")}
+                    name="state"
+                    autoComplete="address-level1"
+                    value={form.state}
+                    onChange={(e) => { setForm({ ...form, state: e.target.value }); clearFieldError("state"); }}
+                    aria-invalid={!!errors.state}
+                    aria-describedby={errors.state ? "auth-state-err" : undefined}
+                    className={cn("h-11 bg-input", errors.state && "border-destructive focus-visible:ring-destructive")}
+                    placeholder="Georgia"
+                  />
+                  {errors.state && <p id="auth-state-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.state}</p>}
                 </div>
                 <div>
                   <Label htmlFor="auth-city">City</Label>
-                  <Input id="auth-city" name="city" autoComplete="address-level2" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="h-11 bg-input" placeholder="Atlanta" />
+                  <Input
+                    id="auth-city"
+                    ref={setFieldRef("city")}
+                    name="city"
+                    autoComplete="address-level2"
+                    value={form.city}
+                    onChange={(e) => { setForm({ ...form, city: e.target.value }); clearFieldError("city"); }}
+                    aria-invalid={!!errors.city}
+                    aria-describedby={errors.city ? "auth-city-err" : undefined}
+                    className={cn("h-11 bg-input", errors.city && "border-destructive focus-visible:ring-destructive")}
+                    placeholder="Atlanta"
+                  />
+                  {errors.city && <p id="auth-city-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.city}</p>}
                 </div>
               </div>
 
@@ -607,10 +785,13 @@ export default function Auth() {
                 />
               </div>
 
-              <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/40 cursor-pointer">
+              <label className={cn("flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/40 cursor-pointer", errors.policies && "ring-1 ring-destructive")}>
                 <Checkbox
+                  ref={setFieldRef("policies")}
                   checked={policiesOk}
-                  onCheckedChange={(v) => { const ok = !!v; setTermsOk(ok); setPrivacyOk(ok); setCommunityOk(ok); }}
+                  onCheckedChange={(v) => { const ok = !!v; setTermsOk(ok); setPrivacyOk(ok); setCommunityOk(ok); if (ok) clearFieldError("policies"); }}
+                  aria-invalid={!!errors.policies}
+                  aria-describedby={errors.policies ? "auth-policies-err" : undefined}
                   className="mt-0.5"
                 />
                 <span className="text-[11px] leading-snug text-muted-foreground">
@@ -621,6 +802,9 @@ export default function Auth() {
                   <Link to="/csae-policy" target="_blank" className="underline text-primary">zero-tolerance CSAE policy</Link>.
                 </span>
               </label>
+              {errors.policies && (
+                <p id="auth-policies-err" role="alert" className="text-[11px] text-destructive -mt-1 px-1">{errors.policies}</p>
+              )}
               <label className="flex items-start gap-2.5 px-2.5 cursor-pointer">
                 <Checkbox checked={marketingOk} onCheckedChange={(v) => setMarketingOk(!!v)} className="mt-0.5" />
                 <span className="text-[11px] leading-snug text-muted-foreground">
