@@ -157,6 +157,19 @@ export default function Auth() {
   };
 
   const handle = async () => {
+  const advanceToStep2 = () => {
+    const email = form.email.trim();
+    if (!/^.+@.+\..+$/.test(email)) { toast.error("Enter a valid email"); return; }
+    if (form.password.length < 8) { toast.error("Password must be at least 8 characters"); return; }
+    if (form.password !== form.confirmPassword) { toast.error("Passwords don't match"); return; }
+    if (pwScore.score < 2) { toast.error("Choose a stronger password"); return; }
+    if (!form.username || usernameStatus === "invalid") { toast.error("Choose a valid username"); return; }
+    if (usernameStatus === "taken") { toast.error("That username is already taken"); return; }
+    if (usernameStatus === "reserved") { toast.error("That username is reserved"); return; }
+    setSignupStep(2);
+  };
+
+  const handle = async () => {
     setLoading(true);
     setUnverifiedEmail(null);
     try {
