@@ -575,12 +575,15 @@ export default function Auth() {
               <div className="relative">
                 <Input
                   id="auth-confirm"
+                  ref={setFieldRef("confirmPassword")}
                   name="confirmPassword"
                   type={showConfirmPw ? "text" : "password"}
                   autoComplete="new-password"
                   value={form.confirmPassword}
-                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                  className="h-11 bg-input pr-11"
+                  onChange={(e) => { setForm({ ...form, confirmPassword: e.target.value }); clearFieldError("confirmPassword"); }}
+                  aria-invalid={!!errors.confirmPassword}
+                  aria-describedby={errors.confirmPassword ? "auth-confirm-err" : undefined}
+                  className={cn("h-11 bg-input pr-11", errors.confirmPassword && "border-destructive focus-visible:ring-destructive")}
                   placeholder="Repeat password"
                 />
                 <button
@@ -592,7 +595,9 @@ export default function Auth() {
                   {showConfirmPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
-              {form.confirmPassword.length > 0 && (
+              {errors.confirmPassword ? (
+                <p id="auth-confirm-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.confirmPassword}</p>
+              ) : form.confirmPassword.length > 0 && (
                 <p className={`text-[11px] mt-1 flex items-center gap-1 ${pwMatch ? "text-emerald-400" : "text-destructive"}`}>
                   {pwMatch ? <Check className="size-3" /> : <X className="size-3" />}
                   {pwMatch ? "Passwords match" : "Passwords don't match"}
@@ -608,10 +613,13 @@ export default function Auth() {
               <div className="relative">
                 <Input
                   id="auth-username"
+                  ref={setFieldRef("username")}
                   name="username"
                   value={form.username}
-                  onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
-                  className="h-11 bg-input pr-10"
+                  onChange={(e) => { setForm({ ...form, username: e.target.value.toLowerCase() }); clearFieldError("username"); }}
+                  aria-invalid={!!errors.username || usernameStatus === "taken" || usernameStatus === "reserved" || usernameStatus === "invalid"}
+                  aria-describedby={errors.username ? "auth-username-err" : undefined}
+                  className={cn("h-11 bg-input pr-10", (errors.username || usernameStatus === "taken" || usernameStatus === "reserved" || usernameStatus === "invalid") && "border-destructive focus-visible:ring-destructive")}
                   placeholder="kingname"
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -620,23 +628,56 @@ export default function Auth() {
                   {(usernameStatus === "taken" || usernameStatus === "reserved" || usernameStatus === "invalid") && <X className="size-4 text-destructive" />}
                 </div>
               </div>
-              {usernameStatus === "taken" && <p className="text-[11px] text-destructive mt-1">That username is taken</p>}
-              {usernameStatus === "reserved" && <p className="text-[11px] text-destructive mt-1">That username is reserved</p>}
-              {usernameStatus === "invalid" && <p className="text-[11px] text-destructive mt-1">3–24 chars · letters, numbers, _ .</p>}
-              {usernameStatus === "available" && <p className="text-[11px] text-emerald-400 mt-1">Available 👑</p>}
+              {errors.username ? (
+                <p id="auth-username-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.username}</p>
+              ) : (
+                <>
+                  {usernameStatus === "taken" && <p className="text-[11px] text-destructive mt-1">That username is taken</p>}
+                  {usernameStatus === "reserved" && <p className="text-[11px] text-destructive mt-1">That username is reserved</p>}
+                  {usernameStatus === "invalid" && <p className="text-[11px] text-destructive mt-1">3–24 chars · letters, numbers, _ .</p>}
+                  {usernameStatus === "available" && <p className="text-[11px] text-emerald-400 mt-1">Available 👑</p>}
+                </>
+              )}
             </div>
           )}
 
           {mode === "signup" && (
-            <div className={signupStep === 1 ? "hidden" : "space-y-2.5"}>
+            <div
+              key={`step2-${signupStep}`}
+              className={signupStep === 1 ? "hidden" : "space-y-2.5 animate-fade-in"}
+            >
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <Label htmlFor="auth-first-name">First name</Label>
-                  <Input id="auth-first-name" name="first_name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className="h-11 bg-input" placeholder="Jane" autoComplete="given-name" />
+                  <Input
+                    id="auth-first-name"
+                    ref={setFieldRef("first_name")}
+                    name="first_name"
+                    value={form.first_name}
+                    onChange={(e) => { setForm({ ...form, first_name: e.target.value }); clearFieldError("first_name"); }}
+                    aria-invalid={!!errors.first_name}
+                    aria-describedby={errors.first_name ? "auth-first-name-err" : undefined}
+                    className={cn("h-11 bg-input", errors.first_name && "border-destructive focus-visible:ring-destructive")}
+                    placeholder="Jane"
+                    autoComplete="given-name"
+                  />
+                  {errors.first_name && <p id="auth-first-name-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.first_name}</p>}
                 </div>
                 <div>
                   <Label htmlFor="auth-last-name">Last name</Label>
-                  <Input id="auth-last-name" name="last_name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className="h-11 bg-input" placeholder="Doe" autoComplete="family-name" />
+                  <Input
+                    id="auth-last-name"
+                    ref={setFieldRef("last_name")}
+                    name="last_name"
+                    value={form.last_name}
+                    onChange={(e) => { setForm({ ...form, last_name: e.target.value }); clearFieldError("last_name"); }}
+                    aria-invalid={!!errors.last_name}
+                    aria-describedby={errors.last_name ? "auth-last-name-err" : undefined}
+                    className={cn("h-11 bg-input", errors.last_name && "border-destructive focus-visible:ring-destructive")}
+                    placeholder="Doe"
+                    autoComplete="family-name"
+                  />
+                  {errors.last_name && <p id="auth-last-name-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.last_name}</p>}
                 </div>
               </div>
 
@@ -645,22 +686,29 @@ export default function Auth() {
                   <Label htmlFor="auth-dob">Date of birth</Label>
                   <Input
                     id="auth-dob"
+                    ref={setFieldRef("dob")}
                     name="dob"
                     type="date"
                     value={form.dob}
                     max={new Date().toISOString().slice(0, 10)}
-                    onChange={(e) => setForm({ ...form, dob: e.target.value })}
-                    className="h-11 bg-input"
+                    onChange={(e) => { setForm({ ...form, dob: e.target.value }); clearFieldError("dob"); }}
+                    aria-invalid={!!errors.dob}
+                    aria-describedby={errors.dob ? "auth-dob-err" : undefined}
+                    className={cn("h-11 bg-input", errors.dob && "border-destructive focus-visible:ring-destructive")}
                   />
+                  {errors.dob && <p id="auth-dob-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.dob}</p>}
                 </div>
                 <div>
                   <Label htmlFor="auth-gender">Gender</Label>
                   <select
                     id="auth-gender"
+                    ref={setFieldRef("gender")}
                     name="gender"
                     value={form.gender}
-                    onChange={(e) => setForm({ ...form, gender: e.target.value as typeof form.gender })}
-                    className="h-11 w-full rounded-md bg-input border border-input px-3 text-sm"
+                    onChange={(e) => { setForm({ ...form, gender: e.target.value as typeof form.gender }); clearFieldError("gender"); }}
+                    aria-invalid={!!errors.gender}
+                    aria-describedby={errors.gender ? "auth-gender-err" : undefined}
+                    className={cn("h-11 w-full rounded-md bg-input border border-input px-3 text-sm", errors.gender && "border-destructive")}
                   >
                     <option value="">Select…</option>
                     <option value="male">Male</option>
@@ -668,6 +716,7 @@ export default function Auth() {
                     <option value="non_binary">Non-binary</option>
                     <option value="prefer_not_to_say">Prefer not to say</option>
                   </select>
+                  {errors.gender && <p id="auth-gender-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.gender}</p>}
                 </div>
               </div>
 
@@ -675,24 +724,52 @@ export default function Auth() {
                 <Label htmlFor="auth-country">Country</Label>
                 <select
                   id="auth-country"
+                  ref={setFieldRef("country")}
                   name="country"
                   value={form.country}
-                  onChange={(e) => setForm({ ...form, country: e.target.value })}
-                  className="h-11 w-full rounded-md bg-input border border-input px-3 text-sm"
+                  onChange={(e) => { setForm({ ...form, country: e.target.value }); clearFieldError("country"); }}
+                  aria-invalid={!!errors.country}
+                  aria-describedby={errors.country ? "auth-country-err" : undefined}
+                  className={cn("h-11 w-full rounded-md bg-input border border-input px-3 text-sm", errors.country && "border-destructive")}
                 >
                   <option value="">Select country…</option>
                   {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
+                {errors.country && <p id="auth-country-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.country}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <Label htmlFor="auth-state">State / Region</Label>
-                  <Input id="auth-state" name="state" autoComplete="address-level1" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="h-11 bg-input" placeholder="Georgia" />
+                  <Input
+                    id="auth-state"
+                    ref={setFieldRef("state")}
+                    name="state"
+                    autoComplete="address-level1"
+                    value={form.state}
+                    onChange={(e) => { setForm({ ...form, state: e.target.value }); clearFieldError("state"); }}
+                    aria-invalid={!!errors.state}
+                    aria-describedby={errors.state ? "auth-state-err" : undefined}
+                    className={cn("h-11 bg-input", errors.state && "border-destructive focus-visible:ring-destructive")}
+                    placeholder="Georgia"
+                  />
+                  {errors.state && <p id="auth-state-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.state}</p>}
                 </div>
                 <div>
                   <Label htmlFor="auth-city">City</Label>
-                  <Input id="auth-city" name="city" autoComplete="address-level2" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="h-11 bg-input" placeholder="Atlanta" />
+                  <Input
+                    id="auth-city"
+                    ref={setFieldRef("city")}
+                    name="city"
+                    autoComplete="address-level2"
+                    value={form.city}
+                    onChange={(e) => { setForm({ ...form, city: e.target.value }); clearFieldError("city"); }}
+                    aria-invalid={!!errors.city}
+                    aria-describedby={errors.city ? "auth-city-err" : undefined}
+                    className={cn("h-11 bg-input", errors.city && "border-destructive focus-visible:ring-destructive")}
+                    placeholder="Atlanta"
+                  />
+                  {errors.city && <p id="auth-city-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.city}</p>}
                 </div>
               </div>
 
@@ -708,10 +785,13 @@ export default function Auth() {
                 />
               </div>
 
-              <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/40 cursor-pointer">
+              <label className={cn("flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/40 cursor-pointer", errors.policies && "ring-1 ring-destructive")}>
                 <Checkbox
+                  ref={setFieldRef("policies")}
                   checked={policiesOk}
-                  onCheckedChange={(v) => { const ok = !!v; setTermsOk(ok); setPrivacyOk(ok); setCommunityOk(ok); }}
+                  onCheckedChange={(v) => { const ok = !!v; setTermsOk(ok); setPrivacyOk(ok); setCommunityOk(ok); if (ok) clearFieldError("policies"); }}
+                  aria-invalid={!!errors.policies}
+                  aria-describedby={errors.policies ? "auth-policies-err" : undefined}
                   className="mt-0.5"
                 />
                 <span className="text-[11px] leading-snug text-muted-foreground">
@@ -722,6 +802,9 @@ export default function Auth() {
                   <Link to="/csae-policy" target="_blank" className="underline text-primary">zero-tolerance CSAE policy</Link>.
                 </span>
               </label>
+              {errors.policies && (
+                <p id="auth-policies-err" role="alert" className="text-[11px] text-destructive -mt-1 px-1">{errors.policies}</p>
+              )}
               <label className="flex items-start gap-2.5 px-2.5 cursor-pointer">
                 <Checkbox checked={marketingOk} onCheckedChange={(v) => setMarketingOk(!!v)} className="mt-0.5" />
                 <span className="text-[11px] leading-snug text-muted-foreground">
