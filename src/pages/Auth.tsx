@@ -79,6 +79,29 @@ export default function Auth() {
   const [checkInbox, setCheckInbox] = useState<string | null>(null);
   const [magicSending, setMagicSending] = useState(false);
   const [signupStep, setSignupStep] = useState<1 | 2>(1);
+  const [errors, setErrors] = useState<SignupErrors>({});
+  const fieldRefs = useRef<Record<string, HTMLElement | null>>({});
+  const setFieldRef = (name: string) => (el: HTMLElement | null) => {
+    fieldRefs.current[name] = el;
+  };
+  const focusFirstError = (errs: SignupErrors, step: 1 | 2) => {
+    const key = firstErrorKey(errs, step === 1 ? STEP1_ORDER : STEP2_ORDER);
+    if (!key) return;
+    // requestAnimationFrame ensures the field exists (esp. after step switch)
+    requestAnimationFrame(() => {
+      const el = fieldRefs.current[key];
+      if (el && typeof (el as HTMLElement).focus === "function") {
+        (el as HTMLElement).focus({ preventScroll: false });
+      }
+    });
+  };
+  const clearFieldError = (field: keyof SignupErrors) => {
+    setErrors((e) => {
+      if (!e[field]) return e;
+      const { [field]: _omit, ...rest } = e;
+      return rest;
+    });
+  };
   const usernameTimer = useRef<number | null>(null);
 
   const pwScore = useMemo(() => scorePassword(form.password), [form.password]);
