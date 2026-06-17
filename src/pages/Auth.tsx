@@ -396,7 +396,8 @@ export default function Auth() {
             />
           </div>
 
-          <div>
+          <div className={mode === "signup" && signupStep === 2 ? "hidden" : ""}>
+
             <div className="flex items-center justify-between">
               <Label htmlFor="auth-password">Password</Label>
               {mode === "login" && (
