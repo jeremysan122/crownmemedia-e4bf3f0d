@@ -347,22 +347,42 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-6 py-10 bg-gradient-royal">
-      <Link to="/" className="flex flex-col items-center gap-2 mb-6 mx-auto" aria-label="CrownMe home">
-        <BrandLogo size={88} priority />
+    <div className="min-h-[100svh] flex flex-col px-5 py-4 sm:py-6 bg-gradient-royal">
+      <Link to="/" className="flex flex-col items-center mb-2 mx-auto" aria-label="CrownMe home">
+        <BrandLogo size={56} priority />
       </Link>
 
       <div className="flex-1 max-w-sm w-full mx-auto animate-fade-in">
-        <h1 className="font-display text-3xl text-gold mb-1">{mode === "signup" ? "Claim your throne" : "Welcome back"}</h1>
-        <p className="text-sm text-muted-foreground mb-6">
-          {mode === "signup" ? "Create your royal account" : "Continue your reign"}
-        </p>
+        <div className="flex items-baseline justify-between mb-3">
+          <div>
+            <h1 className="font-display text-2xl text-gold leading-tight">
+              {mode === "signup" ? (signupStep === 1 ? "Claim your throne" : "Almost there") : "Welcome back"}
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {mode === "signup"
+                ? (signupStep === 1 ? "Step 1 of 2 — your account" : "Step 2 of 2 — your profile")
+                : "Continue your reign"}
+            </p>
+          </div>
+          {mode === "signup" && (
+            <div className="flex gap-1" aria-hidden>
+              <span className={`h-1.5 w-6 rounded-full ${signupStep >= 1 ? "bg-gold" : "bg-muted"}`} />
+              <span className={`h-1.5 w-6 rounded-full ${signupStep >= 2 ? "bg-gold" : "bg-muted"}`} />
+            </div>
+          )}
+        </div>
 
         <form
-          className="space-y-3"
-          onSubmit={(e) => { e.preventDefault(); if (!loading) handle(); }}
+          className="space-y-2.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (loading) return;
+            if (mode === "signup" && signupStep === 1) { advanceToStep2(); return; }
+            handle();
+          }}
         >
-          <div>
+          <div className={mode === "signup" && signupStep === 2 ? "hidden" : ""}>
+
             <Label htmlFor="auth-email">Email</Label>
             <Input
               id="auth-email"
