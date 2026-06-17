@@ -73,6 +73,7 @@ export default function Auth() {
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [checkInbox, setCheckInbox] = useState<string | null>(null);
   const [magicSending, setMagicSending] = useState(false);
+  const [signupStep, setSignupStep] = useState<1 | 2>(1);
   const usernameTimer = useRef<number | null>(null);
 
   const pwScore = useMemo(() => scorePassword(form.password), [form.password]);
@@ -153,6 +154,18 @@ export default function Auth() {
       if (rememberMe) localStorage.setItem("crownme_remember_email", form.email.trim());
       else localStorage.removeItem("crownme_remember_email");
     } catch { /* noop */ }
+  };
+
+  const advanceToStep2 = () => {
+    const email = form.email.trim();
+    if (!/^.+@.+\..+$/.test(email)) { toast.error("Enter a valid email"); return; }
+    if (form.password.length < 8) { toast.error("Password must be at least 8 characters"); return; }
+    if (form.password !== form.confirmPassword) { toast.error("Passwords don't match"); return; }
+    if (pwScore.score < 2) { toast.error("Choose a stronger password"); return; }
+    if (!form.username || usernameStatus === "invalid") { toast.error("Choose a valid username"); return; }
+    if (usernameStatus === "taken") { toast.error("That username is already taken"); return; }
+    if (usernameStatus === "reserved") { toast.error("That username is reserved"); return; }
+    setSignupStep(2);
   };
 
   const handle = async () => {
@@ -334,22 +347,42 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-6 py-10 bg-gradient-royal">
-      <Link to="/" className="flex flex-col items-center gap-2 mb-6 mx-auto" aria-label="CrownMe home">
-        <BrandLogo size={88} priority />
+    <div className="min-h-[100svh] flex flex-col px-5 py-4 sm:py-6 bg-gradient-royal">
+      <Link to="/" className="flex flex-col items-center mb-2 mx-auto" aria-label="CrownMe home">
+        <BrandLogo size={56} priority />
       </Link>
 
       <div className="flex-1 max-w-sm w-full mx-auto animate-fade-in">
-        <h1 className="font-display text-3xl text-gold mb-1">{mode === "signup" ? "Claim your throne" : "Welcome back"}</h1>
-        <p className="text-sm text-muted-foreground mb-6">
-          {mode === "signup" ? "Create your royal account" : "Continue your reign"}
-        </p>
+        <div className="flex items-baseline justify-between mb-3">
+          <div>
+            <h1 className="font-display text-2xl text-gold leading-tight">
+              {mode === "signup" ? (signupStep === 1 ? "Claim your throne" : "Almost there") : "Welcome back"}
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {mode === "signup"
+                ? (signupStep === 1 ? "Step 1 of 2 — your account" : "Step 2 of 2 — your profile")
+                : "Continue your reign"}
+            </p>
+          </div>
+          {mode === "signup" && (
+            <div className="flex gap-1" aria-hidden>
+              <span className={`h-1.5 w-6 rounded-full ${signupStep >= 1 ? "bg-gold" : "bg-muted"}`} />
+              <span className={`h-1.5 w-6 rounded-full ${signupStep >= 2 ? "bg-gold" : "bg-muted"}`} />
+            </div>
+          )}
+        </div>
 
         <form
-          className="space-y-3"
-          onSubmit={(e) => { e.preventDefault(); if (!loading) handle(); }}
+          className="space-y-2.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (loading) return;
+            if (mode === "signup" && signupStep === 1) { advanceToStep2(); return; }
+            handle();
+          }}
         >
-          <div>
+          <div className={mode === "signup" && signupStep === 2 ? "hidden" : ""}>
+
             <Label htmlFor="auth-email">Email</Label>
             <Input
               id="auth-email"
@@ -363,7 +396,8 @@ export default function Auth() {
             />
           </div>
 
-          <div>
+          <div className={mode === "signup" && signupStep === 2 ? "hidden" : ""}>
+
             <div className="flex items-center justify-between">
               <Label htmlFor="auth-password">Password</Label>
               {mode === "login" && (
@@ -435,7 +469,7 @@ export default function Auth() {
           </div>
 
           {mode === "signup" && (
-            <div>
+            <div className={signupStep === 2 ? "hidden" : ""}>
               <Label htmlFor="auth-confirm">Confirm password</Label>
               <div className="relative">
                 <Input
@@ -445,7 +479,7 @@ export default function Auth() {
                   autoComplete="new-password"
                   value={form.confirmPassword}
                   onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                  className="h-12 bg-input pr-11"
+                  className="h-11 bg-input pr-11"
                   placeholder="Repeat password"
                 />
                 <button
@@ -466,72 +500,74 @@ export default function Auth() {
             </div>
           )}
 
+
           {mode === "signup" && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
+            <div className={signupStep === 2 ? "hidden" : ""}>
+              <Label htmlFor="auth-username">Username</Label>
+              <div className="relative">
+                <Input
+                  id="auth-username"
+                  name="username"
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
+                  className="h-11 bg-input pr-10"
+                  placeholder="kingname"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {usernameStatus === "checking" && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+                  {usernameStatus === "available" && <Check className="size-4 text-emerald-400" />}
+                  {(usernameStatus === "taken" || usernameStatus === "reserved" || usernameStatus === "invalid") && <X className="size-4 text-destructive" />}
+                </div>
+              </div>
+              {usernameStatus === "taken" && <p className="text-[11px] text-destructive mt-1">That username is taken</p>}
+              {usernameStatus === "reserved" && <p className="text-[11px] text-destructive mt-1">That username is reserved</p>}
+              {usernameStatus === "invalid" && <p className="text-[11px] text-destructive mt-1">3–24 chars · letters, numbers, _ .</p>}
+              {usernameStatus === "available" && <p className="text-[11px] text-emerald-400 mt-1">Available 👑</p>}
+            </div>
+          )}
+
+          {mode === "signup" && (
+            <div className={signupStep === 1 ? "hidden" : "space-y-2.5"}>
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <Label htmlFor="auth-first-name">First name</Label>
-                  <Input id="auth-first-name" name="first_name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className="h-12 bg-input" placeholder="Jane" autoComplete="given-name" />
+                  <Input id="auth-first-name" name="first_name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className="h-11 bg-input" placeholder="Jane" autoComplete="given-name" />
                 </div>
                 <div>
                   <Label htmlFor="auth-last-name">Last name</Label>
-                  <Input id="auth-last-name" name="last_name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className="h-12 bg-input" placeholder="Doe" autoComplete="family-name" />
+                  <Input id="auth-last-name" name="last_name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className="h-11 bg-input" placeholder="Doe" autoComplete="family-name" />
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="auth-username">Username</Label>
-                <div className="relative">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <Label htmlFor="auth-dob">Date of birth</Label>
                   <Input
-                    id="auth-username"
-                    name="username"
-                    value={form.username}
-                    onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
-                    className="h-12 bg-input pr-10"
-                    placeholder="kingname"
+                    id="auth-dob"
+                    name="dob"
+                    type="date"
+                    value={form.dob}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setForm({ ...form, dob: e.target.value })}
+                    className="h-11 bg-input"
                   />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {usernameStatus === "checking" && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
-                    {usernameStatus === "available" && <Check className="size-4 text-emerald-400" />}
-                    {(usernameStatus === "taken" || usernameStatus === "reserved" || usernameStatus === "invalid") && <X className="size-4 text-destructive" />}
-                  </div>
                 </div>
-                {usernameStatus === "taken" && <p className="text-[11px] text-destructive mt-1">That username is taken</p>}
-                {usernameStatus === "reserved" && <p className="text-[11px] text-destructive mt-1">That username is reserved</p>}
-                {usernameStatus === "invalid" && <p className="text-[11px] text-destructive mt-1">3–24 chars · letters, numbers, _ .</p>}
-                {usernameStatus === "available" && <p className="text-[11px] text-emerald-400 mt-1">Available 👑</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="auth-dob">Date of birth</Label>
-                <Input
-                  id="auth-dob"
-                  name="dob"
-                  type="date"
-                  value={form.dob}
-                  max={new Date().toISOString().slice(0, 10)}
-                  onChange={(e) => setForm({ ...form, dob: e.target.value })}
-                  className="h-12 bg-input"
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">You must be 18+ to join CrownMe.</p>
-              </div>
-
-              <div>
-                <Label htmlFor="auth-gender">Gender</Label>
-                <select
-                  id="auth-gender"
-                  name="gender"
-                  value={form.gender}
-                  onChange={(e) => setForm({ ...form, gender: e.target.value as typeof form.gender })}
-                  className="h-12 w-full rounded-md bg-input border border-input px-3 text-sm"
-                >
-                  <option value="">Select…</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="non_binary">Non-binary</option>
-                  <option value="prefer_not_to_say">Prefer not to say</option>
-                </select>
-                <p className="text-[10px] text-muted-foreground mt-1">Used to display your King / Queen title on the leaderboard.</p>
+                <div>
+                  <Label htmlFor="auth-gender">Gender</Label>
+                  <select
+                    id="auth-gender"
+                    name="gender"
+                    value={form.gender}
+                    onChange={(e) => setForm({ ...form, gender: e.target.value as typeof form.gender })}
+                    className="h-11 w-full rounded-md bg-input border border-input px-3 text-sm"
+                  >
+                    <option value="">Select…</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="non_binary">Non-binary</option>
+                    <option value="prefer_not_to_say">Prefer not to say</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -541,21 +577,21 @@ export default function Auth() {
                   name="country"
                   value={form.country}
                   onChange={(e) => setForm({ ...form, country: e.target.value })}
-                  className="h-12 w-full rounded-md bg-input border border-input px-3 text-sm"
+                  className="h-11 w-full rounded-md bg-input border border-input px-3 text-sm"
                 >
                   <option value="">Select country…</option>
                   {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <Label htmlFor="auth-state">State / Region</Label>
-                  <Input id="auth-state" name="state" autoComplete="address-level1" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="h-12 bg-input" placeholder="Georgia" />
+                  <Input id="auth-state" name="state" autoComplete="address-level1" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="h-11 bg-input" placeholder="Georgia" />
                 </div>
                 <div>
                   <Label htmlFor="auth-city">City</Label>
-                  <Input id="auth-city" name="city" autoComplete="address-level2" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="h-12 bg-input" placeholder="Atlanta" />
+                  <Input id="auth-city" name="city" autoComplete="address-level2" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="h-11 bg-input" placeholder="Atlanta" />
                 </div>
               </div>
 
@@ -566,12 +602,32 @@ export default function Auth() {
                   name="referral"
                   value={form.referral}
                   onChange={(e) => setForm({ ...form, referral: e.target.value.toUpperCase() })}
-                  className="h-12 bg-input"
+                  className="h-11 bg-input"
                   placeholder="CROWN2026"
                 />
-                <p className="text-[10px] text-muted-foreground mt-1">+200 shekels for you and your inviter.</p>
               </div>
-            </>
+
+              <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/40 cursor-pointer">
+                <Checkbox
+                  checked={policiesOk}
+                  onCheckedChange={(v) => { const ok = !!v; setTermsOk(ok); setPrivacyOk(ok); setCommunityOk(ok); }}
+                  className="mt-0.5"
+                />
+                <span className="text-[11px] leading-snug text-muted-foreground">
+                  I'm 18+ and agree to the{" "}
+                  <Link to="/terms" target="_blank" className="underline text-primary">Terms</Link>,{" "}
+                  <Link to="/privacy" target="_blank" className="underline text-primary">Privacy Policy</Link>,{" "}
+                  <Link to="/acceptable-use" target="_blank" className="underline text-primary">Community Guidelines</Link>, and{" "}
+                  <Link to="/csae-policy" target="_blank" className="underline text-primary">zero-tolerance CSAE policy</Link>.
+                </span>
+              </label>
+              <label className="flex items-start gap-2.5 px-2.5 cursor-pointer">
+                <Checkbox checked={marketingOk} onCheckedChange={(v) => setMarketingOk(!!v)} className="mt-0.5" />
+                <span className="text-[11px] leading-snug text-muted-foreground">
+                  Send me royal updates — drops & contests. Unsubscribe anytime.
+                </span>
+              </label>
+            </div>
           )}
 
           {mode === "login" && (
@@ -581,46 +637,34 @@ export default function Auth() {
             </label>
           )}
 
-          {mode === "signup" && (
-            <>
-              <label className="flex items-start gap-3 p-3 rounded-xl bg-muted/40 cursor-pointer">
-                <Checkbox checked={termsOk} onCheckedChange={(v) => setTermsOk(!!v)} className="mt-0.5" />
-                <span className="text-xs leading-snug text-muted-foreground">
-                  I'm 18 or older and I agree to CrownMe Media's{" "}
-                  <Link to="/terms" target="_blank" className="underline text-primary">Terms of Service</Link>.
-                </span>
-              </label>
-              <label className="flex items-start gap-3 p-3 rounded-xl bg-muted/40 cursor-pointer">
-                <Checkbox checked={privacyOk} onCheckedChange={(v) => setPrivacyOk(!!v)} className="mt-0.5" />
-                <span className="text-xs leading-snug text-muted-foreground">
-                  I have read and accept the{" "}
-                  <Link to="/privacy" target="_blank" className="underline text-primary">Privacy Policy</Link>.
-                </span>
-              </label>
-              <label className="flex items-start gap-3 p-3 rounded-xl bg-muted/40 cursor-pointer">
-                <Checkbox checked={communityOk} onCheckedChange={(v) => setCommunityOk(!!v)} className="mt-0.5" />
-                <span className="text-xs leading-snug text-muted-foreground">
-                  I'll follow the{" "}
-                  <Link to="/acceptable-use" target="_blank" className="underline text-primary">Community Guidelines</Link>{" "}
-                  and CrownMe's <Link to="/csae-policy" target="_blank" className="underline text-primary">zero-tolerance CSAE policy</Link>.
-                </span>
-              </label>
-              <label className="flex items-start gap-3 p-3 rounded-xl bg-muted/20 cursor-pointer">
-                <Checkbox checked={marketingOk} onCheckedChange={(v) => setMarketingOk(!!v)} className="mt-0.5" />
-                <span className="text-xs leading-snug text-muted-foreground">
-                  Send me royal updates — drops, contests, and Crown Score milestones. Unsubscribe anytime.
-                </span>
-              </label>
-            </>
-          )}
 
-          <Button
-            type="submit"
-            disabled={loading || (mode === "signup" && !policiesOk)}
-            className="w-full h-12 mt-4 bg-gradient-gold text-primary-foreground font-bold tracking-wider gold-shadow"
-          >
-            {loading ? <Loader2 className="size-5 animate-spin" /> : mode === "signup" ? "CREATE ACCOUNT" : "LOG IN"}
-          </Button>
+          {mode === "signup" && signupStep === 2 ? (
+            <div className="flex gap-2 mt-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSignupStep(1)}
+                className="h-12 px-4 border-border"
+              >
+                Back
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading || !policiesOk}
+                className="flex-1 h-12 bg-gradient-gold text-primary-foreground font-bold tracking-wider gold-shadow"
+              >
+                {loading ? <Loader2 className="size-5 animate-spin" /> : "CREATE ACCOUNT"}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 mt-3 bg-gradient-gold text-primary-foreground font-bold tracking-wider gold-shadow"
+            >
+              {loading ? <Loader2 className="size-5 animate-spin" /> : mode === "signup" ? "CONTINUE" : "LOG IN"}
+            </Button>
+          )}
 
           {unverifiedEmail && mode === "login" && (
             <div className="mt-2 p-3 rounded-lg border border-gold/30 bg-gold/5 text-xs text-foreground flex items-center justify-between gap-2">
@@ -631,7 +675,7 @@ export default function Auth() {
             </div>
           )}
 
-          <div className="relative my-4">
+          <div className={`relative my-3 ${mode === "signup" && signupStep === 2 ? "hidden" : ""}`}>
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-border" />
             </div>
@@ -639,6 +683,7 @@ export default function Auth() {
               <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
             </div>
           </div>
+
 
           {mode === "login" && (
             <Button
@@ -652,77 +697,83 @@ export default function Auth() {
             </Button>
           )}
 
-          <Button
-            type="button"
-            variant="outline"
-            disabled={loading}
-            onClick={async () => {
-              setLoading(true);
-              try {
-                const result = await lovable.auth.signInWithOAuth("google", {
-                  redirect_uri: window.location.origin,
-                });
-                if (result.error) {
-                  toast.error("Google sign-in failed");
-                  return;
-                }
-                if (result.redirected) return;
-                nav("/feed", { replace: true });
-              } catch (e) {
-                toast.error("Google sign-in failed");
-              } finally {
-                setLoading(false);
-              }
-            }}
-            className="w-full h-12 bg-card hover:bg-card/80 border-border text-foreground font-medium"
-          >
-            <svg className="size-5" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.2.8 3.9 1.5l2.7-2.6C17 3.3 14.7 2.3 12 2.3 6.9 2.3 2.8 6.4 2.8 11.5S6.9 20.7 12 20.7c6.9 0 9.5-4.8 9.5-7.4 0-.5-.06-.9-.13-1.3H12z"/>
-            </svg>
-            Continue with Google
-          </Button>
+          {!(mode === "signup" && signupStep === 2) && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading}
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const result = await lovable.auth.signInWithOAuth("google", {
+                      redirect_uri: window.location.origin,
+                    });
+                    if (result.error) {
+                      toast.error("Google sign-in failed");
+                      return;
+                    }
+                    if (result.redirected) return;
+                    nav("/feed", { replace: true });
+                  } catch (e) {
+                    toast.error("Google sign-in failed");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="w-full h-11 bg-card hover:bg-card/80 border-border text-foreground font-medium"
+              >
+                <svg className="size-5" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.2.8 3.9 1.5l2.7-2.6C17 3.3 14.7 2.3 12 2.3 6.9 2.3 2.8 6.4 2.8 11.5S6.9 20.7 12 20.7c6.9 0 9.5-4.8 9.5-7.4 0-.5-.06-.9-.13-1.3H12z"/>
+                </svg>
+                Continue with Google
+              </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            disabled={loading}
-            onClick={async () => {
-              setLoading(true);
-              try {
-                const result = await lovable.auth.signInWithOAuth("apple", {
-                  redirect_uri: window.location.origin,
-                });
-                if (result.error) {
-                  toast.error("Apple sign-in failed");
-                  return;
-                }
-                if (result.redirected) return;
-                nav("/feed", { replace: true });
-              } catch (e) {
-                toast.error("Apple sign-in failed");
-              } finally {
-                setLoading(false);
-              }
-            }}
-            className="w-full h-12 mt-2 bg-foreground hover:bg-foreground/90 text-background border-foreground font-medium"
-          >
-            <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M17.05 12.04c-.03-2.86 2.34-4.24 2.45-4.31-1.34-1.96-3.42-2.23-4.16-2.26-1.77-.18-3.46 1.04-4.36 1.04-.91 0-2.3-1.02-3.78-.99-1.94.03-3.74 1.13-4.74 2.86-2.02 3.5-.52 8.68 1.45 11.52.96 1.39 2.1 2.95 3.58 2.9 1.44-.06 1.99-.93 3.73-.93 1.74 0 2.23.93 3.75.9 1.55-.03 2.53-1.42 3.48-2.82 1.1-1.62 1.55-3.19 1.57-3.27-.03-.01-3.01-1.16-3.04-4.6zM14.18 3.62c.79-.96 1.33-2.29 1.18-3.62-1.14.05-2.53.76-3.35 1.71-.73.84-1.38 2.2-1.21 3.5 1.28.1 2.58-.65 3.38-1.59z"/>
-            </svg>
-            Continue with Apple
-          </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading}
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const result = await lovable.auth.signInWithOAuth("apple", {
+                      redirect_uri: window.location.origin,
+                    });
+                    if (result.error) {
+                      toast.error("Apple sign-in failed");
+                      return;
+                    }
+                    if (result.redirected) return;
+                    nav("/feed", { replace: true });
+                  } catch (e) {
+                    toast.error("Apple sign-in failed");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="w-full h-11 mt-2 bg-foreground hover:bg-foreground/90 text-background border-foreground font-medium"
+              >
+                <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M17.05 12.04c-.03-2.86 2.34-4.24 2.45-4.31-1.34-1.96-3.42-2.23-4.16-2.26-1.77-.18-3.46 1.04-4.36 1.04-.91 0-2.3-1.02-3.78-.99-1.94.03-3.74 1.13-4.74 2.86-2.02 3.5-.52 8.68 1.45 11.52.96 1.39 2.1 2.95 3.58 2.9 1.44-.06 1.99-.93 3.73-.93 1.74 0 2.23.93 3.75.9 1.55-.03 2.53-1.42 3.48-2.82 1.1-1.62 1.55-3.19 1.57-3.27-.03-.01-3.01-1.16-3.04-4.6zM14.18 3.62c.79-.96 1.33-2.29 1.18-3.62-1.14.05-2.53.76-3.35 1.71-.73.84-1.38 2.2-1.21 3.5 1.28.1 2.58-.65 3.38-1.59z"/>
+                </svg>
+                Continue with Apple
+              </Button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setUnverifiedEmail(null);
-              if (mode === "signup") setMode("login");
-              else setMode("signup");
-            }}
-            className="w-full text-sm text-muted-foreground hover:text-primary mt-4"
-          >
-            {mode === "signup" ? "Already have an account? Log in" : "Need an account? Sign up"}
-          </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUnverifiedEmail(null);
+                  setSignupStep(1);
+                  if (mode === "signup") setMode("login");
+                  else setMode("signup");
+                }}
+                className="w-full text-sm text-muted-foreground hover:text-primary mt-3"
+              >
+                {mode === "signup" ? "Already have an account? Log in" : "Need an account? Sign up"}
+              </button>
+            </>
+          )}
+
         </form>
       </div>
     </div>
