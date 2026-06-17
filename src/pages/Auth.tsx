@@ -502,71 +502,72 @@ export default function Auth() {
 
 
           {mode === "signup" && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
+            <div className={signupStep === 2 ? "hidden" : ""}>
+              <Label htmlFor="auth-username">Username</Label>
+              <div className="relative">
+                <Input
+                  id="auth-username"
+                  name="username"
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
+                  className="h-11 bg-input pr-10"
+                  placeholder="kingname"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {usernameStatus === "checking" && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+                  {usernameStatus === "available" && <Check className="size-4 text-emerald-400" />}
+                  {(usernameStatus === "taken" || usernameStatus === "reserved" || usernameStatus === "invalid") && <X className="size-4 text-destructive" />}
+                </div>
+              </div>
+              {usernameStatus === "taken" && <p className="text-[11px] text-destructive mt-1">That username is taken</p>}
+              {usernameStatus === "reserved" && <p className="text-[11px] text-destructive mt-1">That username is reserved</p>}
+              {usernameStatus === "invalid" && <p className="text-[11px] text-destructive mt-1">3–24 chars · letters, numbers, _ .</p>}
+              {usernameStatus === "available" && <p className="text-[11px] text-emerald-400 mt-1">Available 👑</p>}
+            </div>
+          )}
+
+          {mode === "signup" && (
+            <div className={signupStep === 1 ? "hidden" : "space-y-2.5"}>
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <Label htmlFor="auth-first-name">First name</Label>
-                  <Input id="auth-first-name" name="first_name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className="h-12 bg-input" placeholder="Jane" autoComplete="given-name" />
+                  <Input id="auth-first-name" name="first_name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className="h-11 bg-input" placeholder="Jane" autoComplete="given-name" />
                 </div>
                 <div>
                   <Label htmlFor="auth-last-name">Last name</Label>
-                  <Input id="auth-last-name" name="last_name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className="h-12 bg-input" placeholder="Doe" autoComplete="family-name" />
+                  <Input id="auth-last-name" name="last_name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className="h-11 bg-input" placeholder="Doe" autoComplete="family-name" />
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="auth-username">Username</Label>
-                <div className="relative">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <Label htmlFor="auth-dob">Date of birth</Label>
                   <Input
-                    id="auth-username"
-                    name="username"
-                    value={form.username}
-                    onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
-                    className="h-12 bg-input pr-10"
-                    placeholder="kingname"
+                    id="auth-dob"
+                    name="dob"
+                    type="date"
+                    value={form.dob}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setForm({ ...form, dob: e.target.value })}
+                    className="h-11 bg-input"
                   />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {usernameStatus === "checking" && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
-                    {usernameStatus === "available" && <Check className="size-4 text-emerald-400" />}
-                    {(usernameStatus === "taken" || usernameStatus === "reserved" || usernameStatus === "invalid") && <X className="size-4 text-destructive" />}
-                  </div>
                 </div>
-                {usernameStatus === "taken" && <p className="text-[11px] text-destructive mt-1">That username is taken</p>}
-                {usernameStatus === "reserved" && <p className="text-[11px] text-destructive mt-1">That username is reserved</p>}
-                {usernameStatus === "invalid" && <p className="text-[11px] text-destructive mt-1">3–24 chars · letters, numbers, _ .</p>}
-                {usernameStatus === "available" && <p className="text-[11px] text-emerald-400 mt-1">Available 👑</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="auth-dob">Date of birth</Label>
-                <Input
-                  id="auth-dob"
-                  name="dob"
-                  type="date"
-                  value={form.dob}
-                  max={new Date().toISOString().slice(0, 10)}
-                  onChange={(e) => setForm({ ...form, dob: e.target.value })}
-                  className="h-12 bg-input"
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">You must be 18+ to join CrownMe.</p>
-              </div>
-
-              <div>
-                <Label htmlFor="auth-gender">Gender</Label>
-                <select
-                  id="auth-gender"
-                  name="gender"
-                  value={form.gender}
-                  onChange={(e) => setForm({ ...form, gender: e.target.value as typeof form.gender })}
-                  className="h-12 w-full rounded-md bg-input border border-input px-3 text-sm"
-                >
-                  <option value="">Select…</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="non_binary">Non-binary</option>
-                  <option value="prefer_not_to_say">Prefer not to say</option>
-                </select>
-                <p className="text-[10px] text-muted-foreground mt-1">Used to display your King / Queen title on the leaderboard.</p>
+                <div>
+                  <Label htmlFor="auth-gender">Gender</Label>
+                  <select
+                    id="auth-gender"
+                    name="gender"
+                    value={form.gender}
+                    onChange={(e) => setForm({ ...form, gender: e.target.value as typeof form.gender })}
+                    className="h-11 w-full rounded-md bg-input border border-input px-3 text-sm"
+                  >
+                    <option value="">Select…</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="non_binary">Non-binary</option>
+                    <option value="prefer_not_to_say">Prefer not to say</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -576,21 +577,21 @@ export default function Auth() {
                   name="country"
                   value={form.country}
                   onChange={(e) => setForm({ ...form, country: e.target.value })}
-                  className="h-12 w-full rounded-md bg-input border border-input px-3 text-sm"
+                  className="h-11 w-full rounded-md bg-input border border-input px-3 text-sm"
                 >
                   <option value="">Select country…</option>
                   {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <Label htmlFor="auth-state">State / Region</Label>
-                  <Input id="auth-state" name="state" autoComplete="address-level1" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="h-12 bg-input" placeholder="Georgia" />
+                  <Input id="auth-state" name="state" autoComplete="address-level1" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="h-11 bg-input" placeholder="Georgia" />
                 </div>
                 <div>
                   <Label htmlFor="auth-city">City</Label>
-                  <Input id="auth-city" name="city" autoComplete="address-level2" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="h-12 bg-input" placeholder="Atlanta" />
+                  <Input id="auth-city" name="city" autoComplete="address-level2" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="h-11 bg-input" placeholder="Atlanta" />
                 </div>
               </div>
 
@@ -601,12 +602,32 @@ export default function Auth() {
                   name="referral"
                   value={form.referral}
                   onChange={(e) => setForm({ ...form, referral: e.target.value.toUpperCase() })}
-                  className="h-12 bg-input"
+                  className="h-11 bg-input"
                   placeholder="CROWN2026"
                 />
-                <p className="text-[10px] text-muted-foreground mt-1">+200 shekels for you and your inviter.</p>
               </div>
-            </>
+
+              <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/40 cursor-pointer">
+                <Checkbox
+                  checked={policiesOk}
+                  onCheckedChange={(v) => { const ok = !!v; setTermsOk(ok); setPrivacyOk(ok); setCommunityOk(ok); }}
+                  className="mt-0.5"
+                />
+                <span className="text-[11px] leading-snug text-muted-foreground">
+                  I'm 18+ and agree to the{" "}
+                  <Link to="/terms" target="_blank" className="underline text-primary">Terms</Link>,{" "}
+                  <Link to="/privacy" target="_blank" className="underline text-primary">Privacy Policy</Link>,{" "}
+                  <Link to="/acceptable-use" target="_blank" className="underline text-primary">Community Guidelines</Link>, and{" "}
+                  <Link to="/csae-policy" target="_blank" className="underline text-primary">zero-tolerance CSAE policy</Link>.
+                </span>
+              </label>
+              <label className="flex items-start gap-2.5 px-2.5 cursor-pointer">
+                <Checkbox checked={marketingOk} onCheckedChange={(v) => setMarketingOk(!!v)} className="mt-0.5" />
+                <span className="text-[11px] leading-snug text-muted-foreground">
+                  Send me royal updates — drops & contests. Unsubscribe anytime.
+                </span>
+              </label>
+            </div>
           )}
 
           {mode === "login" && (
@@ -616,38 +637,6 @@ export default function Auth() {
             </label>
           )}
 
-          {mode === "signup" && (
-            <>
-              <label className="flex items-start gap-3 p-3 rounded-xl bg-muted/40 cursor-pointer">
-                <Checkbox checked={termsOk} onCheckedChange={(v) => setTermsOk(!!v)} className="mt-0.5" />
-                <span className="text-xs leading-snug text-muted-foreground">
-                  I'm 18 or older and I agree to CrownMe Media's{" "}
-                  <Link to="/terms" target="_blank" className="underline text-primary">Terms of Service</Link>.
-                </span>
-              </label>
-              <label className="flex items-start gap-3 p-3 rounded-xl bg-muted/40 cursor-pointer">
-                <Checkbox checked={privacyOk} onCheckedChange={(v) => setPrivacyOk(!!v)} className="mt-0.5" />
-                <span className="text-xs leading-snug text-muted-foreground">
-                  I have read and accept the{" "}
-                  <Link to="/privacy" target="_blank" className="underline text-primary">Privacy Policy</Link>.
-                </span>
-              </label>
-              <label className="flex items-start gap-3 p-3 rounded-xl bg-muted/40 cursor-pointer">
-                <Checkbox checked={communityOk} onCheckedChange={(v) => setCommunityOk(!!v)} className="mt-0.5" />
-                <span className="text-xs leading-snug text-muted-foreground">
-                  I'll follow the{" "}
-                  <Link to="/acceptable-use" target="_blank" className="underline text-primary">Community Guidelines</Link>{" "}
-                  and CrownMe's <Link to="/csae-policy" target="_blank" className="underline text-primary">zero-tolerance CSAE policy</Link>.
-                </span>
-              </label>
-              <label className="flex items-start gap-3 p-3 rounded-xl bg-muted/20 cursor-pointer">
-                <Checkbox checked={marketingOk} onCheckedChange={(v) => setMarketingOk(!!v)} className="mt-0.5" />
-                <span className="text-xs leading-snug text-muted-foreground">
-                  Send me royal updates — drops, contests, and Crown Score milestones. Unsubscribe anytime.
-                </span>
-              </label>
-            </>
-          )}
 
           <Button
             type="submit"
