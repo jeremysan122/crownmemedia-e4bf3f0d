@@ -156,7 +156,6 @@ export default function Auth() {
     } catch { /* noop */ }
   };
 
-  const handle = async () => {
   const advanceToStep2 = () => {
     const email = form.email.trim();
     if (!/^.+@.+\..+$/.test(email)) { toast.error("Enter a valid email"); return; }
