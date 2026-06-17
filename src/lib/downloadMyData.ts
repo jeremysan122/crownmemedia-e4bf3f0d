@@ -44,7 +44,9 @@ export async function downloadMyData(userId: string, username?: string | null): 
     wallet,
   ] = await Promise.all([
     safeSelect(supabase.rpc("get_my_profile") as any),
-    safeSelect(supabase.from("posts").select("*").eq("user_id", userId) as any),
+    safeSelect(supabase.from("posts").select(
+      "id,user_id,image_url,caption,category,city,state,country,crown_score,vote_count,comment_count,share_count,battle_wins,is_removed,created_at,image_urls,media_type,video_url,video_poster_url,duration_ms,filter,alt_texts,media_width,media_height,photo_filter,video_filter,filter_type,is_archived,archived_at,hashtags,edited_at,pinned_at,scheduled_for,parent_post_id,repost_caption,tagged_user_ids,media_origin,royal_boost_until,vote_boost_until,spotlight_until,crown_shield_until,is_sensitive,sensitive_reason,content_rating,moderation_status,main_category_slug,subcategory_slug,publish_status,content_type"
+    ).eq("user_id", userId) as any),
     safeSelect(supabase.from("comments").select("*").eq("user_id", userId) as any),
     safeSelect(supabase.from("votes").select("*").eq("user_id", userId) as any),
     safeSelect(supabase.from("messages").select("*").eq("sender_id", userId) as any),
