@@ -366,7 +366,7 @@ export default function Rewards() {
                 return (
                   <div
                     key={day}
-                    className={`relative aspect-square rounded-2xl flex flex-col items-center justify-center space-y-1 transition
+                    className={`relative min-w-0 aspect-square rounded-2xl flex flex-col items-center justify-center space-y-1 transition px-1
                       ${isClaimed ? "bg-emerald-500/10 border border-emerald-500/30" :
                         isToday ? "bg-gradient-to-br from-amber-400 to-amber-600 border-2 border-white/30 shadow-[0_0_20px_rgba(251,191,36,0.4)] animate-pulse" :
                         "bg-white/5 border border-white/10 opacity-60"}`}
@@ -395,20 +395,20 @@ export default function Rewards() {
                 const isClaimed = day <= fullyClaimedThisCycle;
                 const isToday = todaySlot === day;
                 return (
-                  <div className={`col-span-2 relative aspect-[2/1] rounded-2xl bg-gradient-to-br from-[#2a1b4d] to-[#1a1033] border flex items-center justify-between gap-2 px-3 overflow-hidden
+                  <div
+                    data-testid="rewards-day7-card"
+                    className={`col-span-2 relative min-w-0 aspect-[2/1] rounded-2xl bg-gradient-to-br from-[#2a1b4d] to-[#1a1033] border flex items-center gap-2 px-2.5 py-2 overflow-hidden
                     ${isToday ? "border-amber-400/80 shadow-[0_0_24px_rgba(245,158,11,0.4)] animate-pulse" : "border-amber-500/50"}
-                    ${isClaimed ? "opacity-90" : ""}`}>
+                    ${isClaimed ? "opacity-90" : ""}`}
+                  >
                     <div className="absolute inset-0 bg-amber-500/5" aria-hidden />
                     <div className="relative min-w-0 flex-1">
-                      <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider block leading-tight">Grand Prize</span>
-                      <span className="text-white font-black text-sm leading-tight block">DAY 7</span>
-                      <span className="text-[9px] text-white/60 block leading-tight">+ random bonus</span>
+                      <span className="text-[8px] sm:text-[9px] text-amber-400 font-bold uppercase tracking-wider block leading-tight truncate">Grand Prize</span>
+                      <span className="text-white font-black text-xs sm:text-sm leading-tight block">DAY 7</span>
+                      <span className="text-amber-400 font-black text-[10px] sm:text-xs leading-tight block truncate">up to +100</span>
                     </div>
-                    <div className="relative flex items-center gap-1.5 shrink-0">
-                      <div className="w-7 h-7 rounded-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)] flex items-center justify-center">
-                        <CrownIcon className="size-4 text-[#1a1033]" />
-                      </div>
-                      <span className="text-amber-400 font-black text-xs whitespace-nowrap">up to +100</span>
+                    <div className="relative shrink-0 w-7 h-7 rounded-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)] flex items-center justify-center">
+                      <CrownIcon className="size-4 text-[#1a1033]" />
                     </div>
                     {isClaimed && (
                       <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 z-10">
