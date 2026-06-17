@@ -366,7 +366,7 @@ export default function Rewards() {
                 return (
                   <div
                     key={day}
-                    className={`relative aspect-square rounded-2xl flex flex-col items-center justify-center space-y-1 transition
+                    className={`relative min-w-0 aspect-square rounded-2xl flex flex-col items-center justify-center space-y-1 transition px-1
                       ${isClaimed ? "bg-emerald-500/10 border border-emerald-500/30" :
                         isToday ? "bg-gradient-to-br from-amber-400 to-amber-600 border-2 border-white/30 shadow-[0_0_20px_rgba(251,191,36,0.4)] animate-pulse" :
                         "bg-white/5 border border-white/10 opacity-60"}`}
