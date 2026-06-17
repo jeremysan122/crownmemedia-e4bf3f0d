@@ -7,6 +7,7 @@ import { FeedPost } from "@/components/PostCard";
 import CommentsDrawer from "@/components/CommentsDrawer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import { POST_SELECT } from "@/lib/postQuery";
 import { useAuth } from "@/context/AuthContext";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { trackUsage } from "@/lib/usageTrack";
