@@ -395,20 +395,20 @@ export default function Rewards() {
                 const isClaimed = day <= fullyClaimedThisCycle;
                 const isToday = todaySlot === day;
                 return (
-                  <div className={`col-span-2 relative aspect-[2/1] rounded-2xl bg-gradient-to-br from-[#2a1b4d] to-[#1a1033] border flex items-center justify-between px-4 overflow-hidden
+                  <div className={`col-span-2 relative aspect-[2/1] rounded-2xl bg-gradient-to-br from-[#2a1b4d] to-[#1a1033] border flex items-center justify-between gap-2 px-3 overflow-hidden
                     ${isToday ? "border-amber-400/80 shadow-[0_0_24px_rgba(245,158,11,0.4)] animate-pulse" : "border-amber-500/50"}
                     ${isClaimed ? "opacity-90" : ""}`}>
                     <div className="absolute inset-0 bg-amber-500/5" aria-hidden />
-                    <div className="relative">
-                      <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">Grand Prize</span>
-                      <span className="text-white font-black text-base leading-tight">DAY 7</span>
-                      <span className="text-[10px] text-white/60 block">+ random bonus</span>
+                    <div className="relative min-w-0 flex-1">
+                      <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider block leading-tight">Grand Prize</span>
+                      <span className="text-white font-black text-sm leading-tight block">DAY 7</span>
+                      <span className="text-[9px] text-white/60 block leading-tight">+ random bonus</span>
                     </div>
-                    <div className="relative flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)] flex items-center justify-center">
-                        <CrownIcon className="size-5 text-[#1a1033]" />
+                    <div className="relative flex items-center gap-1.5 shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)] flex items-center justify-center">
+                        <CrownIcon className="size-4 text-[#1a1033]" />
                       </div>
-                      <span className="text-amber-400 font-black text-base">up to +100</span>
+                      <span className="text-amber-400 font-black text-xs whitespace-nowrap">up to +100</span>
                     </div>
                     {isClaimed && (
                       <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 z-10">
