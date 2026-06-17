@@ -519,14 +519,17 @@ export default function Auth() {
             <div className="relative">
               <Input
                 id="auth-password"
+                ref={setFieldRef("password")}
                 name="password"
                 type={showPw ? "text" : "password"}
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                onChange={(e) => { setForm({ ...form, password: e.target.value }); clearFieldError("password"); }}
                 onKeyDown={onPwKey}
                 onKeyUp={onPwKey}
-                className="h-12 bg-input pr-11"
+                aria-invalid={!!errors.password}
+                aria-describedby={errors.password ? "auth-password-err" : undefined}
+                className={cn("h-11 bg-input pr-11", errors.password && "border-destructive focus-visible:ring-destructive")}
                 placeholder="••••••••"
               />
               <button
@@ -538,6 +541,9 @@ export default function Auth() {
                 {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
+            {errors.password && (
+              <p id="auth-password-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.password}</p>
+            )}
             {capsOn && (
               <p className="text-[11px] text-orange-400 mt-1 flex items-center gap-1">
                 <AlertTriangle className="size-3" /> Caps Lock is on
