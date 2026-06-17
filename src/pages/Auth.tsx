@@ -638,13 +638,33 @@ export default function Auth() {
           )}
 
 
-          <Button
-            type="submit"
-            disabled={loading || (mode === "signup" && !policiesOk)}
-            className="w-full h-12 mt-4 bg-gradient-gold text-primary-foreground font-bold tracking-wider gold-shadow"
-          >
-            {loading ? <Loader2 className="size-5 animate-spin" /> : mode === "signup" ? "CREATE ACCOUNT" : "LOG IN"}
-          </Button>
+          {mode === "signup" && signupStep === 2 ? (
+            <div className="flex gap-2 mt-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSignupStep(1)}
+                className="h-12 px-4 border-border"
+              >
+                Back
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading || !policiesOk}
+                className="flex-1 h-12 bg-gradient-gold text-primary-foreground font-bold tracking-wider gold-shadow"
+              >
+                {loading ? <Loader2 className="size-5 animate-spin" /> : "CREATE ACCOUNT"}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 mt-3 bg-gradient-gold text-primary-foreground font-bold tracking-wider gold-shadow"
+            >
+              {loading ? <Loader2 className="size-5 animate-spin" /> : mode === "signup" ? "CONTINUE" : "LOG IN"}
+            </Button>
+          )}
 
           {unverifiedEmail && mode === "login" && (
             <div className="mt-2 p-3 rounded-lg border border-gold/30 bg-gold/5 text-xs text-foreground flex items-center justify-between gap-2">
@@ -655,7 +675,7 @@ export default function Auth() {
             </div>
           )}
 
-          <div className="relative my-4">
+          <div className={`relative my-3 ${mode === "signup" && signupStep === 2 ? "hidden" : ""}`}>
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-border" />
             </div>
@@ -663,6 +683,7 @@ export default function Auth() {
               <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
             </div>
           </div>
+
 
           {mode === "login" && (
             <Button
