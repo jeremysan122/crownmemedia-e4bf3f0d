@@ -475,14 +475,20 @@ export default function Auth() {
             <Label htmlFor="auth-email">Email</Label>
             <Input
               id="auth-email"
+              ref={setFieldRef("email")}
               name="email"
               type="email"
               autoComplete="email"
               value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="h-12 bg-input"
+              onChange={(e) => { setForm({ ...form, email: e.target.value }); clearFieldError("email"); }}
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? "auth-email-err" : undefined}
+              className={cn("h-11 bg-input", errors.email && "border-destructive focus-visible:ring-destructive")}
               placeholder="you@royal.com"
             />
+            {errors.email && (
+              <p id="auth-email-err" role="alert" className="text-[11px] text-destructive mt-1">{errors.email}</p>
+            )}
           </div>
 
           <div className={mode === "signup" && signupStep === 2 ? "hidden" : ""}>
