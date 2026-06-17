@@ -469,7 +469,7 @@ export default function Auth() {
           </div>
 
           {mode === "signup" && (
-            <div>
+            <div className={signupStep === 2 ? "hidden" : ""}>
               <Label htmlFor="auth-confirm">Confirm password</Label>
               <div className="relative">
                 <Input
@@ -479,7 +479,7 @@ export default function Auth() {
                   autoComplete="new-password"
                   value={form.confirmPassword}
                   onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                  className="h-12 bg-input pr-11"
+                  className="h-11 bg-input pr-11"
                   placeholder="Repeat password"
                 />
                 <button
@@ -499,6 +499,7 @@ export default function Auth() {
               )}
             </div>
           )}
+
 
           {mode === "signup" && (
             <>
