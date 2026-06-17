@@ -284,7 +284,7 @@ export default function Feed() {
   const buildQuery = useCallback((opts: { cursor?: { val: string | number; id: string } | null }) => {
     let q = supabase
       .from("posts")
-      .select("*, profile:profiles!posts_user_id_fkey(username, profile_photo_url, crowns_held, gender, hide_likes, hide_comments, hide_views, verified)")
+      .select(POST_SELECT)
       .eq("is_removed", false)
       // Main feed shows posts only. Vertical Scrolls live on /shorts under
       // their own immersive surface — mixing them into the grid feed makes
