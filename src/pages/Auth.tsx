@@ -210,29 +210,33 @@ export default function Auth() {
     setUnverifiedEmail(null);
     try {
       if (mode === "signup") {
+        const step1Errs = validateStep1({
+          email: form.email, password: form.password, confirmPassword: form.confirmPassword,
+          username: form.username, passwordScore: pwScore.score, usernameStatus,
+        });
+        const step2Errs = validateStep2({
+          first_name: form.first_name, last_name: form.last_name, dob: form.dob,
+          gender: form.gender, country: form.country, state: form.state, city: form.city,
+          policiesOk,
+        });
+        const allErrs: SignupErrors = { ...step1Errs, ...step2Errs };
+        setErrors(allErrs);
+        if (Object.keys(step1Errs).length > 0) {
+          setSignupStep(1);
+          focusFirstError(step1Errs, 1);
+          return;
+        }
+        if (Object.keys(step2Errs).length > 0) {
+          if (step2Errs.dob && /18 or older/i.test(step2Errs.dob)) {
+            trackEvent("age_gate_blocked_underage", { metadata: { source: "auth_signup" } });
+          }
+          focusFirstError(step2Errs, 2);
+          return;
+        }
         const parsed = signupSchema.safeParse(form);
         if (!parsed.success) {
+          // Shouldn't happen — validators are stricter than the schema — but guard.
           toast.error(parsed.error.errors[0].message);
-          return;
-        }
-        if (form.password !== form.confirmPassword) {
-          toast.error("Passwords don't match");
-          return;
-        }
-        if (pwScore.score < 2) {
-          toast.error("Choose a stronger password");
-          return;
-        }
-        if (usernameStatus === "taken") { toast.error("That username is already taken"); return; }
-        if (usernameStatus === "reserved") { toast.error("That username is reserved"); return; }
-        if (usernameStatus === "invalid") { toast.error("Invalid username"); return; }
-        if (calculateAge(parsed.data.dob) < 18) {
-          trackEvent("age_gate_blocked_underage", { metadata: { source: "auth_signup" } });
-          toast.error("You must be 18 or older to register.");
-          return;
-        }
-        if (!policiesOk) {
-          toast.error("Please accept the Terms, Privacy Policy, and Community Guidelines.");
           return;
         }
         try { sessionStorage.setItem("crownme_age_confirmed", "true"); sessionStorage.setItem("crownme_dob", parsed.data.dob); } catch { /* noop */ }
