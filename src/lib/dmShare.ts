@@ -67,5 +67,7 @@ export async function sendDmShare(args: DmShareArgs): Promise<DmShareResult> {
       await sleep(350 * Math.pow(2.5, attempt));
     }
   }
-  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+  if (lastErr instanceof Error) throw lastErr;
+  const errMsg = (lastErr as { message?: string } | null)?.message;
+  throw new Error(typeof errMsg === "string" && errMsg ? errMsg : "Couldn't send");
 }
