@@ -16,6 +16,8 @@ import { POST_SELECT } from "@/lib/postQuery";
 import { trackUsage } from "@/lib/usageTrack";
 import SensitiveThumb from "@/components/SensitiveThumb";
 import { useFeedFilters } from "@/hooks/useFeedFilters";
+import PostMedia from "@/components/PostMedia";
+import type { FilterId } from "@/lib/filters";
 
 const PAGE_SIZE = 30;
 
