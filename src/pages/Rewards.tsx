@@ -145,7 +145,7 @@ export default function Rewards() {
       await refreshWallet();
       walletStore.requestRefresh();
     }
-    setStreak((prev) => prev ? { ...prev, current_streak: res.current_streak ?? prev.current_streak, longest_streak: res.longest_streak ?? prev.longest_streak, last_claimed_date: today } : prev);
+    setStreak((prev) => prev ? { ...prev, current_streak: res.current_streak ?? prev.current_streak, longest_streak: res.longest_streak ?? prev.longest_streak, last_claimed_date: today, last_claimed_at: new Date().toISOString() } : prev);
   }
 
   async function spin() {
