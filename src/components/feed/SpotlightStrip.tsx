@@ -65,7 +65,7 @@ export default function SpotlightStrip() {
           const isVote = p.vote_boost_until && new Date(p.vote_boost_until) > new Date();
           const isShield = p.crown_shield_until && new Date(p.crown_shield_until) > new Date();
           const username = p.profile?.username;
-          const href = username ? `/u/${username}?post=${p.id}` : `/post/${p.id}`;
+          const href = username ? `/${username}?post=${p.id}` : `/post/${p.id}`;
           return (
             <Link
               key={p.id}

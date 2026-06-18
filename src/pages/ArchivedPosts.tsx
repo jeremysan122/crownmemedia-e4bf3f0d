@@ -21,7 +21,7 @@ export default function ArchivedPosts() {
   const nav = useNavigate();
   const [posts, setPosts] = useState<ArchivedPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
+  const profilePath = profile?.username ? `/${profile.username}` : "/me";
 
   const load = async () => {
     if (!user?.id) return;

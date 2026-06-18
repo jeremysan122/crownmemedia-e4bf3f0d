@@ -14,7 +14,7 @@ describe("getNotificationTarget", () => {
     expect(getNotificationTarget({ type: "dm_gift", payload: { sender_id: "u1" } })).toBe("/messages?with=u1");
   });
   it("routes follow notifications to the follower profile", () => {
-    expect(getNotificationTarget({ type: "follow", payload: { follower_username: "king" } })).toBe("/u/king");
+    expect(getNotificationTarget({ type: "follow", payload: { follower_username: "king" } })).toBe("/king");
   });
   it("routes comments to the post with a comment anchor", () => {
     expect(getNotificationTarget({ type: "comment", payload: { post_id: "p1", comment_id: "c9" } })).toBe("/post/p1#c-c9");

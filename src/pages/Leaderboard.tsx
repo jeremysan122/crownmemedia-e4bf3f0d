@@ -322,7 +322,7 @@ export default function Leaderboard() {
                 return (
                 <div key={rank} className="royal-card overflow-hidden border-gold">
                   {p ? (
-                    <Link to={`/u/${p.profile.username}`}>
+                    <Link to={`/${p.profile.username}`}>
                       <div className="aspect-square relative">
                         <img loading="lazy" src={p.image_url} alt={`${label} of ${headerLabel}`} className="w-full h-full object-cover" />
                         <SensitiveThumb blurred={shouldBlurRow(p)} />
@@ -380,7 +380,7 @@ export default function Leaderboard() {
                 return (
                   <Link
                     key={r.id}
-                    to={`/u/${r.profile.username}`}
+                    to={`/${r.profile.username}`}
                     className={`flex items-center gap-3 royal-card p-2.5 ${isMe ? "border-primary/60" : ""}`}
                   >
                     <span className="font-display text-lg w-6 text-center text-muted-foreground">{i + 3}</span>

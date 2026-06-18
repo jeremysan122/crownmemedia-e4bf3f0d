@@ -26,7 +26,7 @@ export default function DesktopSidebar({ onCompose }: DesktopSidebarProps) {
   const loc = useLocation();
   const { user, profile } = useAuth();
   const handleCompose = onCompose ?? (() => { window.location.href = "/upload"; });
-  const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
+  const profilePath = profile?.username ? `/${profile.username}` : "/me";
   const visibleItems = items.filter((it) => !("authOnly" in it && it.authOnly) || !!user);
   return (
     <aside className="hidden lg:flex sticky top-[68px] h-[calc(100vh-84px)] w-[260px] shrink-0 flex-col gap-1 pr-2 pt-9">

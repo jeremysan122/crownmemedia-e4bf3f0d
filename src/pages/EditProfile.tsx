@@ -329,7 +329,7 @@ export default function EditProfile() {
       } catch { /* noop */ }
 
       toast.success("Profile updated");
-      nav(`/u/${username.trim().toLowerCase()}`);
+      nav(`/${username.trim().toLowerCase()}`);
     } catch (error) {
       // Profile update failed — clean up the just-uploaded avatar so it
       // doesn't linger as an orphan. Leave the previous avatar untouched.

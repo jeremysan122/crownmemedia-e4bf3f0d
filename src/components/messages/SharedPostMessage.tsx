@@ -78,7 +78,7 @@ export function buildSharedContentHref(opts: {
   }
   if (opts.kind === "profile_share") {
     if (!opts.username) return null;
-    return `/u/${opts.username}`;
+    return `/${opts.username}`;
   }
   return null;
 }

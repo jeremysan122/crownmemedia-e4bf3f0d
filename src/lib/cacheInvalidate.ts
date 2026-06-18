@@ -40,12 +40,18 @@ export function broadcastCacheInvalidation(detail: InvalidationDetail): void {
     window.dispatchEvent(new CustomEvent("crownme:cache-invalidate", { detail }));
   } catch { /* noop */ }
   if (detail.kind === "profile:username_changed" && detail.previousUsername) {
-    // Best-effort: ask the service worker to drop any cached HTML for the
-    // old username route so a stale share card doesn't 404 forever.
+    // Best-effort: drop SW-cached HTML for both legacy /u/:username and
+    // the new short /:username route so stale share cards don't 404.
     try {
       if ("caches" in self) {
+        const prev = detail.previousUsername;
+        const next = detail.username;
         caches.keys().then((keys) =>
-          Promise.all(keys.map((k) => caches.open(k).then((c) => c.delete(`/u/${detail.previousUsername}`)))),
+          Promise.all(keys.map((k) => caches.open(k).then((c) => Promise.all([
+            c.delete(`/u/${prev}`),
+            c.delete(`/${prev}`),
+            next ? c.delete(`/${next}`) : Promise.resolve(true),
+          ])))),
         ).catch(() => {});
       }
     } catch { /* noop */ }

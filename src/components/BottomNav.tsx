@@ -48,7 +48,7 @@ export default function BottomNav() {
   const { profile } = useAuth();
   const [createOpen, setCreateOpen] = useState(false);
   const hide = ["/", "/auth", "/age-gate", "/verify-age", "/onboarding"].includes(loc.pathname);
-  const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
+  const profilePath = profile?.username ? `/${profile.username}` : "/me";
 
   // Persist the active tab whenever the route matches one of the bottom-nav items.
   useEffect(() => {

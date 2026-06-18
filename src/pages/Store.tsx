@@ -89,7 +89,7 @@ export default function Store() {
   const [pending, setPending] = useState<string | null>(null);
   const [receivedView, setReceivedView] = useState<"received" | "sent">("received");
   const pass = useRoyalPass();
-  const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
+  const profilePath = profile?.username ? `/${profile.username}` : "/me";
 
   // Sync tab to URL (so nav-links + back button work)
   useEffect(() => {

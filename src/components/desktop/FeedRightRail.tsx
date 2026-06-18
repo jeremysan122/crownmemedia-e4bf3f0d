@@ -139,7 +139,7 @@ export default function FeedRightRail() {
           {top.map((t, i) => (
             <Row
               key={t.id + i}
-              to={`/u/${t.username}`}
+              to={`/${t.username}`}
               avatar={t.profile_photo_url}
               primary={`#${i + 1}  @${t.username}`}
               secondary={locationLabel(t)}
@@ -173,7 +173,7 @@ export default function FeedRightRail() {
           {gifters.map((g) => (
             <Row
               key={g.user_id}
-              to={`/u/${g.profile?.username}`}
+              to={`/${g.profile?.username}`}
               avatar={g.profile?.profile_photo_url ?? null}
               primary={`@${g.profile?.username}`}
               secondary="received gifts"
@@ -189,7 +189,7 @@ export default function FeedRightRail() {
           {suggestions.filter((s) => !following.has(s.id)).slice(0, 5).map((s) => (
             <Row
               key={s.id}
-              to={`/u/${s.username}`}
+              to={`/${s.username}`}
               avatar={s.profile_photo_url}
               primary={`@${s.username}`}
               secondary={s.crowns_held > 0 ? `${s.crowns_held} crowns` : "Rising royal"}

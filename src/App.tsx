@@ -20,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import CrownStolenBanner from "./components/CrownStolenBanner";
 import PointerEventsGuard from "./components/PointerEventsGuard";
 import NotificationToaster from "./components/NotificationToaster";
+import UsernameRedirect from "./components/UsernameRedirect";
 
 // Lazy: secondary user pages (load on demand, reduces TTI)
 const Upload = lazy(() => import("./pages/Upload"));
@@ -212,7 +213,9 @@ const App = () => (
               {/* Public — anyone (including Google/bots) can view profiles and posts.
                   RLS on the DB already restricts private data; the component shows
                   a login prompt for actions that need auth (follow, vote, comment). */}
-              <Route path="/u/:username" element={<Profile />} />
+              {/* Legacy share URLs — permanent redirect to /:username so old
+                  links posted online (DMs, tweets, embeds) keep working. */}
+              <Route path="/u/:username" element={<UsernameRedirect />} />
               {/* Pretty short-link: crownmemedia.com/<username>. The dynamic
                   param is matched last by react-router, so all static routes
                   above still win. Reserved usernames prevent collisions. */}

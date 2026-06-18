@@ -223,7 +223,7 @@ export default function GlobalSearchDialog({ open, onOpenChange }: Props) {
               {users.map((u) => (
                 <button
                   key={u.id}
-                  onClick={() => go(`/u/${u.username}`)}
+                  onClick={() => go(`/${u.username}`)}
                   className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 text-left"
                 >
                   <div className="size-9 rounded-full overflow-hidden bg-muted shrink-0">

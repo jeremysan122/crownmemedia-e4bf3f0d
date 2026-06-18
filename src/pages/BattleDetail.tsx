@@ -201,7 +201,7 @@ export default function BattleDetail() {
                           )}
                         </div>
                         <Link
-                          to={profile?.username ? `/u/${profile.username}` : "#"}
+                          to={profile?.username ? `/${profile.username}` : "#"}
                           className="text-xs font-bold text-white truncate hover:underline"
                         >
                           @{profile?.username || "—"}

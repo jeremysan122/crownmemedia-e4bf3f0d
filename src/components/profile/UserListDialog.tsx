@@ -125,7 +125,7 @@ export default function UserListDialog({ open, onOpenChange, userId, mode }: Pro
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <Link
-                  to={`/u/${r.username}`}
+                  to={`/${r.username}`}
                   onClick={() => onOpenChange(false)}
                   className="flex items-center gap-3 flex-1 min-w-0"
                 >

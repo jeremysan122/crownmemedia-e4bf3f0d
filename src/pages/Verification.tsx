@@ -58,7 +58,7 @@ async function uploadDoc(userId: string, file: File, kind: string): Promise<stri
 export default function Verification() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
+  const profilePath = profile?.username ? `/${profile.username}` : "/me";
   const goBack = () => {
     // Only use history.back() if we actually came from within the app —
     // otherwise (direct link / new tab) fall back to a safe destination.
