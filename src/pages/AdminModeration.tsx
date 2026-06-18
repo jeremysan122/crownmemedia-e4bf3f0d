@@ -471,11 +471,11 @@ export default function AdminModeration() {
               <span className="text-[10px] text-muted-foreground">{timeAgo(b.created_at)}</span>
             </div>
             <p className="text-sm">
-              <Link to={`/u/${b.blocker?.username ?? ""}`} className="font-semibold text-foreground hover:underline">
+              <Link to={`/${b.blocker?.username ?? ""}`} className="font-semibold text-foreground hover:underline">
                 @{b.blocker?.username ?? b.blocker_id.slice(0, 8)}
               </Link>
               <span className="text-muted-foreground"> blocked </span>
-              <Link to={`/u/${b.blocked?.username ?? ""}`} className="font-semibold text-foreground hover:underline">
+              <Link to={`/${b.blocked?.username ?? ""}`} className="font-semibold text-foreground hover:underline">
                 @{b.blocked?.username ?? b.blocked_id.slice(0, 8)}
               </Link>
             </p>

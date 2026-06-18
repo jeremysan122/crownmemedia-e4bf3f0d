@@ -45,7 +45,7 @@ export function broadcastCacheInvalidation(detail: InvalidationDetail): void {
     try {
       if ("caches" in self) {
         caches.keys().then((keys) =>
-          Promise.all(keys.map((k) => caches.open(k).then((c) => c.delete(`/u/${detail.previousUsername}`)))),
+          Promise.all(keys.map((k) => caches.open(k).then((c) => c.delete(`/${detail.previousUsername}`)))),
         ).catch(() => {});
       }
     } catch { /* noop */ }

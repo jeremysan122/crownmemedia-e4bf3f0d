@@ -42,7 +42,7 @@ function TaggedPeopleLine({ ids }: Props) {
       {shown.map((id) => {
         const u = map.get(id);
         return u ? (
-          <Link key={id} to={`/u/${u}`} className="text-primary hover:underline">@{u}</Link>
+          <Link key={id} to={`/${u}`} className="text-primary hover:underline">@{u}</Link>
         ) : (
           <span key={id} className="opacity-60">@…</span>
         );

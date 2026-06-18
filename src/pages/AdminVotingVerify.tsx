@@ -230,7 +230,7 @@ export default function AdminVotingVerify() {
                       </div>
                     </div>
                     <Link
-                      to={`/u/${r.post.user_id}`}
+                      to={`/${r.post.user_id}`}
                       className="text-[10px] text-primary hover:underline flex items-center gap-1 shrink-0"
                     >
                       author <ExternalLink size={9} />

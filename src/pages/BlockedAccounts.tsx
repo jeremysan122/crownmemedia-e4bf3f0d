@@ -135,7 +135,7 @@ export default function BlockedAccounts() {
         {!loading && rows.map((row) => (
           <div key={row.id} className="royal-card p-3 flex items-center gap-3">
             <Link
-              to={row.blocked?.username ? `/u/${row.blocked.username}` : "#"}
+              to={row.blocked?.username ? `/${row.blocked.username}` : "#"}
               className="size-10 rounded-full bg-muted overflow-hidden shrink-0"
             >
               {row.blocked?.profile_photo_url && (

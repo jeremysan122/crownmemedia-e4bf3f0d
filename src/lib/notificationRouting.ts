@@ -40,8 +40,8 @@ export function getNotificationTarget(n: NotificationLike): string | null {
       return "/messages";
     }
     case "follow": {
-      if (p.follower_username) return `/u/${p.follower_username}`;
-      if (p.follower_id) return `/u/${p.follower_id}`;
+      if (p.follower_username) return `/${p.follower_username}`;
+      if (p.follower_id) return `/${p.follower_id}`;
       return null;
     }
     case "vote": {
@@ -59,7 +59,7 @@ export function getNotificationTarget(n: NotificationLike): string | null {
     case "crown_won":
     case "crown_lost": {
       if (p.post_id) return `/post/${p.post_id}`;
-      if (p.username) return `/u/${p.username}`;
+      if (p.username) return `/${p.username}`;
       return "/leaderboard";
     }
     case "battle_challenge":

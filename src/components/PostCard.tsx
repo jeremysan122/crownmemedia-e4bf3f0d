@@ -603,7 +603,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     <article ref={articleRef} className="royal-card overflow-hidden mb-3 animate-fade-in relative text-[13px]">
       {/* Header — Instagram-style: larger avatar, bolder username, quieter meta */}
       <header className="flex items-center justify-between gap-2 px-3 py-2.5">
-        <Link to={`/u/${post.profile.username}`} className="flex items-center gap-3 min-w-0 flex-1">
+        <Link to={`/${post.profile.username}`} className="flex items-center gap-3 min-w-0 flex-1">
           <div className={`${post.profile.crowns_held > 0 ? "crown-ring" : ""} ${isPassMember ? "ring-2 ring-gold/60 rounded-full" : ""} shrink-0`}>
             <div className="size-9 rounded-full bg-muted overflow-hidden ring-1 ring-border">
               {post.profile.profile_photo_url ? (
@@ -889,7 +889,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       {/* Caption — Instagram-style: bold username prepended inline, 2-line clamp */}
       {liveCaption && (
         <p className="px-3 pt-2 text-[13px] leading-snug line-clamp-2">
-          <Link to={`/u/${post.profile.username}`} className="font-bold mr-1.5 hover:underline">
+          <Link to={`/${post.profile.username}`} className="font-bold mr-1.5 hover:underline">
             {post.profile.username}
           </Link>
           <span>{liveCaption}</span>

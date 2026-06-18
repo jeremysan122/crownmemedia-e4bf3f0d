@@ -575,7 +575,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
           : (
             <Link
               key={i}
-              to={`/u/${part.mention}`}
+              to={`/${part.mention}`}
               onClick={onClose}
               className="text-primary font-semibold hover:underline"
             >
@@ -592,13 +592,13 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
     return (
       <div className={`flex gap-2 ${depth ? "ml-9" : ""}`}>
-        <Link to={`/u/${c.profile?.username}`} onClick={onClose} className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
+        <Link to={`/${c.profile?.username}`} onClick={onClose} className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
           {c.profile?.profile_photo_url && <img loading="lazy" src={c.profile.profile_photo_url} className="w-full h-full object-cover" alt="" />}
         </Link>
 
         <div className="flex-1 min-w-0">
           <div className="bg-muted/50 rounded-2xl px-3 py-2">
-            <Link to={`/u/${c.profile?.username}`} onClick={onClose} className="text-xs font-bold hover:underline">
+            <Link to={`/${c.profile?.username}`} onClick={onClose} className="text-xs font-bold hover:underline">
               @{c.profile?.username || "user"}
             </Link>
 
@@ -845,7 +845,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
               fetchPostById() from src/lib/postQuery.ts. */}
           {/* Header */}
           <header className="flex items-center justify-between gap-2 p-3 border-b border-border">
-            <Link to={`/u/${post.profile.username}`} onClick={onClose} className="flex items-center gap-2.5 min-w-0 flex-1">
+            <Link to={`/${post.profile.username}`} onClick={onClose} className="flex items-center gap-2.5 min-w-0 flex-1">
               <div className={post.profile.crowns_held > 0 ? "crown-ring shrink-0" : "shrink-0"}>
                 <div className="size-9 rounded-full bg-muted overflow-hidden ring-1 ring-border">
                   {post.profile.profile_photo_url ? (
@@ -961,7 +961,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
           >
             {liveCaption && (
               <div className="flex gap-2">
-                <Link to={`/u/${post.profile.username}`} onClick={onClose} className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
+                <Link to={`/${post.profile.username}`} onClick={onClose} className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
                   {post.profile.profile_photo_url && (
                     <img loading="lazy" src={post.profile.profile_photo_url} className="w-full h-full object-cover" alt="" />
                   )}
@@ -969,7 +969,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
                 <div className="flex-1">
                   <p className="text-sm leading-snug">
-                    <Link to={`/u/${post.profile.username}`} onClick={onClose} className="font-bold mr-1.5 hover:underline">
+                    <Link to={`/${post.profile.username}`} onClick={onClose} className="font-bold mr-1.5 hover:underline">
                       @{post.profile.username}
                     </Link>
                     {liveCaption}

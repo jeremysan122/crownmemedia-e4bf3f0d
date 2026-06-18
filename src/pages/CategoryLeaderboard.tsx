@@ -267,7 +267,7 @@ export default function CategoryLeaderboard() {
                     <div className={`w-9 text-center font-black ${podium ? "text-amber-500" : "text-foreground"}`}>
                       {r.rank <= 3 ? <Crown className="mx-auto" size={20} /> : `#${r.rank}`}
                     </div>
-                    <Link to={`/u/${r.username}`} className="flex items-center gap-3 flex-1 min-w-0">
+                    <Link to={`/${r.username}`} className="flex items-center gap-3 flex-1 min-w-0">
                       {r.profile_photo_url ? (
                         <img src={r.profile_photo_url} alt={r.username} className="w-10 h-10 rounded-full object-cover" />
                       ) : (

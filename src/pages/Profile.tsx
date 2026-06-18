@@ -115,7 +115,7 @@ export default function Profile() {
     !!p.is_sensitive && !isMe && sensitiveMode !== "show";
 
   useEffect(() => {
-    if (!username && me?.username) nav(`/u/${me.username}`, { replace: true });
+    if (!username && me?.username) nav(`/${me.username}`, { replace: true });
   }, [username, me?.username, nav]);
 
   useEffect(() => {

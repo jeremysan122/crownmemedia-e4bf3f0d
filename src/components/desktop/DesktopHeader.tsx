@@ -16,7 +16,7 @@ export default function DesktopHeader() {
   const { profile } = useAuth();
   const { wallet } = useWallet();
   const [searchOpen, setSearchOpen] = useState(false);
-  const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
+  const profilePath = profile?.username ? `/${profile.username}` : "/me";
   const [createOpen, setCreateOpen] = useState(false);
   const unread = useUnreadByType();
   const dmThreads = useThreadUnread();

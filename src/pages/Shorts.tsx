@@ -370,7 +370,7 @@ export default function Shorts() {
               </div>
 
               <div className="absolute left-0 right-20 bottom-6 px-4">
-                <Link to={`/u/${p.profile?.username ?? p.user_id}`} className="flex items-center gap-2 mb-2">
+                <Link to={`/${p.profile?.username ?? p.user_id}`} className="flex items-center gap-2 mb-2">
                   {p.profile?.profile_photo_url ? (
                     <img src={p.profile.profile_photo_url} alt="" className="size-9 rounded-full object-cover border border-white/30" />
                   ) : (

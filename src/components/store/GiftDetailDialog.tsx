@@ -70,7 +70,7 @@ export default function GiftDetailDialog({ tx, sender, open, onOpenChange }: Pro
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">From</p>
               {sender?.username ? (
                 <Link
-                  to={`/u/${sender.username}`}
+                  to={`/${sender.username}`}
                   onClick={() => onOpenChange(false)}
                   className="text-sm font-bold text-foreground hover:text-gold truncate block"
                 >

@@ -1412,7 +1412,7 @@ function MapView({
       wrap.appendChild(el);
 
       const profileTarget = p.r.profile?.username
-        ? `/u/${encodeURIComponent(p.r.profile.username)}`
+        ? `/${encodeURIComponent(p.r.profile.username)}`
         : null;
       const postTarget = p.r.post_id ? `/post/${p.r.post_id}` : null;
       const navTarget = markerMode === "posts" && postTarget ? postTarget : profileTarget;
