@@ -13,6 +13,12 @@ interface Props {
   onClick?: () => void;
   className?: string;
   /**
+   * When true, the video autoplays muted+looped (Reels-style). Required for
+   * reliable inline playback on iOS Safari and Android Chrome where tap-to-play
+   * in modals/dialogs is unreliable. Ignored for images.
+   */
+  autoPlay?: boolean;
+  /**
    * When true, briefly intensifies the filter (saturation + contrast + brightness pop)
    * — used for the premium vote feedback animation.
    */
