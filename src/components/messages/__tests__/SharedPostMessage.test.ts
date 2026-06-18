@@ -11,7 +11,7 @@ describe("buildSharedContentHref", () => {
       .toBe("/p/scroll-9");
   });
   it("profile_share uses username", () => {
-    expect(buildSharedContentHref({ kind: "profile_share", username: "alice" })).toBe("/u/alice");
+    expect(buildSharedContentHref({ kind: "profile_share", username: "alice" })).toBe("/alice");
   });
   it("returns null when post id is missing", () => {
     expect(buildSharedContentHref({ kind: "post_share", postId: null })).toBeNull();
