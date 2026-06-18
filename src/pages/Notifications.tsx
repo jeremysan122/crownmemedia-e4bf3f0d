@@ -105,16 +105,10 @@ export default function Notifications() {
     return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
 
-  // Once the user lands on the notifications inbox, all currently-unread
-  // alerts are considered "viewed" and the bell badge clears immediately.
-  useEffect(() => {
-    if (!user?.id) return;
-    const t = setTimeout(async () => {
-      await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
-      setList((l) => l.map((n) => ({ ...n, read: true })));
-    }, 600);
-    return () => clearTimeout(t);
-  }, [user?.id]);
+  // NOTE: Opening this panel intentionally does NOT mark notifications as
+  // read — users must tap a specific notification, or hit "Mark all read",
+  // so important alerts aren't silently dismissed.
+
 
   const markRead = async (id: string) => {
     if (!id) return;
