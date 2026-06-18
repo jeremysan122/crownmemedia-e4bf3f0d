@@ -30,6 +30,9 @@ interface Row {
   crown_score: number;
   vote_count: number;
   is_sensitive?: boolean | null;
+  filter?: string | null;
+  media_type?: string | null;
+  video_poster_url?: string | null;
   profile: { username: string; profile_photo_url: string | null; crowns_held: number; gender: import("@/lib/rankTitle").GenderValue; hide_likes?: boolean | null };
 }
 
