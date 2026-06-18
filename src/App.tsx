@@ -213,6 +213,10 @@ const App = () => (
                   RLS on the DB already restricts private data; the component shows
                   a login prompt for actions that need auth (follow, vote, comment). */}
               <Route path="/u/:username" element={<Profile />} />
+              {/* Pretty short-link: crownmemedia.com/<username>. The dynamic
+                  param is matched last by react-router, so all static routes
+                  above still win. Reserved usernames prevent collisions. */}
+              <Route path="/:username" element={<Profile />} />
               <Route path="/post/:id" element={<PostPage />} />
               <Route path="/p/:id" element={<PostPage />} />
               <Route path="/reports/mine" element={<ProtectedRoute><MyReports /></ProtectedRoute>} />
