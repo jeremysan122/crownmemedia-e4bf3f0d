@@ -109,6 +109,7 @@ export default function AppShell({ children, title, showHeader = true, rightSlot
       <BottomNav />
 
       <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <CreateSheet open={createOpen} onOpenChange={setCreateOpen} />
 
       {/* keep CrownIcon import used to avoid tree-shake regressions for legacy refs */}
       <span className="hidden"><CrownIcon size={1} /></span>
