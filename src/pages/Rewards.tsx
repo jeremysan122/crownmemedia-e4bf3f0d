@@ -298,11 +298,10 @@ export default function Rewards() {
   if (authLoading || loading || !streak) return <CrownLoader label="Loading rewards…" />;
 
   const nextClaimMs = (() => {
-    if (!claimedToday) return 0;
-    const tomorrow = new Date();
-    tomorrow.setUTCHours(24, 0, 0, 0);
-    return tomorrow.getTime() - Date.now();
+    if (!claimedToday || !lastClaimMs) return 0;
+    return Math.max(0, lastClaimMs + COOLDOWN_MS - nowMs);
   })();
+
 
   // Day mapping for the 7-day track:
   //   - "claimed" : day index <= number of days already fully claimed in the current cycle
