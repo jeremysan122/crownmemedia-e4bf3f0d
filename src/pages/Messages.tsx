@@ -648,6 +648,7 @@ export default function Messages() {
                     profileId={m.shared_profile_id}
                     body={m.body}
                     mine={mine}
+                    messageId={m.id}
                   />
                   {!m._pending && (
                     <MessageReactions messageId={m.id} reactions={myReactions} onChange={() => {}} />
