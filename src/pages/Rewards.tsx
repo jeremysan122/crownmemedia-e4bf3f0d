@@ -59,12 +59,14 @@ type Streak = {
   current_streak: number;
   longest_streak: number;
   last_claimed_date: string | null;
+  last_claimed_at: string | null;
   last_spin_date: string | null;
   total_claims: number;
   bonus_spins: number;
 };
 
 function todayUtc(): string { return new Date().toISOString().slice(0, 10); }
+const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 export default function Rewards() {
   const { user, loading: authLoading } = useAuth();
@@ -83,12 +85,21 @@ export default function Rewards() {
   const [rotation, setRotation] = useState(0);
   const [winFlash, setWinFlash] = useState(false);
   const [lastResult, setLastResult] = useState<{ label: string; prize_type: PrizeType; prize_value: number } | null>(null);
+  // Tick once per minute so the "next in Xh Ym" countdown stays current
+  // without spamming re-renders. 24h cooldown is timestamp-based, not midnight.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const today = todayUtc();
-  const claimedToday = streak?.last_claimed_date === today;
+  const lastClaimMs = streak?.last_claimed_at ? new Date(streak.last_claimed_at).getTime() : 0;
+  const claimedToday = lastClaimMs > 0 && nowMs - lastClaimMs < COOLDOWN_MS;
   const spunToday = streak?.last_spin_date === today;
   const bonusSpins = streak?.bonus_spins ?? 0;
   const canSpin = claimedToday && (!spunToday || bonusSpins > 0);
+
 
   useEffect(() => {
     if (authLoading || !user) return;
