@@ -1,6 +1,17 @@
-// Renders a shared post or profile card inside a DM thread. Fetches a minimal
-// projection (RLS-protected) and shows an "unavailable" state if the target
-// has since been removed, hidden, or made unreachable to the viewer.
+// Renders a shared post/Scroll or profile card inside a DM thread.
+//
+// Routing contract:
+//   - The destination URL is ALWAYS built from the stored content id
+//     (postId / profileId) — never from the DM message id or notification id.
+//   - Scrolls are stored as posts with content_type === "scroll"; both route
+//     through /p/:id which resolves to the correct detail view.
+//
+// Safety:
+//   - If required metadata is missing, or the target row is unreachable
+//     (deleted, hidden, banned, RLS-blocked, moderation removed, fetch
+//     failure), we render a neutral "This content is no longer available."
+//     fallback. We never expose the underlying reason, raw DB errors, or
+//     private fields. Malformed metadata is logged with safe fields only.
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ImageOff, UserRound, Play } from "lucide-react";
@@ -13,6 +24,8 @@ interface SharedRow {
   profileId?: string | null;
   body?: string | null;
   mine: boolean;
+  /** Optional — only used for safe diagnostic logging. */
+  messageId?: string | null;
 }
 
 type PostPreview = {
@@ -35,67 +48,145 @@ type ProfilePreview = {
   is_suspended?: boolean | null;
 };
 
-function isUnavailablePost(p: PostPreview | null): boolean {
+export function isUnavailablePost(p: PostPreview | null): boolean {
   if (!p) return true;
   if (p.is_removed || p.is_archived) return true;
   if (p.moderation_status && ["removed", "rejected", "quarantined"].includes(p.moderation_status)) return true;
   return false;
 }
-function isUnavailableProfile(p: ProfilePreview | null): boolean {
+export function isUnavailableProfile(p: ProfilePreview | null): boolean {
   if (!p) return true;
   if (p.is_banned || p.is_suspended) return true;
   return false;
 }
 
-export default function SharedPostMessage({ kind, postId, profileId, body, mine }: SharedRow) {
+/** Build the destination route for a shared post/Scroll using ONLY the
+ * stored content id and (when present) content_type. Never uses the DM
+ * message id. Exported for tests. */
+export function buildSharedContentHref(opts: {
+  kind: "post_share" | "profile_share";
+  postId?: string | null;
+  profileId?: string | null;
+  contentType?: string | null;
+  videoUrl?: string | null;
+  username?: string | null;
+}): string | null {
+  if (opts.kind === "post_share") {
+    if (!opts.postId) return null;
+    // /p/:id resolves both post and scroll content types in PostPage.
+    return `/p/${opts.postId}`;
+  }
+  if (opts.kind === "profile_share") {
+    if (!opts.username) return null;
+    return `/u/${opts.username}`;
+  }
+  return null;
+}
+
+function safeWarn(scope: string, fields: Record<string, unknown>) {
+  // Only safe, non-sensitive fields. No body, no media URLs, no errors objects.
+  try {
+    // eslint-disable-next-line no-console
+    console.warn(`[dm-share] ${scope}`, fields);
+  } catch {
+    /* noop */
+  }
+}
+
+const UNAVAILABLE_TEXT = "This content is no longer available.";
+
+export default function SharedPostMessage({ kind, postId, profileId, body, mine, messageId }: SharedRow) {
   const [post, setPost] = useState<PostPreview | null>(null);
   const [profile, setProfile] = useState<ProfilePreview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchFailed, setFetchFailed] = useState(false);
+
+  // Guard against malformed metadata up-front. Never route to a broken page.
+  const metadataMissing =
+    (kind === "post_share" && !postId) || (kind === "profile_share" && !profileId);
 
   useEffect(() => {
+    if (metadataMissing) {
+      safeWarn("malformed_metadata", {
+        message_id: messageId ?? null,
+        kind,
+        has_post_id: !!postId,
+        has_profile_id: !!profileId,
+        route_attempted: null,
+        error_category: "missing_content_id",
+        timestamp: new Date().toISOString(),
+      });
+      setLoading(false);
+      return;
+    }
     let cancel = false;
     setLoading(true);
+    setFetchFailed(false);
     (async () => {
-      if (kind === "post_share" && postId) {
-        const { data } = await supabase
-          .from("posts")
-          .select("id, user_id, image_url, video_url, category, content_type, is_removed, is_archived, moderation_status, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
-          .eq("id", postId)
-          .maybeSingle();
-        if (!cancel) setPost(data as PostPreview | null);
-      } else if (kind === "profile_share" && profileId) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("id, username, profile_photo_url, is_banned, is_suspended")
-          .eq("id", profileId)
-          .maybeSingle();
-        if (!cancel) setProfile(data as ProfilePreview | null);
+      try {
+        if (kind === "post_share" && postId) {
+          const { data, error } = await supabase
+            .from("posts")
+            .select("id, user_id, image_url, video_url, category, content_type, is_removed, is_archived, moderation_status, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
+            .eq("id", postId)
+            .maybeSingle();
+          if (error) throw error;
+          if (!cancel) setPost(data as PostPreview | null);
+        } else if (kind === "profile_share" && profileId) {
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("id, username, profile_photo_url, is_banned, is_suspended")
+            .eq("id", profileId)
+            .maybeSingle();
+          if (error) throw error;
+          if (!cancel) setProfile(data as ProfilePreview | null);
+        }
+      } catch (_e) {
+        if (!cancel) setFetchFailed(true);
+        safeWarn("fetch_failed", {
+          message_id: messageId ?? null,
+          kind,
+          has_post_id: !!postId,
+          has_profile_id: !!profileId,
+          error_category: "fetch_error",
+          timestamp: new Date().toISOString(),
+        });
+      } finally {
+        if (!cancel) setLoading(false);
       }
-      if (!cancel) setLoading(false);
     })();
     return () => { cancel = true; };
-  }, [kind, postId, profileId]);
+  }, [kind, postId, profileId, messageId, metadataMissing]);
 
   const wrapBase = `max-w-[78%] rounded-2xl overflow-hidden border ${
     mine ? "bg-primary/10 border-primary/40" : "bg-muted border-border"
   }`;
 
+  const Unavailable = (
+    <div
+      data-testid="shared-content-unavailable"
+      className={`${wrapBase} px-3 py-3 text-xs text-muted-foreground flex items-center gap-2`}
+    >
+      <ImageOff size={14} /> {UNAVAILABLE_TEXT}
+    </div>
+  );
+
+  if (metadataMissing) return Unavailable;
+
   if (loading) {
     return <div className={`${wrapBase} px-3 py-3 text-xs text-muted-foreground animate-pulse`}>Loading share…</div>;
   }
 
+  if (fetchFailed) return Unavailable;
+
   if (kind === "post_share") {
-    if (isUnavailablePost(post)) {
-      return (
-        <div className={`${wrapBase} px-3 py-3 text-xs text-muted-foreground flex items-center gap-2`}>
-          <ImageOff size={14} /> This post is no longer available
-        </div>
-      );
-    }
+    if (isUnavailablePost(post)) return Unavailable;
     const p = post!;
     const isVid = isScroll({ content_type: p.content_type, media_type: p.video_url ? "video" : null });
+    const href = buildSharedContentHref({ kind, postId: p.id });
+    if (!href) return Unavailable;
     return (
-      <Link to={`/p/${p.id}`} className={`${wrapBase} block w-64`}>
+      <Link to={href} data-testid="shared-post-card" data-content-id={p.id} className={`${wrapBase} block w-64`}>
         <div className="aspect-square bg-muted relative">
           {p.image_url ? (
             <img src={p.image_url} alt="" loading="lazy" className="w-full h-full object-cover" />
@@ -113,22 +204,20 @@ export default function SharedPostMessage({ kind, postId, profileId, body, mine 
         <div className="p-2.5 space-y-0.5">
           <p className="text-xs font-semibold truncate">@{p.profile?.username ?? "creator"}</p>
           {body && <p className="text-[11px] text-muted-foreground line-clamp-2">{body}</p>}
-          <p className="text-[10px] uppercase tracking-wider text-primary">Open post →</p>
+          <p className="text-[10px] uppercase tracking-wider text-primary">
+            {isVid ? "Open Scroll →" : "Open post →"}
+          </p>
         </div>
       </Link>
     );
   }
 
-  if (isUnavailableProfile(profile)) {
-    return (
-      <div className={`${wrapBase} px-3 py-3 text-xs text-muted-foreground flex items-center gap-2`}>
-        <UserRound size={14} /> This profile is no longer available
-      </div>
-    );
-  }
+  if (isUnavailableProfile(profile)) return Unavailable;
   const pr = profile!;
+  const href = buildSharedContentHref({ kind, username: pr.username });
+  if (!href) return Unavailable;
   return (
-    <Link to={`/u/${pr.username}`} className={`${wrapBase} flex items-center gap-3 p-3 w-64`}>
+    <Link to={href} data-testid="shared-profile-card" data-content-id={pr.id} className={`${wrapBase} flex items-center gap-3 p-3 w-64`}>
       <div className="size-12 rounded-full bg-muted overflow-hidden shrink-0">
         {pr.profile_photo_url ? (
           <img src={pr.profile_photo_url} alt="" className="w-full h-full object-cover" loading="lazy" />
