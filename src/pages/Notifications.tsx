@@ -33,16 +33,16 @@ function classify(n: any): Group {
   return "other";
 }
 
+import { getNotificationTarget } from "@/lib/notificationRouting";
+
 function targetFor(n: any): string | null {
-  const p = n.payload || {};
-  if (typeof p.link === "string" && p.link.startsWith("/")) return p.link;
-  if (p.battle_id) return `/battles?b=${p.battle_id}`;
-  if (n.type === "follow") {
-    if (p.follower_username) return `/u/${p.follower_username}`;
-    if (p.follower_id) return `/u/${p.follower_id}`;
+  const t = getNotificationTarget(n);
+  if (!t && n?.type) {
+    // Surface malformed metadata for diagnostics without crashing the UI.
+    // eslint-disable-next-line no-console
+    console.warn("[notifications] no route for", n.type, n.payload);
   }
-  if (p.post_id) return `/post/${p.post_id}`;
-  return null;
+  return t;
 }
 
 export default function Notifications() {
@@ -105,16 +105,10 @@ export default function Notifications() {
     return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
 
-  // Once the user lands on the notifications inbox, all currently-unread
-  // alerts are considered "viewed" and the bell badge clears immediately.
-  useEffect(() => {
-    if (!user?.id) return;
-    const t = setTimeout(async () => {
-      await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
-      setList((l) => l.map((n) => ({ ...n, read: true })));
-    }, 600);
-    return () => clearTimeout(t);
-  }, [user?.id]);
+  // NOTE: Opening this panel intentionally does NOT mark notifications as
+  // read — users must tap a specific notification, or hit "Mark all read",
+  // so important alerts aren't silently dismissed.
+
 
   const markRead = async (id: string) => {
     if (!id) return;
