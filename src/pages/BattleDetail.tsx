@@ -22,6 +22,8 @@ import { Crown, MapPin, ArrowLeft, Flame, Loader2, Clock } from "lucide-react";
 import { CATEGORY_LABEL, type CrownCategory, locationLabel, timeUntil } from "@/lib/crown";
 import { useCountdown } from "@/hooks/useCountdown";
 import { OfficialResultBadge } from "@/components/battles/OfficialResultBadge";
+import PostMedia from "@/components/PostMedia";
+import type { FilterId } from "@/lib/filters";
 import { deriveBattleStatus, isSafeBattleForList, type BattleLike } from "@/lib/battlesLogic";
 import { invalidateOfficialResult } from "@/hooks/useOfficialBattleResult";
 import { trackEvent } from "@/lib/analytics";
