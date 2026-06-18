@@ -264,11 +264,28 @@ export default function EditPostDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto p-4 sm:p-5">
-        <DialogHeader className="mb-2">
-          <DialogTitle className="text-base">Edit post</DialogTitle>
+      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto p-0 sm:p-0 gap-0">
+        <DialogHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border px-3 py-2 flex-row items-center justify-between space-y-0">
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+            aria-label="Cancel"
+            className="size-9 -ml-1 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-50"
+          >
+            ✕
+          </button>
+          <DialogTitle className="text-sm font-display tracking-wide">Edit post</DialogTitle>
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="text-sm font-bold tracking-wide text-primary hover:opacity-80 disabled:opacity-50 px-2 py-1 -mr-1"
+          >
+            {saving ? "Saving…" : "Done"}
+          </button>
         </DialogHeader>
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="p-4 sm:p-5 grid sm:grid-cols-2 gap-3">
           <div className="space-y-2">
             <div className="aspect-[4/3] sm:aspect-square w-full max-h-[36vh] sm:max-h-none bg-muted rounded-xl overflow-hidden relative flex items-center justify-center">
               {preview && (
