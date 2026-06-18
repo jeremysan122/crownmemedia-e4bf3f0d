@@ -45,6 +45,7 @@ export default function Shorts() {
   const [muted, setMuted] = useState(true);
   const [endReached, setEndReached] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [activeProgress, setActiveProgress] = useState(0); // 0..1 for the visible Scroll
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [dmShareScroll, setDmShareScroll] = useState<Short | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
@@ -160,6 +161,21 @@ export default function Shorts() {
     videoRefs.current.forEach((v) => { if (v) v.muted = muted; });
   }, [muted]);
 
+  // Drive the top progress bar from the active video's timeupdate event.
+  // Re-binds whenever the active slide changes so we always read the right video.
+  useEffect(() => {
+    const vid = videoRefs.current[activeIdx];
+    if (!vid) return;
+    setActiveProgress(0);
+    const onTime = () => {
+      const d = vid.duration;
+      if (!d || !isFinite(d) || d <= 0) return;
+      setActiveProgress(Math.min(1, vid.currentTime / d));
+    };
+    vid.addEventListener("timeupdate", onTime);
+    return () => vid.removeEventListener("timeupdate", onTime);
+  }, [activeIdx, items.length]);
+
   // Pause the active video while the comments overlay is open; resume on close.
   useEffect(() => {
     const vid = videoRefs.current[activeIdx];
@@ -222,14 +238,23 @@ export default function Shorts() {
 
   return (
     <main className="fixed inset-0 bg-black text-white">
-      <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/70 to-transparent">
-        <button onClick={() => nav(-1)} aria-label="Back" className="p-2 -ml-2 rounded-full hover:bg-white/10">
-          <ArrowLeft className="size-5" />
-        </button>
-        <h1 className="font-display text-lg tracking-widest">SCROLLS</h1>
-        <button onClick={() => setMuted((m) => !m)} aria-label={muted ? "Unmute" : "Mute"} className="p-2 -mr-2 rounded-full hover:bg-white/10">
-          {muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
-        </button>
+      <div className="absolute top-0 inset-x-0 z-20 bg-gradient-to-b from-black/70 to-transparent">
+        {/* Reels-style thin progress bar for the active scroll */}
+        <div className="h-0.5 w-full bg-white/15">
+          <div
+            className="h-full bg-gold transition-[width] duration-150 ease-linear"
+            style={{ width: `${Math.round(activeProgress * 100)}%` }}
+          />
+        </div>
+        <div className="flex items-center justify-between px-4 py-3">
+          <button onClick={() => nav(-1)} aria-label="Back" className="p-2 -ml-2 rounded-full hover:bg-white/10">
+            <ArrowLeft className="size-5" />
+          </button>
+          <h1 className="font-display text-lg tracking-widest">SCROLLS</h1>
+          <button onClick={() => setMuted((m) => !m)} aria-label={muted ? "Unmute" : "Mute"} className="p-2 -mr-2 rounded-full hover:bg-white/10">
+            {muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
+          </button>
+        </div>
       </div>
 
       {items.length === 0 ? (
