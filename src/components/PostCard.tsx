@@ -600,16 +600,16 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
 
   if (hidden) return null;
   return (
-    <article ref={articleRef} className="royal-card overflow-hidden mb-2 animate-fade-in relative text-[13px]">
-      {/* Header */}
-      <header className="flex items-center justify-between gap-2 p-2">
-        <Link to={`/u/${post.profile.username}`} className="flex items-center gap-2.5 min-w-0 flex-1">
+    <article ref={articleRef} className="royal-card overflow-hidden mb-3 animate-fade-in relative text-[13px]">
+      {/* Header — Instagram-style: larger avatar, bolder username, quieter meta */}
+      <header className="flex items-center justify-between gap-2 px-3 py-2.5">
+        <Link to={`/u/${post.profile.username}`} className="flex items-center gap-3 min-w-0 flex-1">
           <div className={`${post.profile.crowns_held > 0 ? "crown-ring" : ""} ${isPassMember ? "ring-2 ring-gold/60 rounded-full" : ""} shrink-0`}>
-            <div className="size-7 rounded-full bg-muted overflow-hidden ring-1 ring-border">
+            <div className="size-9 rounded-full bg-muted overflow-hidden ring-1 ring-border">
               {post.profile.profile_photo_url ? (
                 <img loading="lazy" src={post.profile.profile_photo_url} alt={post.profile.username} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
                   {post.profile.username[0]?.toUpperCase()}
                 </div>
               )}
@@ -617,12 +617,12 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1 min-w-0">
-              <span className="font-semibold text-sm truncate">@{post.profile.username}</span>
+              <span className="font-bold text-sm truncate leading-tight">{post.profile.username}</span>
               {(post.profile as any).verified && <VerifiedBadge size={13} />}
               {post.profile.crowns_held > 0 && <Crown size={11} className="text-primary shrink-0" fill="currentColor" />}
               {isPassMember && <RoyalPassBadge />}
             </div>
-            <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0 leading-tight">
               <MapPin size={9} className="shrink-0" />
               <span className="truncate">{locationLabel({ city: liveCity, state: liveState, country: liveCountry })}</span>
               {pinnedAt && (
@@ -639,7 +639,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           </div>
         </Link>
         <div className="flex items-center gap-1 shrink-0">
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-[11px] text-muted-foreground tabular-nums">
             {timeAgo(post.created_at)}
             {liveEditedAt && <span className="ml-1 italic text-[10px]">· edited</span>}
           </span>
@@ -886,8 +886,32 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       {post.repost_caption && (
         <p className="px-3 pt-2 text-xs leading-snug">{post.repost_caption}</p>
       )}
-      {/* Caption */}
-      {liveCaption && <p className="px-3 pt-2 text-xs leading-snug line-clamp-2">{liveCaption}</p>}
+      {/* Caption — Instagram-style: bold username prepended inline, 2-line clamp */}
+      {liveCaption && (
+        <p className="px-3 pt-2 text-[13px] leading-snug line-clamp-2">
+          <Link to={`/u/${post.profile.username}`} className="font-bold mr-1.5 hover:underline">
+            {post.profile.username}
+          </Link>
+          <span>{liveCaption}</span>
+        </p>
+      )}
+      {/* Comments preview line — IG pattern */}
+      {showComments && counts.comments > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            if (isBelowDesktop) {
+              if (onCommentClick) onCommentClick(post.id);
+              else setCommentsDrawerOpen(true);
+            } else {
+              setDetailOpen(true);
+            }
+          }}
+          className="px-3 pt-1 text-[11px] text-muted-foreground hover:text-foreground text-left"
+        >
+          View {counts.comments === 1 ? "1 comment" : `all ${counts.comments} comments`}
+        </button>
+      )}
       {/* Tagged people */}
       {post.tagged_user_ids && post.tagged_user_ids.length > 0 && (
         <TaggedPeopleLine ids={post.tagged_user_ids} />
@@ -915,8 +939,8 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         scope={raceScope}
       />
 
-      {/* Actions */}
-      <div className="px-2 pt-2 pb-1 flex items-center justify-between gap-1 relative">
+      {/* Actions — Instagram-style row: reactions left, bookmark right-anchored, larger tap targets */}
+      <div className="px-2.5 pt-2.5 pb-1 flex items-center gap-1 relative">
         <div className="flex items-center gap-1 relative">
           <VoteBtn type="crown" icon={Crown} color="from-amber-500 to-yellow-600" active={myVotes.has("crown")} burst={burst} showLikes={showLikes} count={counts.crown} onVote={onVote} />
           <VoteBtn type="fire" icon={Flame} color="from-orange-500 to-red-600" active={myVotes.has("fire")} burst={burst} showLikes={showLikes} count={counts.fire} onVote={onVote} />
@@ -928,7 +952,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
             onDone={() => setOverlayBurst(null)}
           />
         </div>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 ml-auto">
           <button
             onClick={() => {
               // Mobile + tablet (<1024px) always use the universal popup
@@ -940,9 +964,10 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
                 setDetailOpen(true);
               }
             }}
-            className="flex items-center gap-1 px-1.5 py-1.5 text-muted-foreground hover:text-foreground"
+            aria-label="Comments"
+            className="flex items-center gap-1 p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition"
           >
-            <MessageCircle size={16} />
+            <MessageCircle size={18} />
             {showComments ? (
               <span className="text-[11px] tabular-nums">{counts.comments}</span>
             ) : (
@@ -952,18 +977,18 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           {!isOwner && (
             <button
               onClick={() => setGiftOpen(true)}
-              className="p-1.5 text-primary hover:opacity-80 animate-[crown-pulse_3s_ease-in-out_infinite]"
+              className="p-2 rounded-full text-primary hover:bg-primary/10 active:scale-95 transition animate-[crown-pulse_3s_ease-in-out_infinite]"
               aria-label="Send Gift"
             >
-              <Gift size={16} />
+              <Gift size={18} />
             </button>
           )}
-          <button type="button" onClick={() => setShareOpen(true)} className="p-1.5 text-muted-foreground hover:text-foreground" aria-label="Share">
-            <Share2 size={16} />
+          <button type="button" onClick={() => setShareOpen(true)} className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition" aria-label="Share">
+            <Share2 size={18} />
           </button>
           {!isOwner && (
-            <button type="button" onClick={() => setRepostOpen(true)} className="p-1.5 text-muted-foreground hover:text-primary" aria-label="Repost">
-              <Repeat2 size={16} />
+            <button type="button" onClick={() => setRepostOpen(true)} className="p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/50 active:scale-95 transition" aria-label="Repost">
+              <Repeat2 size={18} />
             </button>
           )}
           <button
@@ -971,9 +996,9 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
             disabled={bookmarkBusy}
             aria-pressed={bookmarked}
             aria-label={bookmarked ? "Remove from saved" : "Save post"}
-            className={`p-1.5 transition-colors ${bookmarked ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            className={`p-2 rounded-full transition-colors active:scale-95 hover:bg-muted/50 ${bookmarked ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
           >
-            <Bookmark size={16} fill={bookmarked ? "currentColor" : "none"} />
+            <Bookmark size={18} fill={bookmarked ? "currentColor" : "none"} />
           </button>
         </div>
       </div>
