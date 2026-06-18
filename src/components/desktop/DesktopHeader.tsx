@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/hooks/useWallet";
 import { formatScore } from "@/lib/crown";
 import GlobalSearchDialog from "@/components/GlobalSearchDialog";
+import CreateSheet from "@/components/create/CreateSheet";
 import { useUnreadByType } from "@/hooks/useUnreadByType";
 import { useThreadUnread } from "@/hooks/useThreadUnread";
 import { useMutedThreads } from "@/hooks/useMutedThreads";
