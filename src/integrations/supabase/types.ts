@@ -1244,6 +1244,7 @@ export type Database = {
         Row: {
           bonus_spins: number
           current_streak: number
+          last_claimed_at: string | null
           last_claimed_date: string | null
           last_spin_date: string | null
           longest_streak: number
@@ -1254,6 +1255,7 @@ export type Database = {
         Insert: {
           bonus_spins?: number
           current_streak?: number
+          last_claimed_at?: string | null
           last_claimed_date?: string | null
           last_spin_date?: string | null
           longest_streak?: number
@@ -1264,6 +1266,7 @@ export type Database = {
         Update: {
           bonus_spins?: number
           current_streak?: number
+          last_claimed_at?: string | null
           last_claimed_date?: string | null
           last_spin_date?: string | null
           longest_streak?: number
