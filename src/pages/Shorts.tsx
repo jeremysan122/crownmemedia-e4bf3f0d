@@ -45,6 +45,7 @@ export default function Shorts() {
   const [muted, setMuted] = useState(true);
   const [endReached, setEndReached] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [activeProgress, setActiveProgress] = useState(0); // 0..1 for the visible Scroll
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [dmShareScroll, setDmShareScroll] = useState<Short | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
