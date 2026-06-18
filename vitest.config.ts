@@ -9,6 +9,12 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // Sandboxed CI is slow on first transform of large dep graphs (Radix +
+    // Supabase + React Query). Default 5s timeouts caused spurious hangs.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
+    pool: "forks",
+    poolOptions: { forks: { singleFork: true } },
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
