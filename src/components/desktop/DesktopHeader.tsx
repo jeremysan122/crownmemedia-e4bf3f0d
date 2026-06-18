@@ -78,10 +78,10 @@ export default function DesktopHeader() {
             )}
           </Link>
           <button
-            onClick={() => nav("/upload")}
+            onClick={() => setCreateOpen(true)}
             className="ml-1 h-10 px-4 rounded-full bg-gradient-gold text-primary-foreground font-bold text-sm tracking-wider gold-shadow flex items-center gap-1.5 hover:opacity-95 transition"
           >
-            <Plus size={16} strokeWidth={2.6} /> Post
+            <Plus size={16} strokeWidth={2.6} /> Create
           </button>
           <Link to={profilePath} className="ml-1 size-10 rounded-full overflow-hidden ring-1 ring-border hover:ring-primary transition bg-muted shrink-0">
             {profile?.profile_photo_url ? (
