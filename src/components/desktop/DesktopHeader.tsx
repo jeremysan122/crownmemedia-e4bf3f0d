@@ -95,6 +95,7 @@ export default function DesktopHeader() {
         </div>
       </div>
       <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <CreateSheet open={createOpen} onOpenChange={setCreateOpen} />
     </header>
   );
 }
