@@ -76,7 +76,7 @@ export default function ShareProfileDialog({ open, onOpenChange, profile: initia
   const avatarSrc = withCacheBust(profile.profile_photo_url, v);
   const bannerSrc = withCacheBust(profile.banner_url, v);
 
-  const url = `${window.location.origin}/u/${profile.username}`;
+  const url = `${window.location.origin}/${profile.username}`;
   const text = `Follow @${profile.username} on CrownMe — competing for the crown.`;
 
   const copy = async () => {
