@@ -1,6 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import TrendingHashtags from "@/components/TrendingHashtags";
 import { Hash, X as XIcon, ArrowUp, Loader2, Clock, TrendingUp, Flame as FlameIcon, type LucideIcon } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { FeedPost } from "@/components/PostCard";
@@ -607,9 +606,6 @@ export default function Feed() {
 
         <FeedRealtimeAlert />
 
-        <div className="px-3 lg:px-0 pt-2 xl:hidden">
-          <TrendingHashtags compact />
-        </div>
 
         {tagFilter && (
           <div className="mx-3 lg:mx-0 mt-3 flex items-center justify-between gap-2 royal-card px-3 py-2">
