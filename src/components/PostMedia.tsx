@@ -64,7 +64,7 @@ const BOOST_LABEL: Record<VoteType, string> = {
  * Original file is unchanged on storage — filter is metadata-only.
  */
 export default function PostMedia({
-  src, alt, mediaType = "image", filter, poster, onClick, className, boost, boostType = "crown",
+  src, alt, mediaType = "image", filter, poster, onClick, className, autoPlay, boost, boostType = "crown",
 }: Props) {
   const baseCss = cssFor(filter);
   const intensify = BOOST_FILTER[boostType];
