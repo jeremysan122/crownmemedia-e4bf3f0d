@@ -330,13 +330,13 @@ export default function Leaderboard() {
                     <Link to={`/${p.profile.username}`}>
                       <div className="aspect-square relative">
                         <PostMedia
-                          src={p.image_url}
+                          src={p.media_type === "video" ? (p.video_poster_url || p.image_url) : p.image_url}
                           alt={`${label} of ${headerLabel}`}
-                          mediaType={p.media_type === "video" ? "video" : "image"}
+                          mediaType="image"
                           filter={(p.filter ?? null) as FilterId | null}
-                          poster={p.video_poster_url}
                           className="w-full h-full object-cover"
                         />
+
                         <SensitiveThumb blurred={shouldBlurRow(p)} />
                         <div className={`absolute inset-x-0 top-0 bg-gradient-to-b ${color} text-white text-center text-xs font-bold py-1 tracking-widest overflow-hidden`}>
                           <span key={label} className="inline-block animate-fade-in">{label}</span>
