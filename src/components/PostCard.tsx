@@ -886,8 +886,32 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       {post.repost_caption && (
         <p className="px-3 pt-2 text-xs leading-snug">{post.repost_caption}</p>
       )}
-      {/* Caption */}
-      {liveCaption && <p className="px-3 pt-2 text-xs leading-snug line-clamp-2">{liveCaption}</p>}
+      {/* Caption — Instagram-style: bold username prepended inline, 2-line clamp */}
+      {liveCaption && (
+        <p className="px-3 pt-2 text-[13px] leading-snug line-clamp-2">
+          <Link to={`/u/${post.profile.username}`} className="font-bold mr-1.5 hover:underline">
+            {post.profile.username}
+          </Link>
+          <span>{liveCaption}</span>
+        </p>
+      )}
+      {/* Comments preview line — IG pattern */}
+      {showComments && counts.comments > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            if (isBelowDesktop) {
+              if (onCommentClick) onCommentClick(post.id);
+              else setCommentsDrawerOpen(true);
+            } else {
+              setDetailOpen(true);
+            }
+          }}
+          className="px-3 pt-1 text-[11px] text-muted-foreground hover:text-foreground text-left"
+        >
+          View {counts.comments === 1 ? "1 comment" : `all ${counts.comments} comments`}
+        </button>
+      )}
       {/* Tagged people */}
       {post.tagged_user_ids && post.tagged_user_ids.length > 0 && (
         <TaggedPeopleLine ids={post.tagged_user_ids} />
