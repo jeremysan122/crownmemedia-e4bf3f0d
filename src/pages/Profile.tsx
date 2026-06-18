@@ -710,12 +710,15 @@ export default function Profile() {
               const imagePosts = filterByContentType(posts as any, "post") as typeof posts;
               const scrollPosts = filterByContentType(posts as any, "scroll") as typeof posts;
               const renderTile = (p: typeof posts[number], showPlay: boolean) => (
-                <div key={p.id} className="aspect-square bg-muted overflow-hidden relative rounded-md lg:rounded-xl group">
+                <div
+                  key={p.id}
+                  className={`${showPlay ? "aspect-[9/16]" : "aspect-square"} bg-muted overflow-hidden relative rounded-md lg:rounded-xl group`}
+                >
                   <button
                     type="button"
                     onClick={() => openPostDetail(p.id)}
                     className="absolute inset-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
-                    aria-label="Open post"
+                    aria-label={showPlay ? "Open scroll" : "Open post"}
                   >
                     <img
                       src={(showPlay && p.video_poster_url) ? p.video_poster_url : p.image_url}
@@ -726,9 +729,13 @@ export default function Profile() {
                     <SensitiveThumb blurred={shouldBlurThumb(p)} />
                   </button>
                   {showPlay && (
-                    <div className="absolute top-1 left-1 glass rounded-full p-1 pointer-events-none">
-                      <Play size={10} fill="currentColor" />
-                    </div>
+                    <>
+                      {/* Reels-style gradient + centered play affordance + view count */}
+                      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+                      <div className="absolute top-1.5 left-1.5 glass rounded-full p-1 pointer-events-none">
+                        <Play size={11} fill="currentColor" />
+                      </div>
+                    </>
                   )}
                   <div className="absolute bottom-1 right-1 glass px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1 pointer-events-none">
                     <Crown size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
