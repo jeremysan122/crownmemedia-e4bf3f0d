@@ -80,8 +80,10 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
+const STABLE_USER = { id: "u1", user_metadata: { username: "me" } };
+const STABLE_AUTH = { user: STABLE_USER };
 vi.mock("@/context/AuthContext", () => ({
-  useAuth: () => ({ user: { id: "u1", user_metadata: { username: "me" } } }),
+  useAuth: () => STABLE_AUTH,
 }));
 
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
