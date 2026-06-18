@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORY_LABEL, locationLabel } from "@/lib/crown";
 import { FeedPost } from "./PostCard";
+import PostMedia from "./PostMedia";
+import type { FilterId } from "@/lib/filters";
 import { trackEvent } from "@/lib/analytics";
 import { trackUsage, trackUsageEvent } from "@/lib/usageTrack";
 import { resolvePostShareImage, usePostShareData } from "@/lib/postShare";
