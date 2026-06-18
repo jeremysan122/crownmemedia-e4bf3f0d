@@ -403,7 +403,7 @@ export default function EditPostDialog({
         </div>
 
         {/* Alt text inputs */}
-        <div className="space-y-1.5 mt-2">
+        <div className="px-4 sm:px-5 pb-5 space-y-1.5 mt-2">
           <Label className="text-[11px] uppercase tracking-widest">Alt text (accessibility)</Label>
           <div className="space-y-1.5">
             {imageUrls.map((_, i) => (
@@ -426,13 +426,6 @@ export default function EditPostDialog({
             ))}
           </div>
         </div>
-
-        <DialogFooter className="mt-3">
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-          <Button size="sm" onClick={save} disabled={saving} className="bg-gradient-gold text-primary-foreground">
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
