@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORY_LABEL, locationLabel } from "@/lib/crown";
 import { FeedPost } from "./PostCard";
+import PostMedia from "./PostMedia";
+import type { FilterId } from "@/lib/filters";
 import { trackEvent } from "@/lib/analytics";
 import { trackUsage, trackUsageEvent } from "@/lib/usageTrack";
 import { resolvePostShareImage, usePostShareData } from "@/lib/postShare";
@@ -241,7 +243,24 @@ export function ShareDialog({ open, onOpenChange, post: initialPost, source }: S
 
             <div className="aspect-square rounded-xl overflow-hidden mb-3 ring-1 ring-primary/20 relative bg-muted/20">
               {previewImg && (
-                <img data-testid="share-card-image" key={previewImg} loading="lazy" src={previewImg} alt="" crossOrigin="anonymous" className="w-full h-full object-cover" />
+                <PostMedia
+                  key={previewImg}
+                  src={previewImg}
+                  alt=""
+                  mediaType="image"
+                  filter={(post.filter ?? null) as FilterId | null}
+                  className="w-full h-full object-cover"
+                />
+              )}
+              {/* Hidden mirror img so existing testids / SEO crawlers still see the resolved URL. */}
+              {previewImg && (
+                <img
+                  data-testid="share-card-image"
+                  src={previewImg}
+                  alt=""
+                  aria-hidden
+                  className="sr-only"
+                />
               )}
               {loadingFresh && (
                 <div className="absolute top-2 right-2 bg-black/40 backdrop-blur rounded-full p-1.5">

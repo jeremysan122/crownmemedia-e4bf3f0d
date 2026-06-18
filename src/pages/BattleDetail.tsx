@@ -22,6 +22,8 @@ import { Crown, MapPin, ArrowLeft, Flame, Loader2, Clock } from "lucide-react";
 import { CATEGORY_LABEL, type CrownCategory, locationLabel, timeUntil } from "@/lib/crown";
 import { useCountdown } from "@/hooks/useCountdown";
 import { OfficialResultBadge } from "@/components/battles/OfficialResultBadge";
+import PostMedia from "@/components/PostMedia";
+import type { FilterId } from "@/lib/filters";
 import { deriveBattleStatus, isSafeBattleForList, type BattleLike } from "@/lib/battlesLogic";
 import { invalidateOfficialResult } from "@/hooks/useOfficialBattleResult";
 import { trackEvent } from "@/lib/analytics";
@@ -32,8 +34,12 @@ interface BattleRow extends BattleLike {
   challenger_post: {
     image_url: string; category: CrownCategory;
     city: string | null; state: string | null; country: string | null;
+    filter: string | null; media_type: string | null; video_poster_url: string | null;
   } | null;
-  opponent_post: { image_url: string; category: CrownCategory } | null;
+  opponent_post: {
+    image_url: string; category: CrownCategory;
+    filter: string | null; media_type: string | null; video_poster_url: string | null;
+  } | null;
 }
 
 function CountdownPill({ endsAt }: { endsAt: string }) {
@@ -87,8 +93,8 @@ export default function BattleDetail() {
           `*,
           challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url),
           opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url),
-          challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country),
-          opponent_post:posts!battles_opponent_post_id_fkey(image_url, category)`
+          challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country, filter, media_type, video_poster_url),
+          opponent_post:posts!battles_opponent_post_id_fkey(image_url, category, filter, media_type, video_poster_url)`
         )
         .eq("id", id)
         .maybeSingle();
@@ -186,7 +192,14 @@ export default function BattleDetail() {
                 return (
                   <div key={side} className="relative aspect-square bg-muted/30">
                     {post?.image_url && (
-                      <img src={post.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      <PostMedia
+                        src={post.image_url}
+                        alt=""
+                        mediaType={post.media_type === "video" ? "video" : "image"}
+                        filter={(post.filter ?? null) as FilterId | null}
+                        poster={post.video_poster_url}
+                        className="w-full h-full object-cover"
+                      />
                     )}
                     {won && (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

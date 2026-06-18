@@ -16,6 +16,8 @@ import { POST_SELECT } from "@/lib/postQuery";
 import { trackUsage } from "@/lib/usageTrack";
 import SensitiveThumb from "@/components/SensitiveThumb";
 import { useFeedFilters } from "@/hooks/useFeedFilters";
+import PostMedia from "@/components/PostMedia";
+import type { FilterId } from "@/lib/filters";
 
 const PAGE_SIZE = 30;
 
@@ -30,6 +32,9 @@ interface Row {
   crown_score: number;
   vote_count: number;
   is_sensitive?: boolean | null;
+  filter?: string | null;
+  media_type?: string | null;
+  video_poster_url?: string | null;
   profile: { username: string; profile_photo_url: string | null; crowns_held: number; gender: import("@/lib/rankTitle").GenderValue; hide_likes?: boolean | null };
 }
 
@@ -324,7 +329,14 @@ export default function Leaderboard() {
                   {p ? (
                     <Link to={`/${p.profile.username}`}>
                       <div className="aspect-square relative">
-                        <img loading="lazy" src={p.image_url} alt={`${label} of ${headerLabel}`} className="w-full h-full object-cover" />
+                        <PostMedia
+                          src={p.image_url}
+                          alt={`${label} of ${headerLabel}`}
+                          mediaType={p.media_type === "video" ? "video" : "image"}
+                          filter={(p.filter ?? null) as FilterId | null}
+                          poster={p.video_poster_url}
+                          className="w-full h-full object-cover"
+                        />
                         <SensitiveThumb blurred={shouldBlurRow(p)} />
                         <div className={`absolute inset-x-0 top-0 bg-gradient-to-b ${color} text-white text-center text-xs font-bold py-1 tracking-widest overflow-hidden`}>
                           <span key={label} className="inline-block animate-fade-in">{label}</span>

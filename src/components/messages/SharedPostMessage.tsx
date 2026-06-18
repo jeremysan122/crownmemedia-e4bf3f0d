@@ -17,6 +17,8 @@ import { Link } from "react-router-dom";
 import { ImageOff, UserRound, Play } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { isScroll } from "@/lib/contentType";
+import PostMedia from "@/components/PostMedia";
+import type { FilterId } from "@/lib/filters";
 
 interface SharedRow {
   kind: "post_share" | "profile_share";
@@ -33,6 +35,9 @@ type PostPreview = {
   user_id: string;
   image_url: string | null;
   video_url: string | null;
+  video_poster_url?: string | null;
+  media_type?: string | null;
+  filter?: string | null;
   category: string | null;
   content_type: string | null;
   is_removed: boolean | null;
@@ -127,7 +132,7 @@ export default function SharedPostMessage({ kind, postId, profileId, body, mine,
         if (kind === "post_share" && postId) {
           const { data, error } = await supabase
             .from("posts")
-            .select("id, user_id, image_url, video_url, category, content_type, is_removed, is_archived, moderation_status, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
+            .select("id, user_id, image_url, video_url, video_poster_url, media_type, filter, category, content_type, is_removed, is_archived, moderation_status, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
             .eq("id", postId)
             .maybeSingle();
           if (error) throw error;
@@ -189,9 +194,22 @@ export default function SharedPostMessage({ kind, postId, profileId, body, mine,
       <Link to={href} data-testid="shared-post-card" data-content-id={p.id} className={`${wrapBase} block w-64`}>
         <div className="aspect-square bg-muted relative">
           {p.image_url ? (
-            <img src={p.image_url} alt="" loading="lazy" className="w-full h-full object-cover" />
+            <PostMedia
+              src={p.image_url}
+              alt=""
+              mediaType="image"
+              filter={(p.filter ?? null) as FilterId | null}
+              className="w-full h-full object-cover"
+            />
           ) : p.video_url ? (
-            <video src={p.video_url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+            <PostMedia
+              src={p.video_url}
+              alt=""
+              mediaType="video"
+              poster={p.video_poster_url ?? null}
+              filter={(p.filter ?? null) as FilterId | null}
+              className="w-full h-full object-cover"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground"><ImageOff /></div>
           )}
