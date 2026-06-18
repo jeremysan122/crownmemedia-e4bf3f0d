@@ -35,6 +35,9 @@ type PostPreview = {
   user_id: string;
   image_url: string | null;
   video_url: string | null;
+  video_poster_url: string | null;
+  media_type: string | null;
+  filter: string | null;
   category: string | null;
   content_type: string | null;
   is_removed: boolean | null;
