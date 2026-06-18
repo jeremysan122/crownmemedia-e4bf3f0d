@@ -24,14 +24,17 @@ describe("BottomNav layout", () => {
     }
   });
 
-  it("Upload primary button routes to /upload", () => {
+  it("primary action opens the Create sheet (not a route to /upload)", () => {
     render(
       <MemoryRouter initialEntries={["/feed"]}>
         <BottomNav />
       </MemoryRouter>,
     );
-    const links = screen.getAllByRole("link");
-    const upload = links.find((a) => a.getAttribute("href") === "/upload");
-    expect(upload).toBeTruthy();
+    // The IG-style + button is a sheet trigger, not a <Link>.
+    const createBtn = screen.getByRole("button", { name: /create/i });
+    expect(createBtn).toBeInTheDocument();
+    // And there should be no legacy /upload link in the nav.
+    const links = screen.queryAllByRole("link");
+    expect(links.find((a) => a.getAttribute("href") === "/upload")).toBeUndefined();
   });
 });
