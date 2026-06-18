@@ -53,7 +53,7 @@ export default function AppShell({ children, title, showHeader = true, rightSlot
       <DesktopHeader />
 
       <div className="w-full lg:px-6 lg:flex lg:gap-6 flex-1">
-        <DesktopSidebar onCompose={() => nav("/upload")} />
+        <DesktopSidebar onCompose={() => setCreateOpen(true)} />
 
         {/* Main content column — children mount exactly once to avoid duplicate dialogs/menus. */}
         <div className="flex-1 min-w-0 lg:py-5 w-full flex flex-col">
