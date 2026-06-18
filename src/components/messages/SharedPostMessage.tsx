@@ -132,7 +132,7 @@ export default function SharedPostMessage({ kind, postId, profileId, body, mine,
         if (kind === "post_share" && postId) {
           const { data, error } = await supabase
             .from("posts")
-            .select("id, user_id, image_url, video_url, category, content_type, is_removed, is_archived, moderation_status, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
+            .select("id, user_id, image_url, video_url, video_poster_url, media_type, filter, category, content_type, is_removed, is_archived, moderation_status, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
             .eq("id", postId)
             .maybeSingle();
           if (error) throw error;
