@@ -20,7 +20,7 @@ import {
 
 /** Columns to select on the `posts` table for share rendering. */
 export const POST_SHARE_COLUMNS =
-  "id, user_id, image_url, image_urls, caption, category, vote_count, comment_count, share_count, video_url, video_poster_url, media_type, city, state, country, created_at, edited_at, is_removed, is_sensitive, sensitive_reason";
+  "id, user_id, image_url, image_urls, caption, category, vote_count, comment_count, share_count, video_url, video_poster_url, media_type, filter, city, state, country, created_at, edited_at, is_removed, is_sensitive, sensitive_reason";
 
 export interface PostShareLike {
   id: string;
@@ -30,6 +30,8 @@ export interface PostShareLike {
   video_poster_url?: string | null;
   video_url?: string | null;
   media_type?: string | null;
+  /** Crown Filter id applied to this post (display-only, never baked into storage). */
+  filter?: string | null;
   edited_at?: string | null;
   created_at?: string | null;
   is_removed?: boolean | null;
