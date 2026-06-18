@@ -59,12 +59,14 @@ type Streak = {
   current_streak: number;
   longest_streak: number;
   last_claimed_date: string | null;
+  last_claimed_at: string | null;
   last_spin_date: string | null;
   total_claims: number;
   bonus_spins: number;
 };
 
 function todayUtc(): string { return new Date().toISOString().slice(0, 10); }
+const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 export default function Rewards() {
   const { user, loading: authLoading } = useAuth();
@@ -83,12 +85,21 @@ export default function Rewards() {
   const [rotation, setRotation] = useState(0);
   const [winFlash, setWinFlash] = useState(false);
   const [lastResult, setLastResult] = useState<{ label: string; prize_type: PrizeType; prize_value: number } | null>(null);
+  // Tick once per minute so the "next in Xh Ym" countdown stays current
+  // without spamming re-renders. 24h cooldown is timestamp-based, not midnight.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const today = todayUtc();
-  const claimedToday = streak?.last_claimed_date === today;
+  const lastClaimMs = streak?.last_claimed_at ? new Date(streak.last_claimed_at).getTime() : 0;
+  const claimedToday = lastClaimMs > 0 && nowMs - lastClaimMs < COOLDOWN_MS;
   const spunToday = streak?.last_spin_date === today;
   const bonusSpins = streak?.bonus_spins ?? 0;
   const canSpin = claimedToday && (!spunToday || bonusSpins > 0);
+
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -96,12 +107,13 @@ export default function Rewards() {
     (async () => {
       setLoading(true);
       const [s, p, t] = await Promise.all([
-        supabase.from("daily_streaks").select("current_streak,longest_streak,last_claimed_date,last_spin_date,total_claims,bonus_spins").eq("user_id", user.id).maybeSingle(),
+        supabase.from("daily_streaks").select("current_streak,longest_streak,last_claimed_date,last_claimed_at,last_spin_date,total_claims,bonus_spins").eq("user_id", user.id).maybeSingle(),
         supabase.from("spin_wheel_prizes").select("id,label,prize_type,prize_value,weight,color_hex,sort_order").eq("active", true).order("sort_order"),
         supabase.from("battle_tickets").select("balance").eq("user_id", user.id).maybeSingle(),
       ]);
       if (cancelled) return;
-      setStreak((s.data as Streak | null) ?? { current_streak: 0, longest_streak: 0, last_claimed_date: null, last_spin_date: null, total_claims: 0, bonus_spins: 0 });
+      setStreak((s.data as Streak | null) ?? { current_streak: 0, longest_streak: 0, last_claimed_date: null, last_claimed_at: null, last_spin_date: null, total_claims: 0, bonus_spins: 0 });
+
       setPrizes((p.data as Prize[]) ?? []);
       setTickets((t.data?.balance as number | undefined) ?? 0);
       setLoading(false);
@@ -133,7 +145,7 @@ export default function Rewards() {
       await refreshWallet();
       walletStore.requestRefresh();
     }
-    setStreak((prev) => prev ? { ...prev, current_streak: res.current_streak ?? prev.current_streak, longest_streak: res.longest_streak ?? prev.longest_streak, last_claimed_date: today } : prev);
+    setStreak((prev) => prev ? { ...prev, current_streak: res.current_streak ?? prev.current_streak, longest_streak: res.longest_streak ?? prev.longest_streak, last_claimed_date: today, last_claimed_at: new Date().toISOString() } : prev);
   }
 
   async function spin() {
@@ -286,11 +298,10 @@ export default function Rewards() {
   if (authLoading || loading || !streak) return <CrownLoader label="Loading rewards…" />;
 
   const nextClaimMs = (() => {
-    if (!claimedToday) return 0;
-    const tomorrow = new Date();
-    tomorrow.setUTCHours(24, 0, 0, 0);
-    return tomorrow.getTime() - Date.now();
+    if (!claimedToday || !lastClaimMs) return 0;
+    return Math.max(0, lastClaimMs + COOLDOWN_MS - nowMs);
   })();
+
 
   // Day mapping for the 7-day track:
   //   - "claimed" : day index <= number of days already fully claimed in the current cycle
