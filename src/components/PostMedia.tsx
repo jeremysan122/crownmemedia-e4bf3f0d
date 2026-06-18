@@ -121,11 +121,15 @@ export default function PostMedia({
           poster={poster ?? undefined}
           controls
           playsInline
-          preload="metadata"
+          autoPlay={autoPlay}
+          muted={autoPlay}
+          loop={autoPlay}
+          preload={autoPlay ? "auto" : "metadata"}
           className={className ?? "w-full h-full object-cover"}
           style={{ ...style, opacity: loaded ? 1 : 0, transition: "opacity 220ms ease-out, filter 220ms ease-out" }}
           aria-label={alt}
           onLoadedData={() => setLoaded(true)}
+          onCanPlay={() => setLoaded(true)}
           onError={() => setLoaded(true)}
         />
       ) : (
