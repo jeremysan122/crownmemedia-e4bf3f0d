@@ -17,6 +17,8 @@ import { Link } from "react-router-dom";
 import { ImageOff, UserRound, Play } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { isScroll } from "@/lib/contentType";
+import PostMedia from "@/components/PostMedia";
+import type { FilterId } from "@/lib/filters";
 
 interface SharedRow {
   kind: "post_share" | "profile_share";
