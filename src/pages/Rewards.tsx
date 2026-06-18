@@ -107,12 +107,13 @@ export default function Rewards() {
     (async () => {
       setLoading(true);
       const [s, p, t] = await Promise.all([
-        supabase.from("daily_streaks").select("current_streak,longest_streak,last_claimed_date,last_spin_date,total_claims,bonus_spins").eq("user_id", user.id).maybeSingle(),
+        supabase.from("daily_streaks").select("current_streak,longest_streak,last_claimed_date,last_claimed_at,last_spin_date,total_claims,bonus_spins").eq("user_id", user.id).maybeSingle(),
         supabase.from("spin_wheel_prizes").select("id,label,prize_type,prize_value,weight,color_hex,sort_order").eq("active", true).order("sort_order"),
         supabase.from("battle_tickets").select("balance").eq("user_id", user.id).maybeSingle(),
       ]);
       if (cancelled) return;
-      setStreak((s.data as Streak | null) ?? { current_streak: 0, longest_streak: 0, last_claimed_date: null, last_spin_date: null, total_claims: 0, bonus_spins: 0 });
+      setStreak((s.data as Streak | null) ?? { current_streak: 0, longest_streak: 0, last_claimed_date: null, last_claimed_at: null, last_spin_date: null, total_claims: 0, bonus_spins: 0 });
+
       setPrizes((p.data as Prize[]) ?? []);
       setTickets((t.data?.balance as number | undefined) ?? 0);
       setLoading(false);
