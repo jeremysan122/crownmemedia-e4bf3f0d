@@ -95,9 +95,13 @@ vi.mock("sonner", () => ({
 import CommentsDrawer from "@/components/CommentsDrawer";
 import { toast } from "sonner";
 
-function setupQueryChain(rows: any[] = []) {
-  // Chainable select().eq().eq().is().order() that resolves with { data: rows }
-  const order = vi.fn().mockResolvedValue({ data: rows });
+function setupQueryChain(rows: any[] = [], pending = false) {
+  // Chainable select().eq().eq().is().order() that resolves with { data: rows }.
+  // When `pending` is true, the terminal promise never resolves — used to keep
+  // the loading skeleton visible or to prevent reconcile from overwriting an
+  // optimistic row before the test asserts on it.
+  const result: any = pending ? new Promise(() => {}) : Promise.resolve({ data: rows });
+  const order = vi.fn().mockReturnValue(result);
   const is = vi.fn().mockReturnValue({ order });
   const eq2 = vi.fn().mockReturnValue({ is, order });
   const eq1 = vi.fn().mockReturnValue({ eq: eq2, is, order });
@@ -109,29 +113,32 @@ describe("CommentsDrawer", () => {
   beforeEach(() => {
     insertMock.mockReset();
     fromMock.mockReset();
-    fromMock.mockImplementation((table: string) => {
-      if (table === "comments") {
-        return {
-          select: setupQueryChain([]),
-          insert: (...args: any[]) => insertMock(...args),
-        };
-      }
-      if (table === "comment_reactions") {
-        return {
-          select: () => ({ in: vi.fn().mockResolvedValue({ data: [] }) }),
-        };
-      }
-      return { select: vi.fn(), insert: vi.fn() };
-    });
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it("renders a loading skeleton while comments load, then empty state", async () => {
+  it("renders a loading skeleton while comments are loading", async () => {
+    // Hold the initial query open so the skeleton stays visible.
+    fromMock.mockImplementation((table: string) => {
+      if (table === "comments") {
+        return { select: setupQueryChain([], true), insert: (...a: any[]) => insertMock(...a) };
+      }
+      return { select: () => ({ in: vi.fn().mockResolvedValue({ data: [] }) }) };
+    });
     render(<CommentsDrawer postId="p1" onClose={() => {}} />);
     expect(await screen.findByTestId("comments-loading")).toBeInTheDocument();
+  });
+
+  it("shows the empty state once the load resolves with no comments", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "comments") {
+        return { select: setupQueryChain([]), insert: (...a: any[]) => insertMock(...a) };
+      }
+      return { select: () => ({ in: vi.fn().mockResolvedValue({ data: [] }) }) };
+    });
+    render(<CommentsDrawer postId="p1" onClose={() => {}} />);
     await waitFor(() =>
       expect(screen.getByText(/Be the first to comment/i)).toBeInTheDocument(),
     );
@@ -139,6 +146,18 @@ describe("CommentsDrawer", () => {
 
   it("optimistically shows the comment and dispatches crownme:comment-added on send", async () => {
     insertMock.mockResolvedValue({ error: null });
+    // 1st `from("comments")` call = initial load (resolve []), subsequent
+    // call = reconcile (hold pending so the optimistic row stays in the DOM
+    // long enough for findByText to catch it).
+    let commentsCallIdx = 0;
+    fromMock.mockImplementation((table: string) => {
+      if (table === "comments") {
+        commentsCallIdx += 1;
+        const select = commentsCallIdx === 1 ? setupQueryChain([]) : setupQueryChain([], true);
+        return { select, insert: (...a: any[]) => insertMock(...a) };
+      }
+      return { select: () => ({ in: vi.fn().mockResolvedValue({ data: [] }) }) };
+    });
     const handler = vi.fn();
     window.addEventListener("crownme:comment-added", handler);
 
@@ -159,17 +178,24 @@ describe("CommentsDrawer", () => {
       post_id: "p1",
       user_id: "u1",
       body: "hello world",
+      parent_id: null,
     });
 
     await waitFor(() => expect(handler).toHaveBeenCalledTimes(1));
     const evt = handler.mock.calls[0][0] as CustomEvent;
-    expect(evt.detail).toEqual({ postId: "p1" });
+    expect(evt.detail).toEqual({ postId: "p1", parentId: null });
 
     window.removeEventListener("crownme:comment-added", handler);
   });
 
   it("rolls back optimistic row and restores text when insert fails", async () => {
     insertMock.mockResolvedValue({ error: { message: "boom" } });
+    fromMock.mockImplementation((table: string) => {
+      if (table === "comments") {
+        return { select: setupQueryChain([]), insert: (...a: any[]) => insertMock(...a) };
+      }
+      return { select: () => ({ in: vi.fn().mockResolvedValue({ data: [] }) }) };
+    });
 
     render(<CommentsDrawer postId="p1" onClose={() => {}} />);
     await waitFor(() =>
