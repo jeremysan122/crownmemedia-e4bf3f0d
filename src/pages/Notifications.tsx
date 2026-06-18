@@ -33,16 +33,16 @@ function classify(n: any): Group {
   return "other";
 }
 
+import { getNotificationTarget } from "@/lib/notificationRouting";
+
 function targetFor(n: any): string | null {
-  const p = n.payload || {};
-  if (typeof p.link === "string" && p.link.startsWith("/")) return p.link;
-  if (p.battle_id) return `/battles?b=${p.battle_id}`;
-  if (n.type === "follow") {
-    if (p.follower_username) return `/u/${p.follower_username}`;
-    if (p.follower_id) return `/u/${p.follower_id}`;
+  const t = getNotificationTarget(n);
+  if (!t && n?.type) {
+    // Surface malformed metadata for diagnostics without crashing the UI.
+    // eslint-disable-next-line no-console
+    console.warn("[notifications] no route for", n.type, n.payload);
   }
-  if (p.post_id) return `/post/${p.post_id}`;
-  return null;
+  return t;
 }
 
 export default function Notifications() {
