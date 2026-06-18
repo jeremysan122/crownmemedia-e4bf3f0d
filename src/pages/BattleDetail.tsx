@@ -32,8 +32,12 @@ interface BattleRow extends BattleLike {
   challenger_post: {
     image_url: string; category: CrownCategory;
     city: string | null; state: string | null; country: string | null;
+    filter: string | null; media_type: string | null; video_poster_url: string | null;
   } | null;
-  opponent_post: { image_url: string; category: CrownCategory } | null;
+  opponent_post: {
+    image_url: string; category: CrownCategory;
+    filter: string | null; media_type: string | null; video_poster_url: string | null;
+  } | null;
 }
 
 function CountdownPill({ endsAt }: { endsAt: string }) {
