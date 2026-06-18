@@ -161,6 +161,21 @@ export default function Shorts() {
     videoRefs.current.forEach((v) => { if (v) v.muted = muted; });
   }, [muted]);
 
+  // Drive the top progress bar from the active video's timeupdate event.
+  // Re-binds whenever the active slide changes so we always read the right video.
+  useEffect(() => {
+    const vid = videoRefs.current[activeIdx];
+    if (!vid) return;
+    setActiveProgress(0);
+    const onTime = () => {
+      const d = vid.duration;
+      if (!d || !isFinite(d) || d <= 0) return;
+      setActiveProgress(Math.min(1, vid.currentTime / d));
+    };
+    vid.addEventListener("timeupdate", onTime);
+    return () => vid.removeEventListener("timeupdate", onTime);
+  }, [activeIdx, items.length]);
+
   // Pause the active video while the comments overlay is open; resume on close.
   useEffect(() => {
     const vid = videoRefs.current[activeIdx];
