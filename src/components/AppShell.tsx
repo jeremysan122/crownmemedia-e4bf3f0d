@@ -29,6 +29,7 @@ export default function AppShell({ children, title, showHeader = true, rightSlot
   const { wallet } = useWallet();
   const nav = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   useBattleAlerts();
   const unread = useUnreadByType();
   const dmThreads = useThreadUnread();
