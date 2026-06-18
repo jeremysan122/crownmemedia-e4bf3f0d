@@ -13,8 +13,11 @@ export default defineConfig({
     // Supabase + React Query). Default 5s timeouts caused spurious hangs.
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    // Each test file runs in its own forked process for full isolation.
+    // singleFork:true caused state bleed (fake timers, module mocks) between
+    // unrelated files when running the full suite.
     pool: "forks",
-    poolOptions: { forks: { singleFork: true } },
+    poolOptions: { forks: { singleFork: false, isolate: true } },
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
