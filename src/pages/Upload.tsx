@@ -408,7 +408,23 @@ export default function Upload() {
     }
     if (valid.length === 0) return;
     const [first, ...rest] = valid;
-    setCropQueue(rest);
+    // Multi-select UX: only the first picked photo opens the crop editor.
+    // The rest are added immediately as PickedPhotos so the user sees every
+    // file they selected in the grid right away — matching Instagram behavior.
+    // Any thumbnail can still be tapped to re-crop individually via editPhoto().
+    if (rest.length > 0) {
+      const extras: PickedPhoto[] = rest.map((r) => ({
+        id: crypto.randomUUID(),
+        file: r.file,
+        preview: URL.createObjectURL(r.file),
+        alt: "",
+        origin: r.origin,
+      }));
+      setPhotos((p) => [...p, ...extras]);
+      setMode("photo");
+      if (video) { URL.revokeObjectURL(video.preview); setVideo(null); }
+    }
+    setCropQueue([]);
     setPendingCrop({ file: first.file, fromCamera: false, origin: first.origin });
   };
 
