@@ -19,16 +19,18 @@ export default function DailyRewardChip() {
     (async () => {
       const { data } = await supabase
         .from("daily_streaks")
-        .select("current_streak,last_claimed_date")
+        .select("current_streak,last_claimed_at")
         .eq("user_id", user.id)
         .maybeSingle();
       if (cancelled) return;
-      const today = new Date().toISOString().slice(0, 10);
-      setClaimedToday(data?.last_claimed_date === today);
+      const lastMs = data?.last_claimed_at ? new Date(data.last_claimed_at as string).getTime() : 0;
+      // 24h cooldown from last claim — matches the server-side rule.
+      setClaimedToday(lastMs > 0 && Date.now() - lastMs < 24 * 60 * 60 * 1000);
       setStreak((data?.current_streak as number | undefined) ?? 0);
     })();
     return () => { cancelled = true; };
   }, [user]);
+
 
   if (!user || claimedToday === null) return null;
 
