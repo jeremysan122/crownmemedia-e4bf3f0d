@@ -1,42 +1,78 @@
-This is a large multi-area change. I'll ship it in clearly-scoped slices so each is reviewable and the app stays green between them. Say "go" after any slice and I'll continue with the next.
+# Instagram-style Restructure: Posts, Scrolls & Edit
 
-## Slice 1 — Verification copy: 10k everywhere, not 100k
-- `src/pages/Settings.tsx`: "Standard (100k+ followers) or $1.99/mo fast-track" → "Standard (10,000 followers) or $1.99/mo fast-track".
-- `src/pages/Verification.tsx`: rewrite the requirements bullet so it says "10,000 CrownMe followers + activity requirements" instead of "100k+ external followers". Keep the $1.99/mo fast-track copy intact.
-- Sanity-check the existing Standard Verification progress card already says "At least 10,000 followers" — yes, confirmed in the screenshot.
+Mirror Instagram's structure and gestures across create, feed, scrolls, and edit — keeping CrownMe's gold/crown branding, existing data model (`posts` table with `content_type`), and current edit permissions (media still replaceable).
 
-## Slice 2 — Expand Standard Verification eligibility (server-side)
-Migration to extend `verification_eligibility_progress` and `request_standard_verification` with new performance checks:
-- `followers` ≥ 10,000 (existing)
-- `profile_photo`, `bio ≥ 20 chars`, `account_age ≥ 30d`, `good_standing` (existing)
-- `posts_or_scrolls` ≥ 25 (was 5)
-- `battles_won` ≥ 25 — counted from `battles` where winner = user
-- `crowns_held` ≥ 10 — from `crowns` (active)
-- `votes_received` ≥ 50,000 — sum across the user's posts/battles
-- `email_verified` — `auth.users.email_confirmed_at IS NOT NULL`
-- `phone_verified` — only enforced when phone verification is enabled in `platform_settings`
-- `no_serious_recent_violations` — no active `user_strikes` of severity 'severe' in last 90d
-Update `src/lib/verificationEligibility.ts` `EligibilityCheckKey` union + `CHECK_ORDER` and the test fixture in `verificationEligibility.test.ts`. UI in `Verification.tsx` already renders rows dynamically via `orderedChecks`, so new keys appear automatically with progress bars.
-Add a helper line in the UI: "Standard Verification is earned through activity. Paid Verification ($1.99/mo) is optional."
+## 1. Unified Create Sheet (single `+` entry)
 
-## Slice 3 — Scrolls DM share button
-- Add a DM action to the Shorts action rail (`src/pages/Shorts.tsx`) next to crown/comment/share.
-- Reuse `DmSharePicker` (already built) wired to `sendDmShare({ kind: "post_share", postId })` — Scrolls are posts of type "video", so the existing `post_share` path covers it. `SharedPostMessage` already renders the unavailable fallback.
-- Add a vitest covering: button presence on scroll rail, picker opens, send calls RPC with correct args.
+Replace the current Upload page entry with a single `+` button in the bottom nav that opens a full-height bottom sheet:
 
-## Slice 4 — Gift modal: fix "Send via DM" + replace "Send on Feed" with "Send to Follower"
-- `RoyalGiftStore.tsx` already wires "Send via DM" → `GiftDmPicker` → `performSendViaDm`. I'll audit the picker for: recent chats + following + followers + username search, avatar/display name/verified badge, block + self-gift + unavailable-user filters. Patch any gap.
-- Replace the "Send on Feed" button with **"Send to Follower"** that opens `GiftTargetPicker` configured to load the sender's following list first and expose a username search (extend the picker, not navigate to /feed).
-- Disabled states for blocked / banned / private / unavailable recipients.
-- Vitest: send-via-dm flow, send-to-follower flow, search outside following, self-gift blocked, blocked-user blocked, insufficient funds opens Add Shekels, single wallet debit on double-tap (idempotency key already covers this — keep regression test).
+- **Tabs at top:** `Post` · `Scroll` (Story-style omitted per scope).
+- **Step 1 — Library/Camera:** grid of recent device images, large preview on top (IG-classic). Multi-select toggle for carousel (Post only, up to 10). Scroll tab forces single video, 9:16, ≤30s.
+- **Step 2 — Crop/Aspect:** pinch + drag crop. Post: 1:1 / 4:5 / Original. Scroll: locked 9:16.
+- **Step 3 — Filter & Adjust:** horizontal filter strip (reuses existing `FilterPicker` + `cssFor`). Per-photo filter for carousels.
+- **Step 4 — Details:** caption (500), location (city/state/country, required), category (CrownMe-specific — kept), alt text per photo, advanced (comments on/off, hide vote count). "Share" CTA in top-right.
+- Persists to existing `post_drafts` so resume works across steps.
 
-## Slice 5 — Notifications & inbox polish + final pass
-- Confirm `send_dm_share` and `send_dm_gift` insert the recipient notification + the realtime message; add polling fallback hook if the user is on `/messages` with realtime down (reuse `useRealtimeFallbackPoll`).
-- Manual verification: deep-link from notification to the right thread, mark as read on open.
+Routing: `/create` becomes the sheet host; old `/upload` redirects.
 
-## Tech notes (for me, not the user)
-- All new eligibility data must be computed inside the SECURITY DEFINER RPC — never trust client counts.
-- `votes_received` is the hot column; cap the SUM with a single aggregate over `posts.vote_count` (already materialized) to keep the RPC fast.
-- `phone_verified` only enforced when `platform_settings.phone_verification_enabled = true`; otherwise the check is omitted from `checks` so it doesn't block users.
+## 2. Post Viewer (Feed Card — IG-faithful)
 
-Ready to start with **Slice 1**?
+Rebuild `PostCard` to match IG anatomy:
+
+- Header row: avatar · username · • · location · `…` menu.
+- Media: square/4:5, full-bleed within card. Swipeable carousel with dot indicator + index badge `1/4`. Double-tap = vote (CrownMe's "crown" reaction with gold heart-burst animation).
+- Action row: Crown (like), Comment, Share-to-DM, Battle (replaces IG's "remix"), Bookmark right-aligned.
+- Vote count line: "Crowned by @x and 1,234 others".
+- Caption: username + caption, truncated to 2 lines with "more".
+- Comments preview: "View all 42 comments" + latest 1.
+- Timestamp small caps.
+
+## 3. Scrolls Viewer (Reels-faithful)
+
+Rebuild `Shorts.tsx` page:
+
+- Full-screen vertical pager with snap scrolling (CSS `scroll-snap-type: y mandatory`), one Scroll per viewport.
+- Right action rail: avatar+follow, Crown, Comment, Share, Battle, More.
+- Bottom overlay: username · follow chip · caption (expandable) · audio/author row · category chip.
+- Auto-play visible video, pause off-screen; tap to mute/unmute; progress bar at top.
+- Preserves existing vote/comment/share RPCs.
+
+## 4. Edit Post (kept permissive per your choice)
+
+Restyle `EditPostDialog` into an IG-style "Edit info" screen but keep current capabilities (cover replace, carousel reorder, filter change, caption, category, location, alt text). Visual: full-screen sheet on mobile, two-column on desktop, segmented sections, gold "Save" in header. No backend changes.
+
+## 5. Branding
+
+IG-faithful spacing/iconography but CrownMe palette: gold accent for active states, crown icon replaces heart for likes, dark surfaces preserved. No font swap — keep existing CrownMe type.
+
+## Technical Details
+
+**New / changed files**
+- `src/components/create/CreateSheet.tsx` (new) — sheet host with tab + step state machine.
+- `src/components/create/steps/{LibraryStep,CropStep,FilterStep,DetailsStep}.tsx` (new).
+- `src/components/feed/PostCard.tsx` — rewrite to IG anatomy; keep existing props/handlers.
+- `src/components/feed/PostCarousel.tsx` (new) — swipeable with dots, double-tap detector.
+- `src/pages/Shorts.tsx` — rewrite to snap pager + action rail (`ScrollPlayer`, `ScrollActionRail`).
+- `src/components/EditPostDialog.tsx` — restyle only; logic unchanged.
+- `src/components/nav/BottomNav.tsx` — replace upload link with `+` opening `CreateSheet`.
+- `src/App.tsx` — `/upload` → redirect to `/`+sheet; keep `/p/:id`, `/scroll/:id` deep links.
+
+**Data model**
+- No schema changes. Uses existing `posts.content_type`, `image_urls`, `alt_texts`, `filter`, `category`, `city/state/country`, `post_drafts`.
+- Existing RPCs (vote, share, battle, bookmark) reused.
+
+**Gestures**
+- Carousel + double-tap: lightweight pointer handlers (no new lib).
+- Scrolls pager: native CSS scroll-snap + IntersectionObserver for play/pause.
+
+**Out of scope**
+- Stories, Notes, Reels remix/audio library, collab posts, tagging users (separate follow-up if wanted).
+- No DB migration. No edit-lock change.
+
+## Rollout
+
+1. Create sheet + new routes (behind no flag — replaces current upload UI).
+2. PostCard rewrite (drop-in).
+3. Shorts rewrite.
+4. EditPostDialog restyle.
+5. Smoke test: create post (single + carousel), create Scroll, edit, vote, share-to-DM, battle.
