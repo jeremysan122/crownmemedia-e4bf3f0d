@@ -4498,6 +4498,7 @@ export type Database = {
         | "dm"
         | "system"
         | "dm_gift"
+        | "dm_share"
       ranking_period: "day" | "week" | "month" | "all"
       ranking_scope: "global" | "country" | "state" | "city"
       region_type: "city" | "state" | "country" | "global"
@@ -4717,6 +4718,7 @@ export const Constants = {
         "dm",
         "system",
         "dm_gift",
+        "dm_share",
       ],
       ranking_period: ["day", "week", "month", "all"],
       ranking_scope: ["global", "country", "state", "city"],
