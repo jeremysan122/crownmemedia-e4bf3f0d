@@ -194,9 +194,22 @@ export default function SharedPostMessage({ kind, postId, profileId, body, mine,
       <Link to={href} data-testid="shared-post-card" data-content-id={p.id} className={`${wrapBase} block w-64`}>
         <div className="aspect-square bg-muted relative">
           {p.image_url ? (
-            <img src={p.image_url} alt="" loading="lazy" className="w-full h-full object-cover" />
+            <PostMedia
+              src={p.image_url}
+              alt=""
+              mediaType="image"
+              filter={(p.filter ?? null) as FilterId | null}
+              className="w-full h-full object-cover"
+            />
           ) : p.video_url ? (
-            <video src={p.video_url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+            <PostMedia
+              src={p.video_url}
+              alt=""
+              mediaType="video"
+              poster={p.video_poster_url ?? null}
+              filter={(p.filter ?? null) as FilterId | null}
+              className="w-full h-full object-cover"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground"><ImageOff /></div>
           )}
