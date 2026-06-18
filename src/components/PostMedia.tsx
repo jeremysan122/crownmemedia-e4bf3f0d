@@ -13,6 +13,12 @@ interface Props {
   onClick?: () => void;
   className?: string;
   /**
+   * When true, the video autoplays muted+looped (Reels-style). Required for
+   * reliable inline playback on iOS Safari and Android Chrome where tap-to-play
+   * in modals/dialogs is unreliable. Ignored for images.
+   */
+  autoPlay?: boolean;
+  /**
    * When true, briefly intensifies the filter (saturation + contrast + brightness pop)
    * — used for the premium vote feedback animation.
    */
@@ -58,7 +64,7 @@ const BOOST_LABEL: Record<VoteType, string> = {
  * Original file is unchanged on storage — filter is metadata-only.
  */
 export default function PostMedia({
-  src, alt, mediaType = "image", filter, poster, onClick, className, boost, boostType = "crown",
+  src, alt, mediaType = "image", filter, poster, onClick, className, autoPlay, boost, boostType = "crown",
 }: Props) {
   const baseCss = cssFor(filter);
   const intensify = BOOST_FILTER[boostType];
@@ -115,11 +121,15 @@ export default function PostMedia({
           poster={poster ?? undefined}
           controls
           playsInline
-          preload="metadata"
+          autoPlay={autoPlay}
+          muted={autoPlay}
+          loop={autoPlay}
+          preload={autoPlay ? "auto" : "metadata"}
           className={className ?? "w-full h-full object-cover"}
           style={{ ...style, opacity: loaded ? 1 : 0, transition: "opacity 220ms ease-out, filter 220ms ease-out" }}
           aria-label={alt}
           onLoadedData={() => setLoaded(true)}
+          onCanPlay={() => setLoaded(true)}
           onError={() => setLoaded(true)}
         />
       ) : (

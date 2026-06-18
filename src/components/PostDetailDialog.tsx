@@ -748,6 +748,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                       src={post.video_url}
                       poster={post.video_poster_url ?? images[0]}
                       mediaType="video"
+                      autoPlay
                       filter={postFilter}
                       alt={post.caption || "Video post"}
                       className="w-full h-full object-contain md:object-cover"
