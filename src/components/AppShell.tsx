@@ -8,6 +8,7 @@ import { CrownIcon } from "./CrownIcon";
 import BrandLogo from "./BrandLogo";
 import DesktopHeader from "./desktop/DesktopHeader";
 import DesktopSidebar from "./desktop/DesktopSidebar";
+import CreateSheet from "./create/CreateSheet";
 import { useWallet } from "@/hooks/useWallet";
 import { useBattleAlerts } from "@/hooks/useBattleAlerts";
 import { useUnreadByType } from "@/hooks/useUnreadByType";
@@ -28,6 +29,7 @@ export default function AppShell({ children, title, showHeader = true, rightSlot
   const { wallet } = useWallet();
   const nav = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   useBattleAlerts();
   const unread = useUnreadByType();
   const dmThreads = useThreadUnread();
@@ -51,7 +53,7 @@ export default function AppShell({ children, title, showHeader = true, rightSlot
       <DesktopHeader />
 
       <div className="w-full lg:px-6 lg:flex lg:gap-6 flex-1">
-        <DesktopSidebar onCompose={() => nav("/upload")} />
+        <DesktopSidebar onCompose={() => setCreateOpen(true)} />
 
         {/* Main content column — children mount exactly once to avoid duplicate dialogs/menus. */}
         <div className="flex-1 min-w-0 lg:py-5 w-full flex flex-col">
@@ -107,6 +109,7 @@ export default function AppShell({ children, title, showHeader = true, rightSlot
       <BottomNav />
 
       <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <CreateSheet open={createOpen} onOpenChange={setCreateOpen} />
 
       {/* keep CrownIcon import used to avoid tree-shake regressions for legacy refs */}
       <span className="hidden"><CrownIcon size={1} /></span>

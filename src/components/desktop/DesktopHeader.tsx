@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/hooks/useWallet";
 import { formatScore } from "@/lib/crown";
 import GlobalSearchDialog from "@/components/GlobalSearchDialog";
+import CreateSheet from "@/components/create/CreateSheet";
 import { useUnreadByType } from "@/hooks/useUnreadByType";
 import { useThreadUnread } from "@/hooks/useThreadUnread";
 import { useMutedThreads } from "@/hooks/useMutedThreads";
@@ -16,6 +17,7 @@ export default function DesktopHeader() {
   const { wallet } = useWallet();
   const [searchOpen, setSearchOpen] = useState(false);
   const profilePath = profile?.username ? `/u/${profile.username}` : "/me";
+  const [createOpen, setCreateOpen] = useState(false);
   const unread = useUnreadByType();
   const dmThreads = useThreadUnread();
   const mutedSet = useMutedThreads();
@@ -76,10 +78,10 @@ export default function DesktopHeader() {
             )}
           </Link>
           <button
-            onClick={() => nav("/upload")}
+            onClick={() => setCreateOpen(true)}
             className="ml-1 h-10 px-4 rounded-full bg-gradient-gold text-primary-foreground font-bold text-sm tracking-wider gold-shadow flex items-center gap-1.5 hover:opacity-95 transition"
           >
-            <Plus size={16} strokeWidth={2.6} /> Post
+            <Plus size={16} strokeWidth={2.6} /> Create
           </button>
           <Link to={profilePath} className="ml-1 size-10 rounded-full overflow-hidden ring-1 ring-border hover:ring-primary transition bg-muted shrink-0">
             {profile?.profile_photo_url ? (
@@ -93,6 +95,7 @@ export default function DesktopHeader() {
         </div>
       </div>
       <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <CreateSheet open={createOpen} onOpenChange={setCreateOpen} />
     </header>
   );
 }
