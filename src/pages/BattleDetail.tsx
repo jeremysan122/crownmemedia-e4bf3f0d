@@ -190,7 +190,14 @@ export default function BattleDetail() {
                 return (
                   <div key={side} className="relative aspect-square bg-muted/30">
                     {post?.image_url && (
-                      <img src={post.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      <PostMedia
+                        src={post.image_url}
+                        alt=""
+                        mediaType={post.media_type === "video" ? "video" : "image"}
+                        filter={(post.filter ?? null) as FilterId | null}
+                        poster={post.video_poster_url}
+                        className="w-full h-full object-cover"
+                      />
                     )}
                     {won && (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
