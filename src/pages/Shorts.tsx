@@ -238,14 +238,23 @@ export default function Shorts() {
 
   return (
     <main className="fixed inset-0 bg-black text-white">
-      <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/70 to-transparent">
-        <button onClick={() => nav(-1)} aria-label="Back" className="p-2 -ml-2 rounded-full hover:bg-white/10">
-          <ArrowLeft className="size-5" />
-        </button>
-        <h1 className="font-display text-lg tracking-widest">SCROLLS</h1>
-        <button onClick={() => setMuted((m) => !m)} aria-label={muted ? "Unmute" : "Mute"} className="p-2 -mr-2 rounded-full hover:bg-white/10">
-          {muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
-        </button>
+      <div className="absolute top-0 inset-x-0 z-20 bg-gradient-to-b from-black/70 to-transparent">
+        {/* Reels-style thin progress bar for the active scroll */}
+        <div className="h-0.5 w-full bg-white/15">
+          <div
+            className="h-full bg-gold transition-[width] duration-150 ease-linear"
+            style={{ width: `${Math.round(activeProgress * 100)}%` }}
+          />
+        </div>
+        <div className="flex items-center justify-between px-4 py-3">
+          <button onClick={() => nav(-1)} aria-label="Back" className="p-2 -ml-2 rounded-full hover:bg-white/10">
+            <ArrowLeft className="size-5" />
+          </button>
+          <h1 className="font-display text-lg tracking-widest">SCROLLS</h1>
+          <button onClick={() => setMuted((m) => !m)} aria-label={muted ? "Unmute" : "Mute"} className="p-2 -mr-2 rounded-full hover:bg-white/10">
+            {muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
+          </button>
+        </div>
       </div>
 
       {items.length === 0 ? (
