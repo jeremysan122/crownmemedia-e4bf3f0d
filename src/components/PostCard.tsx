@@ -915,8 +915,8 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         scope={raceScope}
       />
 
-      {/* Actions */}
-      <div className="px-2 pt-2 pb-1 flex items-center justify-between gap-1 relative">
+      {/* Actions — Instagram-style row: reactions left, bookmark right-anchored, larger tap targets */}
+      <div className="px-2.5 pt-2.5 pb-1 flex items-center gap-1 relative">
         <div className="flex items-center gap-1 relative">
           <VoteBtn type="crown" icon={Crown} color="from-amber-500 to-yellow-600" active={myVotes.has("crown")} burst={burst} showLikes={showLikes} count={counts.crown} onVote={onVote} />
           <VoteBtn type="fire" icon={Flame} color="from-orange-500 to-red-600" active={myVotes.has("fire")} burst={burst} showLikes={showLikes} count={counts.fire} onVote={onVote} />
@@ -928,7 +928,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
             onDone={() => setOverlayBurst(null)}
           />
         </div>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 ml-auto">
           <button
             onClick={() => {
               // Mobile + tablet (<1024px) always use the universal popup
@@ -940,9 +940,10 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
                 setDetailOpen(true);
               }
             }}
-            className="flex items-center gap-1 px-1.5 py-1.5 text-muted-foreground hover:text-foreground"
+            aria-label="Comments"
+            className="flex items-center gap-1 p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition"
           >
-            <MessageCircle size={16} />
+            <MessageCircle size={18} />
             {showComments ? (
               <span className="text-[11px] tabular-nums">{counts.comments}</span>
             ) : (
@@ -952,18 +953,18 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           {!isOwner && (
             <button
               onClick={() => setGiftOpen(true)}
-              className="p-1.5 text-primary hover:opacity-80 animate-[crown-pulse_3s_ease-in-out_infinite]"
+              className="p-2 rounded-full text-primary hover:bg-primary/10 active:scale-95 transition animate-[crown-pulse_3s_ease-in-out_infinite]"
               aria-label="Send Gift"
             >
-              <Gift size={16} />
+              <Gift size={18} />
             </button>
           )}
-          <button type="button" onClick={() => setShareOpen(true)} className="p-1.5 text-muted-foreground hover:text-foreground" aria-label="Share">
-            <Share2 size={16} />
+          <button type="button" onClick={() => setShareOpen(true)} className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition" aria-label="Share">
+            <Share2 size={18} />
           </button>
           {!isOwner && (
-            <button type="button" onClick={() => setRepostOpen(true)} className="p-1.5 text-muted-foreground hover:text-primary" aria-label="Repost">
-              <Repeat2 size={16} />
+            <button type="button" onClick={() => setRepostOpen(true)} className="p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/50 active:scale-95 transition" aria-label="Repost">
+              <Repeat2 size={18} />
             </button>
           )}
           <button
@@ -971,9 +972,9 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
             disabled={bookmarkBusy}
             aria-pressed={bookmarked}
             aria-label={bookmarked ? "Remove from saved" : "Save post"}
-            className={`p-1.5 transition-colors ${bookmarked ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            className={`p-2 rounded-full transition-colors active:scale-95 hover:bg-muted/50 ${bookmarked ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
           >
-            <Bookmark size={16} fill={bookmarked ? "currentColor" : "none"} />
+            <Bookmark size={18} fill={bookmarked ? "currentColor" : "none"} />
           </button>
         </div>
       </div>
