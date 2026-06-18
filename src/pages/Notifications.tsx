@@ -9,6 +9,7 @@ import { timeAgo } from "@/lib/crown";
 import { Bell, Crown, Heart, MessageCircle, UserPlus, Swords, AtSign, Reply as ReplyIcon, Check, Trash2, MailOpen, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useRealtimeFallbackPoll } from "@/hooks/useRealtimeFallbackPoll";
 
 type Group = "reply" | "mention" | "vote" | "follow" | "crown" | "battle" | "other";
 
@@ -88,8 +89,11 @@ export default function Notifications() {
   useEffect(() => { trackUsage("notifications_opened"); }, []);
 
   // Realtime: new notifications stream in, deduped by id.
+  // Tracks live-state so the polling fallback can engage when realtime drops.
+  const [rtLive, setRtLive] = useState(false);
   useEffect(() => {
     if (!user?.id) return;
+    setRtLive(false);
     const ch = supabase
       .channel(`notifs-${user.id}`)
       .on(
@@ -101,9 +105,15 @@ export default function Notifications() {
           setList((prev) => dedupe([n, ...prev]));
         },
       )
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+      .subscribe((s) => {
+        setRtLive(s === "SUBSCRIBED");
+      });
+    return () => { setRtLive(false); supabase.removeChannel(ch); };
   }, [user?.id]);
+
+  // Polling fallback: when realtime is not live, poll every 20s for new
+  // notifications. Dedup by id in `refresh` keeps the list clean.
+  useRealtimeFallbackPoll(refresh, rtLive, 20_000);
 
   // NOTE: Opening this panel intentionally does NOT mark notifications as
   // read — users must tap a specific notification, or hit "Mark all read",
