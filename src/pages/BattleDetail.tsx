@@ -91,8 +91,8 @@ export default function BattleDetail() {
           `*,
           challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url),
           opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url),
-          challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country),
-          opponent_post:posts!battles_opponent_post_id_fkey(image_url, category)`
+          challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country, filter, media_type, video_poster_url),
+          opponent_post:posts!battles_opponent_post_id_fkey(image_url, category, filter, media_type, video_poster_url)`
         )
         .eq("id", id)
         .maybeSingle();
