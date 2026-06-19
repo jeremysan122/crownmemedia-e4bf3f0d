@@ -922,6 +922,7 @@ export default function Profile() {
                         if (battleSort === "won" && b.winner_id !== prof.id) return false;
                         if (battleSort === "lost" && !(b.status === "completed" && b.winner_id && b.winner_id !== prof.id)) return false;
                         if (battleSort === "draw" && !(b.status === "completed" && !b.winner_id)) return false;
+                        if (battleSort === "declined" && !(b.status === "declined" || b.status === "cancelled")) return false;
                         if (!term) return true;
                         const opp = b.challenger_id === prof.id ? b.opponent_username : b.challenger_username;
                         const haystack = [
