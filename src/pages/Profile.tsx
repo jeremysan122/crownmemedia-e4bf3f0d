@@ -60,6 +60,7 @@ interface BattleRow {
   id: string; status: string; winner_id: string | null;
   challenger_id: string; opponent_id: string;
   challenger_post_id: string; opponent_post_id: string | null;
+  ends_at: string | null;
   posts_c: { image_url: string; city: string | null; country: string | null; category: string | null } | null;
   posts_o: { image_url: string; city: string | null; country: string | null; category: string | null } | null;
   opponent_username: string | null;
@@ -225,7 +226,7 @@ export default function Profile() {
       // Battles — fetch more than 20 so filter pill counts are accurate
       const { data: bs } = await supabase
         .from("battles")
-        .select("id, status, winner_id, challenger_id, opponent_id, challenger_post_id, opponent_post_id")
+        .select("id, status, winner_id, challenger_id, opponent_id, challenger_post_id, opponent_post_id, ends_at")
         .or(`challenger_id.eq.${pid},opponent_id.eq.${pid}`)
         .order("created_at", { ascending: false })
         .limit(100); // Fix #3: raised from 20 so pill counts reflect true totals
@@ -874,7 +875,12 @@ export default function Profile() {
                       />
                     </div>
                     {(() => {
+                      const nowMs = Date.now();
+                      const isLive = (b: any) =>
+                        (b.status === "active" || b.status === "pending") &&
+                        (!b.ends_at || new Date(b.ends_at).getTime() > nowMs);
                       const counts = {
+                        newest: battles.filter(isLive).length,
                         won: battles.filter((b) => b.winner_id === prof.id).length,
                         lost: battles.filter((b) => b.status === "completed" && b.winner_id && b.winner_id !== prof.id).length,
                         draw: battles.filter((b) => b.status === "completed" && !b.winner_id).length,
@@ -882,7 +888,7 @@ export default function Profile() {
                       return (
                         <div className="flex gap-1.5 mb-3 overflow-x-auto scrollbar-none">
                           {([
-                            { v: "newest", l: "Newest", n: battles.length },
+                            { v: "newest", l: "Active", n: counts.newest },
                             { v: "won", l: "Won", n: counts.won },
                             { v: "lost", l: "Lost", n: counts.lost },
                             { v: "draw", l: "Draw", n: counts.draw },
@@ -904,7 +910,13 @@ export default function Profile() {
                     })()}
                     {(() => {
                       const term = battleQuery.trim().toLowerCase();
+                      const nowMs = Date.now();
                       const filtered = battles.filter((b) => {
+                        if (battleSort === "newest") {
+                          const live = (b.status === "active" || b.status === "pending") &&
+                            (!b.ends_at || new Date(b.ends_at).getTime() > nowMs);
+                          if (!live) return false;
+                        }
                         if (battleSort === "won" && b.winner_id !== prof.id) return false;
                         if (battleSort === "lost" && !(b.status === "completed" && b.winner_id && b.winner_id !== prof.id)) return false;
                         if (battleSort === "draw" && !(b.status === "completed" && !b.winner_id)) return false;
@@ -944,7 +956,13 @@ export default function Profile() {
                             const opp = b.challenger_id === prof.id ? b.opponent_username : b.challenger_username;
                             const region = [b.posts_c?.city || b.posts_o?.city, b.posts_c?.country || b.posts_o?.country].filter(Boolean).join(", ");
                             return (
-                              <div key={b.id} className="royal-card p-2.5 flex items-center gap-2.5">
+                              <button
+                                key={b.id}
+                                type="button"
+                                onClick={() => nav(`/battles/${b.id}`)}
+                                className="royal-card p-2.5 flex items-center gap-2.5 w-full text-left hover:bg-muted/30 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60"
+                                aria-label="Open battle details"
+                              >
                                 <div className="flex gap-1">
                                   {b.posts_c?.image_url && <img loading="lazy" src={b.posts_c.image_url} alt="" className="size-12 rounded-md object-cover" />}
                                   {b.posts_o?.image_url && <img loading="lazy" src={b.posts_o.image_url} alt="" className="size-12 rounded-md object-cover" />}
@@ -956,7 +974,7 @@ export default function Profile() {
                                   </p>
                                 </div>
                                 {won && <span className="text-[10px] bg-gradient-gold text-primary-foreground px-2 py-0.5 rounded-full font-bold">+ Crown</span>}
-                              </div>
+                              </button>
                             );
                           })}
                         </div>
