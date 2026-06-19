@@ -884,6 +884,7 @@ export default function Profile() {
                         won: battles.filter((b) => b.winner_id === prof.id).length,
                         lost: battles.filter((b) => b.status === "completed" && b.winner_id && b.winner_id !== prof.id).length,
                         draw: battles.filter((b) => b.status === "completed" && !b.winner_id).length,
+                        declined: battles.filter((b) => b.status === "declined" || b.status === "cancelled").length,
                       };
                       return (
                         <div className="flex gap-1.5 mb-3 overflow-x-auto scrollbar-none">
@@ -892,6 +893,7 @@ export default function Profile() {
                             { v: "won", l: "Won", n: counts.won },
                             { v: "lost", l: "Lost", n: counts.lost },
                             { v: "draw", l: "Draw", n: counts.draw },
+                            { v: "declined", l: "Declined", n: counts.declined },
                           ] as { v: BattleFilter; l: string; n: number }[]).map((f) => (
                             <button
                               key={f.v}
