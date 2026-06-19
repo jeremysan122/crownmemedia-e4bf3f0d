@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 type CrownFilter = "active" | "past" | "all";
-type BattleFilter = "newest" | "won" | "lost" | "draw";
+type BattleFilter = "newest" | "won" | "lost" | "draw" | "declined";
 
 interface ProfileFull {
   id: string; username: string; bio: string | null;
