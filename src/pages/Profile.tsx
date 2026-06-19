@@ -874,7 +874,12 @@ export default function Profile() {
                       />
                     </div>
                     {(() => {
+                      const nowMs = Date.now();
+                      const isLive = (b: any) =>
+                        (b.status === "active" || b.status === "pending") &&
+                        (!b.ends_at || new Date(b.ends_at).getTime() > nowMs);
                       const counts = {
+                        newest: battles.filter(isLive).length,
                         won: battles.filter((b) => b.winner_id === prof.id).length,
                         lost: battles.filter((b) => b.status === "completed" && b.winner_id && b.winner_id !== prof.id).length,
                         draw: battles.filter((b) => b.status === "completed" && !b.winner_id).length,
@@ -882,7 +887,7 @@ export default function Profile() {
                       return (
                         <div className="flex gap-1.5 mb-3 overflow-x-auto scrollbar-none">
                           {([
-                            { v: "newest", l: "Newest", n: battles.length },
+                            { v: "newest", l: "Active", n: counts.newest },
                             { v: "won", l: "Won", n: counts.won },
                             { v: "lost", l: "Lost", n: counts.lost },
                             { v: "draw", l: "Draw", n: counts.draw },
@@ -904,7 +909,13 @@ export default function Profile() {
                     })()}
                     {(() => {
                       const term = battleQuery.trim().toLowerCase();
+                      const nowMs = Date.now();
                       const filtered = battles.filter((b) => {
+                        if (battleSort === "newest") {
+                          const live = (b.status === "active" || b.status === "pending") &&
+                            (!b.ends_at || new Date(b.ends_at).getTime() > nowMs);
+                          if (!live) return false;
+                        }
                         if (battleSort === "won" && b.winner_id !== prof.id) return false;
                         if (battleSort === "lost" && !(b.status === "completed" && b.winner_id && b.winner_id !== prof.id)) return false;
                         if (battleSort === "draw" && !(b.status === "completed" && !b.winner_id)) return false;
