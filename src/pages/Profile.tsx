@@ -60,6 +60,7 @@ interface BattleRow {
   id: string; status: string; winner_id: string | null;
   challenger_id: string; opponent_id: string;
   challenger_post_id: string; opponent_post_id: string | null;
+  ends_at: string | null;
   posts_c: { image_url: string; city: string | null; country: string | null; category: string | null } | null;
   posts_o: { image_url: string; city: string | null; country: string | null; category: string | null } | null;
   opponent_username: string | null;
