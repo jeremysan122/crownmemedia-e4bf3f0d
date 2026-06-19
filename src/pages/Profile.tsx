@@ -956,7 +956,13 @@ export default function Profile() {
                             const opp = b.challenger_id === prof.id ? b.opponent_username : b.challenger_username;
                             const region = [b.posts_c?.city || b.posts_o?.city, b.posts_c?.country || b.posts_o?.country].filter(Boolean).join(", ");
                             return (
-                              <div key={b.id} className="royal-card p-2.5 flex items-center gap-2.5">
+                              <button
+                                key={b.id}
+                                type="button"
+                                onClick={() => nav(`/battles/${b.id}`)}
+                                className="royal-card p-2.5 flex items-center gap-2.5 w-full text-left hover:bg-muted/30 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60"
+                                aria-label="Open battle details"
+                              >
                                 <div className="flex gap-1">
                                   {b.posts_c?.image_url && <img loading="lazy" src={b.posts_c.image_url} alt="" className="size-12 rounded-md object-cover" />}
                                   {b.posts_o?.image_url && <img loading="lazy" src={b.posts_o.image_url} alt="" className="size-12 rounded-md object-cover" />}
@@ -968,7 +974,7 @@ export default function Profile() {
                                   </p>
                                 </div>
                                 {won && <span className="text-[10px] bg-gradient-gold text-primary-foreground px-2 py-0.5 rounded-full font-bold">+ Crown</span>}
-                              </div>
+                              </button>
                             );
                           })}
                         </div>
