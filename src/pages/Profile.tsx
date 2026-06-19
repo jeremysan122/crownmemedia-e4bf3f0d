@@ -963,20 +963,20 @@ export default function Profile() {
                                 key={b.id}
                                 type="button"
                                 onClick={() => nav(`/battles/${b.id}`)}
-                                className="royal-card p-2.5 flex items-center gap-2.5 w-full text-left hover:bg-muted/30 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60"
+                                className="royal-card p-3 flex items-center gap-3 w-full text-left min-h-[64px] cursor-pointer hover:bg-muted/40 active:scale-[0.99] transition-all focus:outline-none focus:ring-2 focus:ring-primary/60 touch-manipulation"
                                 aria-label="Open battle details"
                               >
-                                <div className="flex gap-1">
+                                <div className="flex gap-1 pointer-events-none">
                                   {b.posts_c?.image_url && <img loading="lazy" src={b.posts_c.image_url} alt="" className="size-12 rounded-md object-cover" />}
                                   {b.posts_o?.image_url && <img loading="lazy" src={b.posts_o.image_url} alt="" className="size-12 rounded-md object-cover" />}
                                 </div>
-                                <div className="flex-1 min-w-0">
+                                <div className="flex-1 min-w-0 pointer-events-none">
                                   <p className={`text-xs font-semibold uppercase tracking-wider ${labelClass}`}>{label}</p>
                                   <p className="text-[10px] text-muted-foreground truncate">
                                     {opp ? `vs @${opp}` : "Crown Battle"}{region ? ` · ${region}` : ""}
                                   </p>
                                 </div>
-                                {won && <span className="text-[10px] bg-gradient-gold text-primary-foreground px-2 py-0.5 rounded-full font-bold">+ Crown</span>}
+                                {won && <span className="text-[10px] bg-gradient-gold text-primary-foreground px-2 py-0.5 rounded-full font-bold pointer-events-none">+ Crown</span>}
                               </button>
                             );
                           })}
