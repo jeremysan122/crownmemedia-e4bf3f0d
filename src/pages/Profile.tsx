@@ -226,7 +226,7 @@ export default function Profile() {
       // Battles — fetch more than 20 so filter pill counts are accurate
       const { data: bs } = await supabase
         .from("battles")
-        .select("id, status, winner_id, challenger_id, opponent_id, challenger_post_id, opponent_post_id")
+        .select("id, status, winner_id, challenger_id, opponent_id, challenger_post_id, opponent_post_id, ends_at")
         .or(`challenger_id.eq.${pid},opponent_id.eq.${pid}`)
         .order("created_at", { ascending: false })
         .limit(100); // Fix #3: raised from 20 so pill counts reflect true totals
