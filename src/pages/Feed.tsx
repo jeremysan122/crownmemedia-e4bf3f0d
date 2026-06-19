@@ -751,43 +751,7 @@ export default function Feed() {
           </div>
         )}
 
-        {trendingFilters.length > 0 && (
-          <div className="px-3 lg:px-0 pt-2" aria-label="Trending filters in this feed">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Sparkles size={12} className="text-primary" />
-              <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Trending Filters</span>
-              <span className="text-[10px] text-muted-foreground/70 normal-case tracking-normal font-normal">in this feed</span>
-            </div>
-            <div
-              className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-3 lg:mx-0 px-3 lg:px-0"
-              style={{ touchAction: "pan-x", overscrollBehaviorY: "contain", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch" }}
-            >
-
-              {trendingFilters.map(([id, count], idx) => {
-                const def = FILTERS.find((f) => f.id === id);
-                if (!def) return null;
-                const active = filterSort === id;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => setFilterSort(id as FilterSort)}
-                    className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border transition ${
-                      active ? "bg-gradient-gold text-primary-foreground border-transparent gold-shadow" : "bg-card/60 text-foreground border-border hover:border-primary/40"
-                    }`}
-                    aria-pressed={active}
-                  >
-                    <span className="text-muted-foreground/80 tabular-nums">#{idx + 1}</span>
-                    <span>{def.label}</span>
-                    {def.animated && (
-                      <span aria-hidden="true" className="px-1 py-px rounded-full bg-primary/80 text-primary-foreground text-[8px]">FX</span>
-                    )}
-                    <span className="px-1.5 py-px rounded-full bg-primary/15 text-primary text-[10px] tabular-nums">{count}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* Trending Filters strip moved to Discover page only */}
 
         {/* New posts pill */}
         {newPosts.length > 0 && (
