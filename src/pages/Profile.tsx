@@ -844,6 +844,21 @@ export default function Profile() {
                                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                                   {c.category.replace(/_/g, " ")} · {c.active ? "Active" : "Past"}
                                 </p>
+                                {(c.started_at || c.ended_at) && (
+                                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">
+                                    {c.active
+                                      ? c.started_at
+                                        ? `Held since ${new Date(c.started_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+                                        : null
+                                      : c.started_at && c.ended_at
+                                        ? `${new Date(c.started_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} – ${new Date(c.ended_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+                                        : c.ended_at
+                                          ? `Ended ${new Date(c.ended_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+                                          : c.started_at
+                                            ? `Received ${new Date(c.started_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+                                            : null}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           ))}
