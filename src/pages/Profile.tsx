@@ -76,9 +76,9 @@ export default function Profile() {
   const [prof, setProf] = useState<ProfileFull | null>(null);
   const [crownVoteTotal, setCrownVoteTotal] = useState<number>(0);
   const [posts, setPosts] = useState<{ id: string; image_url: string; crown_score: number; filter: string | null; pinned_at?: string | null; is_sensitive?: boolean | null; content_type?: string | null; media_type?: string | null; video_poster_url?: string | null }[]>([]);
-  const [crowns, setCrowns] = useState<{ id: string; title: string; region_name: string; active: boolean; category: string }[]>([]);
-  const [liked, setLiked] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null }[]>([]);
-  const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null }[]>([]);
+  const [crowns, setCrowns] = useState<{ id: string; title: string; region_name: string; active: boolean; category: string; started_at: string | null; ended_at: string | null }[]>([]);
+  const [liked, setLiked] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null; filter?: string | null; media_type?: string | null; video_poster_url?: string | null; image_urls?: string[] | null }[]>([]);
+  const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null; filter?: string | null; media_type?: string | null; video_poster_url?: string | null; image_urls?: string[] | null }[]>([]);
   const [battles, setBattles] = useState<BattleRow[]>([]);
   const [following, setFollowing] = useState(false);
   const [openPost, setOpenPost] = useState<FeedPost | null>(null);
