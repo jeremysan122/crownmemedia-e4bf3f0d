@@ -76,9 +76,9 @@ export default function Profile() {
   const [prof, setProf] = useState<ProfileFull | null>(null);
   const [crownVoteTotal, setCrownVoteTotal] = useState<number>(0);
   const [posts, setPosts] = useState<{ id: string; image_url: string; crown_score: number; filter: string | null; pinned_at?: string | null; is_sensitive?: boolean | null; content_type?: string | null; media_type?: string | null; video_poster_url?: string | null }[]>([]);
-  const [crowns, setCrowns] = useState<{ id: string; title: string; region_name: string; active: boolean; category: string }[]>([]);
-  const [liked, setLiked] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null }[]>([]);
-  const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null }[]>([]);
+  const [crowns, setCrowns] = useState<{ id: string; title: string; region_name: string; active: boolean; category: string; started_at: string | null; ended_at: string | null }[]>([]);
+  const [liked, setLiked] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null; filter?: string | null; media_type?: string | null; video_poster_url?: string | null; image_urls?: string[] | null }[]>([]);
+  const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null; filter?: string | null; media_type?: string | null; video_poster_url?: string | null; image_urls?: string[] | null }[]>([]);
   const [battles, setBattles] = useState<BattleRow[]>([]);
   const [following, setFollowing] = useState(false);
   const [openPost, setOpenPost] = useState<FeedPost | null>(null);
@@ -151,7 +151,7 @@ export default function Profile() {
 
       const [{ data: ps, error: psErr }, { data: cs }, { data: rs }] = await Promise.all([
         supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at, is_sensitive, content_type, media_type, video_poster_url").eq("user_id", pid).eq("is_removed", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
-        supabase.from("crowns").select("id, title, region_name, active, category").eq("user_id", pid).order("started_at", { ascending: false }).limit(40),
+        supabase.from("crowns").select("id, title, region_name, active, category, started_at, ended_at").eq("user_id", pid).order("started_at", { ascending: false }).limit(40),
         supabase.from("user_roles").select("role").eq("user_id", pid),
       ]);
       if (cancelled) return;
@@ -190,7 +190,7 @@ export default function Profile() {
       if (likedIds.length) {
         const { data: lp } = await supabase
           .from("posts")
-          .select("id, image_url, crown_score, is_sensitive")
+          .select("id, image_url, image_urls, crown_score, is_sensitive, filter, media_type, video_poster_url")
           .in("id", likedIds)
           .eq("is_removed", false);
         if (!cancelled) setLiked((lp as any) || []);
@@ -212,7 +212,7 @@ export default function Profile() {
         if (bmIds.length) {
           const { data: sp } = await supabase
             .from("posts")
-            .select("id, image_url, crown_score, is_sensitive")
+            .select("id, image_url, image_urls, crown_score, is_sensitive, filter, media_type, video_poster_url")
             .in("id", bmIds)
             .eq("is_removed", false);
           if (!cancelled) setSaved((sp as any) || []);
@@ -844,6 +844,21 @@ export default function Profile() {
                                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                                   {c.category.replace(/_/g, " ")} · {c.active ? "Active" : "Past"}
                                 </p>
+                                {(c.started_at || c.ended_at) && (
+                                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">
+                                    {c.active
+                                      ? c.started_at
+                                        ? `Held since ${new Date(c.started_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+                                        : null
+                                      : c.started_at && c.ended_at
+                                        ? `${new Date(c.started_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} – ${new Date(c.ended_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+                                        : c.ended_at
+                                          ? `Ended ${new Date(c.ended_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+                                          : c.started_at
+                                            ? `Received ${new Date(c.started_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+                                            : null}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -1005,7 +1020,7 @@ export default function Profile() {
                         className="aspect-square bg-muted overflow-hidden relative rounded-md lg:rounded-xl group cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
                         aria-label="Open post"
                       >
-                        <img loading="lazy" src={p.image_url} className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]" alt="" />
+                        <img loading="lazy" src={(p.media_type === "video" && p.video_poster_url) || p.image_url || p.image_urls?.[0] || ""} style={{ filter: cssFor(isValidFilter(p.filter) ? (p.filter as any) : null) }} className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]" alt="" />
                         <SensitiveThumb blurred={shouldBlurThumb(p)} />
                         <div className="absolute bottom-1 right-1 glass px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1">
                           <Heart size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
@@ -1039,7 +1054,7 @@ export default function Profile() {
                           className="aspect-square bg-muted overflow-hidden relative rounded-md lg:rounded-xl group cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
                           aria-label="Open post"
                         >
-                          <img loading="lazy" src={p.image_url} className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]" alt="" />
+                          <img loading="lazy" src={(p.media_type === "video" && p.video_poster_url) || p.image_url || p.image_urls?.[0] || ""} style={{ filter: cssFor(isValidFilter(p.filter) ? (p.filter as any) : null) }} className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]" alt="" />
                           <SensitiveThumb blurred={shouldBlurThumb(p)} />
                           <div className="absolute bottom-1 right-1 glass px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1">
                             <Bookmark size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}

@@ -2,11 +2,16 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Image as ImageIcon, Check } from "lucide-react";
+import { cssFor, isValidFilter } from "@/lib/filters";
 
 interface MyPost {
   id: string;
   caption: string | null;
   image_url: string | null;
+  image_urls: string[] | null;
+  media_type: string | null;
+  video_poster_url: string | null;
+  filter: string | null;
   created_at: string;
 }
 
@@ -30,7 +35,7 @@ export default function BoostPostPicker({ open, userId, boostLabel, onClose, onP
     (async () => {
       const { data } = await supabase
         .from("posts")
-        .select("id, caption, created_at")
+        .select("id, caption, image_url, image_urls, media_type, video_poster_url, filter, created_at")
         .eq("user_id", userId)
         .eq("is_removed", false)
         .order("created_at", { ascending: false })
@@ -67,13 +72,22 @@ export default function BoostPostPicker({ open, userId, boostLabel, onClose, onP
                     onClick={() => setSelected(p.id)}
                     className={`relative aspect-square rounded-lg overflow-hidden border-2 transition ${isSel ? "border-gold ring-2 ring-gold/40" : "border-border/40 hover:border-gold/40"}`}
                   >
-                    {p.image_url ? (
-                      <img src={p.image_url} alt={p.caption ?? "post"} className="w-full h-full object-cover" loading="lazy" />
-                    ) : (
-                      <div className="w-full h-full bg-muted flex items-center justify-center">
-                        <ImageIcon size={20} className="text-muted-foreground" />
-                      </div>
-                    )}
+                    {(() => {
+                      const thumb = (p.media_type === "video" && p.video_poster_url) || p.image_url || p.image_urls?.[0] || null;
+                      return thumb ? (
+                        <img
+                          src={thumb}
+                          alt={p.caption ?? "post"}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          style={{ filter: cssFor(isValidFilter(p.filter) ? (p.filter as any) : null) }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                          <ImageIcon size={20} className="text-muted-foreground" />
+                        </div>
+                      );
+                    })()}
                     {isSel && (
                       <div className="absolute inset-0 bg-gold/20 flex items-center justify-center">
                         <div className="size-7 rounded-full bg-gold text-primary-foreground flex items-center justify-center">
