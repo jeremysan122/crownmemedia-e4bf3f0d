@@ -1005,7 +1005,7 @@ export default function Profile() {
                         className="aspect-square bg-muted overflow-hidden relative rounded-md lg:rounded-xl group cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
                         aria-label="Open post"
                       >
-                        <img loading="lazy" src={p.image_url} className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]" alt="" />
+                        <img loading="lazy" src={(p.media_type === "video" && p.video_poster_url) || p.image_url || p.image_urls?.[0] || ""} style={{ filter: cssFor(isValidFilter(p.filter) ? (p.filter as any) : null) }} className="w-full h-full object-cover transition-transform group-hover:scale-[1.02]" alt="" />
                         <SensitiveThumb blurred={shouldBlurThumb(p)} />
                         <div className="absolute bottom-1 right-1 glass px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1">
                           <Heart size={8} className="text-primary" fill="currentColor" />{formatScore(p.crown_score)}
