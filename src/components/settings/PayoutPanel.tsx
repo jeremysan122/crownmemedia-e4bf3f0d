@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { SHEKEL, formatShekels } from "@/lib/gifts";
 
 // Keep in sync with supabase/functions/request-payout/index.ts
-const SHEKELS_PER_USD = 100;
+const SHEKELS_PER_USD = 1000;
 const USD_PER_SHEKEL = 1 / SHEKELS_PER_USD;
 const MIN_PAYOUT_USD = 25;
 const MIN_SHEKELS_PAYOUT = MIN_PAYOUT_USD * SHEKELS_PER_USD;

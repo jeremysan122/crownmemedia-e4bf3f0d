@@ -5,8 +5,8 @@ export const SHEKEL = "₪";
 export const formatShekels = (n: number): string =>
   n >= 1000 ? n.toLocaleString() : String(n);
 
-/** $ value for a shekel amount. 1 ₪ = $0.01. */
-export const shekelToUsd = (n: number): number => Math.round(n) / 100;
+/** $ value for a shekel amount. 1 ₪ = $0.001. */
+export const shekelToUsd = (n: number): number => Math.round(n) / 1000;
 
 const G = (
   id: string,

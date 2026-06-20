@@ -9,7 +9,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-const SHEKELS_PER_USD = 100;
+const SHEKELS_PER_USD = 1000;
 const MIN_PAYOUT_USD = 25;
 const MIN_SHEKELS_PAYOUT = MIN_PAYOUT_USD * SHEKELS_PER_USD;
 
