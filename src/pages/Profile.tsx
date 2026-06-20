@@ -190,7 +190,7 @@ export default function Profile() {
       if (likedIds.length) {
         const { data: lp } = await supabase
           .from("posts")
-          .select("id, image_url, crown_score, is_sensitive")
+          .select("id, image_url, image_urls, crown_score, is_sensitive, filter, media_type, video_poster_url")
           .in("id", likedIds)
           .eq("is_removed", false);
         if (!cancelled) setLiked((lp as any) || []);
@@ -212,7 +212,7 @@ export default function Profile() {
         if (bmIds.length) {
           const { data: sp } = await supabase
             .from("posts")
-            .select("id, image_url, crown_score, is_sensitive")
+            .select("id, image_url, image_urls, crown_score, is_sensitive, filter, media_type, video_poster_url")
             .in("id", bmIds)
             .eq("is_removed", false);
           if (!cancelled) setSaved((sp as any) || []);
