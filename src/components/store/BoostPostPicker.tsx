@@ -34,7 +34,7 @@ export default function BoostPostPicker({ open, userId, boostLabel, onClose, onP
     (async () => {
       const { data } = await supabase
         .from("posts")
-        .select("id, caption, created_at")
+        .select("id, caption, image_url, image_urls, media_type, video_poster_url, filter, created_at")
         .eq("user_id", userId)
         .eq("is_removed", false)
         .order("created_at", { ascending: false })
