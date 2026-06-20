@@ -123,7 +123,7 @@ export default function ShekelsTab() {
       </div>
 
       <p className="text-center text-[10px] text-muted-foreground pt-2">
-        1 ₪ = $0.01 · Shekels never expire
+        1 ₪ = $0.001 · Shekels never expire
       </p>
     </div>
   );
