@@ -251,7 +251,7 @@ export default function RoyalGiftStore() {
       </div>
 
       <p className="text-center text-[10px] text-muted-foreground pt-2">
-        100 gifts · 1 ₪ = $0.01 · Send from any post or profile
+        100 gifts · 1 ₪ = $0.001 · Send from any post or profile
       </p>
 
       <AddShekelsModal
