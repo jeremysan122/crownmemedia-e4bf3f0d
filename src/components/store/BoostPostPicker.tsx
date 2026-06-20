@@ -7,6 +7,10 @@ interface MyPost {
   id: string;
   caption: string | null;
   image_url: string | null;
+  image_urls: string[] | null;
+  media_type: string | null;
+  video_poster_url: string | null;
+  filter: string | null;
   created_at: string;
 }
 
