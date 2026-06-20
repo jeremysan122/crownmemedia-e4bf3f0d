@@ -16,8 +16,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Conversion rate: 100 Shekels = $1 USD ($0.01 per Shekel).
-const SHEKELS_PER_USD = 100;
+// Conversion rate: 1000 Shekels = $1 USD ($0.001 per Shekel).
+const SHEKELS_PER_USD = 1000;
 const USD_PER_SHEKEL = 1 / SHEKELS_PER_USD;
 const MIN_PAYOUT_USD = 25;
 const MIN_SHEKELS = MIN_PAYOUT_USD * SHEKELS_PER_USD;
