@@ -926,15 +926,7 @@ export default function Upload() {
       }
       clearDraft();
 
-      // Record photo hashes so the same image can't be re-posted later.
-      if (mode === "photo" && photos.length > 0) {
-        try {
-          const rows = await Promise.all(photos.map(async (p) => ({
-            user_id: user.id, hash: await sha256File(p.file),
-          })));
-          await supabase.from("media_hashes" as any).upsert(rows, { onConflict: "user_id,hash", ignoreDuplicates: true });
-        } catch { /* non-fatal */ }
-      }
+      // Photo-hash recording disabled — duplicate uploads are allowed.
 
       submissionKeyRef.current = crypto.randomUUID();
       setSuccess(true);
