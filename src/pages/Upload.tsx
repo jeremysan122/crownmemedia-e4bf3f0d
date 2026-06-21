@@ -639,24 +639,8 @@ export default function Upload() {
         const collected: string[] = new Array(total);
         photos.forEach((p, i) => { if (p.uploaded?.url) collected[i] = p.uploaded.url; });
 
-        // ─── Server-side cross-session dedupe ───
-        // Hash each not-yet-uploaded photo and ask the DB if we've already
-        // posted the same image before. Rejected hashes block submit.
-        setUploadStage("Checking for duplicates…");
+        // Duplicate detection removed — users can re-post any photo.
         const needsHashCheck = photos.filter((p) => !p.uploaded?.url);
-        if (needsHashCheck.length > 0) {
-          const hashes = await Promise.all(needsHashCheck.map((p) => sha256File(p.file)));
-          const { data: existing } = await supabase
-            .from("media_hashes" as any)
-            .select("hash")
-            .eq("user_id", user.id)
-            .in("hash", hashes);
-          const dup = new Set((existing ?? []).map((r: any) => r.hash));
-          if (dup.size > 0) {
-            const idx = hashes.findIndex((h) => dup.has(h));
-            throw new Error(`You've already posted this photo before. Pick a different image (photo ${idx + 1}).`);
-          }
-        }
 
         // ─── Parallel uploads with real byte-level progress ───
         // Pool to 3 concurrent uploads so 10 photos finish in ~3 batches.
@@ -942,15 +926,7 @@ export default function Upload() {
       }
       clearDraft();
 
-      // Record photo hashes so the same image can't be re-posted later.
-      if (mode === "photo" && photos.length > 0) {
-        try {
-          const rows = await Promise.all(photos.map(async (p) => ({
-            user_id: user.id, hash: await sha256File(p.file),
-          })));
-          await supabase.from("media_hashes" as any).upsert(rows, { onConflict: "user_id,hash", ignoreDuplicates: true });
-        } catch { /* non-fatal */ }
-      }
+      // Photo-hash recording disabled — duplicate uploads are allowed.
 
       submissionKeyRef.current = crypto.randomUUID();
       setSuccess(true);
@@ -1239,16 +1215,27 @@ export default function Upload() {
             </div>
           ) : (
             <div className="space-y-3">
-              {/* Cover preview with live filter */}
+              {/* Swipeable preview carousel with live filter */}
               <div className="aspect-square rounded-2xl overflow-hidden border border-primary/40 relative bg-muted">
-                <img loading="lazy" src={photos[0].preview} alt="Cover preview" className="w-full h-full object-cover" style={{ filter: cssFor(filter) }} />
-                <FilterOverlay filter={filter} />
-                <span className="absolute top-2 left-2 px-2 py-1 rounded-full bg-gradient-gold text-primary-foreground text-[10px] font-bold tracking-wider flex items-center gap-1">
+                <div className="flex h-full w-full overflow-x-auto snap-x snap-mandatory scrollbar-none">
+                  {photos.map((p, i) => (
+                    <div key={p.id} className="relative shrink-0 w-full h-full snap-center">
+                      <img loading="lazy" src={p.preview} alt={p.alt || `Photo ${i + 1}`} className="w-full h-full object-cover" style={{ filter: cssFor(filter) }} />
+                      <FilterOverlay filter={filter} />
+                    </div>
+                  ))}
+                </div>
+                <span className="pointer-events-none absolute top-2 left-2 px-2 py-1 rounded-full bg-gradient-gold text-primary-foreground text-[10px] font-bold tracking-wider flex items-center gap-1">
                   <Star size={10} fill="currentColor" /> COVER
                 </span>
-                <span className="absolute top-2 right-2 px-2 py-1 rounded-full glass text-[10px] font-bold tabular-nums">
+                <span className="pointer-events-none absolute top-2 right-2 px-2 py-1 rounded-full glass text-[10px] font-bold tabular-nums">
                   {photos.length}/{MAX_PHOTOS}
                 </span>
+                {photos.length > 1 && (
+                  <span className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full glass text-[10px] font-semibold">
+                    Swipe ←  →
+                  </span>
+                )}
               </div>
 
               {/* Reorder mode toggle (mobile-friendly) */}
