@@ -639,24 +639,8 @@ export default function Upload() {
         const collected: string[] = new Array(total);
         photos.forEach((p, i) => { if (p.uploaded?.url) collected[i] = p.uploaded.url; });
 
-        // ─── Server-side cross-session dedupe ───
-        // Hash each not-yet-uploaded photo and ask the DB if we've already
-        // posted the same image before. Rejected hashes block submit.
-        setUploadStage("Checking for duplicates…");
+        // Duplicate detection removed — users can re-post any photo.
         const needsHashCheck = photos.filter((p) => !p.uploaded?.url);
-        if (needsHashCheck.length > 0) {
-          const hashes = await Promise.all(needsHashCheck.map((p) => sha256File(p.file)));
-          const { data: existing } = await supabase
-            .from("media_hashes" as any)
-            .select("hash")
-            .eq("user_id", user.id)
-            .in("hash", hashes);
-          const dup = new Set((existing ?? []).map((r: any) => r.hash));
-          if (dup.size > 0) {
-            const idx = hashes.findIndex((h) => dup.has(h));
-            throw new Error(`You've already posted this photo before. Pick a different image (photo ${idx + 1}).`);
-          }
-        }
 
         // ─── Parallel uploads with real byte-level progress ───
         // Pool to 3 concurrent uploads so 10 photos finish in ~3 batches.
