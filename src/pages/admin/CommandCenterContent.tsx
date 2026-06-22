@@ -6,7 +6,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { removePost, removeComment, resolveQueueItem } from "@/lib/admin";
+import { removePost, removeComment, resolveQueueItem, logAdminAction } from "@/lib/admin";
 import { toast } from "sonner";
 
 const RATINGS = ["safe", "suggestive", "mature", "explicit"] as const;
