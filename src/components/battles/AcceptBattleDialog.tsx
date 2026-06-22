@@ -83,14 +83,29 @@ export default function AcceptBattleDialog({ open, onOpenChange, battle, onResol
         <div className="flex items-center gap-3">
           <div className="flex-1 aspect-square rounded-lg overflow-hidden bg-muted">
             {battle.challenger_post?.image_url && (
-              <img loading="lazy" src={battle.challenger_post.image_url} alt="" className="w-full h-full object-cover" />
+              <img
+                loading="lazy"
+                src={battle.challenger_post.image_url}
+                alt=""
+                className="w-full h-full object-cover"
+                style={{ filter: cssFor(isValidFilter(battle.challenger_post.filter ?? null) ? (battle.challenger_post.filter as FilterId) : null) }}
+              />
             )}
           </div>
           <div className="font-display text-xl text-gold">VS</div>
           <div className="flex-1 aspect-square rounded-lg overflow-hidden bg-muted border border-dashed border-primary/40 flex items-center justify-center">
-            {postId ? (
-              <img loading="lazy" src={posts.find((p) => p.id === postId)?.image_url} alt="" className="w-full h-full object-cover" />
-            ) : (
+            {postId ? (() => {
+              const sel = posts.find((p) => p.id === postId);
+              return (
+                <img
+                  loading="lazy"
+                  src={sel?.image_url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  style={{ filter: cssFor(isValidFilter(sel?.filter ?? null) ? (sel!.filter as FilterId) : null) }}
+                />
+              );
+            })() : (
               <span className="text-[10px] text-muted-foreground px-2 text-center">Pick below</span>
             )}
           </div>
@@ -101,13 +116,19 @@ export default function AcceptBattleDialog({ open, onOpenChange, battle, onResol
             You have no posts in this category. Upload one to accept.
           </p>
         ) : (
-          <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto">
+          <div className="grid grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
             {posts.map((p) => (
               <button type="button" key={p.id} onClick={() => setPostId(p.id)}
                 className={`relative aspect-square rounded-md overflow-hidden border-2 ${
                   postId === p.id ? "border-primary gold-shadow" : "border-transparent opacity-70"
                 }`}>
-                <img loading="lazy" src={p.image_url} alt="" className="w-full h-full object-cover" />
+                <img
+                  loading="lazy"
+                  src={p.image_url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  style={{ filter: cssFor(isValidFilter(p.filter ?? null) ? (p.filter as FilterId) : null) }}
+                />
               </button>
             ))}
           </div>
