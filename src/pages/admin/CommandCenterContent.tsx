@@ -321,7 +321,13 @@ export default function CommandCenterContent() {
         <div className="mt-1 rounded border border-border/40 bg-card/40 p-2 space-y-2">
           {/* ── AI media analysis (read-only) ── */}
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">AI media analysis</div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">AI media analysis</div>
+              <Button
+                size="sm" variant="outline" className="h-6 px-2 text-[10px]"
+                onClick={() => rerunAi(p.id)}
+              >Re-run AI</Button>
+            </div>
             {!(p.id in ai) ? (
               <div className="text-[10px] text-muted-foreground">Loading…</div>
             ) : ai[p.id] == null ? (
