@@ -65,6 +65,7 @@ export default function CommandCenterContent() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
   const [history, setHistory] = useState<Record<string, AuditRow[]>>({});
+  const [ai, setAi] = useState<Record<string, AiAnalysisRow | null>>({});
   const [confirmKind, setConfirmKind] = useState<BulkKind | null>(null);
   const [bulkProgress, setBulkProgress] = useState<{ kind: BulkKind; done: number; total: number } | null>(null);
   const [recentlyChanged, setRecentlyChanged] = useState<Map<string, number>>(new Map());
