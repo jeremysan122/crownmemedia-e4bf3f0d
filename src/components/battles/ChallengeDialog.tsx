@@ -39,7 +39,7 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
       return;
     }
     if (user) {
-      supabase.from("posts").select("id, image_url, category")
+      supabase.from("posts").select("id, image_url, category, filter")
         .eq("user_id", user.id).eq("is_removed", false)
         .order("created_at", { ascending: false }).limit(24)
         .then(({ data }) => {
