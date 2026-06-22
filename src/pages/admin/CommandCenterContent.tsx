@@ -37,6 +37,25 @@ type AuditRow = {
   details: any;
   created_at: string;
 };
+type AiAnalysisRow = {
+  id: string;
+  analysis_status: string;
+  safety_status: string;
+  confidence_score: number | null;
+  suggested_master_category: string | null;
+  suggested_topic: string | null;
+  safety_flags: Record<string, boolean> | null;
+  text_flags: Record<string, boolean> | null;
+  extracted_text: string | null;
+  detected_language: string | null;
+  moderation_reason: string | null;
+  error_message: string | null;
+  model_name: string | null;
+  duration_ms: number | null;
+  retry_count: number | null;
+  created_at: string;
+  updated_at: string;
+};
 
 export default function CommandCenterContent() {
   const [queue, setQueue] = useState<any[]>([]);
@@ -46,6 +65,7 @@ export default function CommandCenterContent() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
   const [history, setHistory] = useState<Record<string, AuditRow[]>>({});
+  const [ai, setAi] = useState<Record<string, AiAnalysisRow | null>>({});
   const [confirmKind, setConfirmKind] = useState<BulkKind | null>(null);
   const [bulkProgress, setBulkProgress] = useState<{ kind: BulkKind; done: number; total: number } | null>(null);
   const [recentlyChanged, setRecentlyChanged] = useState<Map<string, number>>(new Map());
@@ -129,10 +149,20 @@ export default function CommandCenterContent() {
     setHistory((h) => ({ ...h, [postId]: (data ?? []) as AuditRow[] }));
   };
 
+  const loadAi = async (postId: string) => {
+    const { data } = await (supabase as any)
+      .from("post_media_ai_analysis")
+      .select("id,analysis_status,safety_status,confidence_score,suggested_master_category,suggested_topic,safety_flags,text_flags,extracted_text,detected_language,moderation_reason,error_message,model_name,duration_ms,retry_count,created_at,updated_at")
+      .eq("post_id", postId)
+      .maybeSingle();
+    setAi((a) => ({ ...a, [postId]: (data ?? null) as AiAnalysisRow | null }));
+  };
+
   const toggleExpand = async (id: string) => {
     if (expanded === id) { setExpanded(null); return; }
     setExpanded(id);
     if (!history[id]) await loadHistory(id);
+    if (!(id in ai)) await loadAi(id);
   };
 
   const act = async (item: any, action: "remove" | "dismiss") => {
@@ -251,26 +281,84 @@ export default function CommandCenterContent() {
         >{p.is_sensitive ? "Unmark sensitive" : "Mark sensitive"}</Button>
       </div>
       {expanded === p.id ? (
-        <div className="mt-1 rounded border border-border/40 bg-card/40 p-2 space-y-1">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Audit timeline</div>
-          {(history[p.id] ?? []).length === 0 ? (
-            <div className="text-[10px] text-muted-foreground">No moderation history yet.</div>
-          ) : (
-            <ul className="space-y-1">
-              {(history[p.id] ?? []).map((h) => (
-                <li key={h.id} className="text-[10px] font-mono">
-                  <span className="text-muted-foreground">{new Date(h.created_at).toLocaleString()}</span>{" "}
-                  <span>· actor {h.actor_id.slice(0, 8)} ·</span>{" "}
-                  {Object.entries(h.details?.changes ?? {}).map(([field, v]: [string, any]) => (
-                    <span key={field} className="mr-2">
-                      {field}: <span className="text-rose-400">{String(v?.old)}</span> →{" "}
-                      <span className="text-emerald-400">{String(v?.new)}</span>
-                    </span>
-                  ))}
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="mt-1 rounded border border-border/40 bg-card/40 p-2 space-y-2">
+          {/* ── AI media analysis (read-only) ── */}
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">AI media analysis</div>
+            {!(p.id in ai) ? (
+              <div className="text-[10px] text-muted-foreground">Loading…</div>
+            ) : ai[p.id] == null ? (
+              <div className="text-[10px] text-muted-foreground">No AI analysis on file.</div>
+            ) : (
+              (() => {
+                const a = ai[p.id]!;
+                const safetyFlagsOn = Object.entries(a.safety_flags ?? {}).filter(([, v]) => v).map(([k]) => k);
+                const textFlagsOn = Object.entries(a.text_flags ?? {}).filter(([, v]) => v).map(([k]) => k);
+                const safetyColor = a.safety_status === "blocked" ? "text-rose-400"
+                  : a.safety_status === "sensitive" ? "text-amber-400"
+                  : a.safety_status === "needs_review" ? "text-orange-400"
+                  : "text-emerald-400";
+                return (
+                  <div className="space-y-1 text-[10px] font-mono">
+                    <div>
+                      status: <span className={safetyColor}>{a.safety_status}</span>
+                      {" · "}analysis: <span>{a.analysis_status}</span>
+                      {" · "}confidence: <span>{a.confidence_score != null ? a.confidence_score.toFixed(2) : "—"}</span>
+                      {" · "}model: <span className="text-muted-foreground">{a.model_name}</span>
+                      {a.duration_ms != null ? <> {" · "}{a.duration_ms}ms</> : null}
+                      {a.retry_count != null && a.retry_count > 0 ? <> {" · "}retries: {a.retry_count}</> : null}
+                    </div>
+                    {a.suggested_master_category || a.suggested_topic ? (
+                      <div>
+                        suggested: <span className="text-sky-400">{a.suggested_master_category ?? "—"}</span>
+                        {a.suggested_topic ? <> / {a.suggested_topic}</> : null}
+                      </div>
+                    ) : null}
+                    {safetyFlagsOn.length > 0 ? (
+                      <div>safety flags: <span className="text-rose-400">{safetyFlagsOn.join(", ")}</span></div>
+                    ) : null}
+                    {textFlagsOn.length > 0 ? (
+                      <div>text flags: <span className="text-amber-400">{textFlagsOn.join(", ")}</span></div>
+                    ) : null}
+                    {a.extracted_text ? (
+                      <div className="whitespace-pre-wrap text-muted-foreground">
+                        OCR{a.detected_language ? ` (${a.detected_language})` : ""}: {a.extracted_text.slice(0, 500)}
+                        {a.extracted_text.length > 500 ? "…" : ""}
+                      </div>
+                    ) : null}
+                    {a.moderation_reason ? (
+                      <div className="text-muted-foreground">reason: {a.moderation_reason}</div>
+                    ) : null}
+                    {a.error_message ? (
+                      <div className="text-rose-400">error: {a.error_message}</div>
+                    ) : null}
+                  </div>
+                );
+              })()
+            )}
+          </div>
+          {/* ── Audit timeline ── */}
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Audit timeline</div>
+            {(history[p.id] ?? []).length === 0 ? (
+              <div className="text-[10px] text-muted-foreground">No moderation history yet.</div>
+            ) : (
+              <ul className="space-y-1">
+                {(history[p.id] ?? []).map((h) => (
+                  <li key={h.id} className="text-[10px] font-mono">
+                    <span className="text-muted-foreground">{new Date(h.created_at).toLocaleString()}</span>{" "}
+                    <span>· actor {h.actor_id.slice(0, 8)} ·</span>{" "}
+                    {Object.entries(h.details?.changes ?? {}).map(([field, v]: [string, any]) => (
+                      <span key={field} className="mr-2">
+                        {field}: <span className="text-rose-400">{String(v?.old)}</span> →{" "}
+                        <span className="text-emerald-400">{String(v?.new)}</span>
+                      </span>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       ) : null}
     </li>

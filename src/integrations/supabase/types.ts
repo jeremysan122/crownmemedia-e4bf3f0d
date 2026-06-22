@@ -2435,6 +2435,92 @@ export type Database = {
           },
         ]
       }
+      post_media_ai_analysis: {
+        Row: {
+          analysis_status: string
+          confidence_score: number | null
+          created_at: string
+          detected_language: string | null
+          detected_objects: Json
+          duration_ms: number | null
+          error_message: string | null
+          extracted_text: string | null
+          id: string
+          media_urls: string[]
+          model_name: string
+          moderation_reason: string | null
+          post_id: string
+          raw_ai_response: Json | null
+          retry_count: number
+          safety_flags: Json
+          safety_status: string
+          suggested_master_category: string | null
+          suggested_topic: string | null
+          text_flags: Json
+          token_usage: Json | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          analysis_status?: string
+          confidence_score?: number | null
+          created_at?: string
+          detected_language?: string | null
+          detected_objects?: Json
+          duration_ms?: number | null
+          error_message?: string | null
+          extracted_text?: string | null
+          id?: string
+          media_urls?: string[]
+          model_name?: string
+          moderation_reason?: string | null
+          post_id: string
+          raw_ai_response?: Json | null
+          retry_count?: number
+          safety_flags?: Json
+          safety_status?: string
+          suggested_master_category?: string | null
+          suggested_topic?: string | null
+          text_flags?: Json
+          token_usage?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          analysis_status?: string
+          confidence_score?: number | null
+          created_at?: string
+          detected_language?: string | null
+          detected_objects?: Json
+          duration_ms?: number | null
+          error_message?: string | null
+          extracted_text?: string | null
+          id?: string
+          media_urls?: string[]
+          model_name?: string
+          moderation_reason?: string | null
+          post_id?: string
+          raw_ai_response?: Json | null
+          retry_count?: number
+          safety_flags?: Json
+          safety_status?: string
+          suggested_master_category?: string | null
+          suggested_topic?: string | null
+          text_flags?: Json
+          token_usage?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_media_ai_analysis_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: true
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           alt_texts: string[]

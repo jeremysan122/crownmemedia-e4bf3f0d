@@ -900,15 +900,18 @@ export default function Upload() {
         metadata: { publishStatus, deduped: wasExisting },
       });
 
-      // Kick off background moderation. It runs post-publish — the post is
-      // already live; moderation can later flip it to pending_review,
-      // sensitive, or remove it. Fire-and-forget so we never block the UI.
+      // Kick off background AI media analysis (Gemini 2.5 Flash via Lovable AI
+      // Gateway). It runs once per post, writes safety/OCR/category results to
+      // `post_media_ai_analysis`, and may flip the post to
+      // sensitive/pending_review. Fire-and-forget so we never block the UI.
+      // The existing `moderate-media` pre-publish gate above still runs as a
+      // hard NSFW block; this new function is the deeper post-publish pass.
       if (publishedRow?.id && !wasExisting) {
         try {
-          void supabase.functions.invoke("moderate-media", {
-            body: { post_id: publishedRow.id, reason: "post_publish" },
+          void supabase.functions.invoke("analyze-post-media", {
+            body: { post_id: publishedRow.id },
           });
-        } catch { /* non-fatal: scheduled scanners pick it up */ }
+        } catch { /* non-fatal: admin can re-trigger or scheduled scanners pick it up */ }
       }
 
       setUploadProgress(100);
