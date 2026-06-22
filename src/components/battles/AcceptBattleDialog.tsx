@@ -13,7 +13,7 @@ interface Props {
   onOpenChange: (b: boolean) => void;
   battle: {
     id: string;
-    challenger_post: { image_url: string; category: CrownCategory } | null;
+    challenger_post: { image_url: string; category: CrownCategory; filter?: string | null } | null;
     challenger: { username: string; profile_photo_url: string | null } | null;
   } | null;
   onResolved?: () => void;
