@@ -9,12 +9,13 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Link,
   Preview,
   Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
-import { styles } from './_brand.ts'
+import { HERO_BASE, heroImg, styles } from './_brand.ts'
 
 interface EmailChangeEmailProps {
   siteName: string
@@ -35,9 +36,15 @@ export const EmailChangeEmail = ({
     <Preview>Confirm your email change for {siteName}</Preview>
     <Body style={styles.main}>
       <Container style={styles.container}>
-        <Section style={styles.header}>
-          <Text style={styles.brandText}>👑 CrownMe</Text>
-          <Text style={styles.brandTag}>Where Legends Reign</Text>
+        <Section style={{ padding: 0, margin: 0 }}>
+          <Link href={confirmationUrl}>
+            <Img
+              src={`${HERO_BASE}/crownme-email-change-full-design.png`}
+              alt="CrownMe — Confirm your new address"
+              width="560"
+              style={heroImg}
+            />
+          </Link>
         </Section>
         <Section style={styles.body}>
           <Heading style={styles.h1}>Confirm your new address.</Heading>

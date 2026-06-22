@@ -9,11 +9,13 @@ import {
   Head,
   Heading,
   Html,
+  Img,
+  Link,
   Preview,
   Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
-import { styles } from './_brand.ts'
+import { HERO_BASE, heroImg, styles } from './_brand.ts'
 
 interface MagicLinkEmailProps {
   siteName: string
@@ -29,9 +31,15 @@ export const MagicLinkEmail = ({
     <Preview>Your royal key to {siteName} awaits 👑</Preview>
     <Body style={styles.main}>
       <Container style={styles.container}>
-        <Section style={styles.header}>
-          <Text style={styles.brandText}>👑 CrownMe</Text>
-          <Text style={styles.brandTag}>Where Legends Reign</Text>
+        <Section style={{ padding: 0, margin: 0 }}>
+          <Link href={confirmationUrl}>
+            <Img
+              src={`${HERO_BASE}/crownme-magic-link-full-design.png`}
+              alt="CrownMe — Your royal key"
+              width="560"
+              style={heroImg}
+            />
+          </Link>
         </Section>
         <Section style={styles.body}>
           <Heading style={styles.h1}>Your royal key has arrived.</Heading>
