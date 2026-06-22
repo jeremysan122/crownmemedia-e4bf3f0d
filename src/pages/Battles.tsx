@@ -14,6 +14,7 @@ import {
 import * as LucideIcons from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CATEGORY_LABEL, CrownCategory, timeUntil, locationLabel } from "@/lib/crown";
+import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
 import { useCountdown } from "@/hooks/useCountdown";
 import { toast } from "sonner";
 import ChallengeDialog from "@/components/battles/ChallengeDialog";
