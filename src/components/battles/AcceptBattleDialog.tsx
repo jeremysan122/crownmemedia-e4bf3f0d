@@ -19,7 +19,7 @@ interface Props {
   onResolved?: () => void;
 }
 
-interface PostThumb { id: string; image_url: string; category: CrownCategory; }
+interface PostThumb { id: string; image_url: string; category: CrownCategory; filter: string | null; }
 
 export default function AcceptBattleDialog({ open, onOpenChange, battle, onResolved }: Props) {
   const { user } = useAuth();
