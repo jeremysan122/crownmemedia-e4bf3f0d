@@ -3,6 +3,7 @@ import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
+import { safeParse } from '../_shared/transactional-email-templates/_validate.ts'
 
 // Configuration baked in at scaffold time — do NOT change these manually.
 // To update, re-run the email domain setup flow.
@@ -312,20 +313,50 @@ Deno.serve(async (req) => {
     )
   }
 
-  // 4. Render React Email template to HTML and plain text
-  const html = await renderAsync(
-    React.createElement(template.component, templateData)
-  )
-  const plainText = await renderAsync(
-    React.createElement(template.component, templateData),
-    { plainText: true }
-  )
+  // 4. Strict-validate + apply defaults to templateData before rendering.
+  // Templates with a `schema` get safeParse so missing/malformed fields can
+  // never break rendering or the subject line.
+  const safeData = template.schema
+    ? safeParse(template.schema, templateData)
+    : templateData
+
+  // 5. Render React Email template to HTML and plain text
+  let html: string
+  let plainText: string
+  try {
+    html = await renderAsync(React.createElement(template.component, safeData))
+    plainText = await renderAsync(
+      React.createElement(template.component, safeData),
+      { plainText: true },
+    )
+  } catch (renderErr) {
+    console.error('Template render failed', { templateName, error: renderErr })
+    await supabase.from('email_send_log').insert({
+      message_id: messageId,
+      template_name: templateName,
+      recipient_email: effectiveRecipient,
+      status: 'failed',
+      error_message: `Render failed: ${renderErr instanceof Error ? renderErr.message : String(renderErr)}`,
+    })
+    return new Response(JSON.stringify({ error: 'Template render failed' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
 
   // Resolve subject — supports static string or dynamic function
-  const resolvedSubject =
-    typeof template.subject === 'function'
-      ? template.subject(templateData)
-      : template.subject
+  let resolvedSubject: string
+  try {
+    resolvedSubject =
+      typeof template.subject === 'function'
+        ? template.subject(safeData)
+        : template.subject
+  } catch {
+    resolvedSubject =
+      typeof template.subject === 'string'
+        ? template.subject
+        : `${SITE_NAME} — update`
+  }
 
   // 5. Enqueue the pre-rendered email for async processing by the dispatcher.
   // The dispatcher (process-email-queue) handles sending, retries, and rate-limit backoff.
