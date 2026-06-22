@@ -2435,6 +2435,83 @@ export type Database = {
           },
         ]
       }
+      post_media: {
+        Row: {
+          alt_text: string | null
+          blurhash: string | null
+          bytes: number | null
+          created_at: string
+          deleted_at: string | null
+          duration_ms: number | null
+          height: number | null
+          id: string
+          is_sensitive: boolean
+          kind: string
+          mime_type: string | null
+          moderation_status: string
+          position: number
+          post_id: string
+          public_url: string | null
+          safe_variant_path: string | null
+          storage_bucket: string
+          storage_path: string
+          updated_at: string
+          width: number | null
+        }
+        Insert: {
+          alt_text?: string | null
+          blurhash?: string | null
+          bytes?: number | null
+          created_at?: string
+          deleted_at?: string | null
+          duration_ms?: number | null
+          height?: number | null
+          id?: string
+          is_sensitive?: boolean
+          kind: string
+          mime_type?: string | null
+          moderation_status?: string
+          position?: number
+          post_id: string
+          public_url?: string | null
+          safe_variant_path?: string | null
+          storage_bucket?: string
+          storage_path: string
+          updated_at?: string
+          width?: number | null
+        }
+        Update: {
+          alt_text?: string | null
+          blurhash?: string | null
+          bytes?: number | null
+          created_at?: string
+          deleted_at?: string | null
+          duration_ms?: number | null
+          height?: number | null
+          id?: string
+          is_sensitive?: boolean
+          kind?: string
+          mime_type?: string | null
+          moderation_status?: string
+          position?: number
+          post_id?: string
+          public_url?: string | null
+          safe_variant_path?: string | null
+          storage_bucket?: string
+          storage_path?: string
+          updated_at?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_media_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_media_ai_analysis: {
         Row: {
           analysis_status: string
