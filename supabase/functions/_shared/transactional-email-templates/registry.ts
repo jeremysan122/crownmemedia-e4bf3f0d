@@ -1,5 +1,6 @@
 /// <reference types="npm:@types/react@18.3.1" />
 import * as React from 'npm:react@18.3.1'
+import type { z } from 'npm:zod@3.25.76'
 
 export interface TemplateEntry {
   component: React.ComponentType<any>
@@ -7,6 +8,13 @@ export interface TemplateEntry {
   to?: string
   displayName?: string
   previewData?: Record<string, any>
+  /**
+   * Optional Zod schema for strict validation + safe defaults.
+   * When present, the send pipeline runs `safeParse(schema, templateData)`
+   * BEFORE rendering and subject resolution, so a missing or malformed
+   * field can never break rendering.
+   */
+  schema?: z.ZodTypeAny
 }
 
 import { template as welcome } from './welcome.tsx'
@@ -24,6 +32,15 @@ import { template as shekelsReceipt } from './shekels-receipt.tsx'
 import { template as payoutVerification } from './payout-verification.tsx'
 import { template as weeklyRecap } from './weekly-recap.tsx'
 
+// Auth template designs, wrapped as transactional sends so they can be
+// tested end-to-end (the real auth versions are wired via auth-email-hook).
+import { template as authSignupTest } from './auth-test/signup-test.tsx'
+import { template as authMagicLinkTest } from './auth-test/magic-link-test.tsx'
+import { template as authRecoveryTest } from './auth-test/recovery-test.tsx'
+import { template as authInviteTest } from './auth-test/invite-test.tsx'
+import { template as authEmailChangeTest } from './auth-test/email-change-test.tsx'
+import { template as authReauthTest } from './auth-test/reauthentication-test.tsx'
+
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'welcome': welcome,
   'complete-profile': completeProfile,
@@ -39,4 +56,11 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'shekels-receipt': shekelsReceipt,
   'payout-verification': payoutVerification,
   'weekly-recap': weeklyRecap,
+  // Auth previews (sendable copies for testing the design end-to-end):
+  'auth-signup-test': authSignupTest,
+  'auth-magic-link-test': authMagicLinkTest,
+  'auth-recovery-test': authRecoveryTest,
+  'auth-invite-test': authInviteTest,
+  'auth-email-change-test': authEmailChangeTest,
+  'auth-reauthentication-test': authReauthTest,
 }
