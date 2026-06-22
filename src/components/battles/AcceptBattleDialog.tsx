@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Loader2, Check, X } from "lucide-react";
 import { CrownCategory } from "@/lib/crown";
+import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
 
 interface Props {
   open: boolean;
