@@ -180,7 +180,44 @@ export default function CommandCenterContent() {
   const updatePost = async (id: string, patch: Record<string, any>) => {
     const { error } = await (supabase as any).from("posts").update(patch).eq("id", id);
     if (error) { toast.error(error.message); return false; }
+    // If an AI verdict exists for this post, snapshot it into the audit log so
+    // there is a permanent record of *what the human overrode*. The standard
+    // posts UPDATE audit log records the field change itself; this row
+    // records the AI context that surrounded the decision.
+    const aiSnap = ai[id];
+    if (aiSnap) {
+      try {
+        await logAdminAction("ai_override", "post", id, {
+          patch,
+          ai: {
+            analysis_status: aiSnap.analysis_status,
+            safety_status: aiSnap.safety_status,
+            confidence_score: aiSnap.confidence_score,
+            model_name: aiSnap.model_name,
+            moderation_reason: aiSnap.moderation_reason,
+          },
+        });
+      } catch { /* non-fatal: posts update already succeeded */ }
+    }
     return true;
+  };
+
+  const rerunAi = async (postId: string) => {
+    setAi((a) => ({ ...a, [postId]: a[postId] ? { ...a[postId]!, analysis_status: "pending" } : null }));
+    try {
+      // Clearing the existing row lets the edge function start a fresh analysis;
+      // the unique constraint + upsert in the function keeps this safe under
+      // concurrent invocations.
+      await (supabase as any).from("post_media_ai_analysis").delete().eq("post_id", postId);
+      const { error } = await supabase.functions.invoke("analyze-post-media", {
+        body: { post_id: postId },
+      });
+      if (error) throw error;
+      toast.success("AI analysis re-run");
+      await loadAi(postId);
+    } catch (e: any) {
+      toast.error(`Re-run failed: ${e?.message ?? "unknown"}`);
+    }
   };
 
   const bulk = async (patch: Record<string, any>, label: string) => {
