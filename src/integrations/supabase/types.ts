@@ -1366,6 +1366,108 @@ export type Database = {
         }
         Relationships: []
       }
+      dm_thread_members: {
+        Row: {
+          archived: boolean
+          created_at: string
+          last_read_at: string | null
+          muted: boolean
+          pinned: boolean
+          thread_id: string
+          unread_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          last_read_at?: string | null
+          muted?: boolean
+          pinned?: boolean
+          thread_id: string
+          unread_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          last_read_at?: string | null
+          muted?: boolean
+          pinned?: boolean
+          thread_id?: string
+          unread_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dm_thread_members_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "dm_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dm_thread_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dm_threads: {
+        Row: {
+          created_at: string
+          gift_count: number
+          id: string
+          last_message_at: string | null
+          last_message_id: string | null
+          last_message_preview: string | null
+          updated_at: string
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          created_at?: string
+          gift_count?: number
+          id?: string
+          last_message_at?: string | null
+          last_message_id?: string | null
+          last_message_preview?: string | null
+          updated_at?: string
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          created_at?: string
+          gift_count?: number
+          id?: string
+          last_message_at?: string | null
+          last_message_id?: string | null
+          last_message_preview?: string | null
+          updated_at?: string
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dm_threads_user_a_fkey"
+            columns: ["user_a"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dm_threads_user_b_fkey"
+            columns: ["user_b"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -1890,6 +1992,7 @@ export type Database = {
           sender_id: string
           shared_post_id: string | null
           shared_profile_id: string | null
+          thread_id: string | null
         }
         Insert: {
           attachment_name?: string | null
@@ -1908,6 +2011,7 @@ export type Database = {
           sender_id: string
           shared_post_id?: string | null
           shared_profile_id?: string | null
+          thread_id?: string | null
         }
         Update: {
           attachment_name?: string | null
@@ -1926,6 +2030,7 @@ export type Database = {
           sender_id?: string
           shared_post_id?: string | null
           shared_profile_id?: string | null
+          thread_id?: string | null
         }
         Relationships: [
           {
@@ -1968,6 +2073,13 @@ export type Database = {
             columns: ["shared_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "dm_threads"
             referencedColumns: ["id"]
           },
         ]
