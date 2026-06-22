@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Search, Swords, Loader2 } from "lucide-react";
 import { CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
+import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
 
 interface Props {
   open: boolean;
@@ -17,7 +18,7 @@ interface Props {
 }
 
 interface UserResult { id: string; username: string; profile_photo_url: string | null; }
-interface PostThumb { id: string; image_url: string; category: CrownCategory; }
+interface PostThumb { id: string; image_url: string; category: CrownCategory; filter: string | null; }
 
 export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, onCreated }: Props) {
   const { user } = useAuth();
@@ -38,7 +39,7 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
       return;
     }
     if (user) {
-      supabase.from("posts").select("id, image_url, category")
+      supabase.from("posts").select("id, image_url, category, filter")
         .eq("user_id", user.id).eq("is_removed", false)
         .order("created_at", { ascending: false }).limit(24)
         .then(({ data }) => {
@@ -138,13 +139,19 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
               {myPosts.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-4 text-center">No posts yet — upload one first.</p>
               ) : (
-                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
                   {myPosts.map((p) => (
                     <button type="button" key={p.id} onClick={() => { setPostId(p.id); setCategory(p.category); }}
                       className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
                         postId === p.id ? "border-primary gold-shadow" : "border-transparent opacity-70 hover:opacity-100"
                       }`}>
-                      <img loading="lazy" src={p.image_url} alt="" className="w-full h-full object-cover" />
+                      <img
+                        loading="lazy"
+                        src={p.image_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        style={{ filter: cssFor(isValidFilter(p.filter ?? null) ? (p.filter as FilterId) : null) }}
+                      />
                     </button>
                   ))}
                 </div>

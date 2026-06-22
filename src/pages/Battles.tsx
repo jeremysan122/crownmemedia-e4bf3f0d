@@ -14,6 +14,7 @@ import {
 import * as LucideIcons from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CATEGORY_LABEL, CrownCategory, timeUntil, locationLabel } from "@/lib/crown";
+import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
 import { useCountdown } from "@/hooks/useCountdown";
 import { toast } from "sonner";
 import ChallengeDialog from "@/components/battles/ChallengeDialog";
@@ -51,8 +52,8 @@ interface Battle {
   created_at: string;
   challenger: { username: string; profile_photo_url: string | null } | null;
   opponent: { username: string; profile_photo_url: string | null } | null;
-  challenger_post: { image_url: string; category: CrownCategory; city: string | null; state: string | null; country: string | null; main_category_slug: string | null; subcategory_slug: string | null } | null;
-  opponent_post: { image_url: string; category: CrownCategory } | null;
+  challenger_post: { image_url: string; category: CrownCategory; city: string | null; state: string | null; country: string | null; main_category_slug: string | null; subcategory_slug: string | null; filter: string | null } | null;
+  opponent_post: { image_url: string; category: CrownCategory; filter: string | null } | null;
 }
 
 const SkeletonCard = () => (
@@ -79,8 +80,8 @@ function CountdownPill({ endsAt }: { endsAt: string }) {
 const SELECT_COLS = `*,
   challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url),
   opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url),
-  challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country, main_category_slug, subcategory_slug),
-  opponent_post:posts!battles_opponent_post_id_fkey(image_url, category)
+  challenger_post:posts!battles_challenger_post_id_fkey(image_url, category, city, state, country, main_category_slug, subcategory_slug, filter),
+  opponent_post:posts!battles_opponent_post_id_fkey(image_url, category, filter)
 `;
 
 /** Max server pages to chain inside one Load More click before yielding back
@@ -597,7 +598,13 @@ export default function Battles() {
           }`}
         >
           {post?.image_url
-            ? <img loading="lazy" src={post.image_url} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+            ? <img
+                loading="lazy"
+                src={post.image_url}
+                alt=""
+                className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                style={{ filter: cssFor(isValidFilter(post?.filter ?? null) ? (post.filter as FilterId) : null) }}
+              />
             : <div className="w-full h-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground">Awaiting post</div>}
 
           {won && <WinnerReveal margin={parseFloat(margin)} side={side} fresh={fresh} />}
