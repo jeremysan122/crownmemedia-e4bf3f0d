@@ -76,7 +76,11 @@ export default function GlobalSearchDialog({ open, onOpenChange }: Props) {
           .from("posts")
           .select("id, image_url, caption, category")
           .eq("is_removed", false)
-          .or(`caption.ilike.%${term}%,city.ilike.%${term}%,country.ilike.%${term}%`)
+          // `ai_searchable_text` is populated by the analyze-post-media edge
+          // function with OCR text + AI topic, lowercased. Including it here
+          // lets users find posts by text inside images (memes, posters,
+          // signage) even when the caption doesn't mention it.
+          .or(`caption.ilike.%${term}%,city.ilike.%${term}%,country.ilike.%${term}%,ai_searchable_text.ilike.%${term.toLowerCase()}%`)
           .limit(6),
       ]);
 
