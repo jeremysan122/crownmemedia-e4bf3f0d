@@ -276,6 +276,19 @@ Deno.serve(async (req) => {
       postUpdate.moderation_status = "pending_review";
     }
 
+    // Always populate the AI search/discovery fields on the post — search
+    // recall is a non-safety benefit that runs regardless of the verdict.
+    const searchableParts = [verdict.extracted_text, verdict.suggested_topic]
+      .filter((s): s is string => !!s && s.length > 0);
+    if (searchableParts.length > 0) {
+      postUpdate.ai_searchable_text = searchableParts.join(" ").toLowerCase().slice(0, 4000);
+    }
+    // Only surface the AI category suggestion when we're confident enough to
+    // trust it for recall fallbacks. Never overrides the user's own choice.
+    if (verdict.suggested_master_category && verdict.confidence >= 0.7) {
+      postUpdate.ai_suggested_main_category_slug = verdict.suggested_master_category;
+    }
+
     if (Object.keys(postUpdate).length > 0) {
       await admin.from("posts").update(postUpdate).eq("id", postId);
     }

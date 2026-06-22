@@ -2523,6 +2523,8 @@ export type Database = {
       }
       posts: {
         Row: {
+          ai_searchable_text: string | null
+          ai_suggested_main_category_slug: string | null
           alt_texts: string[]
           archived_at: string | null
           battle_wins: number
@@ -2579,6 +2581,8 @@ export type Database = {
           vote_count: number
         }
         Insert: {
+          ai_searchable_text?: string | null
+          ai_suggested_main_category_slug?: string | null
           alt_texts?: string[]
           archived_at?: string | null
           battle_wins?: number
@@ -2635,6 +2639,8 @@ export type Database = {
           vote_count?: number
         }
         Update: {
+          ai_searchable_text?: string | null
+          ai_suggested_main_category_slug?: string | null
           alt_texts?: string[]
           archived_at?: string | null
           battle_wins?: number
@@ -4356,6 +4362,8 @@ export type Database = {
       publish_post_idempotent: {
         Args: { p_client_request_id: string; p_payload: Json }
         Returns: {
+          ai_searchable_text: string | null
+          ai_suggested_main_category_slug: string | null
           alt_texts: string[]
           archived_at: string | null
           battle_wins: number
