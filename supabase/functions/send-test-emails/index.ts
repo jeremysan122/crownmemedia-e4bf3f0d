@@ -44,25 +44,21 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, serviceKey)
 
-  // Admin gate via has_role (admin-only)
-  const { data: isAdmin, error: roleErr } = await supabase.rpc('has_role', {
+  // Admin gate via has_role; non-admins can still self-test (forced recipient).
+  const { data: isAdmin } = await supabase.rpc('has_role', {
     _user_id: claims.sub,
     _role: 'admin',
   })
-  if (roleErr || !isAdmin) {
-    return new Response(JSON.stringify({ error: 'Forbidden — admin only' }), {
-      status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
 
-  // Parse optional override recipient (admin can target any address)
+  // Parse optional override recipient (admin-only)
   let overrideRecipient: string | undefined
   try {
     const body = await req.json().catch(() => ({}))
     if (typeof body?.recipientEmail === 'string') overrideRecipient = body.recipientEmail.trim()
   } catch {/* ignore */}
 
-  const recipient = overrideRecipient || (claims.email as string | undefined)
+  // Non-admins are forced to send to themselves only — prevents abuse.
+  const recipient = (isAdmin && overrideRecipient) || (claims.email as string | undefined)
   if (!recipient || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipient)) {
     return new Response(JSON.stringify({ error: 'No usable recipient email on JWT' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
