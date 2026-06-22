@@ -2,10 +2,16 @@
 import * as React from 'npm:react@18.3.1'
 import type { TemplateEntry } from './registry.ts'
 import { CrownMeEmail, SITE_NAME, SITE_URL } from './_layout.tsx'
+import { safeOptionalString, safeParse, z } from './_validate.ts'
 
-interface Props { username?: string; first_name?: string }
+const schema = z.object({
+  username: safeOptionalString(),
+  first_name: safeOptionalString(),
+})
+type Props = z.infer<typeof schema>
 
-const Email = ({ username, first_name }: Props) => {
+const Email = (raw: unknown) => {
+  const { username, first_name } = safeParse(schema, raw)
   const name = first_name || username || 'Royal'
   return (
     <CrownMeEmail
@@ -27,6 +33,7 @@ const Email = ({ username, first_name }: Props) => {
 
 export const template = {
   component: Email,
+  schema,
   subject: `Welcome to ${SITE_NAME} — your reign begins now`,
   displayName: 'Welcome',
   previewData: { username: 'royal_one', first_name: 'Alex' },
