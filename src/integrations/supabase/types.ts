@@ -2321,6 +2321,68 @@ export type Database = {
           },
         ]
       }
+      payment_transactions: {
+        Row: {
+          amount_usd: number | null
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          intent: string
+          metadata: Json
+          provider: string
+          provider_event_id: string | null
+          reference_id: string | null
+          reference_table: string | null
+          shekels_delta: number
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount_usd?: number | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          intent: string
+          metadata?: Json
+          provider: string
+          provider_event_id?: string | null
+          reference_id?: string | null
+          reference_table?: string | null
+          shekels_delta?: number
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount_usd?: number | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          intent?: string
+          metadata?: Json
+          provider?: string
+          provider_event_id?: string | null
+          reference_id?: string | null
+          reference_table?: string | null
+          shekels_delta?: number
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payouts: {
         Row: {
           amount_usd: number
