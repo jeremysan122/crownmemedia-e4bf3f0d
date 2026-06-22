@@ -31,7 +31,7 @@ export default function AcceptBattleDialog({ open, onOpenChange, battle, onResol
     if (!open || !user) return;
     setPostId("");
     const cat = battle?.challenger_post?.category;
-    let q = supabase.from("posts").select("id, image_url, category")
+    let q = supabase.from("posts").select("id, image_url, category, filter")
       .eq("user_id", user.id).eq("is_removed", false)
       .order("created_at", { ascending: false }).limit(24);
     if (cat) q = q.eq("category", cat);
