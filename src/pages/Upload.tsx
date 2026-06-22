@@ -915,10 +915,13 @@ export default function Upload() {
       }
 
       setUploadProgress(100);
+      // The post is live; AI media analysis runs in the background. Reflect
+      // that in the success label so users know review may still mark the
+      // post sensitive or send it to pending_review shortly after publish.
       const statusLabel =
-        publishStatus === "approved" ? "Published!" :
+        publishStatus === "approved" ? "Published! Analyzing media in background…" :
         publishStatus === "rejected" ? "Rejected" :
-        publishStatus === "pending_review" ? "In review" :
+        publishStatus === "pending_review" ? "Post is being reviewed" :
         wasExisting ? "Already published" :
         "Published!";
       setUploadStage(statusLabel);
