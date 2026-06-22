@@ -246,22 +246,22 @@ function resolveHref(href: string | undefined, context: CrownMeExactEmailContext
   const siteUrl = context.siteUrl || "https://crownmemedia.com";
 
   return href
-    .replaceAll("{{ post_url }}", context.postUrl || `${siteUrl}/post`)
-    .replaceAll("{{ battle_url }}", context.battleUrl || `${siteUrl}/battles`)
-    .replaceAll("{{ battle_result_url }}", context.battleResultUrl || context.battleUrl || `${siteUrl}/battles`)
-    .replaceAll("{{ crown_url }}", context.crownUrl || context.postUrl || `${siteUrl}/leaderboard`)
-    .replaceAll("{{ leaderboard_url }}", context.leaderboardUrl || `${siteUrl}/leaderboard`)
-    .replaceAll("{{ gift_url }}", context.giftUrl || context.walletUrl || `${siteUrl}/wallet`)
-    .replaceAll("{{ receipt_url }}", context.receiptUrl || context.walletUrl || `${siteUrl}/wallet`);
+    .replace(/\{\{ post_url \}\}/g, context.postUrl || `${siteUrl}/post`)
+    .replace(/\{\{ battle_url \}\}/g, context.battleUrl || `${siteUrl}/battles`)
+    .replace(/\{\{ battle_result_url \}\}/g, context.battleResultUrl || context.battleUrl || `${siteUrl}/battles`)
+    .replace(/\{\{ crown_url \}\}/g, context.crownUrl || context.postUrl || `${siteUrl}/leaderboard`)
+    .replace(/\{\{ leaderboard_url \}\}/g, context.leaderboardUrl || `${siteUrl}/leaderboard`)
+    .replace(/\{\{ gift_url \}\}/g, context.giftUrl || context.walletUrl || `${siteUrl}/wallet`)
+    .replace(/\{\{ receipt_url \}\}/g, context.receiptUrl || context.walletUrl || `${siteUrl}/wallet`);
 }
 
 function escapeHtml(value: string) {
   return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 export function renderCrownMeExactEmail(
