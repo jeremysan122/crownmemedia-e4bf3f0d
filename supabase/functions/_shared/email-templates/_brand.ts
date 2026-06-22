@@ -11,6 +11,18 @@ export const brand = {
   borderGold: '#E7C04A',
 }
 
+export const HERO_BASE = 'https://crownmemedia.com/email'
+
+export const heroImg = {
+  display: 'block',
+  width: '100%',
+  maxWidth: '560px',
+  height: 'auto',
+  border: '0',
+  outline: 'none',
+  textDecoration: 'none',
+} as const
+
 export const styles = {
   main: {
     backgroundColor: '#ffffff',

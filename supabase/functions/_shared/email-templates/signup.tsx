@@ -9,12 +9,13 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Link,
   Preview,
   Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
-import { styles } from './_brand.ts'
+import { HERO_BASE, heroImg, styles } from './_brand.ts'
 
 interface SignupEmailProps {
   siteName: string
@@ -34,9 +35,15 @@ export const SignupEmail = ({
     <Preview>Claim your throne — confirm your CrownMe email 👑</Preview>
     <Body style={styles.main}>
       <Container style={styles.container}>
-        <Section style={styles.header}>
-          <Text style={styles.brandText}>👑 CrownMe</Text>
-          <Text style={styles.brandTag}>Where Legends Reign</Text>
+        <Section style={{ padding: 0, margin: 0 }}>
+          <Link href={confirmationUrl}>
+            <Img
+              src={`${HERO_BASE}/crownme-confirm-signup-full-design.png`}
+              alt="CrownMe — Where Legends Reign"
+              width="560"
+              style={heroImg}
+            />
+          </Link>
         </Section>
         <Section style={styles.body}>
           <Heading style={styles.h1}>Claim your throne, royal.</Heading>
