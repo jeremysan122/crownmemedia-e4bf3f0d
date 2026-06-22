@@ -598,7 +598,13 @@ export default function Battles() {
           }`}
         >
           {post?.image_url
-            ? <img loading="lazy" src={post.image_url} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+            ? <img
+                loading="lazy"
+                src={post.image_url}
+                alt=""
+                className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                style={{ filter: cssFor(isValidFilter(post?.filter ?? null) ? (post.filter as FilterId) : null) }}
+              />
             : <div className="w-full h-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground">Awaiting post</div>}
 
           {won && <WinnerReveal margin={parseFloat(margin)} side={side} fresh={fresh} />}
