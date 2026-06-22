@@ -81,6 +81,41 @@ describe("AI media analysis → post update decision", () => {
     const u = decidePostUpdate({ safety_status: "sensitive", reason: long });
     expect((u.sensitive_reason as string).length).toBeLessThanOrEqual(120);
   });
+
+  it("writes OCR + topic to ai_searchable_text in lowercase, even for safe verdicts", () => {
+    const u = decidePostUpdate({
+      safety_status: "safe",
+      extracted_text: "Visit MyShop.COM for Deals",
+      suggested_topic: "Streetwear Drop",
+    });
+    expect(u.ai_searchable_text).toBe("visit myshop.com for deals streetwear drop");
+    // Search recall is independent of the safety branch — safe posts still get indexed.
+    expect(u.is_sensitive).toBeUndefined();
+  });
+
+  it("scam/spam OCR text alone does not auto-block, but a needs_review safety verdict routes to pending_review", () => {
+    const u = decidePostUpdate({
+      safety_status: "needs_review",
+      extracted_text: "Send $500 to cashapp $scammer — guaranteed return",
+    });
+    expect(u.moderation_status).toBe("pending_review");
+    expect(u.ai_searchable_text).toContain("cashapp");
+  });
+
+  it("only writes ai_suggested_main_category_slug when confidence >= 0.7", () => {
+    const low = decidePostUpdate({
+      safety_status: "safe",
+      suggested_master_category: "fashion-beauty",
+      confidence: 0.5,
+    });
+    expect(low.ai_suggested_main_category_slug).toBeUndefined();
+    const high = decidePostUpdate({
+      safety_status: "safe",
+      suggested_master_category: "fashion-beauty",
+      confidence: 0.9,
+    });
+    expect(high.ai_suggested_main_category_slug).toBe("fashion-beauty");
+  });
 });
 
 // ─── e2e: anon and authenticated non-admin must not read raw AI rows ───
