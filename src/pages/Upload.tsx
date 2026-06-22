@@ -821,7 +821,7 @@ export default function Upload() {
       // open on infra errors so users aren't blocked by transient gateway issues.
       const toModerate = imageUrls.filter(Boolean).slice(0, 6);
       if (toModerate.length > 0) {
-        setUploadStage("Checking content safety…");
+        setUploadStage("Reviewing media safety…");
         try {
           const { data: verdict, error: modErr } = await supabase.functions.invoke("moderate-media", {
             body: { image_urls: toModerate },
