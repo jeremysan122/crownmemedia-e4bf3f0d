@@ -4609,6 +4609,7 @@ export type Database = {
         Args: { p_change_type: string; p_max_per_hour?: number }
         Returns: boolean
       }
+      prune_logs_retention: { Args: never; Returns: Json }
       prune_rank_snapshots: { Args: never; Returns: undefined }
       publish_post_idempotent: {
         Args: { p_client_request_id: string; p_payload: Json }
