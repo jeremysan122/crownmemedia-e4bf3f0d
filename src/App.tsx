@@ -61,6 +61,7 @@ const AdminRewards = lazy(() => import("./pages/AdminRewards"));
 const AdminBroadcast = lazy(() => import("./pages/AdminBroadcast"));
 const Verification = lazy(() => import("./pages/Verification"));
 const AdminVerification = lazy(() => import("./pages/AdminVerification"));
+const EmailTemplatePreview = lazy(() => import("./pages/EmailTemplatePreview"));
 
 // Lazy: admin (heavy, rarely used by regular users)
 const Admin = lazy(() => import("./pages/Admin"));
@@ -149,6 +150,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
+              <Route path="/email-template-preview" element={<EmailTemplatePreview />} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
               <Route path="/legal" element={<LegalCenter />} />
               <Route path="/terms" element={<TermsOfService />} />
