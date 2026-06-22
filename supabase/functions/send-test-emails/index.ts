@@ -10,8 +10,8 @@ import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
 import { safeParse } from '../_shared/transactional-email-templates/_validate.ts'
 
 const SITE_NAME = 'crownmemedia'
-const SENDER_DOMAIN = 'support.crownmemedia.com'
-const FROM_DOMAIN = 'support.crownmemedia.com'
+const SENDER_DOMAIN = 'notify.crownmemedia.com'
+const FROM_DOMAIN = 'notify.crownmemedia.com'
 
 function generateToken(): string {
   const bytes = new Uint8Array(32)
