@@ -37,6 +37,25 @@ type AuditRow = {
   details: any;
   created_at: string;
 };
+type AiAnalysisRow = {
+  id: string;
+  analysis_status: string;
+  safety_status: string;
+  confidence_score: number | null;
+  suggested_master_category: string | null;
+  suggested_topic: string | null;
+  safety_flags: Record<string, boolean> | null;
+  text_flags: Record<string, boolean> | null;
+  extracted_text: string | null;
+  detected_language: string | null;
+  moderation_reason: string | null;
+  error_message: string | null;
+  model_name: string | null;
+  duration_ms: number | null;
+  retry_count: number | null;
+  created_at: string;
+  updated_at: string;
+};
 
 export default function CommandCenterContent() {
   const [queue, setQueue] = useState<any[]>([]);
