@@ -149,10 +149,20 @@ export default function CommandCenterContent() {
     setHistory((h) => ({ ...h, [postId]: (data ?? []) as AuditRow[] }));
   };
 
+  const loadAi = async (postId: string) => {
+    const { data } = await (supabase as any)
+      .from("post_media_ai_analysis")
+      .select("id,analysis_status,safety_status,confidence_score,suggested_master_category,suggested_topic,safety_flags,text_flags,extracted_text,detected_language,moderation_reason,error_message,model_name,duration_ms,retry_count,created_at,updated_at")
+      .eq("post_id", postId)
+      .maybeSingle();
+    setAi((a) => ({ ...a, [postId]: (data ?? null) as AiAnalysisRow | null }));
+  };
+
   const toggleExpand = async (id: string) => {
     if (expanded === id) { setExpanded(null); return; }
     setExpanded(id);
     if (!history[id]) await loadHistory(id);
+    if (!(id in ai)) await loadAi(id);
   };
 
   const act = async (item: any, action: "remove" | "dismiss") => {
