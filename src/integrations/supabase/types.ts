@@ -1153,6 +1153,56 @@ export type Database = {
         }
         Relationships: []
       }
+      crown_map_points: {
+        Row: {
+          category: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          metadata: Json
+          rank: number | null
+          refreshed_at: string
+          region_name: string | null
+          region_type: string
+          score: number
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          metadata?: Json
+          rank?: number | null
+          refreshed_at?: string
+          region_name?: string | null
+          region_type: string
+          score?: number
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          metadata?: Json
+          rank?: number | null
+          refreshed_at?: string
+          region_name?: string | null
+          region_type?: string
+          score?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crown_map_points_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crowns: {
         Row: {
           active: boolean
@@ -1365,6 +1415,108 @@ export type Database = {
           wal_size_bytes?: number
         }
         Relationships: []
+      }
+      dm_thread_members: {
+        Row: {
+          archived: boolean
+          created_at: string
+          last_read_at: string | null
+          muted: boolean
+          pinned: boolean
+          thread_id: string
+          unread_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          last_read_at?: string | null
+          muted?: boolean
+          pinned?: boolean
+          thread_id: string
+          unread_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          last_read_at?: string | null
+          muted?: boolean
+          pinned?: boolean
+          thread_id?: string
+          unread_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dm_thread_members_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "dm_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dm_thread_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dm_threads: {
+        Row: {
+          created_at: string
+          gift_count: number
+          id: string
+          last_message_at: string | null
+          last_message_id: string | null
+          last_message_preview: string | null
+          updated_at: string
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          created_at?: string
+          gift_count?: number
+          id?: string
+          last_message_at?: string | null
+          last_message_id?: string | null
+          last_message_preview?: string | null
+          updated_at?: string
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          created_at?: string
+          gift_count?: number
+          id?: string
+          last_message_at?: string | null
+          last_message_id?: string | null
+          last_message_preview?: string | null
+          updated_at?: string
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dm_threads_user_a_fkey"
+            columns: ["user_a"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dm_threads_user_b_fkey"
+            columns: ["user_b"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_send_log: {
         Row: {
@@ -1890,6 +2042,7 @@ export type Database = {
           sender_id: string
           shared_post_id: string | null
           shared_profile_id: string | null
+          thread_id: string | null
         }
         Insert: {
           attachment_name?: string | null
@@ -1908,6 +2061,7 @@ export type Database = {
           sender_id: string
           shared_post_id?: string | null
           shared_profile_id?: string | null
+          thread_id?: string | null
         }
         Update: {
           attachment_name?: string | null
@@ -1926,6 +2080,7 @@ export type Database = {
           sender_id?: string
           shared_post_id?: string | null
           shared_profile_id?: string | null
+          thread_id?: string | null
         }
         Relationships: [
           {
@@ -1968,6 +2123,13 @@ export type Database = {
             columns: ["shared_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "dm_threads"
             referencedColumns: ["id"]
           },
         ]
@@ -2209,6 +2371,68 @@ export type Database = {
           },
         ]
       }
+      payment_transactions: {
+        Row: {
+          amount_usd: number | null
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          intent: string
+          metadata: Json
+          provider: string
+          provider_event_id: string | null
+          reference_id: string | null
+          reference_table: string | null
+          shekels_delta: number
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount_usd?: number | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          intent: string
+          metadata?: Json
+          provider: string
+          provider_event_id?: string | null
+          reference_id?: string | null
+          reference_table?: string | null
+          shekels_delta?: number
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount_usd?: number | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          intent?: string
+          metadata?: Json
+          provider?: string
+          provider_event_id?: string | null
+          reference_id?: string | null
+          reference_table?: string | null
+          shekels_delta?: number
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payouts: {
         Row: {
           amount_usd: number
@@ -2428,6 +2652,83 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "post_edits_audit_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_media: {
+        Row: {
+          alt_text: string | null
+          blurhash: string | null
+          bytes: number | null
+          created_at: string
+          deleted_at: string | null
+          duration_ms: number | null
+          height: number | null
+          id: string
+          is_sensitive: boolean
+          kind: string
+          mime_type: string | null
+          moderation_status: string
+          position: number
+          post_id: string
+          public_url: string | null
+          safe_variant_path: string | null
+          storage_bucket: string
+          storage_path: string
+          updated_at: string
+          width: number | null
+        }
+        Insert: {
+          alt_text?: string | null
+          blurhash?: string | null
+          bytes?: number | null
+          created_at?: string
+          deleted_at?: string | null
+          duration_ms?: number | null
+          height?: number | null
+          id?: string
+          is_sensitive?: boolean
+          kind: string
+          mime_type?: string | null
+          moderation_status?: string
+          position?: number
+          post_id: string
+          public_url?: string | null
+          safe_variant_path?: string | null
+          storage_bucket?: string
+          storage_path: string
+          updated_at?: string
+          width?: number | null
+        }
+        Update: {
+          alt_text?: string | null
+          blurhash?: string | null
+          bytes?: number | null
+          created_at?: string
+          deleted_at?: string | null
+          duration_ms?: number | null
+          height?: number | null
+          id?: string
+          is_sensitive?: boolean
+          kind?: string
+          mime_type?: string | null
+          moderation_status?: string
+          position?: number
+          post_id?: string
+          public_url?: string | null
+          safe_variant_path?: string | null
+          storage_bucket?: string
+          storage_path?: string
+          updated_at?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_media_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
@@ -3396,6 +3697,83 @@ export type Database = {
         }
         Relationships: []
       }
+      share_cards: {
+        Row: {
+          created_at: string
+          generated_at: string
+          id: string
+          image_path: string
+          invalidated_at: string | null
+          is_sensitive_safe: boolean
+          metadata: Json
+          target_id: string
+          target_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          image_path: string
+          invalidated_at?: string | null
+          is_sensitive_safe?: boolean
+          metadata?: Json
+          target_id: string
+          target_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          image_path?: string
+          invalidated_at?: string | null
+          is_sensitive_safe?: boolean
+          metadata?: Json
+          target_id?: string
+          target_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      share_events: {
+        Row: {
+          channel: string
+          created_at: string
+          id: string
+          metadata: Json
+          sharer_user_id: string | null
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          sharer_user_id?: string | null
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          sharer_user_id?: string | null
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_events_sharer_user_id_fkey"
+            columns: ["sharer_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shekel_bundles: {
         Row: {
           active: boolean
@@ -4358,6 +4736,7 @@ export type Database = {
         Args: { p_change_type: string; p_max_per_hour?: number }
         Returns: boolean
       }
+      prune_logs_retention: { Args: never; Returns: Json }
       prune_rank_snapshots: { Args: never; Returns: undefined }
       publish_post_idempotent: {
         Args: { p_client_request_id: string; p_payload: Json }
