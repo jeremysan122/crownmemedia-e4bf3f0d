@@ -23,6 +23,8 @@ project_id = "bailrqskqpmzvsgivhvm"
     verify_jwt = false
   [functions.moderate-media]
     verify_jwt = true
+  [functions.analyze-post-media]
+    verify_jwt = true
   [functions.web-push-public-key]
     verify_jwt = false
   [functions.send-web-push]
