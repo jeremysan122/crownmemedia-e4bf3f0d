@@ -12,7 +12,14 @@ import { createClient } from "@supabase/supabase-js";
 type Status = "safe" | "sensitive" | "blocked" | "needs_review";
 
 // Mirror of the post-update branch in analyze-post-media/index.ts.
-function decidePostUpdate(verdict: { safety_status: Status; reason?: string }): Record<string, unknown> {
+function decidePostUpdate(verdict: {
+  safety_status: Status;
+  reason?: string;
+  extracted_text?: string;
+  suggested_topic?: string | null;
+  suggested_master_category?: string | null;
+  confidence?: number;
+}): Record<string, unknown> {
   const update: Record<string, unknown> = {};
   const reason = (verdict.reason ?? "").slice(0, 120);
   if (verdict.safety_status === "blocked") {
@@ -26,6 +33,11 @@ function decidePostUpdate(verdict: { safety_status: Status; reason?: string }): 
     update.content_rating = "suggestive";
   } else if (verdict.safety_status === "needs_review") {
     update.moderation_status = "pending_review";
+  }
+  const parts = [verdict.extracted_text, verdict.suggested_topic].filter((s): s is string => !!s && s.length > 0);
+  if (parts.length > 0) update.ai_searchable_text = parts.join(" ").toLowerCase().slice(0, 4000);
+  if (verdict.suggested_master_category && (verdict.confidence ?? 0) >= 0.7) {
+    update.ai_suggested_main_category_slug = verdict.suggested_master_category;
   }
   return update;
 }
