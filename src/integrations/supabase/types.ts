@@ -1153,6 +1153,56 @@ export type Database = {
         }
         Relationships: []
       }
+      crown_map_points: {
+        Row: {
+          category: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          metadata: Json
+          rank: number | null
+          refreshed_at: string
+          region_name: string | null
+          region_type: string
+          score: number
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          metadata?: Json
+          rank?: number | null
+          refreshed_at?: string
+          region_name?: string | null
+          region_type: string
+          score?: number
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          metadata?: Json
+          rank?: number | null
+          refreshed_at?: string
+          region_name?: string | null
+          region_type?: string
+          score?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crown_map_points_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crowns: {
         Row: {
           active: boolean
@@ -3646,6 +3696,83 @@ export type Database = {
           user_statement?: string
         }
         Relationships: []
+      }
+      share_cards: {
+        Row: {
+          created_at: string
+          generated_at: string
+          id: string
+          image_path: string
+          invalidated_at: string | null
+          is_sensitive_safe: boolean
+          metadata: Json
+          target_id: string
+          target_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          image_path: string
+          invalidated_at?: string | null
+          is_sensitive_safe?: boolean
+          metadata?: Json
+          target_id: string
+          target_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          image_path?: string
+          invalidated_at?: string | null
+          is_sensitive_safe?: boolean
+          metadata?: Json
+          target_id?: string
+          target_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      share_events: {
+        Row: {
+          channel: string
+          created_at: string
+          id: string
+          metadata: Json
+          sharer_user_id: string | null
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          sharer_user_id?: string | null
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          sharer_user_id?: string | null
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_events_sharer_user_id_fkey"
+            columns: ["sharer_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shekel_bundles: {
         Row: {
