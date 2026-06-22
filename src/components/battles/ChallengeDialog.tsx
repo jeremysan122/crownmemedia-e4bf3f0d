@@ -139,13 +139,19 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
               {myPosts.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-4 text-center">No posts yet — upload one first.</p>
               ) : (
-                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
                   {myPosts.map((p) => (
                     <button type="button" key={p.id} onClick={() => { setPostId(p.id); setCategory(p.category); }}
                       className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
                         postId === p.id ? "border-primary gold-shadow" : "border-transparent opacity-70 hover:opacity-100"
                       }`}>
-                      <img loading="lazy" src={p.image_url} alt="" className="w-full h-full object-cover" />
+                      <img
+                        loading="lazy"
+                        src={p.image_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        style={{ filter: cssFor(isValidFilter(p.filter ?? null) ? (p.filter as FilterId) : null) }}
+                      />
                     </button>
                   ))}
                 </div>
