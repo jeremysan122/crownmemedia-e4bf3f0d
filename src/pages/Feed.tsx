@@ -755,7 +755,7 @@ export default function Feed() {
 
         {/* New posts pill */}
         {newPosts.length > 0 && (
-          <div className="sticky top-12 z-30 flex justify-center pt-2 pointer-events-none">
+          <div className="sticky top-[112px] z-30 flex justify-center pt-2 pointer-events-none">
             <button
               onClick={showNewPosts}
               aria-live="polite"
