@@ -142,6 +142,7 @@ describe("sessionStorage persistence (tab/cursor/scroll restore)", () => {
       pending: { rows: [], cursor: null, exhausted: true },
       mine: { rows: [{ id: "m1" }, { id: "m2" }], cursor: null, exhausted: true },
       done: { rows: [], cursor: null, exhausted: false },
+      declined: { rows: [], cursor: null, exhausted: false },
     },
     scrollY: 420,
   });
