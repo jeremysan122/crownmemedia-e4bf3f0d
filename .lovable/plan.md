@@ -1,78 +1,51 @@
-# Instagram-style Restructure: Posts, Scrolls & Edit
+## What's already done (this turn)
 
-Mirror Instagram's structure and gestures across create, feed, scrolls, and edit — keeping CrownMe's gold/crown branding, existing data model (`posts` table with `content_type`), and current edit permissions (media still replaceable).
+- Battle cards on the Battles page now render the post's saved filter (`posts.filter`) instead of raw image.
+- Challenge dialog post-picker shows filtered thumbnails and no longer clips a row of tiles (`max-h-48` → `max-h-72`), so the 4th tile no longer appears to "overlap" the row above.
+- Accept Battle dialog shows filtered thumbnails for the challenger's post, your selected post, and every option in the grid.
 
-## 1. Unified Create Sheet (single `+` entry)
+## What's left to do
 
-Replace the current Upload page entry with a single `+` button in the bottom nav that opens a full-height bottom sheet:
+### 1. Battles tabs — redefine semantics
 
-- **Tabs at top:** `Post` · `Scroll` (Story-style omitted per scope).
-- **Step 1 — Library/Camera:** grid of recent device images, large preview on top (IG-classic). Multi-select toggle for carousel (Post only, up to 10). Scroll tab forces single video, 9:16, ≤30s.
-- **Step 2 — Crop/Aspect:** pinch + drag crop. Post: 1:1 / 4:5 / Original. Scroll: locked 9:16.
-- **Step 3 — Filter & Adjust:** horizontal filter strip (reuses existing `FilterPicker` + `cssFor`). Per-photo filter for carousels.
-- **Step 4 — Details:** caption (500), location (city/state/country, required), category (CrownMe-specific — kept), alt text per photo, advanced (comments on/off, hide vote count). "Share" CTA in top-right.
-- Persists to existing `post_drafts` so resume works across steps.
+Update `src/lib/battlesPagination.ts`:
 
-Routing: `/create` becomes the sheet host; old `/upload` redirects.
+- Add `declined` to `TabKey` and `TAB_KEYS`.
+- Rewrite `tabPredicate`:
+  - `active` — any battle with `status='active'` and not yet ended (platform-wide, no viewer scope).
+  - `pending` — viewer's own battles where `status='pending'`.
+  - `mine` — viewer's own battles where `status='active'` and not ended.
+  - `done` (Past) — viewer's own battles that have ended (winner decided OR `ends_at` passed).
+  - `declined` — viewer's own battles where `status in ('declined','cancelled')`.
 
-## 2. Post Viewer (Feed Card — IG-faithful)
+Update `src/pages/Battles.tsx`:
 
-Rebuild `PostCard` to match IG anatomy:
+- Add `declined` to all per-tab state maps (`tabLoading`, `tabError`, `inFlightLoad`).
+- Add `<TabsTrigger value="declined">Declined</TabsTrigger>` next to Past. Switch the `TabsList` grid from `grid-cols-4` to `grid-cols-5`.
+- Change `fetchPage` so `forTab === 'active'` runs a platform-wide query (no `challenger_id/opponent_id` viewer filter, plus a server-side `status='active'` filter) while the other four tabs keep the existing viewer-scoped query.
+- Keep the same keyset cursor shape — both query shapes are ordered by `(created_at DESC, id DESC)` so the pagination helpers stay untouched.
+- Render the same `<TabsContent>` block for Declined as Past, with empty-state copy "No declined or canceled battles."
 
-- Header row: avatar · username · • · location · `…` menu.
-- Media: square/4:5, full-bleed within card. Swipeable carousel with dot indicator + index badge `1/4`. Double-tap = vote (CrownMe's "crown" reaction with gold heart-burst animation).
-- Action row: Crown (like), Comment, Share-to-DM, Battle (replaces IG's "remix"), Bookmark right-aligned.
-- Vote count line: "Crowned by @x and 1,234 others".
-- Caption: username + caption, truncated to 2 lines with "more".
-- Comments preview: "View all 42 comments" + latest 1.
-- Timestamp small caps.
+### 2. Feed — sticky header + sensitivity blur
 
-## 3. Scrolls Viewer (Reels-faithful)
+`src/pages/Feed.tsx`:
 
-Rebuild `Shorts.tsx` page:
+- Bump the inner Tabs strip from `sticky top-0 z-20` to sit below the AppShell header (`sticky top-[56px] z-30` on mobile, `top-0` on lg+) so the global header doesn't cover or get covered by it.
+- Add `pt-2` spacing above the first post so a sensitivity-blurred first card doesn't visually merge into the translucent header.
 
-- Full-screen vertical pager with snap scrolling (CSS `scroll-snap-type: y mandatory`), one Scroll per viewport.
-- Right action rail: avatar+follow, Crown, Comment, Share, Battle, More.
-- Bottom overlay: username · follow chip · caption (expandable) · audio/author row · category chip.
-- Auto-play visible video, pause off-screen; tap to mute/unmute; progress bar at top.
-- Preserves existing vote/comment/share RPCs.
+`src/components/AppShell.tsx`:
 
-## 4. Edit Post (kept permissive per your choice)
+- Strengthen the mobile header backdrop so a sensitive post's purple blur doesn't bleed through as a flat band. Replace `glass` with `bg-background/85 backdrop-blur-md` on the mobile header (keeps the frosted feel while removing the see-through purple band the user circled).
 
-Restyle `EditPostDialog` into an IG-style "Edit info" screen but keep current capabilities (cover replace, carousel reorder, filter change, caption, category, location, alt text). Visual: full-screen sheet on mobile, two-column on desktop, segmented sections, gold "Save" in header. No backend changes.
+`src/components/PostCard.tsx`:
 
-## 5. Branding
+- The blurred sensitive backdrop already lives inside an `overflow-hidden` image container, so it's already card-bounded. No change needed beyond the header opacity above.
 
-IG-faithful spacing/iconography but CrownMe palette: gold accent for active states, crown icon replaces heart for likes, dark surfaces preserved. No font swap — keep existing CrownMe type.
+### 3. Tests
 
-## Technical Details
+- Update `src/lib/__tests__/battlesPagination.test.ts` (if it exists) — extend the `tabPredicate` cases to cover the new semantics (active=platform-wide, declined=own declined/cancelled) and the new tab key.
 
-**New / changed files**
-- `src/components/create/CreateSheet.tsx` (new) — sheet host with tab + step state machine.
-- `src/components/create/steps/{LibraryStep,CropStep,FilterStep,DetailsStep}.tsx` (new).
-- `src/components/feed/PostCard.tsx` — rewrite to IG anatomy; keep existing props/handlers.
-- `src/components/feed/PostCarousel.tsx` (new) — swipeable with dots, double-tap detector.
-- `src/pages/Shorts.tsx` — rewrite to snap pager + action rail (`ScrollPlayer`, `ScrollActionRail`).
-- `src/components/EditPostDialog.tsx` — restyle only; logic unchanged.
-- `src/components/nav/BottomNav.tsx` — replace upload link with `+` opening `CreateSheet`.
-- `src/App.tsx` — `/upload` → redirect to `/`+sheet; keep `/p/:id`, `/scroll/:id` deep links.
+## Out of scope
 
-**Data model**
-- No schema changes. Uses existing `posts.content_type`, `image_urls`, `alt_texts`, `filter`, `category`, `city/state/country`, `post_drafts`.
-- Existing RPCs (vote, share, battle, bookmark) reused.
-
-**Gestures**
-- Carousel + double-tap: lightweight pointer handlers (no new lib).
-- Scrolls pager: native CSS scroll-snap + IntersectionObserver for play/pause.
-
-**Out of scope**
-- Stories, Notes, Reels remix/audio library, collab posts, tagging users (separate follow-up if wanted).
-- No DB migration. No edit-lock change.
-
-## Rollout
-
-1. Create sheet + new routes (behind no flag — replaces current upload UI).
-2. PostCard rewrite (drop-in).
-3. Shorts rewrite.
-4. EditPostDialog restyle.
-5. Smoke test: create post (single + carousel), create Scroll, edit, vote, share-to-DM, battle.
+- Realtime subscription for the platform-wide Active feed is left as-is (filtered on the client by `tabPredicate`); a follow-up can move to a server-side filtered channel if needed.
+- No schema changes required.
