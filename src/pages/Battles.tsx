@@ -218,9 +218,9 @@ export default function Battles() {
         [forTab]: { rows: workingRows, cursor, exhausted },
       }));
 
-      // Hydrate votes for newly-loaded battles only.
+      // Hydrate votes for newly-loaded battles only (requires a session).
       const newIds = workingRows.slice(opts.reset ? 0 : perTab[forTab].rows.length).map((b) => b.id);
-      if (newIds.length) {
+      if (user && newIds.length) {
         const { data: votes } = await supabase
           .from("battle_votes")
           .select("battle_id, voted_for_user_id")
