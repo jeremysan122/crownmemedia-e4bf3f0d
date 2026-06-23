@@ -630,7 +630,7 @@ export default function Feed() {
           </div>
         )}
 
-        <div className="sticky top-0 z-20 -mx-3 lg:mx-0 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="sticky top-[56px] lg:top-0 z-30 -mx-3 lg:mx-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border/40 lg:border-0">
           <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="px-3 lg:px-0 pt-2 lg:pt-0">
             <TabsList className="w-full grid grid-cols-5 bg-muted/40 lg:h-11">
               <TabsTrigger value="nearby" className="text-xs lg:text-sm">Nearby</TabsTrigger>
@@ -755,7 +755,7 @@ export default function Feed() {
 
         {/* New posts pill */}
         {newPosts.length > 0 && (
-          <div className="sticky top-12 z-30 flex justify-center pt-2 pointer-events-none">
+          <div className="sticky top-[112px] z-30 flex justify-center pt-2 pointer-events-none">
             <button
               onClick={showNewPosts}
               aria-live="polite"

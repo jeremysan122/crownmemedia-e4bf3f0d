@@ -25,8 +25,8 @@
 
 import { deriveBattleStatus, type BattleLike } from "./battlesLogic";
 
-export type TabKey = "active" | "pending" | "mine" | "done";
-export const TAB_KEYS: ReadonlyArray<TabKey> = ["active", "pending", "mine", "done"];
+export type TabKey = "active" | "pending" | "mine" | "done" | "declined";
+export const TAB_KEYS: ReadonlyArray<TabKey> = ["active", "pending", "mine", "done", "declined"];
 export const PAGE_SIZE = 20;
 export const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 /** SessionStorage entries older than this are treated as stale and refetched. */
@@ -53,20 +53,21 @@ export function tabPredicate(
   viewerId: string | null,
   nowMs: number = Date.now(),
 ): boolean {
-  if (!viewerId) return false;
-  const isMine = b.challenger_id === viewerId || b.opponent_id === viewerId;
-  if (!isMine) return false;
+  const isMine = !!viewerId && (b.challenger_id === viewerId || b.opponent_id === viewerId);
   const ended = deriveBattleStatus(b, nowMs) === "ended";
-  const age = nowMs - battleTimeMs(b);
+  const isDeclined = b.status === "declined" || b.status === "cancelled" || b.status === "canceled";
   switch (tab) {
     case "active":
-      return b.status === "active" && !ended;
+      // Platform-wide: any live battle, regardless of viewer.
+      return b.status === "active" && !ended && !isDeclined;
     case "pending":
-      return b.status === "pending";
+      return isMine && b.status === "pending";
     case "mine":
-      return age <= THIRTY_DAYS_MS;
+      return isMine && b.status === "active" && !ended;
     case "done":
-      return ended && age > THIRTY_DAYS_MS;
+      return isMine && ended && !isDeclined;
+    case "declined":
+      return isMine && isDeclined;
   }
 }
 
@@ -170,5 +171,6 @@ export function emptyPerTab<TRow>(): Record<TabKey, PersistedTabState<TRow>> {
     pending: { rows: [], cursor: null, exhausted: false },
     mine: { rows: [], cursor: null, exhausted: false },
     done: { rows: [], cursor: null, exhausted: false },
+    declined: { rows: [], cursor: null, exhausted: false },
   };
 }

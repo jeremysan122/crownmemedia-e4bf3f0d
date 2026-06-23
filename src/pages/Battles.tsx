@@ -111,10 +111,10 @@ export default function Battles() {
 
   // ---- Per-tab pagination state (stable keyset cursor) ----
   const [perTab, setPerTab] = useState<Record<TabKey, PersistedTabState<Battle>>>(() => emptyPerTab<Battle>());
-  const [tabLoading, setTabLoading] = useState<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false });
-  const [tabError, setTabError] = useState<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false });
+  const [tabLoading, setTabLoading] = useState<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false, declined: false });
+  const [tabError, setTabError] = useState<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false, declined: false });
   // Tracks in-flight load() calls per tab so rapid double-clicks coalesce instead of duplicating fetches.
-  const inFlightLoad = useRef<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false });
+  const inFlightLoad = useRef<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false, declined: false });
   const [initialHydrating, setInitialHydrating] = useState(true);
   const restoredRef = useRef(false);
 
@@ -142,23 +142,28 @@ export default function Battles() {
   }, [user?.id]);
 
   // ---- Fetch one page for a specific tab using its own cursor ----
-  // All four tabs share the same underlying user-scoped server ordering
-  // (`(challenger_id=me OR opponent_id=me) ORDER BY created_at DESC, id DESC`)
-  // but maintain independent cursors so paginating one tab never moves
-  // another tab's pointer. Each fetched row is routed via `tabPredicate`
-  // into the requesting tab; rows that belong to other tabs are discarded
-  // for this call (those tabs fetch their own pages with their own cursor).
+  // The Active tab is platform-wide (any user's live battles), while the
+  // four personal tabs (Pending / Mine / Past / Declined) share a viewer-
+  // scoped query `(challenger_id=me OR opponent_id=me)`. Each tab still
+  // owns its own cursor so paginating one tab never moves another's
+  // pointer.
   const fetchPage = useCallback(async (forTab: TabKey, cursor: BattleCursor | null): Promise<{
     rows: Battle[]; nextCur: BattleCursor | null; exhausted: boolean;
   }> => {
-    if (!user) return { rows: [], nextCur: null, exhausted: true };
+    const isPlatformWide = forTab === "active";
+    if (!isPlatformWide && !user) return { rows: [], nextCur: null, exhausted: true };
     let q = supabase
       .from("battles")
       .select(SELECT_COLS)
-      .or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(PAGE_SIZE);
+    if (isPlatformWide) {
+      // Server-side narrow to active battles so the page is dense.
+      q = q.eq("status", "active");
+    } else if (user) {
+      q = q.or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`);
+    }
     if (cursor) {
       // Strict keyset: created_at < cur.createdAt OR (created_at = cur.createdAt AND id < cur.id)
       q = q.or(
@@ -169,11 +174,14 @@ export default function Battles() {
     if (error) throw error;
     const raw = (data as any[]) || [];
     // Defence-in-depth safety filter — RLS is the source of truth, but we
-    // also drop hidden/removed/declined/cancelled rows and blocked users
-    // before they reach state, even after rehydration from sessionStorage.
-    const safe = raw.filter((b) => isSafeBattleForList(b as any, { blockedIds }));
+    // also drop hidden/removed rows and blocked users before they reach
+    // state, even after rehydration from sessionStorage. For the Declined
+    // tab we deliberately keep declined/cancelled rows.
+    const safety = forTab === "declined"
+      ? raw.filter((b) => !blockedIds.has(b.challenger_id) && !blockedIds.has(b.opponent_id))
+      : raw.filter((b) => isSafeBattleForList(b as any, { blockedIds }));
     const nowMs = Date.now();
-    const matched = safe.filter((b) => tabPredicate(forTab, b as any, user.id, nowMs)) as Battle[];
+    const matched = safety.filter((b) => tabPredicate(forTab, b as any, user?.id ?? null, nowMs)) as Battle[];
     const cur = nextCursor(raw, PAGE_SIZE);
     return { rows: matched, nextCur: cur, exhausted: cur === null };
   }, [user?.id, blockedIds]);
@@ -183,7 +191,9 @@ export default function Battles() {
   // nothing on the first page (so users don't see an idle Load More button
   // that "did nothing" when most of their battles are e.g. all Past).
   const loadTab = useCallback(async (forTab: TabKey, opts: { reset?: boolean } = {}) => {
-    if (!user) return;
+    // Active is platform-wide so it can load without a session; the four
+    // personal tabs still require a signed-in viewer.
+    if (forTab !== "active" && !user) return;
     if (inFlightLoad.current[forTab]) return;
     inFlightLoad.current[forTab] = true;
     setTabLoading((s) => ({ ...s, [forTab]: true }));
@@ -208,9 +218,9 @@ export default function Battles() {
         [forTab]: { rows: workingRows, cursor, exhausted },
       }));
 
-      // Hydrate votes for newly-loaded battles only.
+      // Hydrate votes for newly-loaded battles only (requires a session).
       const newIds = workingRows.slice(opts.reset ? 0 : perTab[forTab].rows.length).map((b) => b.id);
-      if (newIds.length) {
+      if (user && newIds.length) {
         const { data: votes } = await supabase
           .from("battle_votes")
           .select("battle_id, voted_for_user_id")
@@ -954,7 +964,7 @@ export default function Battles() {
           )}
 
           <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
-            <TabsList className="w-full grid grid-cols-4 h-9">
+            <TabsList className="w-full grid grid-cols-5 h-9">
               <TabsTrigger value="active" className="text-xs">Active</TabsTrigger>
               <TabsTrigger value="pending" className="text-xs relative">
                 Pending
@@ -966,12 +976,13 @@ export default function Battles() {
               </TabsTrigger>
               <TabsTrigger value="mine" className="text-xs">Mine</TabsTrigger>
               <TabsTrigger value="done" className="text-xs">Past</TabsTrigger>
+              <TabsTrigger value="declined" className="text-xs">Declined</TabsTrigger>
             </TabsList>
 
             <TabsContent value="active" className="mt-3">
               <TabBody forTab="active" rows={featured && !query ? activeRows.slice(1) : activeRows} live />
               {!tabLoading.active && !tabError.active && activeRows.length === 0 && (
-                <EmptyState title="No active battles" body="You do not have any active battles right now."
+                <EmptyState title="No active battles" body="No live battles on the platform right now. Start one to break the silence."
                   cta={<Button onClick={() => setChallengeOpen(true)} className="bg-gradient-gold text-primary-foreground gold-shadow"><Swords size={14} /> Start a battle</Button>} />
               )}
             </TabsContent>
@@ -994,7 +1005,7 @@ export default function Battles() {
                 live={(b) => b.status === "active" && !isEnded(b)}
               />
               {!tabLoading.mine && !tabError.mine && perTab.mine.rows.length === 0 && (
-                <EmptyState title="Nothing in the last 30 days" body="You have not joined or created any battles in the last 30 days."
+                <EmptyState title="No active battles of yours" body="You're not currently in any live battles."
                   cta={<Button onClick={() => setChallengeOpen(true)} className="bg-gradient-gold text-primary-foreground gold-shadow"><Swords size={14} /> Challenge a royal</Button>} />
               )}
             </TabsContent>
@@ -1010,7 +1021,22 @@ export default function Battles() {
                 live={false}
               />
               {!tabLoading.done && !tabError.done && perTab.done.rows.length === 0 && (
-                <EmptyState title="No past battles yet" body="Battles older than 30 days will appear here once you have some." />
+                <EmptyState title="No past battles yet" body="Your finished battles will appear here." />
+              )}
+            </TabsContent>
+
+            <TabsContent value="declined" className="mt-3">
+              <TabBody
+                forTab="declined"
+                rows={tab === "declined" ? filteredCurrent.slice().sort((a, b) => {
+                  const ta = a.ends_at ? new Date(a.ends_at).getTime() : new Date(a.created_at).getTime();
+                  const tb = b.ends_at ? new Date(b.ends_at).getTime() : new Date(b.created_at).getTime();
+                  return tb - ta;
+                }) : []}
+                live={false}
+              />
+              {!tabLoading.declined && !tabError.declined && perTab.declined.rows.length === 0 && (
+                <EmptyState title="No declined or canceled battles" body="Battles you decline or cancel will land here." />
               )}
             </TabsContent>
           </Tabs>
