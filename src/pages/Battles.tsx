@@ -191,7 +191,9 @@ export default function Battles() {
   // nothing on the first page (so users don't see an idle Load More button
   // that "did nothing" when most of their battles are e.g. all Past).
   const loadTab = useCallback(async (forTab: TabKey, opts: { reset?: boolean } = {}) => {
-    if (!user) return;
+    // Active is platform-wide so it can load without a session; the four
+    // personal tabs still require a signed-in viewer.
+    if (forTab !== "active" && !user) return;
     if (inFlightLoad.current[forTab]) return;
     inFlightLoad.current[forTab] = true;
     setTabLoading((s) => ({ ...s, [forTab]: true }));
