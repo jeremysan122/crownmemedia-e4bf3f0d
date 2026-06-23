@@ -171,5 +171,6 @@ export function emptyPerTab<TRow>(): Record<TabKey, PersistedTabState<TRow>> {
     pending: { rows: [], cursor: null, exhausted: false },
     mine: { rows: [], cursor: null, exhausted: false },
     done: { rows: [], cursor: null, exhausted: false },
+    declined: { rows: [], cursor: null, exhausted: false },
   };
 }
