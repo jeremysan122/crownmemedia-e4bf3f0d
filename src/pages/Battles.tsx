@@ -111,10 +111,10 @@ export default function Battles() {
 
   // ---- Per-tab pagination state (stable keyset cursor) ----
   const [perTab, setPerTab] = useState<Record<TabKey, PersistedTabState<Battle>>>(() => emptyPerTab<Battle>());
-  const [tabLoading, setTabLoading] = useState<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false });
-  const [tabError, setTabError] = useState<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false });
+  const [tabLoading, setTabLoading] = useState<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false, declined: false });
+  const [tabError, setTabError] = useState<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false, declined: false });
   // Tracks in-flight load() calls per tab so rapid double-clicks coalesce instead of duplicating fetches.
-  const inFlightLoad = useRef<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false });
+  const inFlightLoad = useRef<Record<TabKey, boolean>>({ active: false, pending: false, mine: false, done: false, declined: false });
   const [initialHydrating, setInitialHydrating] = useState(true);
   const restoredRef = useRef(false);
 
