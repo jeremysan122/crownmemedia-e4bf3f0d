@@ -32,25 +32,26 @@ const make = (over: Partial<BattleLike> & { id: string }): BattleLike => ({
 });
 
 describe("tabPredicate", () => {
-  it("rejects battles where viewer is not a participant", () => {
-    const b = make({ id: "x", challenger_id: "a", opponent_id: "b" });
-    expect(tabPredicate("active", b, ME, NOW)).toBe(false);
+  it("Active is platform-wide — non-participants still see live battles", () => {
+    const b = make({ id: "x", challenger_id: "a", opponent_id: "b", status: "active", ends_at: ahead(60_000) });
+    expect(tabPredicate("active", b, ME, NOW)).toBe(true);
+    expect(tabPredicate("active", b, null, NOW)).toBe(true);
+  });
+
+  it("Personal tabs reject battles where viewer is not a participant", () => {
+    const b = make({ id: "x", challenger_id: "a", opponent_id: "b", status: "pending" });
     expect(tabPredicate("pending", b, ME, NOW)).toBe(false);
     expect(tabPredicate("mine", b, ME, NOW)).toBe(false);
     expect(tabPredicate("done", b, ME, NOW)).toBe(false);
+    expect(tabPredicate("declined", b, ME, NOW)).toBe(false);
   });
 
-  it("rejects everything when viewerId is null", () => {
-    const b = make({ id: "x" });
-    expect(tabPredicate("active", b, null, NOW)).toBe(false);
-  });
-
-  it("Active: mine && status=active && not ended", () => {
+  it("Active: status=active && not ended && not declined (platform-wide)", () => {
     expect(tabPredicate("active", make({ id: "a", status: "active", ends_at: ahead(60_000) }), ME, NOW)).toBe(true);
-    // Stale "active" row whose ends_at has passed → counts as ended → not Active.
     expect(tabPredicate("active", make({ id: "a", status: "active", ends_at: ago(60_000) }), ME, NOW)).toBe(false);
     expect(tabPredicate("active", make({ id: "a", status: "pending" }), ME, NOW)).toBe(false);
     expect(tabPredicate("active", make({ id: "a", status: "completed" }), ME, NOW)).toBe(false);
+    expect(tabPredicate("active", make({ id: "a", status: "declined" }), ME, NOW)).toBe(false);
   });
 
   it("Pending: mine && status=pending", () => {
@@ -58,17 +59,25 @@ describe("tabPredicate", () => {
     expect(tabPredicate("pending", make({ id: "a", status: "active" }), ME, NOW)).toBe(false);
   });
 
-  it("Mine: mine && within last 30 days", () => {
-    expect(tabPredicate("mine", make({ id: "a", ends_at: ago(2 * 86_400_000), created_at: ago(2 * 86_400_000) }), ME, NOW)).toBe(true);
-    expect(tabPredicate("mine", make({ id: "a", ends_at: ago(45 * 86_400_000), created_at: ago(45 * 86_400_000) }), ME, NOW)).toBe(false);
+  it("Mine: mine && status=active && not ended (viewer's own live battles)", () => {
+    expect(tabPredicate("mine", make({ id: "a", status: "active", ends_at: ahead(60_000) }), ME, NOW)).toBe(true);
+    expect(tabPredicate("mine", make({ id: "a", status: "active", ends_at: ago(60_000) }), ME, NOW)).toBe(false);
+    expect(tabPredicate("mine", make({ id: "a", status: "pending" }), ME, NOW)).toBe(false);
+    expect(tabPredicate("mine", make({ id: "a", status: "completed" }), ME, NOW)).toBe(false);
   });
 
-  it("Past: mine && ended && older than 30 days", () => {
-    expect(tabPredicate("done", make({ id: "a", status: "completed", ends_at: ago(45 * 86_400_000), created_at: ago(45 * 86_400_000) }), ME, NOW)).toBe(true);
-    // Ended but recent → not Past, belongs in Mine.
-    expect(tabPredicate("done", make({ id: "a", status: "completed", ends_at: ago(2 * 86_400_000), created_at: ago(2 * 86_400_000) }), ME, NOW)).toBe(false);
-    // Old but still active → not Past.
-    expect(tabPredicate("done", make({ id: "a", status: "active", ends_at: ahead(60_000), created_at: ago(45 * 86_400_000) }), ME, NOW)).toBe(false);
+  it("Past: mine && ended (any age)", () => {
+    expect(tabPredicate("done", make({ id: "a", status: "completed", ends_at: ago(2 * 86_400_000) }), ME, NOW)).toBe(true);
+    expect(tabPredicate("done", make({ id: "a", status: "completed", ends_at: ago(45 * 86_400_000) }), ME, NOW)).toBe(true);
+    expect(tabPredicate("done", make({ id: "a", status: "active", ends_at: ahead(60_000) }), ME, NOW)).toBe(false);
+    expect(tabPredicate("done", make({ id: "a", status: "declined" }), ME, NOW)).toBe(false);
+  });
+
+  it("Declined: mine && status in (declined, cancelled)", () => {
+    expect(tabPredicate("declined", make({ id: "a", status: "declined" }), ME, NOW)).toBe(true);
+    expect(tabPredicate("declined", make({ id: "a", status: "cancelled" }), ME, NOW)).toBe(true);
+    expect(tabPredicate("declined", make({ id: "a", status: "canceled" }), ME, NOW)).toBe(true);
+    expect(tabPredicate("declined", make({ id: "a", status: "active" }), ME, NOW)).toBe(false);
   });
 });
 
