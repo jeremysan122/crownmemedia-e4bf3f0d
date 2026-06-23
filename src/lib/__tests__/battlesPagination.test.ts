@@ -243,12 +243,10 @@ describe("end-to-end pagination invariants", () => {
     expect(perTab.done.exhausted).toBe(false);
   });
 
-  it("THIRTY_DAYS_MS boundary: a 30-day-old battle is still Mine, a 30-day-and-1ms battle is Past", () => {
-    const onEdge = make({ id: "edge", status: "completed", ends_at: ago(THIRTY_DAYS_MS), created_at: ago(THIRTY_DAYS_MS) });
-    const justOver = make({ id: "over", status: "completed", ends_at: ago(THIRTY_DAYS_MS + 1), created_at: ago(THIRTY_DAYS_MS + 1) });
-    expect(tabPredicate("mine", onEdge, ME, NOW)).toBe(true);
-    expect(tabPredicate("done", onEdge, ME, NOW)).toBe(false);
-    expect(tabPredicate("mine", justOver, ME, NOW)).toBe(false);
-    expect(tabPredicate("done", justOver, ME, NOW)).toBe(true);
+  it("Past now ignores the 30-day cutoff — any ended battle of mine qualifies", () => {
+    const recentEnded = make({ id: "r", status: "completed", ends_at: ago(60_000), created_at: ago(120_000) });
+    const oldEnded = make({ id: "o", status: "completed", ends_at: ago(THIRTY_DAYS_MS + 1), created_at: ago(THIRTY_DAYS_MS + 1) });
+    expect(tabPredicate("done", recentEnded, ME, NOW)).toBe(true);
+    expect(tabPredicate("done", oldEnded, ME, NOW)).toBe(true);
   });
 });
