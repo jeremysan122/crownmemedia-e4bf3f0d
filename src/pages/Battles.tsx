@@ -964,7 +964,7 @@ export default function Battles() {
           )}
 
           <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
-            <TabsList className="w-full grid grid-cols-4 h-9">
+            <TabsList className="w-full grid grid-cols-5 h-9">
               <TabsTrigger value="active" className="text-xs">Active</TabsTrigger>
               <TabsTrigger value="pending" className="text-xs relative">
                 Pending
@@ -976,6 +976,7 @@ export default function Battles() {
               </TabsTrigger>
               <TabsTrigger value="mine" className="text-xs">Mine</TabsTrigger>
               <TabsTrigger value="done" className="text-xs">Past</TabsTrigger>
+              <TabsTrigger value="declined" className="text-xs">Declined</TabsTrigger>
             </TabsList>
 
             <TabsContent value="active" className="mt-3">
