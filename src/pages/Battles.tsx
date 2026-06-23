@@ -982,7 +982,7 @@ export default function Battles() {
             <TabsContent value="active" className="mt-3">
               <TabBody forTab="active" rows={featured && !query ? activeRows.slice(1) : activeRows} live />
               {!tabLoading.active && !tabError.active && activeRows.length === 0 && (
-                <EmptyState title="No active battles" body="You do not have any active battles right now."
+                <EmptyState title="No active battles" body="No live battles on the platform right now. Start one to break the silence."
                   cta={<Button onClick={() => setChallengeOpen(true)} className="bg-gradient-gold text-primary-foreground gold-shadow"><Swords size={14} /> Start a battle</Button>} />
               )}
             </TabsContent>
