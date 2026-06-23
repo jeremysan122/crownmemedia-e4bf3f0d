@@ -1005,7 +1005,7 @@ export default function Battles() {
                 live={(b) => b.status === "active" && !isEnded(b)}
               />
               {!tabLoading.mine && !tabError.mine && perTab.mine.rows.length === 0 && (
-                <EmptyState title="Nothing in the last 30 days" body="You have not joined or created any battles in the last 30 days."
+                <EmptyState title="No active battles of yours" body="You're not currently in any live battles."
                   cta={<Button onClick={() => setChallengeOpen(true)} className="bg-gradient-gold text-primary-foreground gold-shadow"><Swords size={14} /> Challenge a royal</Button>} />
               )}
             </TabsContent>
@@ -1021,7 +1021,22 @@ export default function Battles() {
                 live={false}
               />
               {!tabLoading.done && !tabError.done && perTab.done.rows.length === 0 && (
-                <EmptyState title="No past battles yet" body="Battles older than 30 days will appear here once you have some." />
+                <EmptyState title="No past battles yet" body="Your finished battles will appear here." />
+              )}
+            </TabsContent>
+
+            <TabsContent value="declined" className="mt-3">
+              <TabBody
+                forTab="declined"
+                rows={tab === "declined" ? filteredCurrent.slice().sort((a, b) => {
+                  const ta = a.ends_at ? new Date(a.ends_at).getTime() : new Date(a.created_at).getTime();
+                  const tb = b.ends_at ? new Date(b.ends_at).getTime() : new Date(b.created_at).getTime();
+                  return tb - ta;
+                }) : []}
+                live={false}
+              />
+              {!tabLoading.declined && !tabError.declined && perTab.declined.rows.length === 0 && (
+                <EmptyState title="No declined or canceled battles" body="Battles you decline or cancel will land here." />
               )}
             </TabsContent>
           </Tabs>
