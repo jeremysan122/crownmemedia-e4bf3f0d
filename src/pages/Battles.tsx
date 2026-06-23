@@ -142,23 +142,28 @@ export default function Battles() {
   }, [user?.id]);
 
   // ---- Fetch one page for a specific tab using its own cursor ----
-  // All four tabs share the same underlying user-scoped server ordering
-  // (`(challenger_id=me OR opponent_id=me) ORDER BY created_at DESC, id DESC`)
-  // but maintain independent cursors so paginating one tab never moves
-  // another tab's pointer. Each fetched row is routed via `tabPredicate`
-  // into the requesting tab; rows that belong to other tabs are discarded
-  // for this call (those tabs fetch their own pages with their own cursor).
+  // The Active tab is platform-wide (any user's live battles), while the
+  // four personal tabs (Pending / Mine / Past / Declined) share a viewer-
+  // scoped query `(challenger_id=me OR opponent_id=me)`. Each tab still
+  // owns its own cursor so paginating one tab never moves another's
+  // pointer.
   const fetchPage = useCallback(async (forTab: TabKey, cursor: BattleCursor | null): Promise<{
     rows: Battle[]; nextCur: BattleCursor | null; exhausted: boolean;
   }> => {
-    if (!user) return { rows: [], nextCur: null, exhausted: true };
+    const isPlatformWide = forTab === "active";
+    if (!isPlatformWide && !user) return { rows: [], nextCur: null, exhausted: true };
     let q = supabase
       .from("battles")
       .select(SELECT_COLS)
-      .or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(PAGE_SIZE);
+    if (isPlatformWide) {
+      // Server-side narrow to active battles so the page is dense.
+      q = q.eq("status", "active");
+    } else if (user) {
+      q = q.or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`);
+    }
     if (cursor) {
       // Strict keyset: created_at < cur.createdAt OR (created_at = cur.createdAt AND id < cur.id)
       q = q.or(
@@ -169,11 +174,14 @@ export default function Battles() {
     if (error) throw error;
     const raw = (data as any[]) || [];
     // Defence-in-depth safety filter — RLS is the source of truth, but we
-    // also drop hidden/removed/declined/cancelled rows and blocked users
-    // before they reach state, even after rehydration from sessionStorage.
-    const safe = raw.filter((b) => isSafeBattleForList(b as any, { blockedIds }));
+    // also drop hidden/removed rows and blocked users before they reach
+    // state, even after rehydration from sessionStorage. For the Declined
+    // tab we deliberately keep declined/cancelled rows.
+    const safety = forTab === "declined"
+      ? raw.filter((b) => !blockedIds.has(b.challenger_id) && !blockedIds.has(b.opponent_id))
+      : raw.filter((b) => isSafeBattleForList(b as any, { blockedIds }));
     const nowMs = Date.now();
-    const matched = safe.filter((b) => tabPredicate(forTab, b as any, user.id, nowMs)) as Battle[];
+    const matched = safety.filter((b) => tabPredicate(forTab, b as any, user?.id ?? null, nowMs)) as Battle[];
     const cur = nextCursor(raw, PAGE_SIZE);
     return { rows: matched, nextCur: cur, exhausted: cur === null };
   }, [user?.id, blockedIds]);
