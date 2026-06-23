@@ -25,8 +25,8 @@
 
 import { deriveBattleStatus, type BattleLike } from "./battlesLogic";
 
-export type TabKey = "active" | "pending" | "mine" | "done";
-export const TAB_KEYS: ReadonlyArray<TabKey> = ["active", "pending", "mine", "done"];
+export type TabKey = "active" | "pending" | "mine" | "done" | "declined";
+export const TAB_KEYS: ReadonlyArray<TabKey> = ["active", "pending", "mine", "done", "declined"];
 export const PAGE_SIZE = 20;
 export const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 /** SessionStorage entries older than this are treated as stale and refetched. */
