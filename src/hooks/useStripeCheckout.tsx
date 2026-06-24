@@ -15,13 +15,13 @@ export function useStripeCheckout() {
 
   const checkoutElement = opts ? (
     <Dialog open onOpenChange={(o) => !o && closeCheckout()}>
-      <DialogContent className="max-w-xl p-0 overflow-hidden">
-        <DialogHeader className="px-5 pt-5 pb-2">
+      <DialogContent className="max-w-xl p-0 overflow-hidden max-h-[90vh] flex flex-col">
+        <DialogHeader className="px-5 pt-5 pb-2 shrink-0">
           <DialogTitle className="font-display text-lg">
             {opts.title ?? "Secure Checkout"}
           </DialogTitle>
         </DialogHeader>
-        <div className="px-3 pb-3">
+        <div className="px-3 pb-3 overflow-y-auto flex-1 min-h-0">
           <StripeEmbeddedCheckoutMount
             priceId={opts.priceId}
             fnName={opts.fnName}
