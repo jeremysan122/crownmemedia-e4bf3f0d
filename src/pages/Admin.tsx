@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Navigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/crown";
-import { Flag, MessageSquare, Image as ImageIcon, User, Activity, ScrollText, CheckSquare, Package, Crown as CrownIcon, Swords, Shield, BadgeCheck, Megaphone } from "lucide-react";
+import { Flag, MessageSquare, Image as ImageIcon, User, Activity, ScrollText, CheckSquare, Package, Crown as CrownIcon, Swords, Shield, BadgeCheck, Megaphone, Users, Gift, AlertTriangle, FileCheck, FolderTree, LayoutDashboard } from "lucide-react";
 import AdminSessionHint from "@/components/admin/AdminSessionHint";
 import CrownRankingsWidget from "@/components/admin/CrownRankingsWidget";
 
