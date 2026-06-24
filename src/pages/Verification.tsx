@@ -273,7 +273,7 @@ export default function Verification() {
                 size="sm"
                 onClick={async () => {
                   try {
-                    const { data, error } = await supabase.functions.invoke("royal-pass-portal", { body: { return_path: "/verification" } });
+                    const { data, error } = await supabase.functions.invoke("royal-pass-portal", { body: { return_path: "/verification", environment: getStripeEnvironment() } });
                     if (error) throw error;
                     const url = (data as any)?.url;
                     if (!url) throw new Error("Could not open the billing portal");

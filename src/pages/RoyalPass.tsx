@@ -7,6 +7,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { getStripeEnvironment } from "@/lib/stripe";
 import { useAuth } from "@/context/AuthContext";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
 import { Crown, Loader2, ExternalLink, Receipt, RefreshCw, ShieldCheck, X, Zap } from "lucide-react";
@@ -43,7 +44,7 @@ export default function RoyalPassSettings() {
   const openPortal = async () => {
     setWorking("portal");
     try {
-      const { data, error } = await supabase.functions.invoke("royal-pass-portal");
+      const { data, error } = await supabase.functions.invoke("royal-pass-portal", { body: { environment: getStripeEnvironment() } });
       if (error) throw error;
       const url = (data as { url?: string; error?: string })?.url;
       const errMsg = (data as { error?: string })?.error;
@@ -59,7 +60,7 @@ export default function RoyalPassSettings() {
     setWorking(resume ? "resume" : "cancel");
     try {
       const { data, error } = await supabase.functions.invoke("royal-pass-cancel", {
-        body: { resume },
+        body: { resume, environment: getStripeEnvironment() },
       });
       if (error) throw error;
       const errMsg = (data as { error?: string })?.error;

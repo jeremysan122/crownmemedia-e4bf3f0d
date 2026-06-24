@@ -87,7 +87,7 @@ export default function PayoutPanel() {
         .maybeSingle(),
       // Live source of truth — matches StripeConnectSection so the two panels
       // never disagree when the cached connect_accounts row is stale/missing.
-      supabase.functions.invoke("connect-account-status", { body: {} })
+      supabase.functions.invoke("connect-account-status", { body: { environment: getStripeEnvironment() } })
         .then((r) => r.data as { connected?: boolean; charges_enabled?: boolean; payouts_enabled?: boolean; details_submitted?: boolean } | null)
         .catch(() => null),
     ]);

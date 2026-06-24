@@ -49,7 +49,7 @@ export default function StripeConnectSection() {
   const refreshLive = useCallback(async () => {
     if (!user) return;
     try {
-      const { data, error } = await supabase.functions.invoke("connect-account-status", { body: {} });
+      const { data, error } = await supabase.functions.invoke("connect-account-status", { body: { environment: getStripeEnvironment() } });
       if (error) throw error;
       if (data?.connected) {
         const live = data as LiveStatus;
@@ -147,7 +147,7 @@ export default function StripeConnectSection() {
       // Always return to the exact page the user is on, on the exact origin.
       const returnPath = location.pathname || "/settings";
       const { data, error } = await supabase.functions.invoke("create-connect-account", {
-        body: { return_path: returnPath },
+        body: { return_path: returnPath, environment: getStripeEnvironment() },
       });
       if (error) throw error;
       const url = (data as { url?: string })?.url;
