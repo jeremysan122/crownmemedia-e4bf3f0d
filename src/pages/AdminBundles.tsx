@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Coins, Plus, Trash2, FlaskConical, Loader2 } from "lucide-react";
+import { Coins, Plus, Trash2, Loader2 } from "lucide-react";
 import AdminSessionHint from "@/components/admin/AdminSessionHint";
 
 interface Bundle {
@@ -27,13 +27,7 @@ export default function AdminBundles() {
   const [form, setForm] = useState({ stripe_price_id: "", shekels: "", usd: "", label: "", sort_order: "0" });
   const [saving, setSaving] = useState(false);
 
-  // Test harness state
-  const [testKind, setTestKind] = useState<"checkout" | "payout_paid" | "payout_failed" | "account_updated">("checkout");
-  const [testShekels, setTestShekels] = useState("1000");
-  const [testAccount, setTestAccount] = useState("");
-  const [testAmount, setTestAmount] = useState("25");
-  const [testResult, setTestResult] = useState<string>("");
-  const [testing, setTesting] = useState(false);
+
 
   const load = async () => {
     const { data } = await supabase
@@ -84,25 +78,8 @@ export default function AdminBundles() {
     load();
   };
 
-  const runTest = async () => {
-    setTesting(true);
-    setTestResult("");
-    try {
-      const body: Record<string, unknown> = { kind: testKind };
-      if (testKind === "checkout") body.shekels = Number(testShekels);
-      if (testKind !== "checkout") body.stripe_account_id = testAccount;
-      if (testKind === "payout_paid" || testKind === "payout_failed") body.amount_usd = Number(testAmount);
-      const { data, error } = await supabase.functions.invoke("webhook-test-harness", { body });
-      if (error) throw error;
-      setTestResult(JSON.stringify(data, null, 2));
-      toast.success("Test event sent");
-    } catch (e) {
-      setTestResult(`Error: ${(e as Error).message}`);
-      toast.error((e as Error).message);
-    } finally {
-      setTesting(false);
-    }
-  };
+
+
 
   return (
     <AppShell title="ADMIN BUNDLES">
@@ -148,43 +125,6 @@ export default function AdminBundles() {
           ))}
         </section>
 
-        <section className="royal-card p-4 space-y-3">
-          <h2 className="font-display text-sm uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-            <FlaskConical size={14} /> Webhook Test Harness
-          </h2>
-          <p className="text-[11px] text-muted-foreground">
-            Replays synthetic events against the live webhook endpoints (signature is bypassed via service-role secret). Idempotency rows are recorded.
-          </p>
-          <div>
-            <Label>Event kind</Label>
-            <select
-              value={testKind}
-              onChange={(e) => setTestKind(e.target.value as typeof testKind)}
-              className="w-full h-10 rounded-md bg-input border border-border px-3 text-sm"
-            >
-              <option value="checkout">checkout.session.completed (credit you)</option>
-              <option value="account_updated">account.updated</option>
-              <option value="payout_paid">payout.paid</option>
-              <option value="payout_failed">payout.failed</option>
-            </select>
-          </div>
-          {testKind === "checkout" && (
-            <div><Label>Shekels to credit</Label><Input type="number" value={testShekels} onChange={(e) => setTestShekels(e.target.value)} className="bg-input" /></div>
-          )}
-          {testKind !== "checkout" && (
-            <div><Label>Stripe Account ID</Label><Input value={testAccount} onChange={(e) => setTestAccount(e.target.value)} placeholder="acct_…" className="bg-input" /></div>
-          )}
-          {(testKind === "payout_paid" || testKind === "payout_failed") && (
-            <div><Label>Amount (USD)</Label><Input type="number" step="0.01" value={testAmount} onChange={(e) => setTestAmount(e.target.value)} className="bg-input" /></div>
-          )}
-          <Button onClick={runTest} disabled={testing} className="w-full">
-            {testing ? <Loader2 size={14} className="animate-spin mr-2" /> : <FlaskConical size={14} className="mr-2" />}
-            Send test event
-          </Button>
-          {testResult && (
-            <pre className="text-[10px] bg-muted/40 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all">{testResult}</pre>
-          )}
-        </section>
       </div>
     </AppShell>
   );
