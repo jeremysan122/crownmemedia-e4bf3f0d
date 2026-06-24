@@ -140,6 +140,7 @@ const App = () => (
           <CrownStolenBanner />
           <PointerEventsGuard />
           <NotificationToaster />
+          <CookieConsentBanner />
           <Suspense fallback={<RouteFallback />}>
             <LegalConsentGate>
             <Routes>
