@@ -520,6 +520,7 @@ export default function Verification() {
           </>
         )}
       </Card>
+      {verificationCheckoutEl}
     </div>
   );
 }
@@ -652,7 +653,6 @@ function StandardEligibilityCard({
           via the fast-track path above.
         </p>
       </div>
-      {verificationCheckoutEl}
     </Card>
   );
 }
