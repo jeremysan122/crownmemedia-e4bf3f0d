@@ -1,76 +1,63 @@
-// Stripe Checkout webhook → credits Shekels (bundles) and activates boosts
-import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
+// Lovable-managed Stripe webhook
+//   Routes via ?env=sandbox or ?env=live
+//   Verifies with PAYMENTS_SANDBOX_WEBHOOK_SECRET / PAYMENTS_LIVE_WEBHOOK_SECRET
+//   Resolves prices via lookup_key (stable across sandbox/live) with fallback to Stripe price ID
+//   Preserves: Shekel crediting, boost activation, Royal Pass subscription state, verification flow
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+import {
+  type StripeEnv,
+  createStripeClient,
+  verifyWebhook,
+} from "../_shared/stripe.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
-const stripe = stripeKey
-  ? new Stripe(stripeKey, {
-      apiVersion: "2024-12-18.acacia",
-      httpClient: Stripe.createFetchHttpClient(),
-    })
-  : null;
-
-// Codes whose messages are safe (and useful) to expose to Stripe's webhook UI.
-// Everything else (notably handler_error / config_error) gets a generic message,
-// with the real detail kept in server logs only.
-const SAFE_ERROR_CODES = new Set([
-  "missing_signature",
-  "invalid_signature",
-  "invalid_json",
-  "unauthorized_test",
-]);
-
 function jsonError(status: number, code: string, detail: string) {
   console.error(`[stripe-webhook] ${code}: ${detail}`);
-  const message = SAFE_ERROR_CODES.has(code) ? detail : "An internal error occurred";
-  return new Response(JSON.stringify({ error: code, message }), {
+  return new Response(JSON.stringify({ error: code, message: detail }), {
     status,
     headers: { "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
-  if (!stripe) return jsonError(500, "config_error", "STRIPE_SECRET_KEY is not configured");
-  if (!webhookSecret) return jsonError(500, "config_error", "STRIPE_WEBHOOK_SECRET is not configured");
+  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
 
-  const sig = req.headers.get("stripe-signature");
-  if (!sig) return jsonError(400, "missing_signature", "stripe-signature header required");
+  const rawEnv = new URL(req.url).searchParams.get("env");
+  if (rawEnv !== "sandbox" && rawEnv !== "live") {
+    console.error("[stripe-webhook] missing/invalid ?env=", rawEnv);
+    // Return 200 so Stripe doesn't retry forever on a misconfigured endpoint.
+    return new Response(JSON.stringify({ received: true, ignored: "invalid env" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const env: StripeEnv = rawEnv;
 
-  const body = await req.text();
-  let event: Stripe.Event;
-
+  let event: { id: string; type: string; data: { object: any } };
   try {
-    event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
+    event = await verifyWebhook(req, env);
   } catch (err) {
-    return jsonError(
-      400,
-      "invalid_signature",
-      `Stripe signature verification failed — check that STRIPE_WEBHOOK_SECRET matches the secret shown in your Stripe webhook endpoint settings. (${(err as Error).message})`,
-    );
+    return jsonError(400, "invalid_signature", (err as Error).message);
   }
 
-  // Idempotency #1 — per Stripe event id (covers retries of same event)
+  // Idempotency #1 — per Stripe event id
   const { error: dupErr } = await supabase
     .from("stripe_events")
     .insert({ id: event.id, type: event.type });
   if (dupErr) {
-    console.log(`[stripe-webhook] duplicate event ${event.id} (${event.type}) — skipping`);
+    console.log(`[stripe-webhook] duplicate event ${event.id} — skipping`);
     return new Response(JSON.stringify({ ok: true, duplicate: true }), {
       headers: { "Content-Type": "application/json" },
     });
   }
 
-  // Idempotency #2 — per checkout session id (covers cases where Stripe sends a
-  // brand-new event_id for the same session, e.g. after manual resend or replays).
+  // Idempotency #2 — per checkout session id
   if (event.type === "checkout.session.completed") {
-    const sessionId = (event.data.object as Stripe.Checkout.Session).id;
+    const sessionId = event.data.object.id as string;
     const { data: existing } = await supabase
       .from("shekel_ledger")
       .select("id")
@@ -78,26 +65,36 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
     if (existing) {
-      console.log(`[stripe-webhook] session ${sessionId} already credited — skipping (event ${event.id})`);
+      console.log(`[stripe-webhook] session ${sessionId} already credited`);
       return new Response(JSON.stringify({ ok: true, duplicate_session: true }), {
         headers: { "Content-Type": "application/json" },
       });
     }
   }
 
-  async function upsertRoyalPassFromSubscription(sub: Stripe.Subscription, userIdHint?: string, planIdHint?: string) {
-    const userId = userIdHint || (sub.metadata?.user_id as string | undefined);
+  const stripe = createStripeClient(env);
+
+  async function resolveLookupKey(price: any): Promise<string | null> {
+    if (!price) return null;
+    if (price.lookup_key) return price.lookup_key as string;
+    if (price.metadata?.lovable_external_id) return price.metadata.lovable_external_id as string;
+    return null;
+  }
+
+  async function upsertRoyalPassFromSubscription(
+    sub: any,
+    userIdHint?: string,
+    planIdHint?: string,
+  ) {
+    const userId = userIdHint || sub.metadata?.userId || sub.metadata?.user_id;
     if (!userId) {
-      console.warn(`[stripe-webhook] subscription ${sub.id} missing user_id metadata — skipping`);
+      console.warn(`[stripe-webhook] sub ${sub.id} missing user_id`);
       return;
     }
-    const planId = planIdHint || (sub.metadata?.plan_id as string | undefined) || null;
-    const periodStart = sub.current_period_start
-      ? new Date(sub.current_period_start * 1000).toISOString()
-      : null;
-    const periodEnd = sub.current_period_end
-      ? new Date(sub.current_period_end * 1000).toISOString()
-      : null;
+    const planId = planIdHint || sub.metadata?.plan_id || null;
+    const item = sub.items?.data?.[0];
+    const periodStart = item?.current_period_start ?? sub.current_period_start;
+    const periodEnd = item?.current_period_end ?? sub.current_period_end;
 
     const { data: existing } = await supabase
       .from("royal_pass_subscriptions")
@@ -108,11 +105,12 @@ Deno.serve(async (req) => {
     const row = {
       user_id: userId,
       plan_id: planId,
-      stripe_customer_id: typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null,
+      stripe_customer_id:
+        typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null,
       stripe_subscription_id: sub.id,
       status: sub.status,
-      current_period_start: periodStart,
-      current_period_end: periodEnd,
+      current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
+      current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
       cancel_at_period_end: !!sub.cancel_at_period_end,
       updated_at: new Date().toISOString(),
     };
@@ -122,8 +120,7 @@ Deno.serve(async (req) => {
     } else {
       await supabase.from("royal_pass_subscriptions").insert(row);
     }
-    // Award referral bonus (+30 free pass days for both inviter & invitee)
-    // when both have an active pass. Function is idempotent.
+
     if (sub.status === "active" || sub.status === "trialing") {
       try {
         await supabase.rpc("grant_pass_invite_bonus", { _user_id: userId });
@@ -131,16 +128,10 @@ Deno.serve(async (req) => {
         console.warn(`[stripe-webhook] grant_pass_invite_bonus failed for ${userId}: ${e}`);
       }
     }
-    console.log(`[stripe-webhook] royal_pass user=${userId} status=${sub.status} ends=${periodEnd}`);
+    console.log(`[stripe-webhook] royal_pass user=${userId} status=${sub.status}`);
   }
 
-  async function recordRoyalPassReceipt(
-    session: Stripe.Checkout.Session,
-    sub: Stripe.Subscription,
-    userId: string,
-    planId?: string,
-  ) {
-    // Skip if we've already recorded this session
+  async function recordRoyalPassReceipt(session: any, sub: any, userId: string, planId?: string) {
     const { data: existing } = await supabase
       .from("shekel_ledger")
       .select("id")
@@ -159,10 +150,6 @@ Deno.serve(async (req) => {
       if (plan) label = `${plan.name} (${plan.interval}ly)`;
     }
     const usd = (session.amount_total ?? 0) / 100;
-    const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null;
-    const periodEnd = sub.current_period_end
-      ? new Date(sub.current_period_end * 1000).toISOString()
-      : null;
 
     await supabase.from("shekel_ledger").insert({
       user_id: userId,
@@ -174,27 +161,26 @@ Deno.serve(async (req) => {
       stripe_event_id: event.id,
       metadata: {
         stripe_subscription_id: sub.id,
-        stripe_customer_id: customerId,
+        stripe_customer_id:
+          typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null,
         stripe_invoice: session.invoice ?? null,
         status: sub.status,
-        current_period_end: periodEnd,
         plan_id: planId ?? null,
       },
     });
   }
 
-  async function applyVerificationSubscription(sub: Stripe.Subscription, userIdHint?: string) {
-    const userId = userIdHint || (sub.metadata?.user_id as string | undefined);
+  async function applyVerificationSubscription(sub: any, userIdHint?: string) {
+    const userId = userIdHint || sub.metadata?.userId || sub.metadata?.user_id;
     if (!userId) {
-      console.warn(`[stripe-webhook] verification sub ${sub.id} missing user_id — skipping`);
+      console.warn(`[stripe-webhook] verification sub ${sub.id} missing user_id`);
       return;
     }
     const isActive = sub.status === "active" || sub.status === "trialing";
-    const renewsAt = sub.current_period_end
-      ? new Date(sub.current_period_end * 1000).toISOString() : null;
+    const item = sub.items?.data?.[0];
+    const periodEnd = item?.current_period_end ?? sub.current_period_end;
+    const renewsAt = periodEnd ? new Date(periodEnd * 1000).toISOString() : null;
 
-    // Upsert the verification_requests row for this subscriber so admins can still
-    // see it. We mark it approved on first active payment.
     const { data: existing } = await supabase
       .from("verification_requests")
       .select("id, status")
@@ -204,13 +190,16 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (existing) {
-      await supabase.from("verification_requests").update({
-        subscription_active: isActive,
-        subscription_id: sub.id,
-        subscription_renews_at: renewsAt,
-        status: isActive ? "approved" : existing.status,
-        updated_at: new Date().toISOString(),
-      }).eq("id", existing.id);
+      await supabase
+        .from("verification_requests")
+        .update({
+          subscription_active: isActive,
+          subscription_id: sub.id,
+          subscription_renews_at: renewsAt,
+          status: isActive ? "approved" : existing.status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
     } else {
       await supabase.from("verification_requests").insert({
         user_id: userId,
@@ -225,13 +214,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Flip the badge on/off
-    await supabase.from("profiles").update({
-      verified: isActive,
-      verified_at: isActive ? new Date().toISOString() : null,
-      verification_plan: isActive ? "subscription" : null,
-    }).eq("id", userId);
-    console.log(`[stripe-webhook] verification user=${userId} status=${sub.status} active=${isActive}`);
+    await supabase
+      .from("profiles")
+      .update({
+        verified: isActive,
+        verified_at: isActive ? new Date().toISOString() : null,
+        verification_plan: isActive ? "subscription" : null,
+      })
+      .eq("id", userId);
+    console.log(`[stripe-webhook] verification user=${userId} active=${isActive}`);
   }
 
   try {
@@ -240,7 +231,7 @@ Deno.serve(async (req) => {
       event.type === "customer.subscription.deleted" ||
       event.type === "customer.subscription.created"
     ) {
-      const sub = event.data.object as Stripe.Subscription;
+      const sub = event.data.object;
       const kind = sub.metadata?.kind as string | undefined;
       if (kind === "royal_pass") {
         await upsertRoyalPassFromSubscription(sub);
@@ -250,13 +241,18 @@ Deno.serve(async (req) => {
     }
 
     if (event.type === "checkout.session.completed") {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const userId = session.metadata?.user_id;
+      const session = event.data.object;
+      const userId = session.metadata?.userId || session.metadata?.user_id;
       if (!userId) throw new Error("missing user_id metadata");
 
       // Royal Pass subscription checkout
-      if (session.mode === "subscription" && session.metadata?.kind === "royal_pass" && session.subscription) {
-        const subId = typeof session.subscription === "string" ? session.subscription : session.subscription.id;
+      if (
+        session.mode === "subscription" &&
+        session.metadata?.kind === "royal_pass" &&
+        session.subscription
+      ) {
+        const subId =
+          typeof session.subscription === "string" ? session.subscription : session.subscription.id;
         const sub = await stripe.subscriptions.retrieve(subId);
         await upsertRoyalPassFromSubscription(sub, userId, session.metadata?.plan_id);
         await recordRoyalPassReceipt(session, sub, userId, session.metadata?.plan_id);
@@ -266,8 +262,13 @@ Deno.serve(async (req) => {
       }
 
       // Verification subscription checkout
-      if (session.mode === "subscription" && session.metadata?.kind === "verification" && session.subscription) {
-        const subId = typeof session.subscription === "string" ? session.subscription : session.subscription.id;
+      if (
+        session.mode === "subscription" &&
+        session.metadata?.kind === "verification" &&
+        session.subscription
+      ) {
+        const subId =
+          typeof session.subscription === "string" ? session.subscription : session.subscription.id;
         const sub = await stripe.subscriptions.retrieve(subId);
         await applyVerificationSubscription(sub, userId);
         return new Response(JSON.stringify({ ok: true, verification: true }), {
@@ -275,128 +276,145 @@ Deno.serve(async (req) => {
         });
       }
 
-
+      // One-off checkout — Shekel bundle or Boost
       let totalShekels = 0;
-      const bundleLabels: string[] = [];
-      const boostsActivated: { boost_type: string; duration_hours: number; label: string; boost_id: string; usd: number }[] = [];
       let totalUsd = 0;
+      const boostsActivated: string[] = [];
 
-      if (isTest && session.metadata?.test_shekels) {
-        totalShekels = Number(session.metadata.test_shekels);
-        bundleLabels.push("Test credit");
-      } else {
-        const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 20 });
-        for (const item of lineItems.data) {
-          const priceId = item.price?.id;
-          if (!priceId) continue;
-          const qty = item.quantity || 1;
-          const itemUsd = (item.amount_total ?? 0) / 100;
-          totalUsd += itemUsd;
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+        limit: 20,
+        expand: ["data.price"],
+      });
+      for (const item of lineItems.data) {
+        const lookupKey = await resolveLookupKey(item.price);
+        const stripePriceId = item.price?.id;
+        const qty = item.quantity || 1;
+        const itemUsd = (item.amount_total ?? 0) / 100;
+        totalUsd += itemUsd;
 
-          // Try Shekel bundle
-          const { data: bundle } = await supabase
+        // Try Shekel bundle — match by lookup_key first, then fallback by stripe price ID
+        let bundle: any = null;
+        if (lookupKey) {
+          const r = await supabase
             .from("shekel_bundles")
             .select("shekels, label")
-            .eq("stripe_price_id", priceId)
+            .eq("stripe_price_id", lookupKey)
             .maybeSingle();
-          if (bundle) {
-            const credit = Number(bundle.shekels) * qty;
-            totalShekels += credit;
-            bundleLabels.push(`${qty}× ${bundle.label}`);
+          bundle = r.data;
+        }
+        if (!bundle && stripePriceId) {
+          const r = await supabase
+            .from("shekel_bundles")
+            .select("shekels, label")
+            .eq("stripe_price_id", stripePriceId)
+            .maybeSingle();
+          bundle = r.data;
+        }
+        if (bundle) {
+          const credit = Number(bundle.shekels) * qty;
+          totalShekels += credit;
+          await supabase.from("shekel_ledger").insert({
+            user_id: userId,
+            kind: "bundle_purchase",
+            shekels_delta: credit,
+            usd_amount: itemUsd,
+            label: bundle.label,
+            stripe_session_id: session.id,
+            stripe_event_id: event.id,
+            metadata: { lookup_key: lookupKey, price_id: stripePriceId, quantity: qty },
+          });
+          continue;
+        }
 
-            await supabase.from("shekel_ledger").insert({
-              user_id: userId,
-              kind: "bundle_purchase",
-              shekels_delta: credit,
-              usd_amount: itemUsd,
-              label: bundle.label,
-              stripe_session_id: session.id,
-              stripe_event_id: event.id,
-              metadata: { price_id: priceId, quantity: qty },
-            });
-            continue;
-          }
-
-          // Try Boost bundle
-          const { data: boost } = await supabase
+        // Try Boost bundle
+        let boost: any = null;
+        if (lookupKey) {
+          const r = await supabase
             .from("boost_bundles")
             .select("boost_type, duration_hours, label")
-            .eq("stripe_price_id", priceId)
+            .eq("stripe_price_id", lookupKey)
             .maybeSingle();
-          if (boost) {
-            const expires = new Date(Date.now() + boost.duration_hours * 3600_000).toISOString();
-            const POST_TARGETED = new Set(["royal_boost", "vote_boost", "crown_spotlight", "crown_shield"]);
-            const metaPostId = (session.metadata?.target_post_id as string | undefined) || null;
-            let postIdToWrite: string | null = null;
-            if (POST_TARGETED.has(boost.boost_type) && metaPostId) {
-              // re-verify ownership server-side
-              const { data: ownerPost } = await supabase
-                .from("posts").select("id, user_id, is_removed")
-                .eq("id", metaPostId).maybeSingle();
-              if (ownerPost && !ownerPost.is_removed && ownerPost.user_id === userId) {
-                postIdToWrite = ownerPost.id;
-              }
-            }
-            const { data: b } = await supabase.from("boosts")
-              .insert({ user_id: userId, post_id: postIdToWrite, boost_type: boost.boost_type, active: true, expires_at: expires })
-              .select("id").single();
-            boostsActivated.push({
-              boost_type: boost.boost_type,
-              duration_hours: boost.duration_hours,
-              label: boost.label,
-              boost_id: b?.id ?? "",
-              usd: itemUsd,
-            });
-            await supabase.from("shekel_ledger").insert({
-              user_id: userId,
-              kind: "boost_stripe",
-              shekels_delta: 0,
-              usd_amount: itemUsd,
-              label: `${boost.label} (${boost.duration_hours}h)`,
-              stripe_session_id: session.id,
-              stripe_event_id: event.id,
-              reference_id: b?.id ?? null,
-              metadata: { price_id: priceId, boost_type: boost.boost_type, duration_hours: boost.duration_hours },
-            });
-            continue;
-          }
-
-          console.warn(`[stripe-webhook] unknown price_id ${priceId} on session ${session.id}`);
+          boost = r.data;
         }
+        if (!boost && stripePriceId) {
+          const r = await supabase
+            .from("boost_bundles")
+            .select("boost_type, duration_hours, label")
+            .eq("stripe_price_id", stripePriceId)
+            .maybeSingle();
+          boost = r.data;
+        }
+        if (boost) {
+          const expires = new Date(Date.now() + boost.duration_hours * 3600_000).toISOString();
+          const POST_TARGETED = new Set(["royal_boost", "vote_boost", "crown_spotlight", "crown_shield"]);
+          const metaPostId = (session.metadata?.target_post_id as string | undefined) || null;
+          let postIdToWrite: string | null = null;
+          if (POST_TARGETED.has(boost.boost_type) && metaPostId) {
+            const { data: ownerPost } = await supabase
+              .from("posts")
+              .select("id, user_id, is_removed")
+              .eq("id", metaPostId)
+              .maybeSingle();
+            if (ownerPost && !ownerPost.is_removed && ownerPost.user_id === userId) {
+              postIdToWrite = ownerPost.id;
+            }
+          }
+          const { data: b } = await supabase
+            .from("boosts")
+            .insert({
+              user_id: userId,
+              post_id: postIdToWrite,
+              boost_type: boost.boost_type,
+              active: true,
+              expires_at: expires,
+            })
+            .select("id")
+            .single();
+          boostsActivated.push(boost.label);
+          await supabase.from("shekel_ledger").insert({
+            user_id: userId,
+            kind: "boost_stripe",
+            shekels_delta: 0,
+            usd_amount: itemUsd,
+            label: `${boost.label} (${boost.duration_hours}h)`,
+            stripe_session_id: session.id,
+            stripe_event_id: event.id,
+            reference_id: b?.id ?? null,
+            metadata: { lookup_key: lookupKey, price_id: stripePriceId, boost_type: boost.boost_type },
+          });
+          continue;
+        }
+
+        console.warn(`[stripe-webhook] unknown line item lookup=${lookupKey} price=${stripePriceId}`);
       }
 
-      // Credit Shekels
+      // Credit Shekels to wallet
       if (totalShekels > 0) {
         const { data: wallet } = await supabase
-          .from("wallets").select("shekel_balance").eq("user_id", userId).maybeSingle();
+          .from("wallets")
+          .select("shekel_balance")
+          .eq("user_id", userId)
+          .maybeSingle();
         if (wallet) {
-          await supabase.from("wallets")
+          await supabase
+            .from("wallets")
             .update({
               shekel_balance: Number(wallet.shekel_balance) + totalShekels,
               updated_at: new Date().toISOString(),
             })
             .eq("user_id", userId);
         } else {
-          await supabase.from("wallets").insert({ user_id: userId, shekel_balance: 12450 + totalShekels });
+          await supabase.from("wallets").insert({ user_id: userId, shekel_balance: totalShekels });
         }
       }
 
-      if (isTest && totalShekels > 0 && bundleLabels[0] === "Test credit") {
-        await supabase.from("shekel_ledger").insert({
-          user_id: userId,
-          kind: "bundle_purchase",
-          shekels_delta: totalShekels,
-          usd_amount: 0,
-          label: "Test credit",
-          stripe_session_id: session.id,
-          stripe_event_id: event.id,
-        });
-      }
-
-      console.log(`[stripe-webhook] event=${event.id} user=${userId} shekels=${totalShekels} boosts=${boostsActivated.length} usd=${totalUsd.toFixed(2)}`);
+      console.log(
+        `[stripe-webhook] event=${event.id} user=${userId} shekels=${totalShekels} boosts=${boostsActivated.length} usd=${totalUsd.toFixed(2)}`,
+      );
     }
   } catch (err) {
     console.error(`[stripe-webhook] handler error for ${event.id}:`, err);
+    // Roll back the idempotency lock so the event can be re-delivered.
     await supabase.from("stripe_events").delete().eq("id", event.id);
     return jsonError(500, "handler_error", (err as Error).message);
   }
