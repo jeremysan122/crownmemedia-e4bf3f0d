@@ -78,25 +78,15 @@ Deno.serve(async (req) => {
   if (!webhookSecret) return jsonError(500, "config_error", "Webhook secret is not configured");
 
   const sig = req.headers.get("stripe-signature");
-  const isTest = Deno.env.get("ENABLE_WEBHOOK_TEST_BYPASS") === "true" && req.headers.get("x-test-bypass-signature") === "1";
-  if (!sig && !isTest) return jsonError(400, "missing_signature", "stripe-signature header required");
+  if (!sig) return jsonError(400, "missing_signature", "stripe-signature header required");
 
   const body = await req.text();
   let event: Stripe.Event;
 
-  if (isTest) {
-    const testSecret = req.headers.get("x-test-secret");
-    if (!testSecret || testSecret !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
-      return jsonError(401, "unauthorized_test", "Test bypass requires service-role secret");
-    }
-    try { event = JSON.parse(body) as Stripe.Event; }
-    catch { return jsonError(400, "invalid_json", "Test payload is not valid JSON"); }
-  } else {
-    try {
-      event = await stripe.webhooks.constructEventAsync(body, sig!, webhookSecret);
-    } catch (err) {
-      return jsonError(400, "invalid_signature", `Stripe signature verification failed (${(err as Error).message})`);
-    }
+  try {
+    event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
+  } catch (err) {
+    return jsonError(400, "invalid_signature", `Stripe signature verification failed (${(err as Error).message})`);
   }
 
   // Idempotency: try to insert event id; if it already exists, skip.
