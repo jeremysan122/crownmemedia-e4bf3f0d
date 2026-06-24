@@ -364,7 +364,7 @@ export default function Rewards() {
             <div className="flex justify-between items-end px-1">
               <h3 className="text-white font-bold text-sm">7-Day Streak</h3>
               <span className="text-amber-400 text-[10px] font-bold bg-amber-400/10 px-2 py-1 rounded-full">
-                Day {Math.max(1, cycleDay || todaySlot || 1)} of 7
+                Day {Math.max(1, todaySlot ?? cycleDay ?? 1)} of 7
               </span>
             </div>
 
