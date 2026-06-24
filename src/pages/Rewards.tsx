@@ -7,10 +7,12 @@ import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { Link } from "react-router-dom";
 import CrownLoader from "@/components/CrownLoader";
 import { CrownIcon } from "@/components/CrownIcon";
-import { Flame, Swords, Sparkles, ArrowLeft, History, Loader2 } from "lucide-react";
+import { Flame, Swords, Sparkles, ArrowLeft, History, Loader2, RefreshCw, Clock, AlertTriangle } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { toast } from "sonner";
 import { haptic } from "@/lib/haptics";
+import { msUntilUtcMidnight, formatCountdown, formatLastUpdated, isUtcDayStale } from "@/lib/rewardsTime";
+
 
 type PrizeType = "shekels" | "battle_tickets" | "royal_pass_days" | "profile_boost_hours" | "bonus_spin" | "nothing";
 type Prize = {
