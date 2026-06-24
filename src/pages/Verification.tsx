@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getStripeEnvironment } from "@/lib/stripe";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -273,7 +274,7 @@ export default function Verification() {
                 size="sm"
                 onClick={async () => {
                   try {
-                    const { data, error } = await supabase.functions.invoke("royal-pass-portal", { body: { return_path: "/verification" } });
+                    const { data, error } = await supabase.functions.invoke("royal-pass-portal", { body: { return_path: "/verification", environment: getStripeEnvironment() } });
                     if (error) throw error;
                     const url = (data as any)?.url;
                     if (!url) throw new Error("Could not open the billing portal");

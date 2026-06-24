@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getStripeEnvironment } from "@/lib/stripe";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -87,7 +88,7 @@ export default function PayoutPanel() {
         .maybeSingle(),
       // Live source of truth — matches StripeConnectSection so the two panels
       // never disagree when the cached connect_accounts row is stale/missing.
-      supabase.functions.invoke("connect-account-status", { body: {} })
+      supabase.functions.invoke("connect-account-status", { body: { environment: getStripeEnvironment() } })
         .then((r) => r.data as { connected?: boolean; charges_enabled?: boolean; payouts_enabled?: boolean; details_submitted?: boolean } | null)
         .catch(() => null),
     ]);

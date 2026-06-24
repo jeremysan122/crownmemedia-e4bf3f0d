@@ -1,17 +1,12 @@
 // Creates a Stripe Billing Portal session so the user can manage their Royal Pass
-import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { type StripeEnv, createStripeClient } from "../_shared/stripe.ts";
 import { safeOrigin } from "../_shared/origin.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
-  apiVersion: "2024-12-18.acacia",
-  httpClient: Stripe.createFetchHttpClient(),
-});
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -38,6 +33,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    const body = await req.json().catch(() => ({}));
+    const environment = body?.environment as StripeEnv | undefined;
+    if (environment !== "sandbox" && environment !== "live") {
+      return new Response(JSON.stringify({ error: "environment required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { data: sub } = await supabase
       .from("royal_pass_subscriptions")
       .select("stripe_customer_id")
@@ -51,6 +55,7 @@ Deno.serve(async (req) => {
       );
     }
 
+    const stripe = createStripeClient(environment);
     const origin = safeOrigin(req);
     const session = await stripe.billingPortal.sessions.create({
       customer: sub.stripe_customer_id,

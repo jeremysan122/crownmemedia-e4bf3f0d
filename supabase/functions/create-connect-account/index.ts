@@ -1,17 +1,12 @@
 // Creates (or returns) a Stripe Express account + onboarding link for the caller
-import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { type StripeEnv, createStripeClient } from "../_shared/stripe.ts";
 import { safeReturnUrl } from "../_shared/origin.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
-  apiVersion: "2024-12-18.acacia",
-  httpClient: Stripe.createFetchHttpClient(),
-});
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -33,16 +28,26 @@ Deno.serve(async (req) => {
     const userId = userData.user.id;
     const email = userData.user.email ?? undefined;
 
+    let body: { return_path?: string; environment?: StripeEnv } = {};
+    try { body = await req.json(); } catch { /* no body is fine */ }
+    const environment = body.environment;
+    if (environment !== "sandbox" && environment !== "live") {
+      return new Response(JSON.stringify({ error: "environment required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Find or create Connect account
     const { data: existing } = await admin
       .from("connect_accounts").select("stripe_account_id")
       .eq("user_id", userId).maybeSingle();
 
+    const stripe = createStripeClient(environment);
     let accountId = existing?.stripe_account_id;
     if (!accountId) {
       const account = await stripe.accounts.create({
@@ -58,13 +63,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    let returnPath: string | undefined;
-    try {
-      const body = await req.json();
-      returnPath = typeof body?.return_path === "string" ? body.return_path : undefined;
-    } catch { /* no body is fine */ }
-
-    const returnBase = safeReturnUrl(req, returnPath ?? "/settings", "/settings");
+    const returnBase = safeReturnUrl(req, body.return_path ?? "/settings", "/settings");
     const link = await stripe.accountLinks.create({
       account: accountId,
       refresh_url: `${returnBase}?connect=refresh`,

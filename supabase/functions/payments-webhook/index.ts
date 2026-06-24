@@ -226,6 +226,51 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // ---- Stripe Connect (creator payouts) ----
+    if (event.type === "account.updated") {
+      const acct = event.data.object;
+      await supabase
+        .from("connect_accounts")
+        .update({
+          charges_enabled: !!acct.charges_enabled,
+          payouts_enabled: !!acct.payouts_enabled,
+          details_submitted: !!acct.details_submitted,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("stripe_account_id", acct.id);
+      console.log(`[stripe-webhook] account.updated ${acct.id}`);
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+
+    if (event.type === "payout.paid" || event.type === "payout.failed" || event.type === "payout.created") {
+      const payout = event.data.object;
+      const accountId = (event as any).account as string | undefined;
+      if (accountId) {
+        const status = event.type === "payout.paid" ? "paid"
+          : event.type === "payout.failed" ? "failed" : "pending";
+        const { data: ca } = await supabase
+          .from("connect_accounts").select("user_id")
+          .eq("stripe_account_id", accountId).maybeSingle();
+        if (ca) {
+          const { data: existing } = await supabase
+            .from("payouts").select("id").eq("stripe_payout_id", payout.id).maybeSingle();
+          if (existing) {
+            await supabase.from("payouts").update({ status }).eq("stripe_payout_id", payout.id);
+          } else {
+            await supabase.from("payouts").insert({
+              user_id: (ca as any).user_id,
+              amount_usd: payout.amount / 100,
+              status,
+              payout_method: "stripe_connect",
+              stripe_payout_id: payout.id,
+              stripe_account_id: accountId,
+            });
+          }
+        }
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+
     if (
       event.type === "customer.subscription.updated" ||
       event.type === "customer.subscription.deleted" ||
@@ -239,6 +284,7 @@ Deno.serve(async (req) => {
         await applyVerificationSubscription(sub);
       }
     }
+
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;

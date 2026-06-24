@@ -1,18 +1,12 @@
 // Returns live Stripe Connect account status for the caller, and upserts it
-// into connect_accounts so the UI can show Connected/Incomplete immediately
-// after the user returns from onboarding (no waiting for the webhook).
-import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
+// into connect_accounts so the UI reflects status immediately after onboarding.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { type StripeEnv, createStripeClient } from "../_shared/stripe.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
-  apiVersion: "2024-12-18.acacia",
-  httpClient: Stripe.createFetchHttpClient(),
-});
 
 function safeError(status: number, message: string, detail?: unknown) {
   if (detail) console.error("[connect-account-status]", message, detail);
@@ -38,6 +32,12 @@ Deno.serve(async (req) => {
     if (authErr || !userData?.user) return safeError(401, "Unauthorized");
     const userId = userData.user.id;
 
+    const body = await req.json().catch(() => ({}));
+    const environment = body?.environment as StripeEnv | undefined;
+    if (environment !== "sandbox" && environment !== "live") {
+      return safeError(400, "environment required");
+    }
+
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -55,12 +55,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Pull live status from Stripe
+    const stripe = createStripeClient(environment);
     let acct;
     try {
       acct = await stripe.accounts.retrieve(row.stripe_account_id);
-    } catch (err) {
-      // Return cached row if Stripe is unreachable
+    } catch (_err) {
       return new Response(
         JSON.stringify({
           connected: true,
@@ -81,7 +80,6 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
-    // Upsert if anything changed
     if (
       next.charges_enabled !== row.charges_enabled ||
       next.payouts_enabled !== row.payouts_enabled ||
