@@ -48,34 +48,8 @@ export default function AdminVerify() {
   const [boosts, setBoosts] = useState<BoostBundle[]>([]);
   const [ledger, setLedger] = useState<LedgerRow[]>([]);
   const [busy, setBusy] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [syncReport, setSyncReport] = useState<null | { ok: boolean; total: number; errors: number; price_mismatches: number; report: any[] }>(null);
 
-  const runSync = async (dryRun: boolean) => {
-    setSyncing(true);
-    setSyncReport(null);
-    try {
-      const { data, error } = await supabase.functions.invoke("stripe-sync-products", {
-        body: {},
-        method: "POST",
-        // dry_run via query string
-        headers: dryRun ? { "x-dry-run": "1" } : {},
-      });
-      // supabase.functions.invoke doesn't pass query params; call fetch instead
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-sync-products${dryRun ? "?dry_run=1" : ""}`;
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session?.access_token}`, "Content-Type": "application/json" },
-      });
-      const json = await res.json();
-      setSyncReport(json);
-      if (!dryRun) await reload();
-      void data; void error;
-    } finally {
-      setSyncing(false);
-    }
-  };
+
 
 
   const reload = async () => {
