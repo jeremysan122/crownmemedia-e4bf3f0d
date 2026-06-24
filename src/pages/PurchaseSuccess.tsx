@@ -131,8 +131,9 @@ export default function PurchaseSuccess() {
     setVerifying(true);
     setVerifyError(null);
     try {
+      const { getStripeEnvironment } = await import("@/lib/stripe");
       const { data, error } = await supabase.functions.invoke("verify-purchase", {
-        body: { session_id: sessionId },
+        body: { session_id: sessionId, environment: getStripeEnvironment() },
       });
       if (error) throw error;
       const errMsg = (data as { error?: string })?.error;
