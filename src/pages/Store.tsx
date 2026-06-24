@@ -30,6 +30,7 @@ import RoyalPassBadge from "@/components/store/RoyalPassBadge";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import BoostPostPicker from "@/components/store/BoostPostPicker";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
 const POST_TARGETED_BOOSTS = new Set(["royal_boost", "vote_boost", "crown_spotlight", "crown_shield"]);
 
