@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { ShieldCheck, Crown, Upload, Loader2, ArrowLeft, CheckCircle2, Lock, Clock, FileText, Eye, MessageCircle, Sparkles, Circle } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { Link, useNavigate } from "react-router-dom";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import {
   fetchEligibilityProgress,
   requestStandardVerification,
@@ -59,6 +60,7 @@ export default function Verification() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const profilePath = profile?.username ? `/${profile.username}` : "/me";
+  const { openCheckout: openVerificationCheckout, checkoutElement: verificationCheckoutEl } = useStripeCheckout();
   const goBack = () => {
     // Only use history.back() if we actually came from within the app —
     // otherwise (direct link / new tab) fall back to a safe destination.
