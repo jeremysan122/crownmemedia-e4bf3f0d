@@ -27,13 +27,7 @@ export default function AdminBundles() {
   const [form, setForm] = useState({ stripe_price_id: "", shekels: "", usd: "", label: "", sort_order: "0" });
   const [saving, setSaving] = useState(false);
 
-  // Test harness state
-  const [testKind, setTestKind] = useState<"checkout" | "payout_paid" | "payout_failed" | "account_updated">("checkout");
-  const [testShekels, setTestShekels] = useState("1000");
-  const [testAccount, setTestAccount] = useState("");
-  const [testAmount, setTestAmount] = useState("25");
-  const [testResult, setTestResult] = useState<string>("");
-  const [testing, setTesting] = useState(false);
+
 
   const load = async () => {
     const { data } = await supabase
