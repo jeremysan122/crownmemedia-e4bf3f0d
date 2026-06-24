@@ -425,7 +425,7 @@ export default function Rewards() {
             <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
               <div className="flex items-center justify-center gap-1 text-amber-400">
                 <Flame className="size-4" />
-                <span className="text-lg font-bold tabular-nums">{streak.current_streak}</span>
+                <span className="text-lg font-bold tabular-nums" data-testid="rewards-streak-current">{streak.current_streak}</span>
               </div>
               <p className="text-[9px] uppercase tracking-widest text-white/50 mt-0.5">Streak</p>
             </div>
