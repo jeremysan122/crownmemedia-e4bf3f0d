@@ -382,10 +382,41 @@ export default function Rewards() {
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-purple-700/15 blur-[100px] pointer-events-none" aria-hidden />
 
           {/* Header */}
-          <div className="relative text-center space-y-1 mb-7">
+          <div className="relative text-center space-y-1 mb-4">
             <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl text-white tracking-tight">Royal Vault</h2>
             <p className="text-amber-400 text-xs sm:text-sm font-semibold tracking-[0.25em] uppercase">Daily Rewards</p>
           </div>
+
+          {/* Freshness + UTC rollover countdown */}
+          <div
+            className="relative mb-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10px] uppercase tracking-widest text-white/50"
+            aria-label="Rewards data freshness"
+            data-testid="rewards-freshness"
+          >
+            <span className="inline-flex items-center gap-1" aria-live="polite">
+              <span
+                className={`size-1.5 rounded-full ${isUtcDayStale(lastUpdated ? new Date(lastUpdated).toISOString().slice(0, 10) : null, nowMs) ? "bg-amber-400 animate-pulse" : "bg-emerald-400"}`}
+                aria-hidden
+              />
+              {formatLastUpdated(lastUpdated, nowMs)}
+            </span>
+            <span className="text-white/20" aria-hidden>·</span>
+            <span className="inline-flex items-center gap-1" data-testid="rewards-utc-countdown">
+              <Clock className="size-3" aria-hidden />
+              Next reset in {formatCountdown(msUntilUtcMidnight(nowMs))}
+            </span>
+            <button
+              type="button"
+              onClick={() => reload({ manual: true })}
+              disabled={refreshing}
+              aria-label="Refresh rewards"
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-amber-400/80 hover:text-amber-300 hover:bg-amber-400/10 disabled:opacity-50"
+            >
+              <RefreshCw className={`size-3 ${refreshing ? "animate-spin" : ""}`} aria-hidden />
+              Refresh
+            </button>
+          </div>
+
 
           <div className="relative grid gap-7 lg:grid-cols-2 lg:gap-10 lg:items-start">
            <div className="space-y-7">
