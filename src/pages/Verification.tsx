@@ -652,6 +652,7 @@ function StandardEligibilityCard({
           via the fast-track path above.
         </p>
       </div>
+      {verificationCheckoutEl}
     </Card>
   );
 }
