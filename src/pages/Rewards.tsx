@@ -425,7 +425,7 @@ export default function Rewards() {
             <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
               <div className="flex items-center justify-center gap-1 text-amber-400">
                 <Flame className="size-4" />
-                <span className="text-lg font-bold tabular-nums">{streak.current_streak}</span>
+                <span className="text-lg font-bold tabular-nums" data-testid="rewards-streak-current">{streak.current_streak}</span>
               </div>
               <p className="text-[9px] uppercase tracking-widest text-white/50 mt-0.5">Streak</p>
             </div>
@@ -525,6 +525,8 @@ export default function Rewards() {
             onClick={claim}
             disabled={claiming || claimedToday}
             aria-busy={claiming}
+            data-testid="rewards-claim-btn"
+            data-claim-state={claiming ? "claiming" : claimedToday ? "claimed" : "ready"}
             className={`w-full group relative py-5 rounded-2xl shadow-[0_10px_30px_rgba(217,119,6,0.3)] transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100
               ${claimedToday ? "bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-700" : "bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600"}`}
           >
@@ -535,6 +537,7 @@ export default function Rewards() {
                 "Claim Today's Chips"}
             </span>
           </button>
+
 
           {claimError && (
             <div
