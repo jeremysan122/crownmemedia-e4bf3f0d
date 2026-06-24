@@ -95,11 +95,10 @@ Deno.serve(async (req) => {
       : stripePrice.product.id;
     const product = await stripe.products.retrieve(productId);
 
-    const returnBase = safeReturnUrl(req, return_url ?? "/store/success", "/store/success");
-
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       ui_mode: "embedded_page",
+      redirect_on_completion: "never",
       line_items: [{ price: stripePrice.id, quantity: 1 }],
       customer: customerId,
       payment_intent_data: { description: product.name },
@@ -108,10 +107,9 @@ Deno.serve(async (req) => {
         userId,
         ...(validatedPostId ? { target_post_id: validatedPostId } : {}),
       },
-      return_url: `${returnBase}?session_id={CHECKOUT_SESSION_ID}`,
     } as any);
 
-    return json(200, { clientSecret: session.client_secret });
+    return json(200, { clientSecret: session.client_secret, sessionId: session.id });
   } catch (err) {
     console.error("create-checkout error:", err);
     return json(500, { error: (err as Error).message || "Failed to create checkout session" });
