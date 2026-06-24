@@ -56,13 +56,10 @@ interface Battle {
   opponent_post: { image_url: string; category: CrownCategory; filter: string | null } | null;
 }
 
-const SkeletonCard = () => (
-  <div className="royal-card overflow-hidden animate-pulse">
-    <div className="grid grid-cols-2 gap-px"><div className="aspect-square bg-muted/40" /><div className="aspect-square bg-muted/40" /></div>
-    <div className="h-2 bg-muted/30" />
-    <div className="p-3 h-10" />
-  </div>
-);
+import { RoyalBattleCardSkeleton } from "@/components/royal/RoyalSkeleton";
+
+const SkeletonCard = RoyalBattleCardSkeleton;
+
 
 function CountdownPill({ endsAt }: { endsAt: string }) {
   const remaining = useCountdown(new Date(endsAt).getTime());
