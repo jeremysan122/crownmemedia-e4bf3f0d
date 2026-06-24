@@ -1,6 +1,10 @@
-// Creates a Stripe Checkout session for a Royal Pass subscription plan
-import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
+// Creates a Lovable-managed Stripe embedded-checkout session for a Royal Pass plan.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  type StripeEnv,
+  createStripeClient,
+  resolveOrCreateCustomer,
+} from "../_shared/stripe.ts";
 import { safeReturnUrl } from "../_shared/origin.ts";
 
 const corsHeaders = {
@@ -8,22 +12,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
-  apiVersion: "2024-12-18.acacia",
-  httpClient: Stripe.createFetchHttpClient(),
-});
+function json(status: number, body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!authHeader?.startsWith("Bearer ")) return json(401, { error: "Unauthorized" });
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -31,73 +32,71 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } },
     );
     const { data: userData, error: authErr } = await supabase.auth.getUser();
-    if (authErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (authErr || !userData?.user) return json(401, { error: "Unauthorized" });
     const userId = userData.user.id;
     const userEmail = userData.user.email ?? undefined;
 
-    const { plan_id, return_path } = await req.json();
-    if (!plan_id || typeof plan_id !== "string") {
-      return new Response(JSON.stringify({ error: "plan_id required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const body = await req.json().catch(() => ({}));
+    const { plan_id, price_id, environment, return_url } = body as {
+      plan_id?: string;
+      price_id?: string;
+      environment?: StripeEnv;
+      return_url?: string;
+    };
+    if (environment !== "sandbox" && environment !== "live") {
+      return json(400, { error: "environment required" });
     }
 
-    const { data: plan } = await supabase
-      .from("royal_pass_plans")
-      .select("id, stripe_price_id, name")
-      .eq("id", plan_id)
-      .eq("active", true)
-      .maybeSingle();
-
-    if (!plan) {
-      return new Response(JSON.stringify({ error: "Invalid plan" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Resolve plan: accept either plan_id (legacy) OR direct price_id (lookup key)
+    let lookupKey = price_id;
+    let resolvedPlanId: string | null = null;
+    if (plan_id) {
+      const { data: plan } = await supabase
+        .from("royal_pass_plans")
+        .select("id, stripe_price_id, name")
+        .eq("id", plan_id)
+        .eq("active", true)
+        .maybeSingle();
+      if (!plan) return json(400, { error: "Invalid plan" });
+      lookupKey = (plan as { stripe_price_id: string }).stripe_price_id;
+      resolvedPlanId = (plan as { id: string }).id;
     }
+    if (!lookupKey) return json(400, { error: "plan_id or price_id required" });
 
-    if (
-      !plan.stripe_price_id.startsWith("price_") ||
-      plan.stripe_price_id.endsWith("_placeholder")
-    ) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Royal Pass not yet configured — admin needs to set the Stripe price ID for this plan.",
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
+    const stripe = createStripeClient(environment);
+    const prices = await stripe.prices.list({ lookup_keys: [lookupKey], limit: 1 });
+    if (!prices.data.length) return json(400, { error: "Royal Pass price not found in Stripe" });
+    const stripePrice = prices.data[0];
 
-    const successBase = safeReturnUrl(req, return_path ?? "/store/success", "/store/success");
-    const cancelBase = safeReturnUrl(req, return_path ?? "/store", "/store");
+    const customerId = await resolveOrCreateCustomer(stripe, { email: userEmail, userId });
+
+    const returnBase = safeReturnUrl(req, return_url ?? "/store/success", "/store/success");
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
-      customer_email: userEmail,
-      metadata: { user_id: userId, plan_id: plan.id, kind: "royal_pass" },
-      subscription_data: {
-        metadata: { user_id: userId, plan_id: plan.id, kind: "royal_pass" },
+      ui_mode: "embedded_page",
+      line_items: [{ price: stripePrice.id, quantity: 1 }],
+      customer: customerId,
+      metadata: {
+        user_id: userId,
+        userId,
+        kind: "royal_pass",
+        ...(resolvedPlanId ? { plan_id: resolvedPlanId } : {}),
       },
-      success_url: `${successBase}?session_id={CHECKOUT_SESSION_ID}&kind=royal_pass`,
-      cancel_url: `${cancelBase}?purchase=cancelled&tab=pass`,
-    });
+      subscription_data: {
+        metadata: {
+          user_id: userId,
+          userId,
+          kind: "royal_pass",
+          ...(resolvedPlanId ? { plan_id: resolvedPlanId } : {}),
+        },
+      },
+      return_url: `${returnBase}?session_id={CHECKOUT_SESSION_ID}&kind=royal_pass`,
+    } as any);
 
-    return new Response(JSON.stringify({ url: session.url }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json(200, { clientSecret: session.client_secret });
   } catch (err) {
     console.error("create-royal-pass-checkout error:", err);
-    return new Response(
-      JSON.stringify({ error: "Failed to create checkout session." }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return json(500, { error: (err as Error).message || "Failed to create checkout session" });
   }
 });
