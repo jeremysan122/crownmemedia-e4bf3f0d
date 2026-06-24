@@ -62,19 +62,40 @@ export default function Admin() {
       <div className="px-4 py-4 space-y-3">
         <AdminSessionHint />
 
-        {/* Admin nav strip */}
-        <nav className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
-          <AdminNav to="/admin/command-center" icon={<Activity size={12} />} label="Command Center" />
+        {/* Admin nav — organized sections */}
+        <AdminSection title="Command Center">
+          <AdminNav to="/admin/command-center" icon={<LayoutDashboard size={12} />} label="Command Center" />
+        </AdminSection>
+
+        <AdminSection title="Moderation & Safety">
           <AdminNav to="/admin/moderation" icon={<Shield size={12} />} label="Moderation Queue" />
+          <AdminNav to="/admin/sensitive-appeals" icon={<AlertTriangle size={12} />} label="Sensitive Appeals" />
+          <AdminNav to="/admin/audit-log" icon={<ScrollText size={12} />} label="Audit Log" />
+        </AdminSection>
+
+        <AdminSection title="Users & Creator Tools">
+          <AdminNav to="/admin/verify" icon={<CheckSquare size={12} />} label="Verification" />
+          <AdminNav to="/admin/verification" icon={<BadgeCheck size={12} />} label="Blue Check Review" />
+          <AdminNav to="/admin/voting-verify" icon={<CrownIcon size={12} />} label="Voting Verify" />
+          <AdminNav to="/admin/creator-program" icon={<Users size={12} />} label="Creator Program" />
+        </AdminSection>
+
+        <AdminSection title="Rewards & Monetization">
+          <AdminNav to="/admin/rewards" icon={<Gift size={12} />} label="Rewards" />
+          <AdminNav to="/admin/bundles" icon={<Package size={12} />} label="Bundles" />
+          <AdminNav to="/admin/broadcast" icon={<Megaphone size={12} />} label="Broadcast" />
+        </AdminSection>
+
+        <AdminSection title="Content & Categories">
+          <AdminNav to="/admin/categories" icon={<FolderTree size={12} />} label="Categories" />
+        </AdminSection>
+
+        <AdminSection title="Compliance & System Health">
+          <AdminNav to="/admin/compliance" icon={<FileCheck size={12} />} label="Compliance Check" />
           <AdminNav to="/admin/system-audit" icon={<Activity size={12} />} label="System Audit" />
           <AdminNav to="/admin/race-audit" icon={<Swords size={12} />} label="Race Audit" />
-          <AdminNav to="/admin/audit-log" icon={<ScrollText size={12} />} label="Audit Log" />
-          <AdminNav to="/admin/verify" icon={<CheckSquare size={12} />} label="Verification" />
-          <AdminNav to="/admin/voting-verify" icon={<CrownIcon size={12} />} label="Voting Verify" />
-          <AdminNav to="/admin/verification" icon={<BadgeCheck size={12} />} label="Blue Check Review" />
-          <AdminNav to="/admin/broadcast" icon={<Megaphone size={12} />} label="Broadcast" />
-          <AdminNav to="/admin/bundles" icon={<Package size={12} />} label="Bundles" />
-        </nav>
+        </AdminSection>
+
 
         <CrownRankingsWidget />
         <div className="flex items-center justify-between">
