@@ -140,7 +140,13 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
 
             <div>
               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Pick your post</p>
-              {myPosts.length === 0 ? (
+              {loadingPosts ? (
+                <div className="grid grid-cols-3 gap-2 max-h-72 overflow-hidden pr-1">
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <RoyalThumbSkeleton key={i} className="rounded-lg" />
+                  ))}
+                </div>
+              ) : myPosts.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-4 text-center">No posts yet — upload one first.</p>
               ) : (
                 <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
