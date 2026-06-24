@@ -41,6 +41,7 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
       return;
     }
     if (user) {
+      setLoadingPosts(true);
       supabase.from("posts").select("id, image_url, category, filter")
         .eq("user_id", user.id).eq("is_removed", false)
         .order("created_at", { ascending: false }).limit(24)
@@ -48,6 +49,7 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
           const posts = (data as PostThumb[]) || [];
           setMyPosts(posts);
           if (posts[0]) { setPostId(posts[0].id); setCategory(posts[0].category); }
+          setLoadingPosts(false);
         });
     }
     if (presetOpponentId) {
