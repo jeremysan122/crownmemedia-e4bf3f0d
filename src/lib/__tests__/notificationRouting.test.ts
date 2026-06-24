@@ -35,4 +35,13 @@ describe("getNotificationTarget", () => {
     expect(getNotificationTarget({ type: "system", payload: { kind: "verification" } })).toBe("/verification");
     expect(getNotificationTarget({ type: "system", payload: { kind: "payout" } })).toBe("/wallet");
   });
+  it("routes streak_reminder system notifications to /rewards (deep link)", () => {
+    expect(getNotificationTarget({ type: "system", payload: { kind: "streak_reminder" } })).toBe("/rewards");
+    // event-based payload (alternate emitter shape)
+    expect(getNotificationTarget({ type: "system", payload: { event: "streak_reminder" } })).toBe("/rewards");
+  });
+  it("falls back to payload.deeplink when payload.link is missing", () => {
+    expect(getNotificationTarget({ type: "system", payload: { deeplink: "/rewards" } })).toBe("/rewards");
+  });
 });
+
