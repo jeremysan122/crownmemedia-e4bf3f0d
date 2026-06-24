@@ -7,10 +7,12 @@ import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { Link } from "react-router-dom";
 import CrownLoader from "@/components/CrownLoader";
 import { CrownIcon } from "@/components/CrownIcon";
-import { Flame, Swords, Sparkles, ArrowLeft, History, Loader2 } from "lucide-react";
+import { Flame, Swords, Sparkles, ArrowLeft, History, Loader2, RefreshCw, Clock, AlertTriangle } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { toast } from "sonner";
 import { haptic } from "@/lib/haptics";
+import { msUntilUtcMidnight, formatCountdown, formatLastUpdated, isUtcDayStale } from "@/lib/rewardsTime";
+
 
 type PrizeType = "shekels" | "battle_tickets" | "royal_pass_days" | "profile_boost_hours" | "bonus_spin" | "nothing";
 type Prize = {
@@ -81,17 +83,20 @@ export default function Rewards() {
   const [prizes, setPrizes] = useState<Prize[]>([]);
   const [tickets, setTickets] = useState<number>(0);
   const [claiming, setClaiming] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [winFlash, setWinFlash] = useState(false);
   const [lastResult, setLastResult] = useState<{ label: string; prize_type: PrizeType; prize_value: number } | null>(null);
-  // Tick once per minute so the "next in Xh Ym" countdown stays current
-  // without spamming re-renders. 24h cooldown is timestamp-based, not midnight.
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  // Tick every second so the "next reset" countdown + "updated Ns ago" stay live.
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    const id = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
+
 
   const today = todayUtc();
   const lastClaimMs = streak?.last_claimed_at ? new Date(streak.last_claimed_at).getTime() : 0;
@@ -101,16 +106,22 @@ export default function Rewards() {
   const canSpin = claimedToday && (!spunToday || bonusSpins > 0);
 
 
-  const reload = async () => {
+  const reload = async (opts?: { manual?: boolean }) => {
     if (!user) return;
-    const [s, p, t] = await Promise.all([
-      supabase.from("daily_streaks").select("current_streak,longest_streak,last_claimed_date,last_claimed_at,last_spin_date,total_claims,bonus_spins").eq("user_id", user.id).maybeSingle(),
-      supabase.from("spin_wheel_prizes").select("id,label,prize_type,prize_value,weight,color_hex,sort_order").eq("active", true).order("sort_order"),
-      supabase.from("battle_tickets").select("balance").eq("user_id", user.id).maybeSingle(),
-    ]);
-    setStreak((s.data as Streak | null) ?? { current_streak: 0, longest_streak: 0, last_claimed_date: null, last_claimed_at: null, last_spin_date: null, total_claims: 0, bonus_spins: 0 });
-    setPrizes((p.data as Prize[]) ?? []);
-    setTickets((t.data?.balance as number | undefined) ?? 0);
+    if (opts?.manual) setRefreshing(true);
+    try {
+      const [s, p, t] = await Promise.all([
+        supabase.from("daily_streaks").select("current_streak,longest_streak,last_claimed_date,last_claimed_at,last_spin_date,total_claims,bonus_spins").eq("user_id", user.id).maybeSingle(),
+        supabase.from("spin_wheel_prizes").select("id,label,prize_type,prize_value,weight,color_hex,sort_order").eq("active", true).order("sort_order"),
+        supabase.from("battle_tickets").select("balance").eq("user_id", user.id).maybeSingle(),
+      ]);
+      setStreak((s.data as Streak | null) ?? { current_streak: 0, longest_streak: 0, last_claimed_date: null, last_claimed_at: null, last_spin_date: null, total_claims: 0, bonus_spins: 0 });
+      setPrizes((p.data as Prize[]) ?? []);
+      setTickets((t.data?.balance as number | undefined) ?? 0);
+      setLastUpdated(Date.now());
+    } finally {
+      if (opts?.manual) setRefreshing(false);
+    }
   };
 
   useEffect(() => {
@@ -135,6 +146,17 @@ export default function Rewards() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading]);
 
+  // Auto-reload on UTC rollover so day-7 / streak / claim-state flip without a manual refresh.
+  const lastSeenUtcDay = useRef<string>(today);
+  useEffect(() => {
+    const cur = new Date(nowMs).toISOString().slice(0, 10);
+    if (cur !== lastSeenUtcDay.current) {
+      lastSeenUtcDay.current = cur;
+      reload();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nowMs]);
+
   async function refreshTickets() {
     if (!user) return;
     const { data } = await supabase.from("battle_tickets").select("balance").eq("user_id", user.id).maybeSingle();
@@ -144,23 +166,39 @@ export default function Rewards() {
   async function claim() {
     if (claiming || claimedToday) return;
     setClaiming(true);
+    setClaimError(null);
+    // Optimistic UI: flip the button to "Claimed" + advance the streak instantly.
+    const optimisticStreak = streak;
+    setStreak((prev) => prev ? {
+      ...prev,
+      current_streak: (prev.current_streak ?? 0) + (prev.last_claimed_date === today ? 0 : 1),
+      last_claimed_date: today,
+      last_claimed_at: new Date().toISOString(),
+    } : prev);
+
     const { data, error } = await supabase.rpc("claim_daily_reward");
     setClaiming(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      // Roll back optimistic update and surface a retryable error state.
+      setStreak(optimisticStreak);
+      setClaimError(error.message || "Couldn't claim — try again.");
+      toast.error(error.message || "Couldn't claim — try again.");
+      return;
+    }
     const res = data as { ok: boolean; shekels_awarded?: number; bonus?: number; current_streak?: number; longest_streak?: number; already_claimed?: boolean };
     if (res.already_claimed) toast.info("Already claimed today — come back tomorrow.");
     else {
       haptic("success");
       const bonusTxt = res.bonus && res.bonus > 0 ? ` (+${res.bonus} bonus!)` : "";
       toast.success(`+${res.shekels_awarded} shekels${bonusTxt} · ${res.current_streak}-day streak 🔥`);
-      // Optimistic instant bump so the header pill reflects the new balance immediately,
-      // then a server refresh confirms the authoritative number.
       if (res.shekels_awarded) applyDelta(res.shekels_awarded);
       await refreshWallet();
       walletStore.requestRefresh();
     }
-    setStreak((prev) => prev ? { ...prev, current_streak: res.current_streak ?? prev.current_streak, longest_streak: res.longest_streak ?? prev.longest_streak, last_claimed_date: today, last_claimed_at: new Date().toISOString() } : prev);
+    // Reconcile with authoritative server state so the page never lingers on stale data.
+    await reload();
   }
+
 
   async function spin() {
     if (spinning || !canSpin || prizes.length === 0) return;
@@ -344,10 +382,41 @@ export default function Rewards() {
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-purple-700/15 blur-[100px] pointer-events-none" aria-hidden />
 
           {/* Header */}
-          <div className="relative text-center space-y-1 mb-7">
+          <div className="relative text-center space-y-1 mb-4">
             <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl text-white tracking-tight">Royal Vault</h2>
             <p className="text-amber-400 text-xs sm:text-sm font-semibold tracking-[0.25em] uppercase">Daily Rewards</p>
           </div>
+
+          {/* Freshness + UTC rollover countdown */}
+          <div
+            className="relative mb-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10px] uppercase tracking-widest text-white/50"
+            aria-label="Rewards data freshness"
+            data-testid="rewards-freshness"
+          >
+            <span className="inline-flex items-center gap-1" aria-live="polite">
+              <span
+                className={`size-1.5 rounded-full ${isUtcDayStale(lastUpdated ? new Date(lastUpdated).toISOString().slice(0, 10) : null, nowMs) ? "bg-amber-400 animate-pulse" : "bg-emerald-400"}`}
+                aria-hidden
+              />
+              {formatLastUpdated(lastUpdated, nowMs)}
+            </span>
+            <span className="text-white/20" aria-hidden>·</span>
+            <span className="inline-flex items-center gap-1" data-testid="rewards-utc-countdown">
+              <Clock className="size-3" aria-hidden />
+              Next reset in {formatCountdown(msUntilUtcMidnight(nowMs))}
+            </span>
+            <button
+              type="button"
+              onClick={() => reload({ manual: true })}
+              disabled={refreshing}
+              aria-label="Refresh rewards"
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-amber-400/80 hover:text-amber-300 hover:bg-amber-400/10 disabled:opacity-50"
+            >
+              <RefreshCw className={`size-3 ${refreshing ? "animate-spin" : ""}`} aria-hidden />
+              Refresh
+            </button>
+          </div>
+
 
           <div className="relative grid gap-7 lg:grid-cols-2 lg:gap-10 lg:items-start">
            <div className="space-y-7">
@@ -467,9 +536,31 @@ export default function Rewards() {
             </span>
           </button>
 
+          {claimError && (
+            <div
+              role="alert"
+              data-testid="rewards-claim-error"
+              className="-mt-3 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] text-red-200"
+            >
+              <AlertTriangle className="size-4 mt-0.5 shrink-0" aria-hidden />
+              <div className="flex-1">
+                <p className="font-semibold">Claim failed</p>
+                <p className="text-red-200/80">{claimError}</p>
+              </div>
+              <button
+                type="button"
+                onClick={claim}
+                className="self-center rounded-md border border-red-400/40 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-red-100 hover:bg-red-400/20"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
           <p className="text-[11px] text-white/50 text-center -mt-3">
             Earn shekels through daily rewards or top up anytime in the store.
           </p>
+
            </div>
 
            <div className="space-y-7">
