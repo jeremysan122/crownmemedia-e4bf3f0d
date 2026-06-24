@@ -536,9 +536,31 @@ export default function Rewards() {
             </span>
           </button>
 
+          {claimError && (
+            <div
+              role="alert"
+              data-testid="rewards-claim-error"
+              className="-mt-3 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] text-red-200"
+            >
+              <AlertTriangle className="size-4 mt-0.5 shrink-0" aria-hidden />
+              <div className="flex-1">
+                <p className="font-semibold">Claim failed</p>
+                <p className="text-red-200/80">{claimError}</p>
+              </div>
+              <button
+                type="button"
+                onClick={claim}
+                className="self-center rounded-md border border-red-400/40 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-red-100 hover:bg-red-400/20"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
           <p className="text-[11px] text-white/50 text-center -mt-3">
             Earn shekels through daily rewards or top up anytime in the store.
           </p>
+
            </div>
 
            <div className="space-y-7">
