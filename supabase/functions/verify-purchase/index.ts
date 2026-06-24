@@ -93,15 +93,22 @@ Deno.serve(async (req) => {
       ?? (await stripe.checkout.sessions.listLineItems(session.id, { limit: 20 })).data;
 
     for (const item of lineItems) {
-      const priceId = item.price?.id;
-      if (!priceId) continue;
+      const priceObj = item.price as { id?: string; lookup_key?: string | null; metadata?: Record<string, string> } | null;
+      const stripePriceId = priceObj?.id;
+      // DB stores the human-readable lookup_key (e.g. "shekels_starter_pouch"),
+      // not Stripe's internal price_xxx id. Prefer lookup_key, fall back to
+      // legacy metadata, then to the raw id as a last resort.
+      const lookupKey = priceObj?.lookup_key
+        || priceObj?.metadata?.lovable_external_id
+        || stripePriceId;
+      if (!lookupKey) continue;
       const qty = item.quantity || 1;
       const itemUsd = (item.amount_total ?? 0) / 100;
 
       const { data: bundle } = await admin
         .from("shekel_bundles")
         .select("shekels, label")
-        .eq("stripe_price_id", priceId)
+        .eq("stripe_price_id", lookupKey)
         .maybeSingle();
       if (bundle) {
         const credit = Number(bundle.shekels) * qty;
@@ -113,7 +120,7 @@ Deno.serve(async (req) => {
           usd_amount: itemUsd,
           label: bundle.label,
           stripe_session_id: session.id,
-          metadata: { price_id: priceId, quantity: qty, source: "verify-purchase" },
+          metadata: { price_id: lookupKey, quantity: qty, source: "verify-purchase" },
         });
         continue;
       }
@@ -121,7 +128,7 @@ Deno.serve(async (req) => {
       const { data: boost } = await admin
         .from("boost_bundles")
         .select("boost_type, duration_hours, label")
-        .eq("stripe_price_id", priceId)
+        .eq("stripe_price_id", lookupKey)
         .maybeSingle();
       if (boost) {
         const expires = new Date(Date.now() + boost.duration_hours * 3600_000).toISOString();
