@@ -25,8 +25,8 @@ export function getNotificationTarget(n: NotificationLike): string | null {
   if (!n) return null;
   const p: Record<string, any> = n.payload ?? {};
 
-  // 1. Explicit payload.link wins (server-authored deep links).
-  const explicit = safePath(p.link);
+  // 1. Explicit payload.link / payload.deeplink wins (server-authored deep links).
+  const explicit = safePath(p.link) ?? safePath(p.deeplink);
   if (explicit) return explicit;
 
   const type = (n.type ?? "").toString();
@@ -69,9 +69,9 @@ export function getNotificationTarget(n: NotificationLike): string | null {
       return "/battles";
     }
     case "system": {
-      // Common system subtypes encoded in payload.kind
-      const kind = (p.kind ?? "").toString();
-      if (kind === "reward" || kind === "daily_reward") return "/rewards";
+      // Common system subtypes encoded in payload.kind or payload.event
+      const kind = (p.kind ?? p.event ?? "").toString();
+      if (kind === "reward" || kind === "daily_reward" || kind === "streak_reminder") return "/rewards";
       if (kind === "verification") return "/verification";
       if (kind === "payout") return "/wallet";
       if (kind === "moderation" && p.post_id) return `/post/${p.post_id}`;

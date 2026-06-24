@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
         type: "system",
         title: "Your streak is about to break 🔥",
         body: `You're on a ${row.current_streak}-day streak. Claim today's reward before midnight UTC to keep it alive.`,
-        payload: { event: "streak_reminder", streak: row.current_streak, deeplink: "/rewards" },
+        payload: { event: "streak_reminder", kind: "streak_reminder", streak: row.current_streak, link: "/rewards", deeplink: "/rewards" },
       });
       if (nErr) { console.error("notif insert failed", row.user_id, nErr.message); continue; }
 
