@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
-import { toast } from "sonner";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
 interface Plan {
   id: string;
@@ -27,7 +27,8 @@ export default function RoyalPassCard() {
   const pass = useRoyalPass();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pending, setPending] = useState<string | null>(null);
+  const [pending] = useState<string | null>(null);
+  const { openCheckout, checkoutElement } = useStripeCheckout();
 
   useEffect(() => {
     let cancelled = false;
@@ -46,24 +47,15 @@ export default function RoyalPassCard() {
     };
   }, []);
 
-  const subscribe = async (plan: Plan) => {
+  const subscribe = (plan: Plan) => {
     if (!user) return;
-    setPending(plan.id);
-    try {
-      const { data, error } = await supabase.functions.invoke("create-royal-pass-checkout", {
-        body: { plan_id: plan.id, return_path: "/store/success?kind=royal_pass" },
-      });
-      if (error) throw error;
-      const url = (data as { url?: string; error?: string })?.url;
-      const errMsg = (data as { error?: string })?.error;
-      if (errMsg) throw new Error(errMsg);
-      if (!url) throw new Error("No checkout URL returned");
-      window.location.href = url;
-    } catch (e) {
-      toast.error((e as Error).message || "Could not start checkout");
-    } finally {
-      setPending(null);
-    }
+    openCheckout({
+      priceId: plan.stripe_price_id,
+      fnName: "create-royal-pass-checkout",
+      extraBody: { plan_id: plan.id },
+      title: plan.name,
+      returnUrl: `${window.location.origin}/store/success?kind=royal_pass`,
+    });
   };
 
   if (loading || pass.loading) {
@@ -212,6 +204,7 @@ export default function RoyalPassCard() {
           </div>
         </div>
       ))}
+      {checkoutElement}
     </div>
   );
 }

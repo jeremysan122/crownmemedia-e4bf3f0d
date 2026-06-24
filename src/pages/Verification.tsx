@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { ShieldCheck, Crown, Upload, Loader2, ArrowLeft, CheckCircle2, Lock, Clock, FileText, Eye, MessageCircle, Sparkles, Circle } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { Link, useNavigate } from "react-router-dom";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import {
   fetchEligibilityProgress,
   requestStandardVerification,
@@ -59,6 +60,7 @@ export default function Verification() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const profilePath = profile?.username ? `/${profile.username}` : "/me";
+  const { openCheckout: openVerificationCheckout, checkoutElement: verificationCheckoutEl } = useStripeCheckout();
   const goBack = () => {
     // Only use history.back() if we actually came from within the app —
     // otherwise (direct link / new tab) fall back to a safe destination.
@@ -449,19 +451,14 @@ export default function Verification() {
             type="button"
             variant="default"
             className="w-full"
-            onClick={async () => {
-              try {
-                const { data, error } = await supabase.functions.invoke("create-verification-checkout", {
-                  body: { return_path: "/verification" },
-                });
-                if (error) throw error;
-                const url = (data as any)?.url;
-                if (!url) throw new Error("No checkout URL returned");
-                window.location.href = url;
-              } catch (e: any) {
-                toast.error(e?.message ?? "Could not start checkout");
-              }
-            }}
+            onClick={() =>
+              openVerificationCheckout({
+                priceId: "verification_monthly",
+                fnName: "create-verification-checkout",
+                title: "CrownMe Verified · Monthly",
+                returnUrl: `${window.location.origin}/verification`,
+              })
+            }
           >
             <Crown className="h-4 w-4 mr-2" /> Subscribe $1.99/mo & fast-track
           </Button>
@@ -523,6 +520,7 @@ export default function Verification() {
           </>
         )}
       </Card>
+      {verificationCheckoutEl}
     </div>
   );
 }

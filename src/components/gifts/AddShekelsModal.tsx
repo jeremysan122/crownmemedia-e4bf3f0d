@@ -2,8 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { SHEKEL, formatShekels } from "@/lib/gifts";
 import { Sparkles, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
 interface Bundle {
   id: string;
@@ -24,8 +24,8 @@ export default function AddShekelsModal({
   onPurchase?: (shekels: number, usd: number) => Promise<void> | void;
 }) {
   const [bundles, setBundles] = useState<Bundle[]>([]);
-  const [pending, setPending] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { openCheckout, checkoutElement } = useStripeCheckout();
 
   useEffect(() => {
     if (!open) return;
@@ -41,23 +41,16 @@ export default function AddShekelsModal({
     })();
   }, [open]);
 
-  const buy = async (b: Bundle) => {
-    setPending(b.id);
-    try {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { price_id: b.stripe_price_id, return_path: "/store/success" },
-      });
-      if (error) throw error;
-      const url = (data as { url?: string })?.url;
-      if (!url) throw new Error("No checkout URL returned");
-      window.open(url, "_blank");
-      toast.success("Opening Stripe Checkout…");
-    } catch (e) {
-      toast.error((e as Error).message || "Could not start checkout");
-    } finally {
-      setPending(null);
-    }
+  const buy = (b: Bundle) => {
+    onOpenChange(false);
+    openCheckout({
+      priceId: b.stripe_price_id,
+      fnName: "create-checkout",
+      title: `${b.label} — ${formatShekels(Number(b.shekels))} Shekels`,
+      returnUrl: `${window.location.origin}/store/success`,
+    });
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -83,7 +76,6 @@ export default function AddShekelsModal({
           {bundles.map((b) => (
             <button
               key={b.id}
-              disabled={pending !== null}
               onClick={() => buy(b)}
               className="relative rounded-2xl p-4 flex flex-col items-center gap-1 active:scale-95 transition-all bg-card/70 border border-border/60 hover:border-primary/50"
             >
@@ -96,11 +88,11 @@ export default function AddShekelsModal({
               <div className="text-xs font-semibold tabular-nums text-muted-foreground">
                 ${Number(b.usd).toFixed(2)}
               </div>
-              {pending === b.id && <div className="text-[10px] mt-1 opacity-80 flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Opening…</div>}
             </button>
           ))}
         </div>
       </DialogContent>
+      {checkoutElement}
     </Dialog>
   );
 }

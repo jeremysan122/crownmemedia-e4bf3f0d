@@ -30,6 +30,7 @@ import RoyalPassBadge from "@/components/store/RoyalPassBadge";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import BoostPostPicker from "@/components/store/BoostPostPicker";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
 const POST_TARGETED_BOOSTS = new Set(["royal_boost", "vote_boost", "crown_spotlight", "crown_shield"]);
 
@@ -144,27 +145,17 @@ export default function Store() {
   }, []);
 
   const [pickerBundle, setPickerBundle] = useState<BoostBundle | null>(null);
+  const { openCheckout, checkoutElement } = useStripeCheckout();
 
-  const startCheckout = async (b: BoostBundle, postId?: string) => {
+  const startCheckout = (b: BoostBundle, postId?: string) => {
     if (!user) return;
-    setPending(b.id);
-    try {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: {
-          price_id: b.stripe_price_id,
-          return_path: "/store/success",
-          ...(postId ? { target_post_id: postId } : {}),
-        },
-      });
-      if (error) throw error;
-      const url = (data as { url?: string })?.url;
-      if (!url) throw new Error("No checkout URL returned");
-      window.location.href = url;
-    } catch (e) {
-      toast.error((e as Error).message || "Could not start checkout");
-    } finally {
-      setPending(null);
-    }
+    openCheckout({
+      priceId: b.stripe_price_id,
+      fnName: "create-checkout",
+      title: b.label,
+      returnUrl: `${window.location.origin}/store/success`,
+      extraBody: postId ? { target_post_id: postId } : undefined,
+    });
   };
 
   const buy = (b: BoostBundle) => {
