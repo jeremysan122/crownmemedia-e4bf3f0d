@@ -101,24 +101,38 @@ export default function Rewards() {
   const canSpin = claimedToday && (!spunToday || bonusSpins > 0);
 
 
+  const reload = async () => {
+    if (!user) return;
+    const [s, p, t] = await Promise.all([
+      supabase.from("daily_streaks").select("current_streak,longest_streak,last_claimed_date,last_claimed_at,last_spin_date,total_claims,bonus_spins").eq("user_id", user.id).maybeSingle(),
+      supabase.from("spin_wheel_prizes").select("id,label,prize_type,prize_value,weight,color_hex,sort_order").eq("active", true).order("sort_order"),
+      supabase.from("battle_tickets").select("balance").eq("user_id", user.id).maybeSingle(),
+    ]);
+    setStreak((s.data as Streak | null) ?? { current_streak: 0, longest_streak: 0, last_claimed_date: null, last_claimed_at: null, last_spin_date: null, total_claims: 0, bonus_spins: 0 });
+    setPrizes((p.data as Prize[]) ?? []);
+    setTickets((t.data?.balance as number | undefined) ?? 0);
+  };
+
   useEffect(() => {
     if (authLoading || !user) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [s, p, t] = await Promise.all([
-        supabase.from("daily_streaks").select("current_streak,longest_streak,last_claimed_date,last_claimed_at,last_spin_date,total_claims,bonus_spins").eq("user_id", user.id).maybeSingle(),
-        supabase.from("spin_wheel_prizes").select("id,label,prize_type,prize_value,weight,color_hex,sort_order").eq("active", true).order("sort_order"),
-        supabase.from("battle_tickets").select("balance").eq("user_id", user.id).maybeSingle(),
-      ]);
-      if (cancelled) return;
-      setStreak((s.data as Streak | null) ?? { current_streak: 0, longest_streak: 0, last_claimed_date: null, last_claimed_at: null, last_spin_date: null, total_claims: 0, bonus_spins: 0 });
-
-      setPrizes((p.data as Prize[]) ?? []);
-      setTickets((t.data?.balance as number | undefined) ?? 0);
-      setLoading(false);
+      await reload();
+      if (!cancelled) setLoading(false);
     })();
-    return () => { cancelled = true; };
+    // Re-fetch when the tab regains focus so the streak/tickets/last-claim
+    // can't go stale (e.g. user left the tab open across the UTC rollover or
+    // claimed from another device).
+    const onFocus = () => { if (!document.hidden) reload(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading]);
 
   async function refreshTickets() {
