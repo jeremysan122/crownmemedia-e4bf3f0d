@@ -83,17 +83,20 @@ export default function Rewards() {
   const [prizes, setPrizes] = useState<Prize[]>([]);
   const [tickets, setTickets] = useState<number>(0);
   const [claiming, setClaiming] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [winFlash, setWinFlash] = useState(false);
   const [lastResult, setLastResult] = useState<{ label: string; prize_type: PrizeType; prize_value: number } | null>(null);
-  // Tick once per minute so the "next in Xh Ym" countdown stays current
-  // without spamming re-renders. 24h cooldown is timestamp-based, not midnight.
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  // Tick every second so the "next reset" countdown + "updated Ns ago" stay live.
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    const id = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
+
 
   const today = todayUtc();
   const lastClaimMs = streak?.last_claimed_at ? new Date(streak.last_claimed_at).getTime() : 0;
