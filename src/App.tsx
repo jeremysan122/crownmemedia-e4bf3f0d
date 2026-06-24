@@ -21,6 +21,7 @@ import CrownStolenBanner from "./components/CrownStolenBanner";
 import PointerEventsGuard from "./components/PointerEventsGuard";
 import NotificationToaster from "./components/NotificationToaster";
 import CookieConsentBanner from "./components/CookieConsentBanner";
+import { PaymentTestModeBanner } from "./components/payments/PaymentTestModeBanner";
 import UsernameRedirect from "./components/UsernameRedirect";
 
 // Lazy: secondary user pages (load on demand, reduces TTI)
@@ -141,6 +142,7 @@ const App = () => (
           <PointerEventsGuard />
           <NotificationToaster />
           <CookieConsentBanner />
+          <PaymentTestModeBanner />
           <Suspense fallback={<RouteFallback />}>
             <LegalConsentGate>
             <Routes>
