@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Coins, Plus, Trash2, FlaskConical, Loader2 } from "lucide-react";
+import { Coins, Plus, Trash2, Loader2 } from "lucide-react";
 import AdminSessionHint from "@/components/admin/AdminSessionHint";
 
 interface Bundle {
