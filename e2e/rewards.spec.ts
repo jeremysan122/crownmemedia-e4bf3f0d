@@ -160,6 +160,13 @@ async function installSupabaseMocks(page: Page, claimCounter: ClaimCounter) {
       });
     }
     if (url.includes("/notifications")) return json([]);
+    // Force LegalConsentGate to treat consents as resolved (its catch sets
+    // outstanding=[], which removes the blocking modal). Returning an error
+    // here is safer than guessing the current doc versions.
+    if (url.includes("/user_legal_acceptances")) {
+      return route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ message: "e2e mock" }) });
+    }
+
 
     // Default — empty list / empty object depending on the verb.
     if (method === "GET") return json([]);
