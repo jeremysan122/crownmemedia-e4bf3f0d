@@ -106,16 +106,22 @@ export default function Rewards() {
   const canSpin = claimedToday && (!spunToday || bonusSpins > 0);
 
 
-  const reload = async () => {
+  const reload = async (opts?: { manual?: boolean }) => {
     if (!user) return;
-    const [s, p, t] = await Promise.all([
-      supabase.from("daily_streaks").select("current_streak,longest_streak,last_claimed_date,last_claimed_at,last_spin_date,total_claims,bonus_spins").eq("user_id", user.id).maybeSingle(),
-      supabase.from("spin_wheel_prizes").select("id,label,prize_type,prize_value,weight,color_hex,sort_order").eq("active", true).order("sort_order"),
-      supabase.from("battle_tickets").select("balance").eq("user_id", user.id).maybeSingle(),
-    ]);
-    setStreak((s.data as Streak | null) ?? { current_streak: 0, longest_streak: 0, last_claimed_date: null, last_claimed_at: null, last_spin_date: null, total_claims: 0, bonus_spins: 0 });
-    setPrizes((p.data as Prize[]) ?? []);
-    setTickets((t.data?.balance as number | undefined) ?? 0);
+    if (opts?.manual) setRefreshing(true);
+    try {
+      const [s, p, t] = await Promise.all([
+        supabase.from("daily_streaks").select("current_streak,longest_streak,last_claimed_date,last_claimed_at,last_spin_date,total_claims,bonus_spins").eq("user_id", user.id).maybeSingle(),
+        supabase.from("spin_wheel_prizes").select("id,label,prize_type,prize_value,weight,color_hex,sort_order").eq("active", true).order("sort_order"),
+        supabase.from("battle_tickets").select("balance").eq("user_id", user.id).maybeSingle(),
+      ]);
+      setStreak((s.data as Streak | null) ?? { current_streak: 0, longest_streak: 0, last_claimed_date: null, last_claimed_at: null, last_spin_date: null, total_claims: 0, bonus_spins: 0 });
+      setPrizes((p.data as Prize[]) ?? []);
+      setTickets((t.data?.balance as number | undefined) ?? 0);
+      setLastUpdated(Date.now());
+    } finally {
+      if (opts?.manual) setRefreshing(false);
+    }
   };
 
   useEffect(() => {
@@ -140,6 +146,17 @@ export default function Rewards() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading]);
 
+  // Auto-reload on UTC rollover so day-7 / streak / claim-state flip without a manual refresh.
+  const lastSeenUtcDay = useRef<string>(today);
+  useEffect(() => {
+    const cur = new Date(nowMs).toISOString().slice(0, 10);
+    if (cur !== lastSeenUtcDay.current) {
+      lastSeenUtcDay.current = cur;
+      reload();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nowMs]);
+
   async function refreshTickets() {
     if (!user) return;
     const { data } = await supabase.from("battle_tickets").select("balance").eq("user_id", user.id).maybeSingle();
@@ -149,23 +166,39 @@ export default function Rewards() {
   async function claim() {
     if (claiming || claimedToday) return;
     setClaiming(true);
+    setClaimError(null);
+    // Optimistic UI: flip the button to "Claimed" + advance the streak instantly.
+    const optimisticStreak = streak;
+    setStreak((prev) => prev ? {
+      ...prev,
+      current_streak: (prev.current_streak ?? 0) + (prev.last_claimed_date === today ? 0 : 1),
+      last_claimed_date: today,
+      last_claimed_at: new Date().toISOString(),
+    } : prev);
+
     const { data, error } = await supabase.rpc("claim_daily_reward");
     setClaiming(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      // Roll back optimistic update and surface a retryable error state.
+      setStreak(optimisticStreak);
+      setClaimError(error.message || "Couldn't claim — try again.");
+      toast.error(error.message || "Couldn't claim — try again.");
+      return;
+    }
     const res = data as { ok: boolean; shekels_awarded?: number; bonus?: number; current_streak?: number; longest_streak?: number; already_claimed?: boolean };
     if (res.already_claimed) toast.info("Already claimed today — come back tomorrow.");
     else {
       haptic("success");
       const bonusTxt = res.bonus && res.bonus > 0 ? ` (+${res.bonus} bonus!)` : "";
       toast.success(`+${res.shekels_awarded} shekels${bonusTxt} · ${res.current_streak}-day streak 🔥`);
-      // Optimistic instant bump so the header pill reflects the new balance immediately,
-      // then a server refresh confirms the authoritative number.
       if (res.shekels_awarded) applyDelta(res.shekels_awarded);
       await refreshWallet();
       walletStore.requestRefresh();
     }
-    setStreak((prev) => prev ? { ...prev, current_streak: res.current_streak ?? prev.current_streak, longest_streak: res.longest_streak ?? prev.longest_streak, last_claimed_date: today, last_claimed_at: new Date().toISOString() } : prev);
+    // Reconcile with authoritative server state so the page never lingers on stale data.
+    await reload();
   }
+
 
   async function spin() {
     if (spinning || !canSpin || prizes.length === 0) return;
