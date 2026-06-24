@@ -11,6 +11,12 @@ project_id = "bailrqskqpmzvsgivhvm"
     verify_jwt = false
   [functions.stripe-webhook]
     verify_jwt = false
+  [functions.create-checkout]
+    verify_jwt = false
+  [functions.create-royal-pass-checkout]
+    verify_jwt = false
+  [functions.create-verification-checkout]
+    verify_jwt = false
   [functions.send-transactional-email]
     verify_jwt = true
   [functions.send-test-emails]
