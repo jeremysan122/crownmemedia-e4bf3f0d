@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
           label: `${boost.label} (${boost.duration_hours}h)`,
           stripe_session_id: session.id,
           reference_id: b?.id ?? null,
-          metadata: { price_id: priceId, boost_type: boost.boost_type, source: "verify-purchase" },
+          metadata: { price_id: lookupKey, boost_type: boost.boost_type, source: "verify-purchase" },
         });
       }
     }
