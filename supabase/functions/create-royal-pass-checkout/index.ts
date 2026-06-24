@@ -70,11 +70,10 @@ Deno.serve(async (req) => {
 
     const customerId = await resolveOrCreateCustomer(stripe, { email: userEmail, userId });
 
-    const returnBase = safeReturnUrl(req, return_url ?? "/store/success", "/store/success");
-
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       ui_mode: "embedded_page",
+      redirect_on_completion: "never",
       line_items: [{ price: stripePrice.id, quantity: 1 }],
       customer: customerId,
       metadata: {
@@ -91,10 +90,9 @@ Deno.serve(async (req) => {
           ...(resolvedPlanId ? { plan_id: resolvedPlanId } : {}),
         },
       },
-      return_url: `${returnBase}?session_id={CHECKOUT_SESSION_ID}&kind=royal_pass`,
     } as any);
 
-    return json(200, { clientSecret: session.client_secret });
+    return json(200, { clientSecret: session.client_secret, sessionId: session.id });
   } catch (err) {
     console.error("create-royal-pass-checkout error:", err);
     return json(500, { error: (err as Error).message || "Failed to create checkout session" });
