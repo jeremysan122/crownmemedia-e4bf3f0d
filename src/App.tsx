@@ -20,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import CrownStolenBanner from "./components/CrownStolenBanner";
 import PointerEventsGuard from "./components/PointerEventsGuard";
 import NotificationToaster from "./components/NotificationToaster";
+import CookieConsentBanner from "./components/CookieConsentBanner";
 import UsernameRedirect from "./components/UsernameRedirect";
 
 // Lazy: secondary user pages (load on demand, reduces TTI)
