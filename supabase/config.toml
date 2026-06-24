@@ -7,8 +7,6 @@ project_id = "bailrqskqpmzvsgivhvm"
     verify_jwt = true
   [functions.snapshot-ranks]
     verify_jwt = false
-  [functions.stripe-connect-webhook]
-    verify_jwt = false
   [functions.payments-webhook]
     verify_jwt = false
   [functions.create-checkout]
