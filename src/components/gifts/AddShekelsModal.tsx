@@ -76,7 +76,6 @@ export default function AddShekelsModal({
           {bundles.map((b) => (
             <button
               key={b.id}
-              disabled={pending !== null}
               onClick={() => buy(b)}
               className="relative rounded-2xl p-4 flex flex-col items-center gap-1 active:scale-95 transition-all bg-card/70 border border-border/60 hover:border-primary/50"
             >
@@ -89,11 +88,11 @@ export default function AddShekelsModal({
               <div className="text-xs font-semibold tabular-nums text-muted-foreground">
                 ${Number(b.usd).toFixed(2)}
               </div>
-              {pending === b.id && <div className="text-[10px] mt-1 opacity-80 flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Opening…</div>}
             </button>
           ))}
         </div>
       </DialogContent>
+      {checkoutElement}
     </Dialog>
   );
 }
