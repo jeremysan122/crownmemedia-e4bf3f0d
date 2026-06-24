@@ -50,21 +50,20 @@ Deno.serve(async (req) => {
     const stripePrice = prices.data[0];
 
     const customerId = await resolveOrCreateCustomer(stripe, { email: userEmail, userId });
-    const returnBase = safeReturnUrl(req, return_url ?? "/verification", "/verification");
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       ui_mode: "embedded_page",
+      redirect_on_completion: "never",
       line_items: [{ price: stripePrice.id, quantity: 1 }],
       customer: customerId,
       metadata: { user_id: userId, userId, kind: "verification" },
       subscription_data: {
         metadata: { user_id: userId, userId, kind: "verification" },
       },
-      return_url: `${returnBase}?session_id={CHECKOUT_SESSION_ID}&kind=verification`,
     } as any);
 
-    return json(200, { clientSecret: session.client_secret });
+    return json(200, { clientSecret: session.client_secret, sessionId: session.id });
   } catch (err) {
     console.error("create-verification-checkout error:", err);
     return json(500, { error: (err as Error).message || "Failed to create checkout session" });
