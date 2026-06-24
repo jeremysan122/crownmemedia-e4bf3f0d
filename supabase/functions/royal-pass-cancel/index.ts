@@ -1,16 +1,11 @@
 // Cancels (or resumes) the user's Royal Pass at period end via Stripe
-import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { type StripeEnv, createStripeClient } from "../_shared/stripe.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
-  apiVersion: "2024-12-18.acacia",
-  httpClient: Stripe.createFetchHttpClient(),
-});
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -39,6 +34,13 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const resume = !!body.resume;
+    const environment = body?.environment as StripeEnv | undefined;
+    if (environment !== "sandbox" && environment !== "live") {
+      return new Response(JSON.stringify({ error: "environment required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { data: sub } = await supabase
       .from("royal_pass_subscriptions")
@@ -53,11 +55,11 @@ Deno.serve(async (req) => {
       );
     }
 
+    const stripe = createStripeClient(environment);
     const updated = await stripe.subscriptions.update(sub.stripe_subscription_id, {
       cancel_at_period_end: !resume,
     });
 
-    // Sync immediately so the UI reflects the change without waiting for the webhook
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
