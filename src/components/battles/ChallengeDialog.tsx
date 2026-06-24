@@ -32,6 +32,7 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
   const [duration, setDuration] = useState<string>("24");
   const [category, setCategory] = useState<CrownCategory>("overall");
   const [submitting, setSubmitting] = useState(false);
+  const [loadingPosts, setLoadingPosts] = useState(false);
 
   useEffect(() => {
     if (!open) {
