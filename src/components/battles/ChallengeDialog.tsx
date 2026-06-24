@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Search, Swords, Loader2 } from "lucide-react";
 import { CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
 import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
+import { RoyalThumbSkeleton } from "@/components/royal/RoyalSkeleton";
 
 interface Props {
   open: boolean;
