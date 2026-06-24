@@ -78,25 +78,8 @@ export default function AdminBundles() {
     load();
   };
 
-  const runTest = async () => {
-    setTesting(true);
-    setTestResult("");
-    try {
-      const body: Record<string, unknown> = { kind: testKind };
-      if (testKind === "checkout") body.shekels = Number(testShekels);
-      if (testKind !== "checkout") body.stripe_account_id = testAccount;
-      if (testKind === "payout_paid" || testKind === "payout_failed") body.amount_usd = Number(testAmount);
-      const { data, error } = await supabase.functions.invoke("webhook-test-harness", { body });
-      if (error) throw error;
-      setTestResult(JSON.stringify(data, null, 2));
-      toast.success("Test event sent");
-    } catch (e) {
-      setTestResult(`Error: ${(e as Error).message}`);
-      toast.error((e as Error).message);
-    } finally {
-      setTesting(false);
-    }
-  };
+
+
 
   return (
     <AppShell title="ADMIN BUNDLES">
