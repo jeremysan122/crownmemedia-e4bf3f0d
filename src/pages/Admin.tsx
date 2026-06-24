@@ -185,3 +185,14 @@ function AdminNav({ to, icon, label }: { to: string; icon: React.ReactNode; labe
     </Link>
   );
 }
+
+function AdminSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-1.5" aria-label={title}>
+      <h2 className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground px-0.5">{title}</h2>
+      <nav className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+        {children}
+      </nav>
+    </section>
+  );
+}
