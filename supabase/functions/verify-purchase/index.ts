@@ -33,12 +33,14 @@ Deno.serve(async (req) => {
     }
     const userId = ud.user.id;
 
-    const { session_id } = await req.json().catch(() => ({}));
+    const { session_id, environment } = await req.json().catch(() => ({}));
     if (!session_id || typeof session_id !== "string" || !session_id.startsWith("cs_")) {
       return new Response(JSON.stringify({ error: "session_id required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const env: StripeEnv = environment === "live" ? "live" : "sandbox";
+    const stripe = createStripeClient(env);
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -49,7 +51,7 @@ Deno.serve(async (req) => {
     // so we never leak another user's ledger entries to a caller who only knows
     // their session_id.
     const session = await stripe.checkout.sessions.retrieve(session_id, {
-      expand: ["line_items"],
+      expand: ["line_items", "line_items.data.price"],
     });
     if (session.metadata?.user_id !== userId) {
       return new Response(JSON.stringify({ error: "Not your session" }), {
