@@ -115,7 +115,13 @@ export default function AcceptBattleDialog({ open, onOpenChange, battle, onResol
           </div>
         </div>
 
-        {posts.length === 0 ? (
+        {loadingPosts ? (
+          <div className="grid grid-cols-4 gap-2 max-h-56 overflow-hidden pr-1">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <RoyalThumbSkeleton key={i} />
+            ))}
+          </div>
+        ) : posts.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-3">
             You have no posts in this category. Upload one to accept.
           </p>
