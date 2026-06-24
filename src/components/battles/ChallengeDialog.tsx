@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Search, Swords, Loader2 } from "lucide-react";
 import { CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
 import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
+import { RoyalThumbSkeleton } from "@/components/royal/RoyalSkeleton";
 
 interface Props {
   open: boolean;
@@ -31,6 +32,7 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
   const [duration, setDuration] = useState<string>("24");
   const [category, setCategory] = useState<CrownCategory>("overall");
   const [submitting, setSubmitting] = useState(false);
+  const [loadingPosts, setLoadingPosts] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -39,6 +41,7 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
       return;
     }
     if (user) {
+      setLoadingPosts(true);
       supabase.from("posts").select("id, image_url, category, filter")
         .eq("user_id", user.id).eq("is_removed", false)
         .order("created_at", { ascending: false }).limit(24)
@@ -46,6 +49,7 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
           const posts = (data as PostThumb[]) || [];
           setMyPosts(posts);
           if (posts[0]) { setPostId(posts[0].id); setCategory(posts[0].category); }
+          setLoadingPosts(false);
         });
     }
     if (presetOpponentId) {
@@ -136,7 +140,13 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
 
             <div>
               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Pick your post</p>
-              {myPosts.length === 0 ? (
+              {loadingPosts ? (
+                <div className="grid grid-cols-3 gap-2 max-h-72 overflow-hidden pr-1">
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <RoyalThumbSkeleton key={i} className="rounded-lg" />
+                  ))}
+                </div>
+              ) : myPosts.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-4 text-center">No posts yet — upload one first.</p>
               ) : (
                 <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Loader2, Check, X } from "lucide-react";
 import { CrownCategory } from "@/lib/crown";
 import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
+import { RoyalThumbSkeleton } from "@/components/royal/RoyalSkeleton";
 
 interface Props {
   open: boolean;
@@ -26,10 +27,12 @@ export default function AcceptBattleDialog({ open, onOpenChange, battle, onResol
   const [posts, setPosts] = useState<PostThumb[]>([]);
   const [postId, setPostId] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [loadingPosts, setLoadingPosts] = useState(false);
 
   useEffect(() => {
     if (!open || !user) return;
     setPostId("");
+    setLoadingPosts(true);
     const cat = battle?.challenger_post?.category;
     let q = supabase.from("posts").select("id, image_url, category, filter")
       .eq("user_id", user.id).eq("is_removed", false)
@@ -39,6 +42,7 @@ export default function AcceptBattleDialog({ open, onOpenChange, battle, onResol
       const ps = (data as PostThumb[]) || [];
       setPosts(ps);
       if (ps[0]) setPostId(ps[0].id);
+      setLoadingPosts(false);
     });
   }, [open, user, battle]);
 
@@ -111,7 +115,13 @@ export default function AcceptBattleDialog({ open, onOpenChange, battle, onResol
           </div>
         </div>
 
-        {posts.length === 0 ? (
+        {loadingPosts ? (
+          <div className="grid grid-cols-4 gap-2 max-h-56 overflow-hidden pr-1">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <RoyalThumbSkeleton key={i} />
+            ))}
+          </div>
+        ) : posts.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-3">
             You have no posts in this category. Upload one to accept.
           </p>
