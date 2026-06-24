@@ -25,8 +25,8 @@ export function getNotificationTarget(n: NotificationLike): string | null {
   if (!n) return null;
   const p: Record<string, any> = n.payload ?? {};
 
-  // 1. Explicit payload.link wins (server-authored deep links).
-  const explicit = safePath(p.link);
+  // 1. Explicit payload.link / payload.deeplink wins (server-authored deep links).
+  const explicit = safePath(p.link) ?? safePath(p.deeplink);
   if (explicit) return explicit;
 
   const type = (n.type ?? "").toString();
