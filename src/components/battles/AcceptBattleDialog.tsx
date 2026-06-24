@@ -27,10 +27,12 @@ export default function AcceptBattleDialog({ open, onOpenChange, battle, onResol
   const [posts, setPosts] = useState<PostThumb[]>([]);
   const [postId, setPostId] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [loadingPosts, setLoadingPosts] = useState(false);
 
   useEffect(() => {
     if (!open || !user) return;
     setPostId("");
+    setLoadingPosts(true);
     const cat = battle?.challenger_post?.category;
     let q = supabase.from("posts").select("id, image_url, category, filter")
       .eq("user_id", user.id).eq("is_removed", false)
@@ -40,6 +42,7 @@ export default function AcceptBattleDialog({ open, onOpenChange, battle, onResol
       const ps = (data as PostThumb[]) || [];
       setPosts(ps);
       if (ps[0]) setPostId(ps[0].id);
+      setLoadingPosts(false);
     });
   }, [open, user, battle]);
 
