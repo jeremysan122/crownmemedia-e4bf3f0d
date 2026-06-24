@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Sparkles, ShoppingCart } from "lucide-react";
-import { toast } from "sonner";
 import { SHEKEL, formatShekels } from "@/lib/gifts";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
 interface Bundle {
   id: string;
@@ -16,7 +16,8 @@ interface Bundle {
 export default function ShekelsTab() {
   const [bundles, setBundles] = useState<Bundle[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pending, setPending] = useState<string | null>(null);
+  const [pending] = useState<string | null>(null);
+  const { openCheckout, checkoutElement } = useStripeCheckout();
 
   useEffect(() => {
     (async () => {
@@ -30,21 +31,13 @@ export default function ShekelsTab() {
     })();
   }, []);
 
-  const buy = async (b: Bundle) => {
-    setPending(b.id);
-    try {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { price_id: b.stripe_price_id, return_path: "/store/success" },
-      });
-      if (error) throw error;
-      const url = (data as { url?: string })?.url;
-      if (!url) throw new Error("No checkout URL returned");
-      window.location.href = url;
-    } catch (e) {
-      toast.error((e as Error).message || "Could not start checkout");
-    } finally {
-      setPending(null);
-    }
+  const buy = (b: Bundle) => {
+    openCheckout({
+      priceId: b.stripe_price_id,
+      fnName: "create-checkout",
+      title: `${b.label} — ${formatShekels(Number(b.shekels))} Shekels`,
+      returnUrl: `${window.location.origin}/store/success`,
+    });
   };
 
   // Compute best per-shekel rate to flag value bundles
@@ -125,6 +118,7 @@ export default function ShekelsTab() {
       <p className="text-center text-[10px] text-muted-foreground pt-2">
         1 ₪ = $0.001 · Shekels never expire
       </p>
+      {checkoutElement}
     </div>
   );
 }
