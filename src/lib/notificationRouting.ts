@@ -69,9 +69,9 @@ export function getNotificationTarget(n: NotificationLike): string | null {
       return "/battles";
     }
     case "system": {
-      // Common system subtypes encoded in payload.kind
-      const kind = (p.kind ?? "").toString();
-      if (kind === "reward" || kind === "daily_reward") return "/rewards";
+      // Common system subtypes encoded in payload.kind or payload.event
+      const kind = (p.kind ?? p.event ?? "").toString();
+      if (kind === "reward" || kind === "daily_reward" || kind === "streak_reminder") return "/rewards";
       if (kind === "verification") return "/verification";
       if (kind === "payout") return "/wallet";
       if (kind === "moderation" && p.post_id) return `/post/${p.post_id}`;
