@@ -165,36 +165,8 @@ export default function AdminVerify() {
           </Button>
         </div>
 
-        {/* Stripe sync */}
-        <section className="royal-card p-3 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <h2 className="font-display text-sm uppercase tracking-widest text-muted-foreground">Stripe Product Sync</h2>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Pushes names, descriptions, tax_code & metadata to all 11 Stripe products and verifies prices.</p>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => runSync(true)} disabled={syncing}>
-                {syncing ? <Loader2 size={12} className="animate-spin mr-1.5" /> : null} Dry run
-              </Button>
-              <Button size="sm" onClick={() => runSync(false)} disabled={syncing}>
-                {syncing ? <Loader2 size={12} className="animate-spin mr-1.5" /> : null} Sync now
-              </Button>
-            </div>
-          </div>
-          {syncReport && (
-            <div className="text-[11px] space-y-1 mt-2">
-              <div className="flex gap-3">
-                <span>Total: <b>{syncReport.total}</b></span>
-                <span className={syncReport.errors ? "text-destructive" : "text-emerald-500"}>Errors: <b>{syncReport.errors}</b></span>
-                <span className={syncReport.price_mismatches ? "text-yellow-500" : "text-emerald-500"}>Price mismatches: <b>{syncReport.price_mismatches}</b></span>
-              </div>
-              <details className="bg-muted/30 rounded p-2">
-                <summary className="cursor-pointer text-muted-foreground">View per-product report</summary>
-                <pre className="text-[10px] overflow-auto max-h-72 mt-2">{JSON.stringify(syncReport.report, null, 2)}</pre>
-              </details>
-            </div>
-          )}
-        </section>
+
+
 
 
         <div className="grid grid-cols-3 gap-2">
