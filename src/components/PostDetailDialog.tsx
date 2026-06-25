@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Crown, Flame, Gem, Gift, MessageCircle, Share2, MapPin, Send, Flag, Reply, TrendingUp, ArrowLeft, Bell, BellOff, Pencil, Check, Sparkles, } from "lucide-react";
+import { Crown, Flame, Gem, Gift, MessageCircle, Share2, MapPin, Send, Flag, Reply, TrendingUp, ArrowLeft, Bell, BellOff, Pencil, Check, Sparkles, Repeat2, } from "lucide-react";
 import { BrokenCrown } from "@/components/icons/BrokenCrown";
 import VoteBurst from "@/components/VoteBurst";
 import PostMedia from "./PostMedia";
@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { toggleVote, VoteType } from "@/lib/votes";
 import { ShareDialog } from "./ShareDialog";
+import RepostDialog from "./RepostDialog";
 import GiftPanel from "./gifts/GiftPanel";
 import GiftAnimationOverlay from "./gifts/GiftAnimationOverlay";
 import type { RoyalGift } from "@/types/gifts";
@@ -83,6 +84,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
   const [filterBoost, setFilterBoost] = useState<VoteType | null>(null);
   const [overlayBurst, setOverlayBurst] = useState<{ type: VoteType; delta: string } | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [repostOpen, setRepostOpen] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
   const [activeGift, setActiveGift] = useState<RoyalGift | null>(null);
   const [activeGiftQty, setActiveGiftQty] = useState(1);
@@ -1088,6 +1090,16 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 >
                   <Share2 size={18} />
                 </button>
+
+                {user && post.user_id !== user.id && (
+                  <button
+                    onClick={() => setRepostOpen(true)}
+                    className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-primary touch-manipulation"
+                    aria-label="Repost"
+                  >
+                    <Repeat2 size={18} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1180,6 +1192,8 @@ export default function PostDetailDialog({ post, onClose }: Props) {
         </div>
 
         <ShareDialog open={shareOpen} onOpenChange={setShareOpen} post={post} />
+
+        <RepostDialog open={repostOpen} onOpenChange={setRepostOpen} parent={post} />
 
         <GiftPanel
           isOpen={giftOpen}
