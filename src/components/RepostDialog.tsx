@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
+import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
 import type { FeedPost } from "./PostCard";
 
 interface Props {
