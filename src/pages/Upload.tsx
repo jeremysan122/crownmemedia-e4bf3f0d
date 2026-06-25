@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { CATEGORIES, CrownCategory } from "@/lib/crown";
 import { CategoryBadge } from "@/lib/categoryIcons";
-import { ImagePlus, Crown, X, Star, Camera, Video as VideoIcon, GripVertical, Trash2, Loader2, Crop, RotateCw, Sparkles } from "lucide-react";
+import { ImagePlus, Crown, X, Star, Camera, Video as VideoIcon, GripVertical, Trash2, Loader2, Crop, RotateCw, Sparkles, AlertTriangle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -158,6 +159,16 @@ export default function Upload() {
   const [uploadStage, setUploadStage] = useState<string>("");
   const [uploadProgress, setUploadProgress] = useState<number>(0); // 0..100
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Visible progress for the photo-pick pipeline (HEIC conversion, validation).
+  // null = idle. error is non-null when a file fails so the user can retry.
+  const [pickProgress, setPickProgress] = useState<
+    | { current: number; total: number; phase: "converting" | "validating"; fileName: string }
+    | null
+  >(null);
+  const [pickError, setPickError] = useState<
+    | { fileName: string; message: string; retry: () => void }
+    | null
+  >(null);
   const [draftRestored, setDraftRestored] = useState(false);
 
   // Stable per-attempt idempotency key — regenerated only after a successful
@@ -388,34 +399,52 @@ export default function Upload() {
     for (const p of photos) {
       try { existingHashes.add(await sha256File(p.file)); } catch { /* noop */ }
     }
+    const queue = Array.from(files).slice(0, remaining);
     const valid: { file: File; origin: MediaOrigin }[] = [];
-    for (const raw of Array.from(files).slice(0, remaining)) {
-      let f = raw;
-      // iOS Photos often delivers HEIC even when accept lists JPEG. Convert
-      // in-browser so the rest of the pipeline always sees a JPEG.
-      if (isHeic(f)) {
+    setPickError(null);
+    setPickProgress({ current: 0, total: queue.length, phase: "validating", fileName: "" });
+    try {
+      for (let i = 0; i < queue.length; i++) {
+        const raw = queue[i];
+        let f = raw;
+        // iOS Photos often delivers HEIC even when accept lists JPEG. Convert
+        // in-browser so the rest of the pipeline always sees a JPEG. The
+        // conversion can take a few seconds per photo, so we expose it as a
+        // visible "Converting…" step in the overlay.
+        if (isHeic(f)) {
+          setPickProgress({ current: i, total: queue.length, phase: "converting", fileName: raw.name });
+          try {
+            f = await convertHeicToJpeg(f);
+          } catch {
+            setPickProgress(null);
+            setPickError({
+              fileName: raw.name,
+              message: `Couldn't convert ${raw.name} from HEIC. Save it as JPG on your device, or try a different photo.`,
+              retry: () => onPickPhotos(files, origin),
+            });
+            return;
+          }
+        }
+        setPickProgress({ current: i, total: queue.length, phase: "validating", fileName: f.name });
+        if (!f.type.startsWith("image/")) { toast.error(`${f.name} isn't a supported image`); continue; }
+        if (f.size > MAX_PHOTO_BYTES) { toast.error(`${f.name} exceeds 8MB`); continue; }
         try {
-          f = await convertHeicToJpeg(f);
+          const dims = await probeImage(f);
+          if (dims.width > MAX_DIM || dims.height > MAX_DIM) {
+            toast.error(`${f.name} is too large (${dims.width}x${dims.height})`);
+            continue;
+          }
+          const hash = await sha256File(f);
+          if (existingHashes.has(hash)) { toast.info(`${f.name} is already added — skipped`); continue; }
+          existingHashes.add(hash);
+          valid.push({ file: f, origin });
         } catch {
-          toast.error(`Couldn't convert ${raw.name} from HEIC — try saving it as JPG first`);
-          continue;
+          toast.error(`Couldn't read ${f.name}`);
         }
       }
-      if (!f.type.startsWith("image/")) { toast.error(`${f.name} isn't a supported image`); continue; }
-      if (f.size > MAX_PHOTO_BYTES) { toast.error(`${f.name} exceeds 8MB`); continue; }
-      try {
-        const dims = await probeImage(f);
-        if (dims.width > MAX_DIM || dims.height > MAX_DIM) {
-          toast.error(`${f.name} is too large (${dims.width}x${dims.height})`);
-          continue;
-        }
-        const hash = await sha256File(f);
-        if (existingHashes.has(hash)) { toast.info(`${f.name} is already added — skipped`); continue; }
-        existingHashes.add(hash);
-        valid.push({ file: f, origin });
-      } catch {
-        toast.error(`Couldn't read ${f.name}`);
-      }
+      setPickProgress({ current: queue.length, total: queue.length, phase: "validating", fileName: "" });
+    } finally {
+      setPickProgress(null);
     }
     if (valid.length === 0) return;
     const [first, ...rest] = valid;
@@ -1154,6 +1183,63 @@ export default function Upload() {
               <ImagePlus size={48} className="mx-auto text-primary mb-2" />
               <p className="font-display text-xl text-gold">Drop to upload</p>
               <p className="text-xs text-muted-foreground mt-1">Photos (JPG/PNG/WebP) or video (MP4/WebM, ≤30s)</p>
+            </div>
+          </div>
+        )}
+        {pickProgress && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center px-6"
+          >
+            <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-5 shadow-xl text-center space-y-3">
+              <Loader2 className="mx-auto h-7 w-7 text-primary animate-spin" />
+              <div>
+                <p className="font-display text-base text-gold">
+                  {pickProgress.phase === "converting" ? "Converting photo…" : "Preparing photos…"}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                  {pickProgress.fileName
+                    ? `${pickProgress.fileName} · ${Math.min(pickProgress.current + 1, pickProgress.total)} of ${pickProgress.total}`
+                    : `${pickProgress.current} of ${pickProgress.total}`}
+                </p>
+              </div>
+              <Progress
+                value={pickProgress.total > 0 ? Math.round((pickProgress.current / pickProgress.total) * 100) : 0}
+                className="h-2"
+              />
+              <p className="text-[10px] text-muted-foreground">HEIC photos from iPhone can take a few seconds.</p>
+            </div>
+          </div>
+        )}
+        {pickError && (
+          <div
+            role="alertdialog"
+            aria-live="assertive"
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center px-6"
+          >
+            <div className="w-full max-w-xs rounded-2xl border border-destructive/40 bg-card p-5 shadow-xl text-center space-y-3">
+              <AlertTriangle className="mx-auto h-7 w-7 text-destructive" />
+              <div>
+                <p className="font-display text-base text-destructive">Photo couldn't be processed</p>
+                <p className="text-xs text-muted-foreground mt-1 break-words">{pickError.message}</p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setPickError(null)}
+                  className="flex-1 rounded-lg border border-border bg-muted/40 text-foreground text-sm py-2 hover:bg-muted"
+                >
+                  Dismiss
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { const r = pickError.retry; setPickError(null); r(); }}
+                  className="flex-1 rounded-lg bg-primary text-primary-foreground text-sm py-2 hover:bg-primary/90"
+                >
+                  Try again
+                </button>
+              </div>
             </div>
           </div>
         )}
