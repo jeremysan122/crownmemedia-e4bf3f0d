@@ -11,7 +11,7 @@ import { Flame, Swords, Sparkles, ArrowLeft, History, Loader2, RefreshCw, Clock,
 import AppShell from "@/components/AppShell";
 import { toast } from "sonner";
 import { haptic } from "@/lib/haptics";
-import { msUntilUtcMidnight, formatCountdown, formatLastUpdated, isUtcDayStale } from "@/lib/rewardsTime";
+import { formatCountdown, formatLastUpdated, isUtcDayStale } from "@/lib/rewardsTime";
 
 
 type PrizeType = "shekels" | "battle_tickets" | "royal_pass_days" | "profile_boost_hours" | "bonus_spin" | "nothing";
