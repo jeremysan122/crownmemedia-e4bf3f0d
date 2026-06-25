@@ -83,6 +83,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
   const [filterBoost, setFilterBoost] = useState<VoteType | null>(null);
   const [overlayBurst, setOverlayBurst] = useState<{ type: VoteType; delta: string } | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [repostOpen, setRepostOpen] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
   const [activeGift, setActiveGift] = useState<RoyalGift | null>(null);
   const [activeGiftQty, setActiveGiftQty] = useState(1);
