@@ -1,51 +1,105 @@
-## What's already done (this turn)
+# CrownMe Launch Plan
 
-- Battle cards on the Battles page now render the post's saved filter (`posts.filter`) instead of raw image.
-- Challenge dialog post-picker shows filtered thumbnails and no longer clips a row of tiles (`max-h-48` → `max-h-72`), so the 4th tile no longer appears to "overlap" the row above.
-- Accept Battle dialog shows filtered thumbnails for the challenger's post, your selected post, and every option in the grid.
+## v1.0 — Public PWA Launch (this week)
 
-## What's left to do
+**Status: READY TO PUBLISH ✅**
 
-### 1. Battles tabs — redefine semantics
+### Verified
+- ✅ Security scan: 0 findings (Supabase, agent, connector scanners all clean)
+- ✅ Dependency scan: 0 high/critical npm vulnerabilities
+- ✅ Stripe go-live: all 5 steps completed, live checkout ready
+- ✅ PWA: `site.webmanifest` with id, icons, shortcuts, screenshots, standalone display
+- ✅ Web push service worker (`public/sw.js`) — handles `push` and `notificationclick`
+- ✅ Head metadata: title, description, canonical, OG, Twitter card, JSON-LD WebApplication
+- ✅ Sitemap + robots.txt
+- ✅ Edge functions migrated to Lovable-managed Stripe gateway:
+  `create-checkout`, `create-royal-pass-checkout`, `create-verification-checkout`,
+  `payments-webhook` (with Connect events merged), `verify-purchase`,
+  `royal-pass-portal`, `royal-pass-cancel`, `create-connect-account`,
+  `connect-account-status`, `request-payout`
+- ✅ Cron jobs scheduled: `snapshot-ranks`, `process-email-queue`, `streak-reminder`
+- ✅ Cookie consent banner
+- ✅ Error reporter installed (filters benign auth-session messages)
+- ✅ Embedded checkout uses `redirect_on_completion: never` (preserves session)
+- ✅ Streak reminder + analytics deeplink to `/rewards`
+- ✅ Admin portal: all routes reachable + protected by `AdminRoute`
 
-Update `src/lib/battlesPagination.ts`:
+### Launch action
+Click **Publish** in Lovable → site goes live at `crownmemedia.com`.
+DNS already configured (custom domain active).
 
-- Add `declined` to `TabKey` and `TAB_KEYS`.
-- Rewrite `tabPredicate`:
-  - `active` — any battle with `status='active'` and not yet ended (platform-wide, no viewer scope).
-  - `pending` — viewer's own battles where `status='pending'`.
-  - `mine` — viewer's own battles where `status='active'` and not ended.
-  - `done` (Past) — viewer's own battles that have ended (winner decided OR `ends_at` passed).
-  - `declined` — viewer's own battles where `status in ('declined','cancelled')`.
+---
 
-Update `src/pages/Battles.tsx`:
+## v1.1 — Native App Stores (queued for after PWA proves stable)
 
-- Add `declined` to all per-tab state maps (`tabLoading`, `tabError`, `inFlightLoad`).
-- Add `<TabsTrigger value="declined">Declined</TabsTrigger>` next to Past. Switch the `TabsList` grid from `grid-cols-4` to `grid-cols-5`.
-- Change `fetchPage` so `forTab === 'active'` runs a platform-wide query (no `challenger_id/opponent_id` viewer filter, plus a server-side `status='active'` filter) while the other four tabs keep the existing viewer-scoped query.
-- Keep the same keyset cursor shape — both query shapes are ordered by `(created_at DESC, id DESC)` so the pagination helpers stay untouched.
-- Render the same `<TabsContent>` block for Declined as Past, with empty-state copy "No declined or canceled battles."
+### Capacitor shell
+1. `bun add @capacitor/core @capacitor/ios @capacitor/android`
+2. `bun add -D @capacitor/cli`
+3. `npx cap init crownmemedia app.lovable.fcbd98f7a4524e42a0f9b92cfce5c620`
+4. Add `server.url` pointing to preview for hot-reload during dev
+5. User exports to GitHub → `npx cap add ios && npx cap add android`
 
-### 2. Feed — sticky header + sensitivity blur
+### Native push
+- Add `@capacitor/push-notifications`
+- Bridge native APNs/FCM tokens into existing `push_subscriptions` table
+- Reuse `send-web-push` for web; add `send-native-push` for FCM/APNs
 
-`src/pages/Feed.tsx`:
+### Assets
+- App icon (1024×1024 master) → run `npx @capacitor/assets generate`
+- Splash screens (2732×2732 master) — dark royal background `#0b0612`
+- Adaptive icon foreground/background for Android
 
-- Bump the inner Tabs strip from `sticky top-0 z-20` to sit below the AppShell header (`sticky top-[56px] z-30` on mobile, `top-0` on lg+) so the global header doesn't cover or get covered by it.
-- Add `pt-2` spacing above the first post so a sensitivity-blurred first card doesn't visually merge into the translucent header.
+### Play Store prep (lower-risk, start here)
+- Privacy policy URL (already at `/legal/privacy-policy`)
+- Data Safety form: media, location (city), payments, messaging
+- Content rating: Mature 17+ (sensitive content, social, IAP)
+- Age gate already enforced at `/verify-age`
+- Screenshot set: phone (4–8), 7" tablet, 10" tablet
+- AAB signed upload
 
-`src/components/AppShell.tsx`:
+### iOS purchase-rule review
+**Critical decision before iOS submission:** Apple requires IAP (15–30% cut) for
+digital goods consumed inside the app. Affected surfaces:
+- Shekel bundles → MUST use IAP on iOS
+- Royal Pass subscription → MUST use IAP on iOS
+- Verification subscription → MUST use IAP on iOS
+- Boosts (consumed inside app) → MUST use IAP on iOS
+- Creator payouts (Stripe Connect) → exempt (real-world money out, not in)
 
-- Strengthen the mobile header backdrop so a sensitive post's purple blur doesn't bleed through as a flat band. Replace `glass` with `bg-background/85 backdrop-blur-md` on the mobile header (keeps the frosted feel while removing the see-through purple band the user circled).
+### IAP strategy (iOS only)
+- `@revenuecat/purchases-capacitor` (handles both App Store + Play Billing,
+  unified webhooks → existing `payments-webhook` via RevenueCat → Lovable bridge)
+- Mirror Shekel SKUs in App Store Connect (consumable) and Play Console
+- Royal Pass → App Store auto-renewing subscription group
 
-`src/components/PostCard.tsx`:
+### iOS-vs-web purchase gating
+```ts
+// src/lib/purchaseGate.ts
+export function shouldUseIAP() {
+  return Capacitor.getPlatform() === "ios";
+}
+```
+- Hide Stripe checkout buttons when `shouldUseIAP()`; show IAP buttons instead
+- Same gating for Royal Pass + Verification CTAs
 
-- The blurred sensitive backdrop already lives inside an `overflow-hidden` image container, so it's already card-bounded. No change needed beyond the header opacity above.
+### Native QA checklist
+- [ ] Cold start < 3s
+- [ ] Deep links: `/post/:id`, `/u/:username`, `/battles/:id`, `/rewards`
+- [ ] Push permission prompt (iOS + Android 13+)
+- [ ] Camera permission + photo library
+- [ ] Sign-in with Apple (required by App Store when other social logins exist)
+- [ ] Offline error state (no app-shell SW — show inline retry)
+- [ ] Safe area insets on notched devices
+- [ ] Back-button behavior (Android)
+- [ ] IAP sandbox purchase + restore
+- [ ] Webhook reaches `payments-webhook` from RevenueCat sandbox
+- [ ] Account deletion in-app (App Store requirement)
+- [ ] Report/block flows reachable in 2 taps (App Store UGC requirement)
 
-### 3. Tests
+---
 
-- Update `src/lib/__tests__/battlesPagination.test.ts` (if it exists) — extend the `tabPredicate` cases to cover the new semantics (active=platform-wide, declined=own declined/cancelled) and the new tab key.
-
-## Out of scope
-
-- Realtime subscription for the platform-wide Active feed is left as-is (filtered on the client by `tabPredicate`); a follow-up can move to a server-side filtered channel if needed.
-- No schema changes required.
+## Out of scope for v1.0
+- Capacitor wrapper
+- Native push (web push works in PWA on Android + desktop; iOS web push works on iOS 16.4+ for installed PWAs)
+- App Store / Play Store submissions
+- IAP integration
