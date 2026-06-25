@@ -32,6 +32,11 @@ DNS already configured (custom domain active).
 
 ## v1.1 — Native App Stores (queued for after PWA proves stable)
 
+> **Update:** Capacitor + RevenueCat scaffolding is now in the repo.
+> See `docs/NATIVE_APP_PLAN.md` for the full readiness matrix, local
+> `npx cap add` instructions, RevenueCat dashboard setup, and the
+> App Store / Play Store submission checklist.
+
 ### Capacitor shell
 1. `bun add @capacitor/core @capacitor/ios @capacitor/android`
 2. `bun add -D @capacitor/cli`
