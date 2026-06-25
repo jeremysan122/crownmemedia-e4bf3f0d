@@ -1179,32 +1179,77 @@ export default function Upload() {
             </div>
           </div>
         )}
-        {pickProgress && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center px-6"
-          >
-            <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-5 shadow-xl text-center space-y-3">
-              <Loader2 className="mx-auto h-7 w-7 text-primary animate-spin" />
-              <div>
-                <p className="font-display text-base text-gold">
-                  {pickProgress.phase === "converting" ? "Converting photo…" : "Preparing photos…"}
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                  {pickProgress.fileName
-                    ? `${pickProgress.fileName} · ${Math.min(pickProgress.current + 1, pickProgress.total)} of ${pickProgress.total}`
-                    : `${pickProgress.current} of ${pickProgress.total}`}
-                </p>
+        {pickItems && (() => {
+          const total = pickItems.length;
+          const done = pickItems.filter((it) => it.status === "done" || it.status === "failed" || it.status === "cancelled").length;
+          const active = pickItems.find((it) => it.status === "converting" || it.status === "validating");
+          const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+          return (
+            <div
+              role="status"
+              aria-live="polite"
+              data-testid="pick-progress"
+              className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center px-6"
+            >
+              <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-xl space-y-3">
+                <div className="text-center">
+                  <Loader2 className="mx-auto h-7 w-7 text-primary animate-spin" />
+                  <p className="font-display text-base text-gold mt-2">
+                    {active?.status === "converting" ? "Converting photo…" : "Preparing photos…"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {done} of {total} processed
+                  </p>
+                </div>
+                <Progress value={pct} className="h-2" />
+                <ul className="max-h-48 overflow-y-auto space-y-1 text-[11px]" data-testid="pick-progress-list">
+                  {pickItems.map((it, idx) => (
+                    <li
+                      key={`${it.name}-${idx}`}
+                      data-testid="pick-progress-item"
+                      data-status={it.status}
+                      className="flex items-center justify-between gap-2 px-2 py-1 rounded bg-muted/30"
+                    >
+                      <span className="truncate flex-1 text-foreground">{it.name}</span>
+                      <span
+                        className={
+                          it.status === "failed"
+                            ? "text-destructive"
+                            : it.status === "done"
+                            ? "text-primary"
+                            : it.status === "cancelled"
+                            ? "text-muted-foreground italic"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {it.status === "converting"
+                          ? "Converting…"
+                          : it.status === "validating"
+                          ? "Checking…"
+                          : it.status === "done"
+                          ? "Ready"
+                          : it.status === "failed"
+                          ? "Failed"
+                          : it.status === "cancelled"
+                          ? "Cancelled"
+                          : "Waiting"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  data-testid="pick-progress-cancel"
+                  onClick={() => { pickCancelRef.current = true; }}
+                  className="w-full rounded-lg border border-border bg-muted/40 text-foreground text-sm py-2 hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <p className="text-[10px] text-muted-foreground text-center">HEIC photos from iPhone can take a few seconds.</p>
               </div>
-              <Progress
-                value={pickProgress.total > 0 ? Math.round((pickProgress.current / pickProgress.total) * 100) : 0}
-                className="h-2"
-              />
-              <p className="text-[10px] text-muted-foreground">HEIC photos from iPhone can take a few seconds.</p>
             </div>
-          </div>
-        )}
+          );
+        })()}
         {pickError && (
           <div
             role="alertdialog"
