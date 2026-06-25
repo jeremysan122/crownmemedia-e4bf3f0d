@@ -19,6 +19,23 @@ export function isHeic(file: File): boolean {
   return ext === "heic" || ext === "heif" || file.type === "image/heic" || file.type === "image/heif";
 }
 
+/**
+ * Converts an iOS HEIC/HEIF photo to a JPEG File client-side.
+ * iOS Safari's auto-conversion is unreliable in PWA/standalone mode and in
+ * Chrome on iOS, so we always normalize HEIC before validation/upload.
+ * Uses a dynamic import so heic2any stays out of the main bundle.
+ */
+export async function convertHeicToJpeg(file: File): Promise<File> {
+  if (!isHeic(file)) return file;
+  const mod = await import("heic2any");
+  const heic2any = (mod as { default: typeof import("heic2any") }).default ?? (mod as unknown as typeof import("heic2any"));
+  const out = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+  const blob = Array.isArray(out) ? out[0] : out;
+  const newName = file.name.replace(/\.(heic|heif)$/i, ".jpg") || "photo.jpg";
+  return new File([blob], newName, { type: "image/jpeg", lastModified: Date.now() });
+}
+
+
 export async function probeImage(file: File): Promise<{ width: number; height: number }> {
   const url = URL.createObjectURL(file);
   try {
