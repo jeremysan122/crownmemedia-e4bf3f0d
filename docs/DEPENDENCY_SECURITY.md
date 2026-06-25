@@ -1,6 +1,22 @@
 # Dependency Security Status
 
-_Last updated: 2026-06-24_
+_Last updated: 2026-06-25_
+
+## Pre-launch re-verification (2026-06-25)
+
+Triggered by a publish-check report that referenced 3 high-severity transitive advisories (`ws`, `@remix-run/router`, `lodash` via `recharts`). Re-traced the lockfile and re-ran the scanner:
+
+| Package | Installed | Parent chain | Status |
+| --- | --- | --- | --- |
+| `ws` | **8.20.0** | `@supabase/realtime-js@^8.18.2`, `jsdom@^8.11.0` (devDependency, not shipped) | Patched. All known `ws` advisories (GHSA-3h5v-q93c-6h6q DoS, GHSA-96hv-2xvq-fx4p, GHSA-58qx-3vcg-4xpx) are fixed at ≤8.17.1. Single version in lockfile — no duplicate. |
+| `@remix-run/router` | **1.23.0** | `react-router-dom@6.30.4`, `react-router@6.30.4` | Latest on the v6 line. XSS / open-redirect advisories patched. v7 not adopted to avoid route-priority regressions (`/:username` splat, deep links). |
+| `lodash` | **4.17.21** | `recharts@2.15.4` only | Latest 4.x. No upstream patch — see "Medium: Accepted with follow-up". |
+
+`code--dependency_scan` result: **no high or critical severity vulnerabilities**. The earlier publish-check message was stale reporting from before the `@supabase/supabase-js` 2.108.2 + `react-router-dom` 6.30.4 bumps.
+
+No `overrides` were added — the existing transitive versions are already the patched ones, so forcing them would be a no-op.
+
+
 
 ## High / Critical: CLEARED
 
