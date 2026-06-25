@@ -183,6 +183,16 @@ Deno.serve(async (req) => {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // Authorize: only the post owner or an admin/moderator may trigger analysis.
+    if (post.user_id !== callerId) {
+      const { data: isAdmin } = await admin.rpc("has_role", { _user_id: callerId, _role: "admin" });
+      const { data: isMod } = await admin.rpc("has_role", { _user_id: callerId, _role: "moderator" });
+      if (!isAdmin && !isMod) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
     if (post.is_removed) {
       return new Response(JSON.stringify({ ok: true, status: "post_removed" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
