@@ -43,8 +43,7 @@ export async function registerNativePush(userId: string): Promise<RegisterResult
     }
     if (status !== "granted") return { status: "denied" };
 
-    // @ts-expect-error capacitor global
-    const platform = ((globalThis as any).Capacitor?.getPlatform?.() ?? "web") as
+    const platform = ((globalThis as unknown as { Capacitor?: { getPlatform?: () => string } }).Capacitor?.getPlatform?.() ?? "web") as
       | "ios"
       | "android";
 
@@ -86,12 +85,13 @@ export async function registerNativePush(userId: string): Promise<RegisterResult
       // aligned. Never log payload contents (privacy on lockscreen previews is
       // enforced at the send side via `content-available` minimal payloads).
       PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
-        const data = action.notification?.data ?? {};
+        const data = (action.notification?.data ?? {}) as Record<string, unknown>;
         try {
-          routeNotification({
-            type: data.type,
+          const target = getNotificationTarget({
+            type: String(data.type ?? ""),
             payload: data,
           });
+          if (target) window.location.assign(target);
         } catch {
           /* swallow — never crash on bad payload */
         }

@@ -18,8 +18,9 @@ export function getPlatform(): Platform {
   if (cached) return cached;
   // Lazy import keeps web bundle free of Capacitor at runtime when not native.
   try {
-    // @ts-expect-error - Capacitor global is only present in native shells.
-    const cap = (globalThis as any).Capacitor;
+    const cap = (globalThis as unknown as {
+      Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string };
+    }).Capacitor;
     if (cap?.isNativePlatform?.()) {
       const p = cap.getPlatform?.();
       if (p === "ios" || p === "android") {
