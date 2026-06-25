@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Crown, Flame, Gem, Gift, MessageCircle, Share2, MapPin, Send, Flag, Reply, TrendingUp, ArrowLeft, Bell, BellOff, Pencil, Check, Sparkles, } from "lucide-react";
+import { Crown, Flame, Gem, Gift, MessageCircle, Share2, MapPin, Send, Flag, Reply, TrendingUp, ArrowLeft, Bell, BellOff, Pencil, Check, Sparkles, Repeat2, } from "lucide-react";
 import { BrokenCrown } from "@/components/icons/BrokenCrown";
 import VoteBurst from "@/components/VoteBurst";
 import PostMedia from "./PostMedia";
