@@ -398,72 +398,67 @@ export default function Upload() {
       try { existingHashes.add(await sha256File(p.file)); } catch { /* noop */ }
     }
     const queue = Array.from(files).slice(0, remaining);
-    const valid: { file: File; origin: MediaOrigin }[] = [];
     setPickError(null);
-    setPickProgress({ current: 0, total: queue.length, phase: "validating", fileName: "" });
+    pickCancelRef.current = false;
     try {
-      for (let i = 0; i < queue.length; i++) {
-        const raw = queue[i];
-        let f = raw;
-        // iOS Photos often delivers HEIC even when accept lists JPEG. Convert
-        // in-browser so the rest of the pipeline always sees a JPEG. The
-        // conversion can take a few seconds per photo, so we expose it as a
-        // visible "Converting…" step in the overlay.
-        if (isHeic(f)) {
-          setPickProgress({ current: i, total: queue.length, phase: "converting", fileName: raw.name });
-          try {
-            f = await convertHeicToJpeg(f);
-          } catch {
-            setPickProgress(null);
-            setPickError({
-              fileName: raw.name,
-              message: `Couldn't convert ${raw.name} from HEIC. Save it as JPG on your device, or try a different photo.`,
-              retry: () => onPickPhotos(files, origin),
-            });
-            return;
-          }
-        }
-        setPickProgress({ current: i, total: queue.length, phase: "validating", fileName: f.name });
-        if (!f.type.startsWith("image/")) { toast.error(`${f.name} isn't a supported image`); continue; }
-        if (f.size > MAX_PHOTO_BYTES) { toast.error(`${f.name} exceeds 8MB`); continue; }
-        try {
-          const dims = await probeImage(f);
-          if (dims.width > MAX_DIM || dims.height > MAX_DIM) {
-            toast.error(`${f.name} is too large (${dims.width}x${dims.height})`);
-            continue;
-          }
-          const hash = await sha256File(f);
-          if (existingHashes.has(hash)) { toast.info(`${f.name} is already added — skipped`); continue; }
-          existingHashes.add(hash);
-          valid.push({ file: f, origin });
-        } catch {
-          toast.error(`Couldn't read ${f.name}`);
+      const result = await runPickPipeline({
+        files: queue,
+        existingHashes,
+        isCancelled: () => pickCancelRef.current,
+        onProgress: (items) => setPickItems(items),
+        deps: {
+          isHeic,
+          convertHeicToJpeg,
+          probeImage,
+          sha256File,
+          maxBytes: MAX_PHOTO_BYTES,
+          maxDim: MAX_DIM,
+        },
+      });
+
+      // Surface a single retryable error for the first HEIC conversion failure.
+      const firstConvertFail = result.items.find(
+        (it) => it.status === "failed" && /HEIC/i.test(it.error ?? ""),
+      );
+      if (firstConvertFail) {
+        setPickError({
+          fileName: firstConvertFail.name,
+          message: firstConvertFail.error ?? "Conversion failed.",
+          retry: () => onPickPhotos(files, origin),
+        });
+      } else {
+        // Non-HEIC failures get inline toasts so the user knows which files were skipped.
+        for (const it of result.items) {
+          if (it.status === "failed") toast.error(it.error ?? `${it.name} was skipped`);
         }
       }
-      setPickProgress({ current: queue.length, total: queue.length, phase: "validating", fileName: "" });
+
+      if (result.cancelled) {
+        toast.info("Upload cancelled");
+        return;
+      }
+
+      const valid = result.valid.map((file) => ({ file, origin }));
+      if (valid.length === 0) return;
+      const [first, ...rest] = valid;
+      if (rest.length > 0) {
+        const extras: PickedPhoto[] = rest.map((r) => ({
+          id: crypto.randomUUID(),
+          file: r.file,
+          preview: URL.createObjectURL(r.file),
+          alt: "",
+          origin: r.origin,
+        }));
+        setPhotos((p) => [...p, ...extras]);
+        setMode("photo");
+        if (video) { URL.revokeObjectURL(video.preview); setVideo(null); }
+      }
+      setCropQueue([]);
+      setPendingCrop({ file: first.file, fromCamera: false, origin: first.origin });
     } finally {
-      setPickProgress(null);
+      setPickItems(null);
+      pickCancelRef.current = false;
     }
-    if (valid.length === 0) return;
-    const [first, ...rest] = valid;
-    // Multi-select UX: only the first picked photo opens the crop editor.
-    // The rest are added immediately as PickedPhotos so the user sees every
-    // file they selected in the grid right away — matching Instagram behavior.
-    // Any thumbnail can still be tapped to re-crop individually via editPhoto().
-    if (rest.length > 0) {
-      const extras: PickedPhoto[] = rest.map((r) => ({
-        id: crypto.randomUUID(),
-        file: r.file,
-        preview: URL.createObjectURL(r.file),
-        alt: "",
-        origin: r.origin,
-      }));
-      setPhotos((p) => [...p, ...extras]);
-      setMode("photo");
-      if (video) { URL.revokeObjectURL(video.preview); setVideo(null); }
-    }
-    setCropQueue([]);
-    setPendingCrop({ file: first.file, fromCamera: false, origin: first.origin });
   };
 
   const onPickVideo = async (file: File | null, origin: MediaOrigin = "gallery") => {
