@@ -3545,6 +3545,57 @@ export type Database = {
           },
         ]
       }
+      repost_attempts_log: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          eligibility_code: string | null
+          failure_code: string | null
+          id: string
+          normalized_main_slug: string | null
+          normalized_sub_slug: string | null
+          outcome: string
+          parent_owner_id: string | null
+          parent_post_id: string | null
+          raw_main_slug: string | null
+          raw_sub_slug: string | null
+          repost_id: string | null
+          request_id: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          eligibility_code?: string | null
+          failure_code?: string | null
+          id?: string
+          normalized_main_slug?: string | null
+          normalized_sub_slug?: string | null
+          outcome: string
+          parent_owner_id?: string | null
+          parent_post_id?: string | null
+          raw_main_slug?: string | null
+          raw_sub_slug?: string | null
+          repost_id?: string | null
+          request_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          eligibility_code?: string | null
+          failure_code?: string | null
+          id?: string
+          normalized_main_slug?: string | null
+          normalized_sub_slug?: string | null
+          outcome?: string
+          parent_owner_id?: string | null
+          parent_post_id?: string | null
+          raw_main_slug?: string | null
+          raw_sub_slug?: string | null
+          repost_id?: string | null
+          request_id?: string | null
+        }
+        Relationships: []
+      }
       restricted_users: {
         Row: {
           created_at: string
@@ -4519,6 +4570,10 @@ export type Database = {
       can_view_posts_of: { Args: { _owner: string }; Returns: boolean }
       cancel_account_deletion: { Args: never; Returns: undefined }
       capture_db_health_snapshot: { Args: never; Returns: string }
+      check_repost_eligibility: {
+        Args: { p_parent_post_id: string }
+        Returns: Json
+      }
       claim_daily_reward: { Args: never; Returns: Json }
       claim_daily_royal_boost: { Args: { p_post_id: string }; Returns: Json }
       cleanup_orphaned_media: {
@@ -4535,6 +4590,14 @@ export type Database = {
       count_post_votes_by_type: {
         Args: { _post_ids: string[]; _vote_type: string }
         Returns: number
+      }
+      create_repost: {
+        Args: {
+          p_caption?: string
+          p_parent_post_id: string
+          p_request_id?: string
+        }
+        Returns: Json
       }
       deactivate_my_account: { Args: never; Returns: undefined }
       delete_email: {
@@ -4727,6 +4790,13 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      normalize_repost_category_pair: {
+        Args: { p_main: string; p_sub: string }
+        Returns: {
+          main_slug: string
+          sub_slug: string
+        }[]
       }
       notif_pref: {
         Args: { _kind: string; _user_id: string }

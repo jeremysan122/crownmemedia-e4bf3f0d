@@ -1,13 +1,18 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Repeat2, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Repeat2, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
+import {
+  checkRepostEligibility,
+  createRepost,
+  friendlyRepostMessage,
+  type RepostEligibility,
+} from "@/lib/repost";
 import type { FeedPost } from "./PostCard";
 
 interface Props {
@@ -16,92 +21,79 @@ interface Props {
   parent: FeedPost;
 }
 
-const normalizeRepostCategoryPair = (mainSlug?: string | null, subSlug?: string | null) => {
-  if (mainSlug === "royal-crowns" && subSlug === "overall") {
-    return { mainCategorySlug: "royal-crowns", subcategorySlug: "overall-crown" };
-  }
-
-  return { mainCategorySlug: mainSlug ?? null, subcategorySlug: subSlug ?? null };
-};
-
 /**
- * Repost / quote dialog. Creates a new post owned by the current user that
- * references the parent via `parent_post_id` and copies the media so the feed
- * row can render it without an extra fetch.
+ * Repost / quote dialog. All eligibility, category normalization, RLS, blocks,
+ * and duplicate prevention are enforced server-side by the `create_repost`
+ * Postgres function. The client is intentionally thin and renders only what
+ * the server reports.
  */
 export default function RepostDialog({ open, onOpenChange, parent }: Props) {
   const { user } = useAuth();
   const [caption, setCaption] = useState("");
   const [busy, setBusy] = useState(false);
+  const [eligibility, setEligibility] = useState<RepostEligibility | null>(null);
+  const [error, setError] = useState<{ code: string; message: string; retryable: boolean } | null>(null);
+  // Stable request id per dialog session — guarantees idempotency across
+  // retries/double-clicks via the server-side unique index on
+  // (actor_user_id, request_id) in repost_attempts_log.
+  const requestIdRef = useRef<string>("");
 
-  const submit = async () => {
-    if (!user) return;
-    if (parent.user_id === user.id) {
-      toast.error("You can't repost your own post.");
+  useEffect(() => {
+    if (!open) return;
+    requestIdRef.current = crypto.randomUUID();
+    setError(null);
+    setEligibility(null);
+    if (!user) {
+      setEligibility({ eligible: false, code: "not_authenticated", reason: friendlyRepostMessage("not_authenticated") });
       return;
     }
-    setBusy(true);
-    try {
-      // Fetch the parent's category slugs + filter metadata so the repost row
-      // satisfies the posts validation trigger (main_category_slug +
-      // subcategory_slug are required) and preserves the original filter.
-      const { data: parentRow, error: parentErr } = await supabase
-        .from("posts")
-        .select("main_category_slug, subcategory_slug, photo_filter, video_filter, filter_type, filter, media_width, media_height, hashtags, content_type")
-        .eq("id", parent.id)
-        .maybeSingle();
-      if (parentErr) throw parentErr;
-      if (!parentRow?.main_category_slug || !parentRow?.subcategory_slug) {
-        toast.error("This post is missing a category and can't be reposted yet.");
-        setBusy(false);
-        return;
-      }
-      const { mainCategorySlug, subcategorySlug } = normalizeRepostCategoryPair(
-        parentRow.main_category_slug,
-        parentRow.subcategory_slug,
-      );
+    let cancelled = false;
+    checkRepostEligibility(parent.id).then((r) => {
+      if (!cancelled) setEligibility(r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, parent.id, user]);
 
-      const { error } = await supabase.from("posts").insert({
-        user_id: user.id,
-        parent_post_id: parent.id,
-        repost_caption: caption.trim().slice(0, 500),
-        // Repost surfaces the original media on the feed card. We carry just
-        // enough columns to satisfy validation + render.
-        image_url: parent.image_url,
-        image_urls: parent.image_urls ?? [parent.image_url],
-        media_type: parent.media_type ?? "image",
-        video_url: parent.video_url ?? null,
-        video_poster_url: parent.video_poster_url ?? null,
-        caption: "",
-        category: parent.category,
-        city: parent.city ?? "",
-        state: parent.state ?? "",
-        country: parent.country ?? "",
-        media_width: parentRow.media_width ?? 1080,
-        media_height: parentRow.media_height ?? 1080,
-        main_category_slug: mainCategorySlug,
-        subcategory_slug: subcategorySlug,
-        photo_filter: parentRow.photo_filter ?? null,
-        video_filter: parentRow.video_filter ?? null,
-        filter_type: parentRow.filter_type ?? null,
-        filter: parentRow.filter ?? parent.filter ?? null,
-        hashtags: parentRow.hashtags ?? null,
-        content_type: parentRow.content_type ?? null,
-      } as any);
-      if (error) throw error;
-      trackEvent("post_reposted", { postId: parent.id, metadata: { has_caption: caption.length > 0 } });
-      toast.success("Reposted");
+  const submit = async () => {
+    if (!user || busy) return;
+    if (eligibility && !eligibility.eligible) return;
+    setBusy(true);
+    setError(null);
+    const result = await createRepost({
+      parentPostId: parent.id,
+      caption: caption.trim(),
+      requestId: requestIdRef.current,
+    });
+    setBusy(false);
+    if (result.ok) {
+      trackEvent("post_reposted", {
+        postId: parent.id,
+        metadata: { has_caption: caption.length > 0, code: result.code },
+      });
+      toast.success(result.code === "idempotent_replay" ? "Already reposted" : "Reposted");
       setCaption("");
       onOpenChange(false);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Couldn't repost");
-    } finally {
-      setBusy(false);
+      return;
+    }
+    setError({
+      code: result.code,
+      message: friendlyRepostMessage(result.code, result.message),
+      retryable: result.retryable,
+    });
+    // Refresh eligibility for non-retryable terminal states
+    if (!result.retryable) {
+      checkRepostEligibility(parent.id).then(setEligibility);
     }
   };
 
+  const ineligible = eligibility && !eligibility.eligible;
+  const disableSubmit = busy || !user || !!ineligible || (error != null && !error.retryable);
+  const checking = eligibility === null;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!busy) onOpenChange(v); }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -122,19 +114,45 @@ export default function RepostDialog({ open, onOpenChange, parent }: Props) {
             )}
           </div>
         </div>
+
+        {ineligible && (
+          <div role="alert" className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+            <AlertCircle size={14} className="mt-0.5 shrink-0" />
+            <span>{eligibility?.reason ?? friendlyRepostMessage(eligibility?.code)}</span>
+          </div>
+        )}
+
+        {error && (
+          <div role="alert" className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+            <AlertCircle size={14} className="mt-0.5 shrink-0" />
+            <span>{error.message}{error.retryable ? " You can try again." : ""}</span>
+          </div>
+        )}
+
         <Textarea
           placeholder="Add a quote (optional)"
           value={caption}
           onChange={(e) => setCaption(e.target.value.slice(0, 500))}
           maxLength={500}
           rows={3}
+          disabled={busy || !!ineligible}
           className="bg-input text-sm"
         />
         <p className="text-[10px] text-muted-foreground -mt-2 text-right tabular-nums">{caption.length}/500</p>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
-          <Button size="sm" onClick={submit} disabled={busy} className="bg-gradient-gold text-primary-foreground">
-            {busy ? <><Loader2 size={14} className="animate-spin mr-1" /> Posting…</> : "Repost"}
+          <Button
+            size="sm"
+            onClick={submit}
+            disabled={disableSubmit}
+            aria-disabled={disableSubmit}
+            className="bg-gradient-gold text-primary-foreground"
+          >
+            {busy
+              ? <><Loader2 size={14} className="animate-spin mr-1" /> Posting…</>
+              : checking
+                ? <><Loader2 size={14} className="animate-spin mr-1" /> Checking…</>
+                : "Repost"}
           </Button>
         </DialogFooter>
       </DialogContent>
