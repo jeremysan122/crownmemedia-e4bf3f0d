@@ -39,6 +39,7 @@ import { Calendar as CalendarIcon, Users, Hash } from "lucide-react";
 import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
 import CategoryPicker, { type CategoryPickerValue } from "@/components/categories/CategoryPicker";
 import { validateUploadSelection } from "@/lib/contentType";
+import { runPickPipeline, type PickItem } from "@/lib/pickPipeline";
 
 const MAX_PHOTOS = 10;
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;          // 8MB raw input
