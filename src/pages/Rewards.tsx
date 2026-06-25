@@ -603,11 +603,26 @@ export default function Rewards() {
                     : "You already spun today — come back tomorrow."}
               </p>
 
-              <div className="relative w-full max-w-[280px] sm:max-w-[360px] lg:max-w-[420px] aspect-square mx-auto">
-                {/* Pointer */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-20 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
-                     style={{ width: 0, height: 0, borderLeft: "14px solid transparent", borderRight: "14px solid transparent", borderTop: "22px solid hsl(43 95% 60%)" }}
-                     aria-hidden />
+              <div className="relative w-full max-w-[280px] sm:max-w-[360px] lg:max-w-[420px] aspect-square mx-auto pt-5">
+                {/* Pointer — sits above the rim, aimed at the divider between wedges */}
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 z-20 drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]"
+                  style={{
+                    top: "-6px",
+                    width: 0,
+                    height: 0,
+                    borderLeft: "12px solid transparent",
+                    borderRight: "12px solid transparent",
+                    borderTop: "20px solid hsl(43 95% 60%)",
+                  }}
+                  aria-hidden
+                />
+                {/* Notch marker on the rim showing the divider the pointer aims at */}
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 z-10"
+                  style={{ top: "14px", width: "2px", height: "10px", background: "hsl(43 95% 75%)", boxShadow: "0 0 6px hsl(43 95% 70% / 0.8)" }}
+                  aria-hidden
+                />
                 {wheel}
 
                 {winFlash && (
