@@ -1186,6 +1186,63 @@ export default function Upload() {
             </div>
           </div>
         )}
+        {pickProgress && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center px-6"
+          >
+            <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-5 shadow-xl text-center space-y-3">
+              <Loader2 className="mx-auto h-7 w-7 text-primary animate-spin" />
+              <div>
+                <p className="font-display text-base text-gold">
+                  {pickProgress.phase === "converting" ? "Converting photo…" : "Preparing photos…"}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                  {pickProgress.fileName
+                    ? `${pickProgress.fileName} · ${Math.min(pickProgress.current + 1, pickProgress.total)} of ${pickProgress.total}`
+                    : `${pickProgress.current} of ${pickProgress.total}`}
+                </p>
+              </div>
+              <Progress
+                value={pickProgress.total > 0 ? Math.round((pickProgress.current / pickProgress.total) * 100) : 0}
+                className="h-2"
+              />
+              <p className="text-[10px] text-muted-foreground">HEIC photos from iPhone can take a few seconds.</p>
+            </div>
+          </div>
+        )}
+        {pickError && (
+          <div
+            role="alertdialog"
+            aria-live="assertive"
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center px-6"
+          >
+            <div className="w-full max-w-xs rounded-2xl border border-destructive/40 bg-card p-5 shadow-xl text-center space-y-3">
+              <AlertTriangle className="mx-auto h-7 w-7 text-destructive" />
+              <div>
+                <p className="font-display text-base text-destructive">Photo couldn't be processed</p>
+                <p className="text-xs text-muted-foreground mt-1 break-words">{pickError.message}</p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setPickError(null)}
+                  className="flex-1 rounded-lg border border-border bg-muted/40 text-foreground text-sm py-2 hover:bg-muted"
+                >
+                  Dismiss
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { const r = pickError.retry; setPickError(null); r(); }}
+                  className="flex-1 rounded-lg bg-primary text-primary-foreground text-sm py-2 hover:bg-primary/90"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <h1 className="font-display text-2xl text-gold">Enter the race</h1>
 
         {draftRestored && (
