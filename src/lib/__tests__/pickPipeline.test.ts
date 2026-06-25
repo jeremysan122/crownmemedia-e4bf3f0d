@@ -77,7 +77,7 @@ describe("runPickPipeline", () => {
     const deps = makeDeps({
       convertHeicToJpeg: async (f) => {
         processed++;
-        if (processed === 1) cancel.now = true; // cancel after first conversion
+        if (processed === 2) cancel.now = true; // cancel after second conversion starts processing
         return new File([new Uint8Array(5)], f.name.replace(/\.heic$/i, ".jpg"), { type: "image/jpeg" });
       },
     });
