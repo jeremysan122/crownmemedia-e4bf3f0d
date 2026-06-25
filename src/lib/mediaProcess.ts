@@ -27,8 +27,8 @@ export function isHeic(file: File): boolean {
  */
 export async function convertHeicToJpeg(file: File): Promise<File> {
   if (!isHeic(file)) return file;
-  const mod = await import("heic2any");
-  const heic2any = (mod as { default: typeof import("heic2any") }).default ?? (mod as unknown as typeof import("heic2any"));
+  const mod = (await import("heic2any")) as unknown as { default?: (opts: { blob: Blob; toType?: string; quality?: number }) => Promise<Blob | Blob[]> };
+  const heic2any = mod.default ?? (mod as unknown as (opts: { blob: Blob; toType?: string; quality?: number }) => Promise<Blob | Blob[]>);
   const out = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
   const blob = Array.isArray(out) ? out[0] : out;
   const newName = file.name.replace(/\.(heic|heif)$/i, ".jpg") || "photo.jpg";
