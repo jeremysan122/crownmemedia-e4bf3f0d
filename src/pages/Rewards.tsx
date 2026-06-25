@@ -403,7 +403,9 @@ export default function Rewards() {
             <span className="text-white/20" aria-hidden>·</span>
             <span className="inline-flex items-center gap-1" data-testid="rewards-utc-countdown">
               <Clock className="size-3" aria-hidden />
-              Next reset in {formatCountdown(msUntilUtcMidnight(nowMs))}
+              {claimedToday
+                ? `Next claim in ${formatCountdown(nextClaimMs)}`
+                : "Claim available now"}
             </span>
             <button
               type="button"
