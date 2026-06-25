@@ -11,7 +11,7 @@ import { Flame, Swords, Sparkles, ArrowLeft, History, Loader2, RefreshCw, Clock,
 import AppShell from "@/components/AppShell";
 import { toast } from "sonner";
 import { haptic } from "@/lib/haptics";
-import { msUntilUtcMidnight, formatCountdown, formatLastUpdated, isUtcDayStale } from "@/lib/rewardsTime";
+import { formatCountdown, formatLastUpdated, isUtcDayStale } from "@/lib/rewardsTime";
 
 
 type PrizeType = "shekels" | "battle_tickets" | "royal_pass_days" | "profile_boost_hours" | "bonus_spin" | "nothing";
@@ -403,7 +403,9 @@ export default function Rewards() {
             <span className="text-white/20" aria-hidden>·</span>
             <span className="inline-flex items-center gap-1" data-testid="rewards-utc-countdown">
               <Clock className="size-3" aria-hidden />
-              Next reset in {formatCountdown(msUntilUtcMidnight(nowMs))}
+              {claimedToday
+                ? `Next claim in ${formatCountdown(nextClaimMs)}`
+                : "Claim available now"}
             </span>
             <button
               type="button"
