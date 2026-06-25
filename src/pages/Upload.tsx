@@ -398,34 +398,52 @@ export default function Upload() {
     for (const p of photos) {
       try { existingHashes.add(await sha256File(p.file)); } catch { /* noop */ }
     }
+    const queue = Array.from(files).slice(0, remaining);
     const valid: { file: File; origin: MediaOrigin }[] = [];
-    for (const raw of Array.from(files).slice(0, remaining)) {
-      let f = raw;
-      // iOS Photos often delivers HEIC even when accept lists JPEG. Convert
-      // in-browser so the rest of the pipeline always sees a JPEG.
-      if (isHeic(f)) {
+    setPickError(null);
+    setPickProgress({ current: 0, total: queue.length, phase: "validating", fileName: "" });
+    try {
+      for (let i = 0; i < queue.length; i++) {
+        const raw = queue[i];
+        let f = raw;
+        // iOS Photos often delivers HEIC even when accept lists JPEG. Convert
+        // in-browser so the rest of the pipeline always sees a JPEG. The
+        // conversion can take a few seconds per photo, so we expose it as a
+        // visible "Converting…" step in the overlay.
+        if (isHeic(f)) {
+          setPickProgress({ current: i, total: queue.length, phase: "converting", fileName: raw.name });
+          try {
+            f = await convertHeicToJpeg(f);
+          } catch {
+            setPickProgress(null);
+            setPickError({
+              fileName: raw.name,
+              message: `Couldn't convert ${raw.name} from HEIC. Save it as JPG on your device, or try a different photo.`,
+              retry: () => onPickPhotos(files, origin),
+            });
+            return;
+          }
+        }
+        setPickProgress({ current: i, total: queue.length, phase: "validating", fileName: f.name });
+        if (!f.type.startsWith("image/")) { toast.error(`${f.name} isn't a supported image`); continue; }
+        if (f.size > MAX_PHOTO_BYTES) { toast.error(`${f.name} exceeds 8MB`); continue; }
         try {
-          f = await convertHeicToJpeg(f);
+          const dims = await probeImage(f);
+          if (dims.width > MAX_DIM || dims.height > MAX_DIM) {
+            toast.error(`${f.name} is too large (${dims.width}x${dims.height})`);
+            continue;
+          }
+          const hash = await sha256File(f);
+          if (existingHashes.has(hash)) { toast.info(`${f.name} is already added — skipped`); continue; }
+          existingHashes.add(hash);
+          valid.push({ file: f, origin });
         } catch {
-          toast.error(`Couldn't convert ${raw.name} from HEIC — try saving it as JPG first`);
-          continue;
+          toast.error(`Couldn't read ${f.name}`);
         }
       }
-      if (!f.type.startsWith("image/")) { toast.error(`${f.name} isn't a supported image`); continue; }
-      if (f.size > MAX_PHOTO_BYTES) { toast.error(`${f.name} exceeds 8MB`); continue; }
-      try {
-        const dims = await probeImage(f);
-        if (dims.width > MAX_DIM || dims.height > MAX_DIM) {
-          toast.error(`${f.name} is too large (${dims.width}x${dims.height})`);
-          continue;
-        }
-        const hash = await sha256File(f);
-        if (existingHashes.has(hash)) { toast.info(`${f.name} is already added — skipped`); continue; }
-        existingHashes.add(hash);
-        valid.push({ file: f, origin });
-      } catch {
-        toast.error(`Couldn't read ${f.name}`);
-      }
+      setPickProgress({ current: queue.length, total: queue.length, phase: "validating", fileName: "" });
+    } finally {
+      setPickProgress(null);
     }
     if (valid.length === 0) return;
     const [first, ...rest] = valid;
