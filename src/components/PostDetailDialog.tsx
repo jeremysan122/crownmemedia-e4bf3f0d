@@ -1193,6 +1193,8 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
         <ShareDialog open={shareOpen} onOpenChange={setShareOpen} post={post} />
 
+        <RepostDialog open={repostOpen} onOpenChange={setRepostOpen} parent={post} />
+
         <GiftPanel
           isOpen={giftOpen}
           onClose={() => setGiftOpen(false)}
