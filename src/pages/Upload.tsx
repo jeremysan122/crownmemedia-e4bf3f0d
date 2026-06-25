@@ -389,8 +389,18 @@ export default function Upload() {
       try { existingHashes.add(await sha256File(p.file)); } catch { /* noop */ }
     }
     const valid: { file: File; origin: MediaOrigin }[] = [];
-    for (const f of Array.from(files).slice(0, remaining)) {
-      if (isHeic(f)) { toast.error(`${f.name} is HEIC — please convert to JPG/PNG first`); continue; }
+    for (const raw of Array.from(files).slice(0, remaining)) {
+      let f = raw;
+      // iOS Photos often delivers HEIC even when accept lists JPEG. Convert
+      // in-browser so the rest of the pipeline always sees a JPEG.
+      if (isHeic(f)) {
+        try {
+          f = await convertHeicToJpeg(f);
+        } catch {
+          toast.error(`Couldn't convert ${raw.name} from HEIC — try saving it as JPG first`);
+          continue;
+        }
+      }
       if (!f.type.startsWith("image/")) { toast.error(`${f.name} isn't a supported image`); continue; }
       if (f.size > MAX_PHOTO_BYTES) { toast.error(`${f.name} exceeds 8MB`); continue; }
       try {
