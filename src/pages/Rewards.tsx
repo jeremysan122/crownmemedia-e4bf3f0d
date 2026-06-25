@@ -493,19 +493,34 @@ export default function Rewards() {
                 return (
                   <div
                     data-testid="rewards-day7-card"
-                    className={`col-span-2 relative min-w-0 aspect-[2/1] rounded-2xl bg-gradient-to-br from-[#2a1b4d] to-[#1a1033] border flex items-center gap-2 px-2.5 py-2 overflow-hidden
+                    className={`col-span-2 relative min-w-0 aspect-[2/1] rounded-2xl bg-gradient-to-br from-[#2a1b4d] via-[#231646] to-[#1a1033] border flex items-center justify-center text-center px-3 py-2 overflow-hidden
                     ${isToday ? "border-amber-400/80 shadow-[0_0_24px_rgba(245,158,11,0.4)] animate-pulse" : "border-amber-500/50"}
                     ${isClaimed ? "opacity-90" : ""}`}
                   >
+                    {/* Celebration backdrop */}
                     <div className="absolute inset-0 bg-amber-500/5" aria-hidden />
-                    <div className="relative min-w-0 flex-1">
-                      <span className="text-[8px] sm:text-[9px] text-amber-400 font-bold uppercase tracking-wider block leading-tight truncate">Grand Prize</span>
-                      <span className="text-white font-black text-xs sm:text-sm leading-tight block">DAY 7</span>
-                      <span className="text-amber-400 font-black text-[10px] sm:text-xs leading-tight block truncate">up to +100</span>
+                    <div className="absolute -top-6 -left-6 w-24 h-24 rounded-full bg-amber-400/15 blur-2xl" aria-hidden />
+                    <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-fuchsia-500/15 blur-2xl" aria-hidden />
+                    {/* Confetti dots */}
+                    <span className="pointer-events-none absolute top-2 left-3 text-[10px] opacity-80" aria-hidden>✨</span>
+                    <span className="pointer-events-none absolute top-3 right-10 text-[9px] opacity-70" aria-hidden>🎉</span>
+                    <span className="pointer-events-none absolute bottom-2 left-8 text-[9px] opacity-70" aria-hidden>🎊</span>
+                    <span className="pointer-events-none absolute bottom-3 right-3 text-[10px] opacity-80" aria-hidden>✨</span>
+                    <span className="pointer-events-none absolute top-1/2 left-1.5 size-1 rounded-full bg-amber-300/80" aria-hidden />
+                    <span className="pointer-events-none absolute top-1.5 left-1/2 size-1 rounded-full bg-fuchsia-300/70" aria-hidden />
+                    <span className="pointer-events-none absolute bottom-1.5 left-1/3 size-1 rounded-full bg-amber-200/70" aria-hidden />
+
+                    {/* Centered crown medallion */}
+                    <div className="relative shrink-0 mr-3 w-9 h-9 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 shadow-[0_0_18px_rgba(245,158,11,0.7)] flex items-center justify-center ring-2 ring-amber-200/40">
+                      <CrownIcon className="size-5 text-[#1a1033]" />
                     </div>
-                    <div className="relative shrink-0 w-7 h-7 rounded-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)] flex items-center justify-center">
-                      <CrownIcon className="size-4 text-[#1a1033]" />
+
+                    <div className="relative min-w-0 flex flex-col items-center justify-center">
+                      <span className="text-[8px] sm:text-[9px] text-amber-400 font-bold uppercase tracking-[0.18em] leading-tight">Grand Prize</span>
+                      <span className="text-white font-black text-sm sm:text-base leading-tight">DAY 7</span>
+                      <span className="text-amber-400 font-black text-[10px] sm:text-xs leading-tight">up to +100</span>
                     </div>
+
                     {isClaimed && (
                       <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 z-10">
                         <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
