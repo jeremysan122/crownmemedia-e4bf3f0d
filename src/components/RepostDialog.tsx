@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
+import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
 import type { FeedPost } from "./PostCard";
 
 interface Props {
@@ -33,6 +34,21 @@ export default function RepostDialog({ open, onOpenChange, parent }: Props) {
     }
     setBusy(true);
     try {
+      // Fetch the parent's category slugs + filter metadata so the repost row
+      // satisfies the posts validation trigger (main_category_slug +
+      // subcategory_slug are required) and preserves the original filter.
+      const { data: parentRow, error: parentErr } = await supabase
+        .from("posts")
+        .select("main_category_slug, subcategory_slug, photo_filter, video_filter, filter_type, filter, media_width, media_height, hashtags, content_type")
+        .eq("id", parent.id)
+        .maybeSingle();
+      if (parentErr) throw parentErr;
+      if (!parentRow?.main_category_slug || !parentRow?.subcategory_slug) {
+        toast.error("This post is missing a category and can't be reposted yet.");
+        setBusy(false);
+        return;
+      }
+
       const { error } = await supabase.from("posts").insert({
         user_id: user.id,
         parent_post_id: parent.id,
@@ -49,8 +65,16 @@ export default function RepostDialog({ open, onOpenChange, parent }: Props) {
         city: parent.city ?? "",
         state: parent.state ?? "",
         country: parent.country ?? "",
-        media_width: 1080,
-        media_height: 1080,
+        media_width: parentRow.media_width ?? 1080,
+        media_height: parentRow.media_height ?? 1080,
+        main_category_slug: parentRow.main_category_slug,
+        subcategory_slug: parentRow.subcategory_slug,
+        photo_filter: parentRow.photo_filter ?? null,
+        video_filter: parentRow.video_filter ?? null,
+        filter_type: parentRow.filter_type ?? null,
+        filter: parentRow.filter ?? parent.filter ?? null,
+        hashtags: parentRow.hashtags ?? null,
+        content_type: parentRow.content_type ?? null,
       } as any);
       if (error) throw error;
       trackEvent("post_reposted", { postId: parent.id, metadata: { has_caption: caption.length > 0 } });
@@ -76,6 +100,7 @@ export default function RepostDialog({ open, onOpenChange, parent }: Props) {
           <img
             src={parent.image_url}
             alt=""
+            style={{ filter: cssFor(isValidFilter(parent.filter ?? null) ? (parent.filter as FilterId) : null) }}
             className="size-20 rounded-lg object-cover border border-border shrink-0"
           />
           <div className="flex-1 min-w-0 text-xs">
