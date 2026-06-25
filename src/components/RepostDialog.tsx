@@ -16,6 +16,14 @@ interface Props {
   parent: FeedPost;
 }
 
+const normalizeRepostCategoryPair = (mainSlug?: string | null, subSlug?: string | null) => {
+  if (mainSlug === "royal-crowns" && subSlug === "overall") {
+    return { mainCategorySlug: "royal-crowns", subcategorySlug: "overall-crown" };
+  }
+
+  return { mainCategorySlug: mainSlug ?? null, subcategorySlug: subSlug ?? null };
+};
+
 /**
  * Repost / quote dialog. Creates a new post owned by the current user that
  * references the parent via `parent_post_id` and copies the media so the feed
@@ -48,6 +56,10 @@ export default function RepostDialog({ open, onOpenChange, parent }: Props) {
         setBusy(false);
         return;
       }
+      const { mainCategorySlug, subcategorySlug } = normalizeRepostCategoryPair(
+        parentRow.main_category_slug,
+        parentRow.subcategory_slug,
+      );
 
       const { error } = await supabase.from("posts").insert({
         user_id: user.id,
@@ -67,8 +79,8 @@ export default function RepostDialog({ open, onOpenChange, parent }: Props) {
         country: parent.country ?? "",
         media_width: parentRow.media_width ?? 1080,
         media_height: parentRow.media_height ?? 1080,
-        main_category_slug: parentRow.main_category_slug,
-        subcategory_slug: parentRow.subcategory_slug,
+        main_category_slug: mainCategorySlug,
+        subcategory_slug: subcategorySlug,
         photo_filter: parentRow.photo_filter ?? null,
         video_filter: parentRow.video_filter ?? null,
         filter_type: parentRow.filter_type ?? null,
