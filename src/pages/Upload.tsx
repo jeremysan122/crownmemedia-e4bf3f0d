@@ -158,6 +158,16 @@ export default function Upload() {
   const [uploadStage, setUploadStage] = useState<string>("");
   const [uploadProgress, setUploadProgress] = useState<number>(0); // 0..100
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Visible progress for the photo-pick pipeline (HEIC conversion, validation).
+  // null = idle. error is non-null when a file fails so the user can retry.
+  const [pickProgress, setPickProgress] = useState<
+    | { current: number; total: number; phase: "converting" | "validating"; fileName: string }
+    | null
+  >(null);
+  const [pickError, setPickError] = useState<
+    | { fileName: string; message: string; retry: () => void }
+    | null
+  >(null);
   const [draftRestored, setDraftRestored] = useState(false);
 
   // Stable per-attempt idempotency key — regenerated only after a successful
