@@ -39,6 +39,7 @@ import { Calendar as CalendarIcon, Users, Hash } from "lucide-react";
 import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
 import CategoryPicker, { type CategoryPickerValue } from "@/components/categories/CategoryPicker";
 import { validateUploadSelection } from "@/lib/contentType";
+import { runPickPipeline, type PickItem } from "@/lib/pickPipeline";
 
 const MAX_PHOTOS = 10;
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;          // 8MB raw input
@@ -159,12 +160,9 @@ export default function Upload() {
   const [uploadStage, setUploadStage] = useState<string>("");
   const [uploadProgress, setUploadProgress] = useState<number>(0); // 0..100
   const [uploadError, setUploadError] = useState<string | null>(null);
-  // Visible progress for the photo-pick pipeline (HEIC conversion, validation).
-  // null = idle. error is non-null when a file fails so the user can retry.
-  const [pickProgress, setPickProgress] = useState<
-    | { current: number; total: number; phase: "converting" | "validating"; fileName: string }
-    | null
-  >(null);
+  // Per-file pick progress (HEIC convert + validate). null = idle.
+  const [pickItems, setPickItems] = useState<PickItem[] | null>(null);
+  const pickCancelRef = useRef(false);
   const [pickError, setPickError] = useState<
     | { fileName: string; message: string; retry: () => void }
     | null
@@ -400,72 +398,67 @@ export default function Upload() {
       try { existingHashes.add(await sha256File(p.file)); } catch { /* noop */ }
     }
     const queue = Array.from(files).slice(0, remaining);
-    const valid: { file: File; origin: MediaOrigin }[] = [];
     setPickError(null);
-    setPickProgress({ current: 0, total: queue.length, phase: "validating", fileName: "" });
+    pickCancelRef.current = false;
     try {
-      for (let i = 0; i < queue.length; i++) {
-        const raw = queue[i];
-        let f = raw;
-        // iOS Photos often delivers HEIC even when accept lists JPEG. Convert
-        // in-browser so the rest of the pipeline always sees a JPEG. The
-        // conversion can take a few seconds per photo, so we expose it as a
-        // visible "Converting…" step in the overlay.
-        if (isHeic(f)) {
-          setPickProgress({ current: i, total: queue.length, phase: "converting", fileName: raw.name });
-          try {
-            f = await convertHeicToJpeg(f);
-          } catch {
-            setPickProgress(null);
-            setPickError({
-              fileName: raw.name,
-              message: `Couldn't convert ${raw.name} from HEIC. Save it as JPG on your device, or try a different photo.`,
-              retry: () => onPickPhotos(files, origin),
-            });
-            return;
-          }
-        }
-        setPickProgress({ current: i, total: queue.length, phase: "validating", fileName: f.name });
-        if (!f.type.startsWith("image/")) { toast.error(`${f.name} isn't a supported image`); continue; }
-        if (f.size > MAX_PHOTO_BYTES) { toast.error(`${f.name} exceeds 8MB`); continue; }
-        try {
-          const dims = await probeImage(f);
-          if (dims.width > MAX_DIM || dims.height > MAX_DIM) {
-            toast.error(`${f.name} is too large (${dims.width}x${dims.height})`);
-            continue;
-          }
-          const hash = await sha256File(f);
-          if (existingHashes.has(hash)) { toast.info(`${f.name} is already added — skipped`); continue; }
-          existingHashes.add(hash);
-          valid.push({ file: f, origin });
-        } catch {
-          toast.error(`Couldn't read ${f.name}`);
+      const result = await runPickPipeline({
+        files: queue,
+        existingHashes,
+        isCancelled: () => pickCancelRef.current,
+        onProgress: (items) => setPickItems(items),
+        deps: {
+          isHeic,
+          convertHeicToJpeg,
+          probeImage,
+          sha256File,
+          maxBytes: MAX_PHOTO_BYTES,
+          maxDim: MAX_DIM,
+        },
+      });
+
+      // Surface a single retryable error for the first HEIC conversion failure.
+      const firstConvertFail = result.items.find(
+        (it) => it.status === "failed" && /HEIC/i.test(it.error ?? ""),
+      );
+      if (firstConvertFail) {
+        setPickError({
+          fileName: firstConvertFail.name,
+          message: firstConvertFail.error ?? "Conversion failed.",
+          retry: () => onPickPhotos(files, origin),
+        });
+      } else {
+        // Non-HEIC failures get inline toasts so the user knows which files were skipped.
+        for (const it of result.items) {
+          if (it.status === "failed") toast.error(it.error ?? `${it.name} was skipped`);
         }
       }
-      setPickProgress({ current: queue.length, total: queue.length, phase: "validating", fileName: "" });
+
+      if (result.cancelled) {
+        toast.info("Upload cancelled");
+        return;
+      }
+
+      const valid = result.valid.map((file) => ({ file, origin }));
+      if (valid.length === 0) return;
+      const [first, ...rest] = valid;
+      if (rest.length > 0) {
+        const extras: PickedPhoto[] = rest.map((r) => ({
+          id: crypto.randomUUID(),
+          file: r.file,
+          preview: URL.createObjectURL(r.file),
+          alt: "",
+          origin: r.origin,
+        }));
+        setPhotos((p) => [...p, ...extras]);
+        setMode("photo");
+        if (video) { URL.revokeObjectURL(video.preview); setVideo(null); }
+      }
+      setCropQueue([]);
+      setPendingCrop({ file: first.file, fromCamera: false, origin: first.origin });
     } finally {
-      setPickProgress(null);
+      setPickItems(null);
+      pickCancelRef.current = false;
     }
-    if (valid.length === 0) return;
-    const [first, ...rest] = valid;
-    // Multi-select UX: only the first picked photo opens the crop editor.
-    // The rest are added immediately as PickedPhotos so the user sees every
-    // file they selected in the grid right away — matching Instagram behavior.
-    // Any thumbnail can still be tapped to re-crop individually via editPhoto().
-    if (rest.length > 0) {
-      const extras: PickedPhoto[] = rest.map((r) => ({
-        id: crypto.randomUUID(),
-        file: r.file,
-        preview: URL.createObjectURL(r.file),
-        alt: "",
-        origin: r.origin,
-      }));
-      setPhotos((p) => [...p, ...extras]);
-      setMode("photo");
-      if (video) { URL.revokeObjectURL(video.preview); setVideo(null); }
-    }
-    setCropQueue([]);
-    setPendingCrop({ file: first.file, fromCamera: false, origin: first.origin });
   };
 
   const onPickVideo = async (file: File | null, origin: MediaOrigin = "gallery") => {
@@ -1186,32 +1179,77 @@ export default function Upload() {
             </div>
           </div>
         )}
-        {pickProgress && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center px-6"
-          >
-            <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-5 shadow-xl text-center space-y-3">
-              <Loader2 className="mx-auto h-7 w-7 text-primary animate-spin" />
-              <div>
-                <p className="font-display text-base text-gold">
-                  {pickProgress.phase === "converting" ? "Converting photo…" : "Preparing photos…"}
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                  {pickProgress.fileName
-                    ? `${pickProgress.fileName} · ${Math.min(pickProgress.current + 1, pickProgress.total)} of ${pickProgress.total}`
-                    : `${pickProgress.current} of ${pickProgress.total}`}
-                </p>
+        {pickItems && (() => {
+          const total = pickItems.length;
+          const done = pickItems.filter((it) => it.status === "done" || it.status === "failed" || it.status === "cancelled").length;
+          const active = pickItems.find((it) => it.status === "converting" || it.status === "validating");
+          const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+          return (
+            <div
+              role="status"
+              aria-live="polite"
+              data-testid="pick-progress"
+              className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center px-6"
+            >
+              <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-xl space-y-3">
+                <div className="text-center">
+                  <Loader2 className="mx-auto h-7 w-7 text-primary animate-spin" />
+                  <p className="font-display text-base text-gold mt-2">
+                    {active?.status === "converting" ? "Converting photo…" : "Preparing photos…"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {done} of {total} processed
+                  </p>
+                </div>
+                <Progress value={pct} className="h-2" />
+                <ul className="max-h-48 overflow-y-auto space-y-1 text-[11px]" data-testid="pick-progress-list">
+                  {pickItems.map((it, idx) => (
+                    <li
+                      key={`${it.name}-${idx}`}
+                      data-testid="pick-progress-item"
+                      data-status={it.status}
+                      className="flex items-center justify-between gap-2 px-2 py-1 rounded bg-muted/30"
+                    >
+                      <span className="truncate flex-1 text-foreground">{it.name}</span>
+                      <span
+                        className={
+                          it.status === "failed"
+                            ? "text-destructive"
+                            : it.status === "done"
+                            ? "text-primary"
+                            : it.status === "cancelled"
+                            ? "text-muted-foreground italic"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {it.status === "converting"
+                          ? "Converting…"
+                          : it.status === "validating"
+                          ? "Checking…"
+                          : it.status === "done"
+                          ? "Ready"
+                          : it.status === "failed"
+                          ? "Failed"
+                          : it.status === "cancelled"
+                          ? "Cancelled"
+                          : "Waiting"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  data-testid="pick-progress-cancel"
+                  onClick={() => { pickCancelRef.current = true; }}
+                  className="w-full rounded-lg border border-border bg-muted/40 text-foreground text-sm py-2 hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <p className="text-[10px] text-muted-foreground text-center">HEIC photos from iPhone can take a few seconds.</p>
               </div>
-              <Progress
-                value={pickProgress.total > 0 ? Math.round((pickProgress.current / pickProgress.total) * 100) : 0}
-                className="h-2"
-              />
-              <p className="text-[10px] text-muted-foreground">HEIC photos from iPhone can take a few seconds.</p>
             </div>
-          </div>
-        )}
+          );
+        })()}
         {pickError && (
           <div
             role="alertdialog"
