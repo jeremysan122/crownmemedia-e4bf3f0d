@@ -12,7 +12,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { routeNotification } from "@/lib/notificationRouting";
+import { getNotificationTarget } from "@/lib/notificationRouting";
 
 type RegisterResult =
   | { status: "registered"; token: string; platform: "ios" | "android" }
@@ -22,8 +22,7 @@ type RegisterResult =
 
 function isNative(): boolean {
   try {
-    // @ts-expect-error capacitor global
-    return Boolean((globalThis as any).Capacitor?.isNativePlatform?.());
+    return Boolean((globalThis as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.());
   } catch {
     return false;
   }
