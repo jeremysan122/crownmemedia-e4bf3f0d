@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { toggleVote, VoteType } from "@/lib/votes";
 import { ShareDialog } from "./ShareDialog";
+import RepostDialog from "./RepostDialog";
 import GiftPanel from "./gifts/GiftPanel";
 import GiftAnimationOverlay from "./gifts/GiftAnimationOverlay";
 import type { RoyalGift } from "@/types/gifts";
