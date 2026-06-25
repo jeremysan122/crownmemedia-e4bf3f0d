@@ -1090,6 +1090,16 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 >
                   <Share2 size={18} />
                 </button>
+
+                {user && post.user_id !== user.id && (
+                  <button
+                    onClick={() => setRepostOpen(true)}
+                    className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-primary touch-manipulation"
+                    aria-label="Repost"
+                  >
+                    <Repeat2 size={18} />
+                  </button>
+                )}
               </div>
             </div>
 
