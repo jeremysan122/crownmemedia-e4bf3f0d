@@ -100,6 +100,7 @@ export default function RepostDialog({ open, onOpenChange, parent }: Props) {
           <img
             src={parent.image_url}
             alt=""
+            style={{ filter: cssFor(isValidFilter(parent.filter ?? null) ? (parent.filter as FilterId) : null) }}
             className="size-20 rounded-lg object-cover border border-border shrink-0"
           />
           <div className="flex-1 min-w-0 text-xs">
