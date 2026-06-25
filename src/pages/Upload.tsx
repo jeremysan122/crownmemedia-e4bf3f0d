@@ -1227,7 +1227,7 @@ export default function Upload() {
                 <ImagePlus size={36} />
                 <span className="text-sm">Choose photos</span>
                 <span className="text-[10px]">JPG/PNG · max 8MB · up to {MAX_PHOTOS}</span>
-                <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => { onPickPhotos(e.target.files); e.target.value = ""; }} />
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple className="hidden" onChange={(e) => { onPickPhotos(e.target.files); e.target.value = ""; }} />
               </label>
             </div>
           ) : (
@@ -1359,7 +1359,7 @@ export default function Upload() {
                 {canAddMore && (
                   <label className="aspect-square rounded-lg border-2 border-dashed border-primary/40 bg-card/40 flex items-center justify-center cursor-pointer text-muted-foreground hover:border-primary/70">
                     <ImagePlus size={20} />
-                    <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => { onPickPhotos(e.target.files); e.target.value = ""; }} />
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple className="hidden" onChange={(e) => { onPickPhotos(e.target.files); e.target.value = ""; }} />
                   </label>
                 )}
               </div>
