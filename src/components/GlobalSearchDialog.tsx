@@ -74,7 +74,6 @@ export default function GlobalSearchDialog({ open, onOpenChange }: Props) {
           .or(
             `username.ilike.%${term}%,first_name.ilike.%${term}%,last_name.ilike.%${term}%,city.ilike.%${term}%,country.ilike.%${term}%`
           )
-          .eq("is_banned", false)
           .limit(8),
 
         supabase
