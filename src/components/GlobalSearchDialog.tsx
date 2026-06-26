@@ -9,6 +9,8 @@ import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcat
 interface UserHit {
   id: string;
   username: string;
+  first_name: string | null;
+  last_name: string | null;
   profile_photo_url: string | null;
   crowns_held: number;
   city: string | null;
