@@ -56,6 +56,7 @@ export default function GlobalSearchDialog({ open, onOpenChange }: Props) {
 
   useEffect(() => {
     const term = q.trim();
+    const userTerm = term.replace(/^@+/, "");
 
     if (term.length < 2) {
       setUsers([]);
@@ -67,37 +68,39 @@ export default function GlobalSearchDialog({ open, onOpenChange }: Props) {
     setLoading(true);
 
     const t = setTimeout(async () => {
-      const [{ data: u, error: uErr }, { data: p, error: pErr }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, username, first_name, last_name, profile_photo_url, crowns_held, city, country")
-          .or(
-            `username.ilike.%${term}%,first_name.ilike.%${term}%,last_name.ilike.%${term}%,city.ilike.%${term}%,country.ilike.%${term}%`
-          )
-          .limit(8),
+      const userQuery = userTerm.length >= 2
+        ? supabase
+            .from("profiles")
+            .select("id, username, first_name, last_name, profile_photo_url, crowns_held, city, country")
+            .or(
+              `username.ilike.%${userTerm}%,first_name.ilike.%${userTerm}%,last_name.ilike.%${userTerm}%,city.ilike.%${userTerm}%,country.ilike.%${userTerm}%`
+            )
+            .limit(8)
+        : Promise.resolve({ data: [], error: null });
 
-        supabase
-          .from("posts")
-          .select("id, image_url, caption, category")
-          .eq("is_removed", false)
-          // `ai_searchable_text` is populated by the analyze-post-media edge
-          // function with OCR text + AI topic, lowercased. Including it here
-          // lets users find posts by text inside images (memes, posters,
-          // signage) even when the caption doesn't mention it.
-          .or(`caption.ilike.%${term}%,city.ilike.%${term}%,country.ilike.%${term}%,ai_searchable_text.ilike.%${term.toLowerCase()}%`)
-          .limit(6),
+      const [{ data: u, error: uErr }, { data: p, error: pErr }] = await Promise.all([
+        userQuery,
+
+        term.startsWith("@")
+          ? Promise.resolve({ data: [], error: null })
+          : supabase
+              .from("posts")
+              .select("id, image_url, caption, category")
+              .eq("is_removed", false)
+              // `ai_searchable_text` is populated by the analyze-post-media edge
+              // function with OCR text + AI topic, lowercased. Including it here
+              // lets users find posts by text inside images (memes, posters,
+              // signage) even when the caption doesn't mention it.
+              .or(`caption.ilike.%${term}%,city.ilike.%${term}%,country.ilike.%${term}%,ai_searchable_text.ilike.%${term.toLowerCase()}%`)
+              .limit(6),
       ]);
 
       if (cancelled) return;
 
-      if (uErr || pErr) {
-        console.warn("Search error", { uErr, pErr });
-        setUsers([]);
-        setPosts([]);
-      } else {
-        setUsers((u as any) || []);
-        setPosts((p as any) || []);
-      }
+      if (uErr || pErr) console.warn("Search error", { uErr, pErr });
+
+      setUsers(uErr ? [] : ((u as any) || []));
+      setPosts(pErr ? [] : ((p as any) || []));
 
       setLoading(false);
     }, 200);
