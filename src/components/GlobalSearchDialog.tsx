@@ -70,8 +70,11 @@ export default function GlobalSearchDialog({ open, onOpenChange }: Props) {
       const [{ data: u, error: uErr }, { data: p, error: pErr }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, username, profile_photo_url, crowns_held, city, country")
-          .or(`username.ilike.%${term}%,city.ilike.%${term}%,country.ilike.%${term}%`)
+          .select("id, username, first_name, last_name, profile_photo_url, crowns_held, city, country")
+          .or(
+            `username.ilike.%${term}%,first_name.ilike.%${term}%,last_name.ilike.%${term}%,city.ilike.%${term}%,country.ilike.%${term}%`
+          )
+          .eq("is_banned", false)
           .limit(8),
 
         supabase
