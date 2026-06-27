@@ -903,14 +903,13 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         )}
       </div>
 
-      {/* Repost banner */}
-      {post.parent_post_id && (
+      {/* Repost attribution now appears as the top banner; keep a link to view the original. */}
+      {isRepost && (
         <Link
           to={`/post/${post.parent_post_id}`}
-          className="mx-3 mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+          className="mx-3 mt-2 inline-flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground"
         >
-          <Repeat2 size={12} className="text-primary" />
-          <span>Reposted</span>
+          View original post
         </Link>
       )}
       {/* Quote caption (repost) */}
