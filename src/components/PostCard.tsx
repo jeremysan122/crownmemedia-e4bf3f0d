@@ -634,23 +634,23 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       )}
       {/* Header — Instagram-style: larger avatar, bolder username, quieter meta */}
       <header className="flex items-center justify-between gap-2 px-3 py-2.5">
-        <Link to={`/${post.profile.username}`} className="flex items-center gap-3 min-w-0 flex-1">
-          <div className={`${post.profile.crowns_held > 0 ? "crown-ring" : ""} ${isPassMember ? "ring-2 ring-gold/60 rounded-full" : ""} shrink-0`}>
+        <Link to={`/${displayProfile.username}`} className="flex items-center gap-3 min-w-0 flex-1">
+          <div className={`${displayProfile.crowns_held > 0 ? "crown-ring" : ""} ${isPassMember ? "ring-2 ring-gold/60 rounded-full" : ""} shrink-0`}>
             <div className="size-9 rounded-full bg-muted overflow-hidden ring-1 ring-border">
-              {post.profile.profile_photo_url ? (
-                <img loading="lazy" src={post.profile.profile_photo_url} alt={post.profile.username} className="w-full h-full object-cover" />
+              {displayProfile.profile_photo_url ? (
+                <img loading="lazy" src={displayProfile.profile_photo_url} alt={displayProfile.username} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
-                  {post.profile.username[0]?.toUpperCase()}
+                  {displayProfile.username[0]?.toUpperCase()}
                 </div>
               )}
             </div>
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1 min-w-0">
-              <span className="font-bold text-sm truncate leading-tight">{post.profile.username}</span>
-              {(post.profile as any).verified && <VerifiedBadge size={13} />}
-              {post.profile.crowns_held > 0 && <Crown size={11} className="text-primary shrink-0" fill="currentColor" />}
+              <span className="font-bold text-sm truncate leading-tight">{displayProfile.username}</span>
+              {(displayProfile as any).verified && <VerifiedBadge size={13} />}
+              {displayProfile.crowns_held > 0 && <Crown size={11} className="text-primary shrink-0" fill="currentColor" />}
               {isPassMember && <RoyalPassBadge />}
             </div>
             <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0 leading-tight">
