@@ -143,7 +143,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   const isOwnPost = user?.id === post.user_id;
   const shouldBlurSensitive = !!post.is_sensitive && sensitiveMode === "blur" && !isOwnPost;
   const [sensitiveRevealed, setSensitiveRevealed] = useState(false);
-  const isPassMember = useIsRoyalPassUser(post.user_id);
+  const isPassMember = useIsRoyalPassUser(post.parent?.user_id ?? post.user_id);
   const [myVotes, setMyVotes] = useState<Set<VoteType>>(new Set());
   const [counts, setCounts] = useState({
     crown: 0, fire: 0, diamond: 0, dislike: 0, total: post.vote_count, score: post.crown_score, comments: post.comment_count,
