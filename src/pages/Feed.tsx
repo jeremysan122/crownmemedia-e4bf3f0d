@@ -6,7 +6,7 @@ import { FeedPost } from "@/components/PostCard";
 import CommentsDrawer from "@/components/CommentsDrawer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { POST_SELECT } from "@/lib/postQuery";
+import { POST_SELECT, hydrateParents } from "@/lib/postQuery";
 import { useAuth } from "@/context/AuthContext";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { trackUsage } from "@/lib/usageTrack";
@@ -343,6 +343,7 @@ export default function Feed() {
         return;
       }
       const rows = ((data as any[]) || []).filter((p) => !isFilteredOut(p, feedFilters));
+      await hydrateParents(rows);
       setPosts(rows as FeedPost[]);
       setHasMore(((data as any[]) || []).length >= PAGE_SIZE);
       setLoading(false);
@@ -364,6 +365,7 @@ export default function Feed() {
     if (error) { setLoadingMore(false); return; }
     const rawRows = (data as any[]) || [];
     const rows = rawRows.filter((r) => !isFilteredOut(r, feedFilters));
+    await hydrateParents(rows);
     setPosts((prev) => {
       const seen = new Set(prev.map((p) => p.id));
       return [...prev, ...rows.filter((r) => !seen.has(r.id))] as FeedPost[];
@@ -514,6 +516,7 @@ export default function Feed() {
           if (tab === "following" && followingIds && followingIds.length) q = q.in("user_id", followingIds);
           const { data } = await q;
           const rows = (data as any[]) || [];
+          await hydrateParents(rows);
           setPosts(rows as FeedPost[]);
           setHasMore(rows.length >= PAGE_SIZE);
           setNewPosts([]);

@@ -12,7 +12,7 @@ import { rankBadgeLabel } from "@/lib/rankTitle";
 import { canSeeLikes } from "@/lib/privacyVisibility";
 import HiddenCountLock from "@/components/HiddenCountLock";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
-import { POST_SELECT } from "@/lib/postQuery";
+import { POST_SELECT, hydrateParents } from "@/lib/postQuery";
 import { trackUsage } from "@/lib/usageTrack";
 import SensitiveThumb from "@/components/SensitiveThumb";
 import { useFeedFilters } from "@/hooks/useFeedFilters";
@@ -137,6 +137,7 @@ export default function Leaderboard() {
       const { data } = await q.range(0, PAGE_SIZE - 1);
       if (cancelled) return;
       const arr = (data as any[]) ?? [];
+      await hydrateParents(arr);
       setRows(arr);
       setHasMore(arr.length === PAGE_SIZE);
       setLoading(false);
@@ -154,6 +155,7 @@ export default function Leaderboard() {
     const to = from + PAGE_SIZE - 1;
     const { data } = await q.range(from, to);
     const arr = (data as any[]) ?? [];
+    await hydrateParents(arr);
     // De-dupe by id in case realtime/score changes shifted ordering between pages.
     setRows((prev) => {
       const seen = new Set(prev.map((r) => r.id));
