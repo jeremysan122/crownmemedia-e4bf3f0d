@@ -155,6 +155,7 @@ export default function Leaderboard() {
     const to = from + PAGE_SIZE - 1;
     const { data } = await q.range(from, to);
     const arr = (data as any[]) ?? [];
+    await hydrateParents(arr);
     // De-dupe by id in case realtime/score changes shifted ordering between pages.
     setRows((prev) => {
       const seen = new Set(prev.map((r) => r.id));
