@@ -516,6 +516,7 @@ export default function Feed() {
           if (tab === "following" && followingIds && followingIds.length) q = q.in("user_id", followingIds);
           const { data } = await q;
           const rows = (data as any[]) || [];
+          await hydrateParents(rows);
           setPosts(rows as FeedPost[]);
           setHasMore(rows.length >= PAGE_SIZE);
           setNewPosts([]);
