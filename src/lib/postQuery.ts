@@ -7,8 +7,17 @@
 // (PostCard / PostDetailDialog) silently render the old/empty version and the
 // post looks "different" between pages.
 //
-// If you need a new field on any post surface, add it here so every surface
-// picks it up at once.
+// REPOST PARENT HYDRATION
+// -----------------------
+// We intentionally do NOT use a nested self-join (parent:posts!...) in
+// POST_SELECT. PostgREST's schema cache has been observed to fail resolving
+// the posts→posts self-relationship in production ("Could not find a
+// relationship between 'posts' and 'posts' in the schema cache"), which
+// crashes the entire Feed. Instead, fetch posts with POST_SELECT, then call
+// `hydrateParents()` to batch-load parent metadata in a single follow-up
+// query and merge it client-side. This avoids the self-join entirely while
+// still giving PostCard / PostDetailDialog the `parent` field for repost
+// attribution.
 // ============================================================================
 import { supabase } from "@/integrations/supabase/client";
 import type { FeedPost } from "@/components/PostCard";
@@ -23,15 +32,59 @@ export const POST_SELECT = `
   profile:profiles!posts_user_id_fkey(
     username, profile_photo_url, crowns_held, gender,
     hide_likes, hide_comments, hide_views, verified
-  ),
-  parent:posts!posts_parent_post_id_fkey(
-    id, user_id,
-    profile:profiles!posts_user_id_fkey(
-      username, profile_photo_url, crowns_held, gender,
-      hide_likes, hide_comments, hide_views, verified
-    )
   )
 `;
+
+// Subset of POST_SELECT used when batch-loading parent (original) posts for
+// repost attribution. Kept narrow on purpose — repost rows only need enough
+// of the original to render the attribution header + "View original" link.
+const PARENT_SELECT = `
+  id, user_id, image_url, caption, category,
+  city, state, country, created_at, is_removed, is_archived,
+  profile:profiles!posts_user_id_fkey(
+    username, profile_photo_url, crowns_held, gender,
+    hide_likes, hide_comments, hide_views, verified
+  )
+`;
+
+/**
+ * Batch-load and attach `parent` metadata to any rows that have a
+ * `parent_post_id`. Mutates the passed-in array in place AND returns it so it
+ * can be chained. Silently leaves `parent = null` for any unresolved id
+ * (deleted, RLS-blocked, banned author, etc.) — the UI must treat a missing
+ * parent as "Original post is no longer available."
+ */
+export async function hydrateParents<T extends { parent_post_id?: string | null; parent?: any }>(
+  rows: T[],
+): Promise<T[]> {
+  if (!rows || rows.length === 0) return rows;
+  const ids = Array.from(
+    new Set(
+      rows
+        .map((r) => r.parent_post_id)
+        .filter((v): v is string => typeof v === "string" && v.length > 0),
+    ),
+  );
+  if (ids.length === 0) return rows;
+  const { data, error } = await supabase
+    .from("posts")
+    .select(PARENT_SELECT)
+    .in("id", ids);
+  if (error || !data) return rows;
+  const byId = new Map<string, any>();
+  for (const p of data as any[]) {
+    // Respect visibility: don't attach removed/archived originals — the UI
+    // will render the "Original post is no longer available" fallback.
+    if (p.is_removed || p.is_archived) continue;
+    byId.set(p.id, p);
+  }
+  for (const r of rows) {
+    if (r.parent_post_id) {
+      r.parent = byId.get(r.parent_post_id) ?? null;
+    }
+  }
+  return rows;
+}
 
 export async function fetchPostById(id: string): Promise<FeedPost | null> {
   const { data, error } = await supabase
@@ -40,17 +93,13 @@ export async function fetchPostById(id: string): Promise<FeedPost | null> {
     .eq("id", id)
     .maybeSingle();
   if (error || !data) return null;
-  return data as unknown as FeedPost;
+  const row = data as unknown as FeedPost;
+  await hydrateParents([row as any]);
+  return row;
 }
 
 /**
  * Shorts (vertical scroll) feed.
- *
- * Reads rows with `content_type='scroll'` (authoritative under the new model)
- * OR — for rows inserted before the column existed — legacy `media_type='video'`
- * rows. The OR clause keeps backfilled and pre-backfill scrolls visible during
- * the rollout. Uses the canonical POST_SELECT so the same row shape powers the
- * Shorts player, the feed, and the post detail dialog.
  */
 export async function fetchShortsPage(opts: { limit: number; beforeCreatedAt?: string }) {
   let q = supabase
@@ -65,6 +114,7 @@ export async function fetchShortsPage(opts: { limit: number; beforeCreatedAt?: s
   if (opts.beforeCreatedAt) q = q.lt("created_at", opts.beforeCreatedAt);
   const { data, error } = await q;
   if (error) return [] as FeedPost[];
-  return (data ?? []) as unknown as FeedPost[];
+  const rows = (data ?? []) as unknown as FeedPost[];
+  await hydrateParents(rows as any[]);
+  return rows;
 }
-
