@@ -23,6 +23,13 @@ export const POST_SELECT = `
   profile:profiles!posts_user_id_fkey(
     username, profile_photo_url, crowns_held, gender,
     hide_likes, hide_comments, hide_views, verified
+  ),
+  parent:posts!posts_parent_post_id_fkey(
+    id, user_id,
+    profile:profiles!posts_user_id_fkey(
+      username, profile_photo_url, crowns_held, gender,
+      hide_likes, hide_comments, hide_views, verified
+    )
   )
 `;
 
