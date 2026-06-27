@@ -79,6 +79,20 @@ export interface FeedPost {
     hide_comments?: boolean | null;
     hide_views?: boolean | null;
   };
+  parent?: {
+    id: string;
+    user_id: string;
+    profile: {
+      username: string;
+      profile_photo_url: string | null;
+      crowns_held: number;
+      gender?: import("@/lib/rankTitle").GenderValue;
+      hide_likes?: boolean | null;
+      hide_comments?: boolean | null;
+      hide_views?: boolean | null;
+      verified?: boolean | null;
+    };
+  } | null;
   rank?: number | null;
   is_sensitive?: boolean | null;
   sensitive_reason?: string | null;
@@ -129,7 +143,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   const isOwnPost = user?.id === post.user_id;
   const shouldBlurSensitive = !!post.is_sensitive && sensitiveMode === "blur" && !isOwnPost;
   const [sensitiveRevealed, setSensitiveRevealed] = useState(false);
-  const isPassMember = useIsRoyalPassUser(post.user_id);
+  const isPassMember = useIsRoyalPassUser(post.parent?.user_id ?? post.user_id);
   const [myVotes, setMyVotes] = useState<Set<VoteType>>(new Set());
   const [counts, setCounts] = useState({
     crown: 0, fire: 0, diamond: 0, dislike: 0, total: post.vote_count, score: post.crown_score, comments: post.comment_count,
@@ -599,27 +613,44 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   const showComments = canSeeComments(post.profile, { isOwner });
 
   if (hidden) return null;
+  // For reposts: attribute the post to the original author (Instagram/Twitter
+  // pattern). The reposter is shown in a small banner above the card.
+  const isRepost = !!post.parent_post_id && !!post.parent?.profile;
+  const displayProfile = isRepost ? post.parent!.profile : post.profile;
+  const displayUserId = isRepost ? post.parent!.user_id : post.user_id;
+  const reposterUsername = isRepost ? post.profile.username : null;
   return (
     <article ref={articleRef} className="royal-card overflow-hidden mb-3 animate-fade-in relative text-[13px]">
+      {isRepost && reposterUsername && (
+        <Link
+          to={`/${reposterUsername}`}
+          className="flex items-center gap-1.5 px-3 pt-2 -mb-1 text-[11px] text-muted-foreground hover:text-foreground"
+        >
+          <Repeat2 size={12} className="text-primary" />
+          <span>
+            Reposted by <span className="font-semibold text-foreground">@{reposterUsername}</span>
+          </span>
+        </Link>
+      )}
       {/* Header — Instagram-style: larger avatar, bolder username, quieter meta */}
       <header className="flex items-center justify-between gap-2 px-3 py-2.5">
-        <Link to={`/${post.profile.username}`} className="flex items-center gap-3 min-w-0 flex-1">
-          <div className={`${post.profile.crowns_held > 0 ? "crown-ring" : ""} ${isPassMember ? "ring-2 ring-gold/60 rounded-full" : ""} shrink-0`}>
+        <Link to={`/${displayProfile.username}`} className="flex items-center gap-3 min-w-0 flex-1">
+          <div className={`${displayProfile.crowns_held > 0 ? "crown-ring" : ""} ${isPassMember ? "ring-2 ring-gold/60 rounded-full" : ""} shrink-0`}>
             <div className="size-9 rounded-full bg-muted overflow-hidden ring-1 ring-border">
-              {post.profile.profile_photo_url ? (
-                <img loading="lazy" src={post.profile.profile_photo_url} alt={post.profile.username} className="w-full h-full object-cover" />
+              {displayProfile.profile_photo_url ? (
+                <img loading="lazy" src={displayProfile.profile_photo_url} alt={displayProfile.username} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
-                  {post.profile.username[0]?.toUpperCase()}
+                  {displayProfile.username[0]?.toUpperCase()}
                 </div>
               )}
             </div>
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1 min-w-0">
-              <span className="font-bold text-sm truncate leading-tight">{post.profile.username}</span>
-              {(post.profile as any).verified && <VerifiedBadge size={13} />}
-              {post.profile.crowns_held > 0 && <Crown size={11} className="text-primary shrink-0" fill="currentColor" />}
+              <span className="font-bold text-sm truncate leading-tight">{displayProfile.username}</span>
+              {(displayProfile as any).verified && <VerifiedBadge size={13} />}
+              {displayProfile.crowns_held > 0 && <Crown size={11} className="text-primary shrink-0" fill="currentColor" />}
               {isPassMember && <RoyalPassBadge />}
             </div>
             <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0 leading-tight">
@@ -872,14 +903,13 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         )}
       </div>
 
-      {/* Repost banner */}
-      {post.parent_post_id && (
+      {/* Repost attribution now appears as the top banner; keep a link to view the original. */}
+      {isRepost && (
         <Link
           to={`/post/${post.parent_post_id}`}
-          className="mx-3 mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+          className="mx-3 mt-2 inline-flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground"
         >
-          <Repeat2 size={12} className="text-primary" />
-          <span>Reposted</span>
+          View original post
         </Link>
       )}
       {/* Quote caption (repost) */}
