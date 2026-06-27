@@ -343,6 +343,7 @@ export default function Feed() {
         return;
       }
       const rows = ((data as any[]) || []).filter((p) => !isFilteredOut(p, feedFilters));
+      await hydrateParents(rows);
       setPosts(rows as FeedPost[]);
       setHasMore(((data as any[]) || []).length >= PAGE_SIZE);
       setLoading(false);
