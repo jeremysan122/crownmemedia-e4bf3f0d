@@ -79,6 +79,20 @@ export interface FeedPost {
     hide_comments?: boolean | null;
     hide_views?: boolean | null;
   };
+  parent?: {
+    id: string;
+    user_id: string;
+    profile: {
+      username: string;
+      profile_photo_url: string | null;
+      crowns_held: number;
+      gender?: import("@/lib/rankTitle").GenderValue;
+      hide_likes?: boolean | null;
+      hide_comments?: boolean | null;
+      hide_views?: boolean | null;
+      verified?: boolean | null;
+    };
+  } | null;
   rank?: number | null;
   is_sensitive?: boolean | null;
   sensitive_reason?: string | null;
