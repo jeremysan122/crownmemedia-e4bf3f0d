@@ -137,6 +137,7 @@ export default function Leaderboard() {
       const { data } = await q.range(0, PAGE_SIZE - 1);
       if (cancelled) return;
       const arr = (data as any[]) ?? [];
+      await hydrateParents(arr);
       setRows(arr);
       setHasMore(arr.length === PAGE_SIZE);
       setLoading(false);
