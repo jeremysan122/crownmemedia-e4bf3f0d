@@ -365,6 +365,7 @@ export default function Feed() {
     if (error) { setLoadingMore(false); return; }
     const rawRows = (data as any[]) || [];
     const rows = rawRows.filter((r) => !isFilteredOut(r, feedFilters));
+    await hydrateParents(rows);
     setPosts((prev) => {
       const seen = new Set(prev.map((p) => p.id));
       return [...prev, ...rows.filter((r) => !seen.has(r.id))] as FeedPost[];
