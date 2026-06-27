@@ -12,7 +12,7 @@ import { rankBadgeLabel } from "@/lib/rankTitle";
 import { canSeeLikes } from "@/lib/privacyVisibility";
 import HiddenCountLock from "@/components/HiddenCountLock";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
-import { POST_SELECT } from "@/lib/postQuery";
+import { POST_SELECT, hydrateParents } from "@/lib/postQuery";
 import { trackUsage } from "@/lib/usageTrack";
 import SensitiveThumb from "@/components/SensitiveThumb";
 import { useFeedFilters } from "@/hooks/useFeedFilters";
