@@ -261,7 +261,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     if (!window.confirm("Delete this post permanently? This cannot be undone.")) return;
     const { error } = await supabase.from("posts").delete().eq("id", post.id).eq("user_id", user.id);
     if (error) return toast.error(error.message);
-    trackEvent("post_deleted", { metadata: { post_id: post.id } });
+    trackEvent("post_deleted", { metadata: { post_id: interactionPostId } });
     toast.success("Post deleted");
     setHidden(true);
     window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id: post.id } }));
@@ -308,12 +308,12 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           .from("post_bookmarks" as any)
           .delete()
           .eq("user_id", user.id)
-          .eq("post_id", post.id);
+          .eq("post_id", interactionPostId);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("post_bookmarks" as any)
-          .insert({ user_id: user.id, post_id: post.id });
+          .insert({ user_id: user.id, post_id: interactionPostId });
         if (error && (error as any).code !== "23505") throw error;
         rememberPostAsGiftTarget(post, "saved");
         toast.success("Saved");
@@ -374,7 +374,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         .from("post_bookmarks" as any)
         .select("id")
         .eq("user_id", user.id)
-        .eq("post_id", post.id)
+        .eq("post_id", interactionPostId)
         .maybeSingle();
       if (!cancelled) setBookmarked(!!data);
     })();
@@ -395,7 +395,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase.rpc("get_post_vote_stats", { _post_id: post.id });
+      const { data } = await supabase.rpc("get_post_vote_stats", { _post_id: interactionPostId });
       const stats = (data ?? {}) as { counts?: Record<string, number>; my_votes?: string[] };
       const counts = stats.counts ?? {};
       const byType = {
@@ -430,9 +430,9 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
 
     const refetchAll = async () => {
       const [{ data: stats }, { data: postRow }, { count: cmtCount }] = await Promise.all([
-        supabase.rpc("get_post_vote_stats", { _post_id: post.id }),
+        supabase.rpc("get_post_vote_stats", { _post_id: interactionPostId }),
         supabase.from("posts").select("crown_score, comment_count, share_count, battle_wins").eq("id", post.id).maybeSingle(),
-        supabase.from("comments").select("id", { count: "exact", head: true }).eq("post_id", post.id).eq("is_removed", false),
+        supabase.from("comments").select("id", { count: "exact", head: true }).eq("post_id", interactionPostId).eq("is_removed", false),
       ]);
       if (cancelled) return;
       const c2 = ((stats ?? {}) as { counts?: Record<string, number> }).counts ?? {};
@@ -475,14 +475,14 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
 
     const subscribe = () => {
       if (cancelled || activeChannel) return; // never overlap channels
-      const channelName = `post-${post.id}-${crypto.randomUUID()}`;
+      const channelName = `post-${interactionPostId}-${crypto.randomUUID()}`;
       const ch = supabase.channel(channelName);
       activeChannel = ch;
       ch.on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "votes", filter: `post_id=eq.${post.id}` },
+        { event: "*", schema: "public", table: "votes", filter: `post_id=eq.${interactionPostId}` },
         async () => {
-          const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: post.id });
+          const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: interactionPostId });
           if (cancelled) return;
           const c2 = ((stats ?? {}) as { counts?: Record<string, number> }).counts ?? {};
           const byType = { crown: c2.crown ?? 0, fire: c2.fire ?? 0, diamond: c2.diamond ?? 0, dislike: c2.dislike ?? 0 };
@@ -491,7 +491,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       ).on(
 
         "postgres_changes",
-        { event: "*", schema: "public", table: "posts", filter: `id=eq.${post.id}` },
+        { event: "*", schema: "public", table: "posts", filter: `id=eq.${interactionPostId}` },
         (payload) => {
           const row: any = payload.new;
           if (!row || cancelled) return;
@@ -509,12 +509,12 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         },
       ).on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "comments", filter: `post_id=eq.${post.id}` },
+        { event: "*", schema: "public", table: "comments", filter: `post_id=eq.${interactionPostId}` },
         async () => {
           const { count } = await supabase
             .from("comments")
             .select("id", { count: "exact", head: true })
-            .eq("post_id", post.id)
+            .eq("post_id", interactionPostId)
             .eq("is_removed", false);
           if (typeof count === "number" && !cancelled) setCounts((c) => ({ ...c, comments: count }));
         },
@@ -557,7 +557,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ postId: string }>).detail;
-      if (!detail || detail.postId !== post.id) return;
+      if (!detail || detail.postId !== interactionPostId) return;
       setCounts((c) => ({
         ...c,
         comments: c.comments + 1,
@@ -656,7 +656,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       nextC.total = Math.max(0, c.total + totalDelta);
       return nextC;
     });
-    await toggleVote(post.id, user!.id, t);
+    await toggleVote(interactionPostId, user!.id, t);
   }, [user?.id, myVotes, counts, liveFilter, bumpFilterStreak, post]);
 
   const showLikes = canSeeLikes(post.profile, { isOwner });
@@ -975,7 +975,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           type="button"
           onClick={() => {
             if (isBelowDesktop) {
-              if (onCommentClick) onCommentClick(post.id);
+              if (onCommentClick) onCommentClick(interactionPostId);
               else setCommentsDrawerOpen(true);
             } else {
               setDetailOpen(true);
@@ -1032,7 +1032,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
               // Mobile + tablet (<1024px) always use the universal popup
               // comments overlay so users never leave the current screen.
               if (isBelowDesktop) {
-                if (onCommentClick) onCommentClick(post.id);
+                if (onCommentClick) onCommentClick(interactionPostId);
                 else setCommentsDrawerOpen(true);
               } else {
                 setDetailOpen(true);
@@ -1104,7 +1104,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         anchored
       />
       <CommentsDrawer
-        postId={commentsDrawerOpen ? post.id : null}
+        postId={commentsDrawerOpen ? interactionPostId : null}
         onClose={() => setCommentsDrawerOpen(false)}
       />
       <PostDetailDialog
