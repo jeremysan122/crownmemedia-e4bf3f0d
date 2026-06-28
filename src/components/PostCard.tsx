@@ -1232,11 +1232,14 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         />
       )}
       <RepostDialog open={repostOpen} onOpenChange={setRepostOpen} parent={post} />
+      {/* Reports always target the ORIGINAL post and original author for
+          reposts — reporting a repost shell would route to the wrong author
+          and skip moderation on the content the user actually saw. */}
       <ReportDialog
         open={reportOpen}
         onOpenChange={setReportOpen}
-        postId={post.id}
-        reportedUserId={post.user_id}
+        postId={interactionPostId}
+        reportedUserId={displayUserId}
       />
     </article>
   );
