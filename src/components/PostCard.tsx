@@ -248,12 +248,15 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   const blockUser = async () => {
     if (!user) return toast.error("Sign in to block");
     if (isOwner) return;
+    // Block the displayed author. For reposts that's the ORIGINAL author so
+    // hiding "this content" hides the content's true owner, not just the
+    // intermediate reposter.
     const { error } = await supabase.from("blocks").insert({
-      blocker_id: user.id, blocked_id: post.user_id,
+      blocker_id: user.id, blocked_id: displayUserId,
     });
     if (error) return toast.error(error.message);
-    trackEvent("user_blocked", { metadata: { blocked_id: post.user_id } });
-    toast.success(`Blocked @${post.profile.username}`);
+    trackEvent("user_blocked", { metadata: { blocked_id: displayUserId } });
+    toast.success(`Blocked @${displayProfile.username}`);
     setHidden(true);
   };
   const deletePost = async () => {
