@@ -164,11 +164,40 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   const isOwnPost = user?.id === post.user_id;
   const shouldBlurSensitive = !!post.is_sensitive && sensitiveMode === "blur" && !isOwnPost;
   const [sensitiveRevealed, setSensitiveRevealed] = useState(false);
-  const isPassMember = useIsRoyalPassUser(post.parent?.user_id ?? post.user_id);
+  // ── Repost attribution ──
+  // For reposts we display the ORIGINAL author and route ALL interactions
+  // (votes, comments, gifts, share, bookmark, realtime subscriptions, race
+  // progress, gift recipient, reporting) to the parent post — the repost row
+  // is just a shell pointing back at the original (Instagram/X model).
+  // The parent is hydrated by `hydrateParents()` in src/lib/postQuery.ts.
+  const isRepost = !!post.parent_post_id && !!post.parent?.profile;
+  const displayProfile = isRepost ? post.parent!.profile : post.profile;
+  const displayUserId = isRepost ? post.parent!.user_id : post.user_id;
+  const reposterUsername = isRepost ? post.profile.username : null;
+  const interactionPostId = isRepost ? post.parent!.id : post.id;
+  const isPassMember = useIsRoyalPassUser(displayUserId);
   const [myVotes, setMyVotes] = useState<Set<VoteType>>(new Set());
+  // Initial counts seed from the parent when this is a repost so the card
+  // never momentarily shows "0 votes" before the realtime refetch lands.
+  const seed = isRepost
+    ? {
+        vote_count: post.parent!.vote_count ?? 0,
+        comment_count: post.parent!.comment_count ?? 0,
+        share_count: post.parent!.share_count ?? 0,
+        crown_score: post.parent!.crown_score ?? 0,
+        battle_wins: post.parent!.battle_wins ?? 0,
+      }
+    : {
+        vote_count: post.vote_count,
+        comment_count: post.comment_count,
+        share_count: post.share_count ?? 0,
+        crown_score: post.crown_score,
+        battle_wins: post.battle_wins ?? 0,
+      };
   const [counts, setCounts] = useState({
-    crown: 0, fire: 0, diamond: 0, dislike: 0, total: post.vote_count, score: post.crown_score, comments: post.comment_count,
-    shares: post.share_count ?? 0, battleWins: post.battle_wins ?? 0,
+    crown: 0, fire: 0, diamond: 0, dislike: 0,
+    total: seed.vote_count, score: seed.crown_score, comments: seed.comment_count,
+    shares: seed.share_count, battleWins: seed.battle_wins,
   });
   const [burst, setBurst] = useState<VoteType | null>(null);
   // Timer refs — clear on component unmount to prevent setState on unmounted component.
