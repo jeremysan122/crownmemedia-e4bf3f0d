@@ -1099,16 +1099,57 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         <span className="opacity-70">competing in</span>
         <span className="font-semibold text-foreground">{CATEGORY_LABEL[post.category]}</span>
       </div>
-      <ShareDialog open={shareOpen} onOpenChange={setShareOpen} post={post} />
+      {/* Share — for reposts share the ORIGINAL post (id, author, media,
+          stats) so share cards credit the original creator. */}
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        post={
+          isRepost
+            ? ({
+                ...post,
+                id: post.parent!.id,
+                user_id: post.parent!.user_id,
+                image_url: post.parent!.image_url ?? post.image_url,
+                image_urls: post.parent!.image_urls ?? post.image_urls ?? null,
+                caption: post.parent!.caption ?? "",
+                category: (post.parent!.category ?? post.category) as CrownCategory,
+                city: post.parent!.city ?? null,
+                state: post.parent!.state ?? null,
+                country: post.parent!.country ?? null,
+                crown_score: post.parent!.crown_score ?? 0,
+                vote_count: post.parent!.vote_count ?? 0,
+                comment_count: post.parent!.comment_count ?? 0,
+                share_count: post.parent!.share_count ?? 0,
+                battle_wins: post.parent!.battle_wins ?? 0,
+                created_at: post.parent!.created_at ?? post.created_at,
+                edited_at: null,
+                pinned_at: null,
+                parent_post_id: null,
+                repost_caption: null,
+                media_type: post.parent!.media_type ?? null,
+                video_url: post.parent!.video_url ?? null,
+                video_poster_url: post.parent!.video_poster_url ?? null,
+                filter: post.parent!.filter ?? null,
+                alt_texts: post.parent!.alt_texts ?? null,
+                tagged_user_ids: post.parent!.tagged_user_ids ?? null,
+                is_sensitive: post.parent!.is_sensitive ?? null,
+                sensitive_reason: post.parent!.sensitive_reason ?? null,
+                profile: post.parent!.profile,
+                parent: null,
+              } as FeedPost)
+            : post
+        }
+      />
       <GiftPanel
         isOpen={giftOpen}
         onClose={() => setGiftOpen(false)}
         recipient={{
-          id: post.user_id,
-          username: post.profile.username,
-          avatarUrl: post.profile.profile_photo_url ?? undefined,
+          id: displayUserId,
+          username: displayProfile.username,
+          avatarUrl: displayProfile.profile_photo_url ?? undefined,
         }}
-        postId={post.id}
+        postId={interactionPostId}
         onSent={(gift, qty) => {
           setActiveGift(gift);
           setActiveGiftQty(qty);
@@ -1124,22 +1165,27 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         postId={commentsDrawerOpen ? interactionPostId : null}
         onClose={() => setCommentsDrawerOpen(false)}
       />
-      <PostDetailDialog
-        post={detailOpen ? {
-          ...post,
-          caption: liveCaption,
-          image_url: liveCover,
-          image_urls: liveImageUrls,
-          alt_texts: liveAltTexts,
-          filter: liveFilter,
-          category: liveCategory,
-          city: liveCity,
-          state: liveState,
-          country: liveCountry,
-          edited_at: liveEditedAt,
-        } : null}
-        onClose={() => setDetailOpen(false)}
-      />
+      {/* Detail dialog is only opened for non-reposts. Reposts navigate
+          to /post/<parent_post_id> via the comments button so the original
+          author and shared thread are always shown. */}
+      {!isRepost && (
+        <PostDetailDialog
+          post={detailOpen ? {
+            ...post,
+            caption: liveCaption,
+            image_url: liveCover,
+            image_urls: liveImageUrls,
+            alt_texts: liveAltTexts,
+            filter: liveFilter,
+            category: liveCategory,
+            city: liveCity,
+            state: liveState,
+            country: liveCountry,
+            edited_at: liveEditedAt,
+          } : null}
+          onClose={() => setDetailOpen(false)}
+        />
+      )}
       {isOwner && (
         <EditPostDialog
           postId={post.id}
