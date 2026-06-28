@@ -82,6 +82,27 @@ export interface FeedPost {
   parent?: {
     id: string;
     user_id: string;
+    image_url?: string | null;
+    image_urls?: string[] | null;
+    caption?: string | null;
+    category?: CrownCategory | null;
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
+    crown_score?: number | null;
+    vote_count?: number | null;
+    comment_count?: number | null;
+    share_count?: number | null;
+    battle_wins?: number | null;
+    media_type?: "image" | "video" | null;
+    video_url?: string | null;
+    video_poster_url?: string | null;
+    filter?: string | null;
+    alt_texts?: string[] | null;
+    tagged_user_ids?: string[] | null;
+    is_sensitive?: boolean | null;
+    sensitive_reason?: string | null;
+    created_at?: string | null;
     profile: {
       username: string;
       profile_photo_url: string | null;
@@ -143,11 +164,40 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   const isOwnPost = user?.id === post.user_id;
   const shouldBlurSensitive = !!post.is_sensitive && sensitiveMode === "blur" && !isOwnPost;
   const [sensitiveRevealed, setSensitiveRevealed] = useState(false);
-  const isPassMember = useIsRoyalPassUser(post.parent?.user_id ?? post.user_id);
+  // ── Repost attribution ──
+  // For reposts we display the ORIGINAL author and route ALL interactions
+  // (votes, comments, gifts, share, bookmark, realtime subscriptions, race
+  // progress, gift recipient, reporting) to the parent post — the repost row
+  // is just a shell pointing back at the original (Instagram/X model).
+  // The parent is hydrated by `hydrateParents()` in src/lib/postQuery.ts.
+  const isRepost = !!post.parent_post_id && !!post.parent?.profile;
+  const displayProfile = isRepost ? post.parent!.profile : post.profile;
+  const displayUserId = isRepost ? post.parent!.user_id : post.user_id;
+  const reposterUsername = isRepost ? post.profile.username : null;
+  const interactionPostId = isRepost ? post.parent!.id : post.id;
+  const isPassMember = useIsRoyalPassUser(displayUserId);
   const [myVotes, setMyVotes] = useState<Set<VoteType>>(new Set());
+  // Initial counts seed from the parent when this is a repost so the card
+  // never momentarily shows "0 votes" before the realtime refetch lands.
+  const seed = isRepost
+    ? {
+        vote_count: post.parent!.vote_count ?? 0,
+        comment_count: post.parent!.comment_count ?? 0,
+        share_count: post.parent!.share_count ?? 0,
+        crown_score: post.parent!.crown_score ?? 0,
+        battle_wins: post.parent!.battle_wins ?? 0,
+      }
+    : {
+        vote_count: post.vote_count,
+        comment_count: post.comment_count,
+        share_count: post.share_count ?? 0,
+        crown_score: post.crown_score,
+        battle_wins: post.battle_wins ?? 0,
+      };
   const [counts, setCounts] = useState({
-    crown: 0, fire: 0, diamond: 0, dislike: 0, total: post.vote_count, score: post.crown_score, comments: post.comment_count,
-    shares: post.share_count ?? 0, battleWins: post.battle_wins ?? 0,
+    crown: 0, fire: 0, diamond: 0, dislike: 0,
+    total: seed.vote_count, score: seed.crown_score, comments: seed.comment_count,
+    shares: seed.share_count, battleWins: seed.battle_wins,
   });
   const [burst, setBurst] = useState<VoteType | null>(null);
   // Timer refs — clear on component unmount to prevent setState on unmounted component.
@@ -198,12 +248,15 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   const blockUser = async () => {
     if (!user) return toast.error("Sign in to block");
     if (isOwner) return;
+    // Block the displayed author. For reposts that's the ORIGINAL author so
+    // hiding "this content" hides the content's true owner, not just the
+    // intermediate reposter.
     const { error } = await supabase.from("blocks").insert({
-      blocker_id: user.id, blocked_id: post.user_id,
+      blocker_id: user.id, blocked_id: displayUserId,
     });
     if (error) return toast.error(error.message);
-    trackEvent("user_blocked", { metadata: { blocked_id: post.user_id } });
-    toast.success(`Blocked @${post.profile.username}`);
+    trackEvent("user_blocked", { metadata: { blocked_id: displayUserId } });
+    toast.success(`Blocked @${displayProfile.username}`);
     setHidden(true);
   };
   const deletePost = async () => {
@@ -211,7 +264,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     if (!window.confirm("Delete this post permanently? This cannot be undone.")) return;
     const { error } = await supabase.from("posts").delete().eq("id", post.id).eq("user_id", user.id);
     if (error) return toast.error(error.message);
-    trackEvent("post_deleted", { metadata: { post_id: post.id } });
+    trackEvent("post_deleted", { metadata: { post_id: interactionPostId } });
     toast.success("Post deleted");
     setHidden(true);
     window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id: post.id } }));
@@ -258,12 +311,12 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           .from("post_bookmarks" as any)
           .delete()
           .eq("user_id", user.id)
-          .eq("post_id", post.id);
+          .eq("post_id", interactionPostId);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("post_bookmarks" as any)
-          .insert({ user_id: user.id, post_id: post.id });
+          .insert({ user_id: user.id, post_id: interactionPostId });
         if (error && (error as any).code !== "23505") throw error;
         rememberPostAsGiftTarget(post, "saved");
         toast.success("Saved");
@@ -324,7 +377,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         .from("post_bookmarks" as any)
         .select("id")
         .eq("user_id", user.id)
-        .eq("post_id", post.id)
+        .eq("post_id", interactionPostId)
         .maybeSingle();
       if (!cancelled) setBookmarked(!!data);
     })();
@@ -345,7 +398,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase.rpc("get_post_vote_stats", { _post_id: post.id });
+      const { data } = await supabase.rpc("get_post_vote_stats", { _post_id: interactionPostId });
       const stats = (data ?? {}) as { counts?: Record<string, number>; my_votes?: string[] };
       const counts = stats.counts ?? {};
       const byType = {
@@ -380,9 +433,9 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
 
     const refetchAll = async () => {
       const [{ data: stats }, { data: postRow }, { count: cmtCount }] = await Promise.all([
-        supabase.rpc("get_post_vote_stats", { _post_id: post.id }),
-        supabase.from("posts").select("crown_score, comment_count, share_count, battle_wins").eq("id", post.id).maybeSingle(),
-        supabase.from("comments").select("id", { count: "exact", head: true }).eq("post_id", post.id).eq("is_removed", false),
+        supabase.rpc("get_post_vote_stats", { _post_id: interactionPostId }),
+        supabase.from("posts").select("crown_score, comment_count, share_count, battle_wins").eq("id", interactionPostId).maybeSingle(),
+        supabase.from("comments").select("id", { count: "exact", head: true }).eq("post_id", interactionPostId).eq("is_removed", false),
       ]);
       if (cancelled) return;
       const c2 = ((stats ?? {}) as { counts?: Record<string, number> }).counts ?? {};
@@ -425,14 +478,14 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
 
     const subscribe = () => {
       if (cancelled || activeChannel) return; // never overlap channels
-      const channelName = `post-${post.id}-${crypto.randomUUID()}`;
+      const channelName = `post-${interactionPostId}-${crypto.randomUUID()}`;
       const ch = supabase.channel(channelName);
       activeChannel = ch;
       ch.on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "votes", filter: `post_id=eq.${post.id}` },
+        { event: "*", schema: "public", table: "votes", filter: `post_id=eq.${interactionPostId}` },
         async () => {
-          const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: post.id });
+          const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: interactionPostId });
           if (cancelled) return;
           const c2 = ((stats ?? {}) as { counts?: Record<string, number> }).counts ?? {};
           const byType = { crown: c2.crown ?? 0, fire: c2.fire ?? 0, diamond: c2.diamond ?? 0, dislike: c2.dislike ?? 0 };
@@ -441,7 +494,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       ).on(
 
         "postgres_changes",
-        { event: "*", schema: "public", table: "posts", filter: `id=eq.${post.id}` },
+        { event: "*", schema: "public", table: "posts", filter: `id=eq.${interactionPostId}` },
         (payload) => {
           const row: any = payload.new;
           if (!row || cancelled) return;
@@ -459,12 +512,12 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         },
       ).on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "comments", filter: `post_id=eq.${post.id}` },
+        { event: "*", schema: "public", table: "comments", filter: `post_id=eq.${interactionPostId}` },
         async () => {
           const { count } = await supabase
             .from("comments")
             .select("id", { count: "exact", head: true })
-            .eq("post_id", post.id)
+            .eq("post_id", interactionPostId)
             .eq("is_removed", false);
           if (typeof count === "number" && !cancelled) setCounts((c) => ({ ...c, comments: count }));
         },
@@ -507,7 +560,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ postId: string }>).detail;
-      if (!detail || detail.postId !== post.id) return;
+      if (!detail || detail.postId !== interactionPostId) return;
       setCounts((c) => ({
         ...c,
         comments: c.comments + 1,
@@ -606,19 +659,13 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       nextC.total = Math.max(0, c.total + totalDelta);
       return nextC;
     });
-    await toggleVote(post.id, user!.id, t);
+    await toggleVote(interactionPostId, user!.id, t);
   }, [user?.id, myVotes, counts, liveFilter, bumpFilterStreak, post]);
 
   const showLikes = canSeeLikes(post.profile, { isOwner });
   const showComments = canSeeComments(post.profile, { isOwner });
 
   if (hidden) return null;
-  // For reposts: attribute the post to the original author (Instagram/Twitter
-  // pattern). The reposter is shown in a small banner above the card.
-  const isRepost = !!post.parent_post_id && !!post.parent?.profile;
-  const displayProfile = isRepost ? post.parent!.profile : post.profile;
-  const displayUserId = isRepost ? post.parent!.user_id : post.user_id;
-  const reposterUsername = isRepost ? post.profile.username : null;
   return (
     <article ref={articleRef} className="royal-card overflow-hidden mb-3 animate-fade-in relative text-[13px]">
       {isRepost && reposterUsername && (
@@ -716,7 +763,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={blockUser} className="text-destructive focus:text-destructive">
-                    <Ban size={14} className="mr-2" /> Block @{post.profile.username}
+                    <Ban size={14} className="mr-2" /> Block @{displayProfile.username}
                   </DropdownMenuItem>
                 </>
               )}
@@ -916,13 +963,16 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       {post.repost_caption && (
         <p className="px-3 pt-2 text-xs leading-snug">{post.repost_caption}</p>
       )}
-      {/* Caption — Instagram-style: bold username prepended inline, 2-line clamp */}
-      {liveCaption && (
+      {/* Caption — Instagram-style: bold username prepended inline, 2-line clamp.
+           For reposts the original author byline is used because the caption
+           displayed below the media is the ORIGINAL author's caption (the
+           reposter's quote, if any, is rendered above as `repost_caption`). */}
+      {(liveCaption || (isRepost && post.parent?.caption)) && (
         <p className="px-3 pt-2 text-[13px] leading-snug line-clamp-2">
-          <Link to={`/${post.profile.username}`} className="font-bold mr-1.5 hover:underline">
-            {post.profile.username}
+          <Link to={`/${displayProfile.username}`} className="font-bold mr-1.5 hover:underline">
+            {displayProfile.username}
           </Link>
-          <span>{liveCaption}</span>
+          <span>{liveCaption || post.parent?.caption}</span>
         </p>
       )}
       {/* Comments preview line — IG pattern */}
@@ -931,8 +981,10 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           type="button"
           onClick={() => {
             if (isBelowDesktop) {
-              if (onCommentClick) onCommentClick(post.id);
+              if (onCommentClick) onCommentClick(interactionPostId);
               else setCommentsDrawerOpen(true);
+            } else if (isRepost) {
+              nav(`/post/${post.parent_post_id}`);
             } else {
               setDetailOpen(true);
             }
@@ -942,12 +994,16 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           View {counts.comments === 1 ? "1 comment" : `all ${counts.comments} comments`}
         </button>
       )}
-      {/* Tagged people */}
-      {post.tagged_user_ids && post.tagged_user_ids.length > 0 && (
-        <TaggedPeopleLine ids={post.tagged_user_ids} />
-      )}
+      {/* Tagged people — for reposts, surface the ORIGINAL post's tags. */}
+      {(() => {
+        const tags = isRepost
+          ? (post.parent?.tagged_user_ids ?? post.tagged_user_ids)
+          : post.tagged_user_ids;
+        return tags && tags.length > 0 ? <TaggedPeopleLine ids={tags} /> : null;
+      })()}
 
-      {/* Race progress vs current regional crown holder */}
+      {/* Race progress — for reposts this reads/writes against the ORIGINAL
+           post so repost shells never inflate rankings or duplicate stats. */}
       <div className="px-3 pt-1 flex items-center justify-end">
         <RaceScopeSelector
           value={raceScope}
@@ -956,7 +1012,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         />
       </div>
       <RaceProgressBar
-        postId={post.id}
+        postId={interactionPostId}
         votes={{ crown: counts.crown, fire: counts.fire, diamond: counts.diamond }}
         comments={counts.comments}
         shares={counts.shares}
@@ -968,6 +1024,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         country={post.country}
         scope={raceScope}
       />
+
 
       {/* Actions — Instagram-style row: reactions left, bookmark right-anchored, larger tap targets */}
       <div className="px-2.5 pt-2.5 pb-1 flex items-center gap-1 relative">
@@ -988,8 +1045,13 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
               // Mobile + tablet (<1024px) always use the universal popup
               // comments overlay so users never leave the current screen.
               if (isBelowDesktop) {
-                if (onCommentClick) onCommentClick(post.id);
+                if (onCommentClick) onCommentClick(interactionPostId);
                 else setCommentsDrawerOpen(true);
+              } else if (isRepost) {
+                // Repost shells route to the ORIGINAL post detail so the
+                // comment thread is shared with every other repost / original
+                // surface, not duplicated per repost row.
+                nav(`/post/${post.parent_post_id}`);
               } else {
                 setDetailOpen(true);
               }
@@ -1016,7 +1078,9 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           <button type="button" onClick={() => setShareOpen(true)} className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition" aria-label="Share">
             <Share2 size={18} />
           </button>
-          {!isOwner && (
+          {/* Hide repost button on repost shells — the server blocks reposts
+              of reposts and we surface a "View original" link instead. */}
+          {!isOwner && !isRepost && (
             <button type="button" onClick={() => setRepostOpen(true)} className="p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/50 active:scale-95 transition" aria-label="Repost">
               <Repeat2 size={18} />
             </button>
@@ -1038,16 +1102,57 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         <span className="opacity-70">competing in</span>
         <span className="font-semibold text-foreground">{CATEGORY_LABEL[post.category]}</span>
       </div>
-      <ShareDialog open={shareOpen} onOpenChange={setShareOpen} post={post} />
+      {/* Share — for reposts share the ORIGINAL post (id, author, media,
+          stats) so share cards credit the original creator. */}
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        post={
+          isRepost
+            ? ({
+                ...post,
+                id: post.parent!.id,
+                user_id: post.parent!.user_id,
+                image_url: post.parent!.image_url ?? post.image_url,
+                image_urls: post.parent!.image_urls ?? post.image_urls ?? null,
+                caption: post.parent!.caption ?? "",
+                category: (post.parent!.category ?? post.category) as CrownCategory,
+                city: post.parent!.city ?? null,
+                state: post.parent!.state ?? null,
+                country: post.parent!.country ?? null,
+                crown_score: post.parent!.crown_score ?? 0,
+                vote_count: post.parent!.vote_count ?? 0,
+                comment_count: post.parent!.comment_count ?? 0,
+                share_count: post.parent!.share_count ?? 0,
+                battle_wins: post.parent!.battle_wins ?? 0,
+                created_at: post.parent!.created_at ?? post.created_at,
+                edited_at: null,
+                pinned_at: null,
+                parent_post_id: null,
+                repost_caption: null,
+                media_type: post.parent!.media_type ?? null,
+                video_url: post.parent!.video_url ?? null,
+                video_poster_url: post.parent!.video_poster_url ?? null,
+                filter: post.parent!.filter ?? null,
+                alt_texts: post.parent!.alt_texts ?? null,
+                tagged_user_ids: post.parent!.tagged_user_ids ?? null,
+                is_sensitive: post.parent!.is_sensitive ?? null,
+                sensitive_reason: post.parent!.sensitive_reason ?? null,
+                profile: post.parent!.profile,
+                parent: null,
+              } as FeedPost)
+            : post
+        }
+      />
       <GiftPanel
         isOpen={giftOpen}
         onClose={() => setGiftOpen(false)}
         recipient={{
-          id: post.user_id,
-          username: post.profile.username,
-          avatarUrl: post.profile.profile_photo_url ?? undefined,
+          id: displayUserId,
+          username: displayProfile.username,
+          avatarUrl: displayProfile.profile_photo_url ?? undefined,
         }}
-        postId={post.id}
+        postId={interactionPostId}
         onSent={(gift, qty) => {
           setActiveGift(gift);
           setActiveGiftQty(qty);
@@ -1060,25 +1165,30 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         anchored
       />
       <CommentsDrawer
-        postId={commentsDrawerOpen ? post.id : null}
+        postId={commentsDrawerOpen ? interactionPostId : null}
         onClose={() => setCommentsDrawerOpen(false)}
       />
-      <PostDetailDialog
-        post={detailOpen ? {
-          ...post,
-          caption: liveCaption,
-          image_url: liveCover,
-          image_urls: liveImageUrls,
-          alt_texts: liveAltTexts,
-          filter: liveFilter,
-          category: liveCategory,
-          city: liveCity,
-          state: liveState,
-          country: liveCountry,
-          edited_at: liveEditedAt,
-        } : null}
-        onClose={() => setDetailOpen(false)}
-      />
+      {/* Detail dialog is only opened for non-reposts. Reposts navigate
+          to /post/<parent_post_id> via the comments button so the original
+          author and shared thread are always shown. */}
+      {!isRepost && (
+        <PostDetailDialog
+          post={detailOpen ? {
+            ...post,
+            caption: liveCaption,
+            image_url: liveCover,
+            image_urls: liveImageUrls,
+            alt_texts: liveAltTexts,
+            filter: liveFilter,
+            category: liveCategory,
+            city: liveCity,
+            state: liveState,
+            country: liveCountry,
+            edited_at: liveEditedAt,
+          } : null}
+          onClose={() => setDetailOpen(false)}
+        />
+      )}
       {isOwner && (
         <EditPostDialog
           postId={post.id}
@@ -1125,11 +1235,14 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         />
       )}
       <RepostDialog open={repostOpen} onOpenChange={setRepostOpen} parent={post} />
+      {/* Reports always target the ORIGINAL post and original author for
+          reposts — reporting a repost shell would route to the wrong author
+          and skip moderation on the content the user actually saw. */}
       <ReportDialog
         open={reportOpen}
         onOpenChange={setReportOpen}
-        postId={post.id}
-        reportedUserId={post.user_id}
+        postId={interactionPostId}
+        reportedUserId={displayUserId}
       />
     </article>
   );

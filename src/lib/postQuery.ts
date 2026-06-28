@@ -36,11 +36,15 @@ export const POST_SELECT = `
 `;
 
 // Subset of POST_SELECT used when batch-loading parent (original) posts for
-// repost attribution. Kept narrow on purpose — repost rows only need enough
-// of the original to render the attribution header + "View original" link.
+// repost attribution. Wider than just header fields because reposts must
+// display the ORIGINAL post's stats, media, filter, category, and location
+// (interactions target the original — see PostCard `interactionPostId`).
 const PARENT_SELECT = `
-  id, user_id, image_url, caption, category,
+  id, user_id, image_url, image_urls, caption, category,
   city, state, country, created_at, is_removed, is_archived,
+  crown_score, vote_count, comment_count, share_count, battle_wins,
+  media_type, video_url, video_poster_url, filter, alt_texts,
+  tagged_user_ids, is_sensitive, sensitive_reason,
   profile:profiles!posts_user_id_fkey(
     username, profile_photo_url, crowns_held, gender,
     hide_likes, hide_comments, hide_views, verified
