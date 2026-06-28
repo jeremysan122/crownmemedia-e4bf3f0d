@@ -1044,6 +1044,11 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
               if (isBelowDesktop) {
                 if (onCommentClick) onCommentClick(interactionPostId);
                 else setCommentsDrawerOpen(true);
+              } else if (isRepost) {
+                // Repost shells route to the ORIGINAL post detail so the
+                // comment thread is shared with every other repost / original
+                // surface, not duplicated per repost row.
+                nav(`/post/${post.parent_post_id}`);
               } else {
                 setDetailOpen(true);
               }
@@ -1070,7 +1075,9 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           <button type="button" onClick={() => setShareOpen(true)} className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition" aria-label="Share">
             <Share2 size={18} />
           </button>
-          {!isOwner && (
+          {/* Hide repost button on repost shells — the server blocks reposts
+              of reposts and we surface a "View original" link instead. */}
+          {!isOwner && !isRepost && (
             <button type="button" onClick={() => setRepostOpen(true)} className="p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/50 active:scale-95 transition" aria-label="Repost">
               <Repeat2 size={18} />
             </button>
