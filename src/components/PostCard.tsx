@@ -82,6 +82,27 @@ export interface FeedPost {
   parent?: {
     id: string;
     user_id: string;
+    image_url?: string | null;
+    image_urls?: string[] | null;
+    caption?: string | null;
+    category?: CrownCategory | null;
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
+    crown_score?: number | null;
+    vote_count?: number | null;
+    comment_count?: number | null;
+    share_count?: number | null;
+    battle_wins?: number | null;
+    media_type?: "image" | "video" | null;
+    video_url?: string | null;
+    video_poster_url?: string | null;
+    filter?: string | null;
+    alt_texts?: string[] | null;
+    tagged_user_ids?: string[] | null;
+    is_sensitive?: boolean | null;
+    sensitive_reason?: string | null;
+    created_at?: string | null;
     profile: {
       username: string;
       profile_photo_url: string | null;
