@@ -960,13 +960,16 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       {post.repost_caption && (
         <p className="px-3 pt-2 text-xs leading-snug">{post.repost_caption}</p>
       )}
-      {/* Caption — Instagram-style: bold username prepended inline, 2-line clamp */}
-      {liveCaption && (
+      {/* Caption — Instagram-style: bold username prepended inline, 2-line clamp.
+           For reposts the original author byline is used because the caption
+           displayed below the media is the ORIGINAL author's caption (the
+           reposter's quote, if any, is rendered above as `repost_caption`). */}
+      {(liveCaption || (isRepost && post.parent?.caption)) && (
         <p className="px-3 pt-2 text-[13px] leading-snug line-clamp-2">
-          <Link to={`/${post.profile.username}`} className="font-bold mr-1.5 hover:underline">
-            {post.profile.username}
+          <Link to={`/${displayProfile.username}`} className="font-bold mr-1.5 hover:underline">
+            {displayProfile.username}
           </Link>
-          <span>{liveCaption}</span>
+          <span>{liveCaption || post.parent?.caption}</span>
         </p>
       )}
       {/* Comments preview line — IG pattern */}
@@ -977,6 +980,8 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
             if (isBelowDesktop) {
               if (onCommentClick) onCommentClick(interactionPostId);
               else setCommentsDrawerOpen(true);
+            } else if (isRepost) {
+              nav(`/post/${post.parent_post_id}`);
             } else {
               setDetailOpen(true);
             }
@@ -986,12 +991,16 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           View {counts.comments === 1 ? "1 comment" : `all ${counts.comments} comments`}
         </button>
       )}
-      {/* Tagged people */}
-      {post.tagged_user_ids && post.tagged_user_ids.length > 0 && (
-        <TaggedPeopleLine ids={post.tagged_user_ids} />
-      )}
+      {/* Tagged people — for reposts, surface the ORIGINAL post's tags. */}
+      {(() => {
+        const tags = isRepost
+          ? (post.parent?.tagged_user_ids ?? post.tagged_user_ids)
+          : post.tagged_user_ids;
+        return tags && tags.length > 0 ? <TaggedPeopleLine ids={tags} /> : null;
+      })()}
 
-      {/* Race progress vs current regional crown holder */}
+      {/* Race progress — for reposts this reads/writes against the ORIGINAL
+           post so repost shells never inflate rankings or duplicate stats. */}
       <div className="px-3 pt-1 flex items-center justify-end">
         <RaceScopeSelector
           value={raceScope}
@@ -1000,7 +1009,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         />
       </div>
       <RaceProgressBar
-        postId={post.id}
+        postId={interactionPostId}
         votes={{ crown: counts.crown, fire: counts.fire, diamond: counts.diamond }}
         comments={counts.comments}
         shares={counts.shares}
@@ -1012,6 +1021,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         country={post.country}
         scope={raceScope}
       />
+
 
       {/* Actions — Instagram-style row: reactions left, bookmark right-anchored, larger tap targets */}
       <div className="px-2.5 pt-2.5 pb-1 flex items-center gap-1 relative">
