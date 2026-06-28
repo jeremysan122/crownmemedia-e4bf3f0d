@@ -763,7 +763,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={blockUser} className="text-destructive focus:text-destructive">
-                    <Ban size={14} className="mr-2" /> Block @{post.profile.username}
+                    <Ban size={14} className="mr-2" /> Block @{displayProfile.username}
                   </DropdownMenuItem>
                 </>
               )}
