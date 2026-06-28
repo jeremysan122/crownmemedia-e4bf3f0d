@@ -663,12 +663,6 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   const showComments = canSeeComments(post.profile, { isOwner });
 
   if (hidden) return null;
-  // For reposts: attribute the post to the original author (Instagram/Twitter
-  // pattern). The reposter is shown in a small banner above the card.
-  const isRepost = !!post.parent_post_id && !!post.parent?.profile;
-  const displayProfile = isRepost ? post.parent!.profile : post.profile;
-  const displayUserId = isRepost ? post.parent!.user_id : post.user_id;
-  const reposterUsername = isRepost ? post.profile.username : null;
   return (
     <article ref={articleRef} className="royal-card overflow-hidden mb-3 animate-fade-in relative text-[13px]">
       {isRepost && reposterUsername && (
