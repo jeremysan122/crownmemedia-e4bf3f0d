@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock the supabase client so we can observe batched parent fetches.
 const inMock = vi.fn();
 const selectMock = vi.fn(() => ({ in: inMock }));
-const fromMock = vi.fn(() => ({ select: selectMock }));
+const fromMock = vi.fn((..._args: any[]) => ({ select: selectMock }));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { from: (...args: any[]) => fromMock(...args) },
 }));
