@@ -756,7 +756,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                       autoPlay
                       filter={postFilter}
                       alt={post.caption || "Video post"}
-                      className="w-full h-full object-contain md:object-cover"
+                      className="w-full h-full object-cover"
                       boost={!!filterBoost}
                       boostType={filterBoost ?? undefined}
                     />
@@ -772,7 +772,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                           src={src}
                           alt={post.alt_texts?.[i] || (post.caption ? `${post.caption} (${i + 1}/${images.length})` : `Photo ${i + 1}`)}
                           filter={postFilter}
-                          className="w-full h-full object-contain md:object-cover"
+                          className="w-full h-full object-cover"
                           boost={!!filterBoost && i === activeImage}
                           boostType={filterBoost ?? undefined}
                         />
@@ -784,7 +784,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                     src={images[0]}
                     alt={post.alt_texts?.[0] || post.caption || "Post"}
                     filter={postFilter}
-                    className="w-full h-full object-contain md:object-cover"
+                    className="w-full h-full object-cover"
                     boost={!!filterBoost}
                     boostType={filterBoost ?? undefined}
                   />
