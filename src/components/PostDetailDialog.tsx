@@ -4,6 +4,7 @@ import { Crown, Flame, Gem, Gift, MessageCircle, Share2, MapPin, Send, Flag, Rep
 import { BrokenCrown } from "@/components/icons/BrokenCrown";
 import VoteBurst from "@/components/VoteBurst";
 import PostMedia from "./PostMedia";
+import { postMediaFrameClass } from "@/lib/postMediaFrame";
 import { FilterId, isValidFilter, FILTER_BY_ID } from "@/lib/filters";
 import { useThreadMute } from "@/hooks/useThreadMute";
 import { classifyBlock } from "@/lib/commentBlockReason";
@@ -694,7 +695,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
-        className="p-0 gap-0 max-w-[100vw] w-full h-[100svh] md:w-[min(96vw,1280px)] md:max-w-[1280px] md:h-auto md:aspect-[16/10] md:max-h-[90vh] md:rounded-2xl md:my-3 bg-card border-border overflow-hidden flex flex-col md:flex-row [&>button]:hidden overscroll-contain"
+        className="p-0 gap-0 max-w-[100vw] w-full h-[100svh] md:w-[min(96vw,1280px)] md:max-w-[1280px] md:h-[min(90vh,800px)] md:rounded-2xl md:my-3 bg-card border-border overflow-hidden flex flex-col md:flex-row [&>button]:hidden overscroll-contain"
       >
         <VisuallyHidden>
           <DialogTitle>Post details</DialogTitle>
@@ -717,9 +718,11 @@ export default function PostDetailDialog({ post, onClose }: Props) {
           </button>
         </div>
 
-        {/* Image side */}
+        {/* Media side — canonical aspect ratio, identical on mobile and desktop.
+            On desktop the media region is a fixed square sized to dialog height
+            (Instagram-web layout); the comments column flexes to the remaining width. */}
         <div
-          className="relative w-full aspect-square shrink-0 md:aspect-auto md:w-auto md:h-full md:flex-1 md:basis-[60%] md:shrink flex items-center justify-center min-h-0 overflow-hidden bg-card"
+          className={`relative w-full ${postMediaFrameClass(post)} shrink-0 md:w-auto md:h-full md:aspect-square md:flex-none flex items-center justify-center min-h-0 overflow-hidden bg-card`}
           onDoubleClick={() => !myVotes.has("crown") && onVote("crown")}
           {...doubleTapHandlers}
         >
@@ -753,7 +756,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                       autoPlay
                       filter={postFilter}
                       alt={post.caption || "Video post"}
-                      className="w-full h-full object-contain md:object-cover"
+                      className="w-full h-full object-cover"
                       boost={!!filterBoost}
                       boostType={filterBoost ?? undefined}
                     />
@@ -769,7 +772,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                           src={src}
                           alt={post.alt_texts?.[i] || (post.caption ? `${post.caption} (${i + 1}/${images.length})` : `Photo ${i + 1}`)}
                           filter={postFilter}
-                          className="w-full h-full object-contain md:object-cover"
+                          className="w-full h-full object-cover"
                           boost={!!filterBoost && i === activeImage}
                           boostType={filterBoost ?? undefined}
                         />
@@ -781,7 +784,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                     src={images[0]}
                     alt={post.alt_texts?.[0] || post.caption || "Post"}
                     filter={postFilter}
-                    className="w-full h-full object-contain md:object-cover"
+                    className="w-full h-full object-cover"
                     boost={!!filterBoost}
                     boostType={filterBoost ?? undefined}
                   />

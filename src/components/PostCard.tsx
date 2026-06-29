@@ -33,6 +33,7 @@ import { trackEvent } from "@/lib/analytics";
 
 import { FilterId, isValidFilter, FILTER_BY_ID } from "@/lib/filters";
 import PostMedia from "./PostMedia";
+import { postMediaFrameClass } from "@/lib/postMediaFrame";
 import FilterStreakBadge from "./FilterStreakBadge";
 import { useFilterStreaks } from "@/hooks/useFilterStreak";
 import { rankBadgeLabel } from "@/lib/rankTitle";
@@ -772,9 +773,11 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         </div>
       </header>
 
-      {/* Image(s) */}
+      {/* Image(s) — canonical media frame: same aspect ratio on every
+          viewport and every surface. For reposts we use the ORIGINAL post's
+          media metadata so the repost frames identically to the source. */}
       <div
-        className="relative aspect-square lg:aspect-[4/5] max-h-[70vh] overflow-hidden flex items-center justify-center mx-auto w-full max-w-[640px]"
+        className={`relative ${postMediaFrameClass(isRepost ? post.parent : post)} overflow-hidden flex items-center justify-center mx-auto w-full max-w-[640px]`}
         onDoubleClick={() => !myVotes.has("crown") && onVote("crown")}
         onPointerUp={(e) => {
           if (e.pointerType !== "touch") return;
