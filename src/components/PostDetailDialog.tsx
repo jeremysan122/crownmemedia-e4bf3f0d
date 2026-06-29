@@ -4,7 +4,7 @@ import { Crown, Flame, Gem, Gift, MessageCircle, Share2, MapPin, Send, Flag, Rep
 import { BrokenCrown } from "@/components/icons/BrokenCrown";
 import VoteBurst from "@/components/VoteBurst";
 import PostMedia from "./PostMedia";
-import { postMediaFrameClass, POST_MEDIA_FIT_CLASS } from "@/lib/postMediaFrame";
+import { postMediaFrameClass } from "@/lib/postMediaFrame";
 import { FilterId, isValidFilter, FILTER_BY_ID } from "@/lib/filters";
 import { useThreadMute } from "@/hooks/useThreadMute";
 import { classifyBlock } from "@/lib/commentBlockReason";
