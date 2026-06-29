@@ -718,9 +718,11 @@ export default function PostDetailDialog({ post, onClose }: Props) {
           </button>
         </div>
 
-        {/* Image side */}
+        {/* Media side — canonical aspect ratio, identical on mobile and desktop.
+            On desktop the media region is a fixed square sized to dialog height
+            (Instagram-web layout); the comments column flexes to the remaining width. */}
         <div
-          className="relative w-full aspect-square shrink-0 md:aspect-auto md:w-auto md:h-full md:flex-1 md:basis-[60%] md:shrink flex items-center justify-center min-h-0 overflow-hidden bg-card"
+          className={`relative w-full ${postMediaFrameClass(post)} shrink-0 md:w-auto md:h-full md:aspect-square md:flex-none flex items-center justify-center min-h-0 overflow-hidden bg-card`}
           onDoubleClick={() => !myVotes.has("crown") && onVote("crown")}
           {...doubleTapHandlers}
         >
