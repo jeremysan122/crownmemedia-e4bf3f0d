@@ -33,6 +33,7 @@ import { trackEvent } from "@/lib/analytics";
 
 import { FilterId, isValidFilter, FILTER_BY_ID } from "@/lib/filters";
 import PostMedia from "./PostMedia";
+import { postMediaFrameClass } from "@/lib/postMediaFrame";
 import FilterStreakBadge from "./FilterStreakBadge";
 import { useFilterStreaks } from "@/hooks/useFilterStreak";
 import { rankBadgeLabel } from "@/lib/rankTitle";
