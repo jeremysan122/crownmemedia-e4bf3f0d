@@ -1,12 +1,10 @@
-// Module-level shared wallet store. Replaces the old
-// `window.dispatchEvent("wallet:refresh")` hack so wallet balance updates
-// stay consistent across every mounted useWallet() consumer without
-// relying on global DOM events.
-//
-// Pattern: a tiny pub/sub. Any component (or non-React code) can call
-// `walletStore.requestRefresh()` after an action that changes the balance
-// — every subscribed useWallet() instance refetches in response.
-
+// Module-level shared wallet store. Two channels:
+//   - refresh listeners: triggered by `requestRefresh()` after balance-changing
+//     actions (purchase, gift, daily reward, payout). useWallet() instances
+//     respond by re-fetching once (deduped behind a module-level inflight).
+//   - snapshot listeners: get the latest snapshot pushed to them whenever any
+//     useWallet() instance fetches successfully. This lets every other mounted
+//     instance update from cache instead of issuing its own DB read.
 export interface WalletSnapshot {
   shekelBalance: number;
   totalEarned: number;
@@ -15,28 +13,33 @@ export interface WalletSnapshot {
 }
 
 type Listener = () => void;
+type SnapshotListener = (s: WalletSnapshot) => void;
 
-const listeners = new Set<Listener>();
+const refreshListeners = new Set<Listener>();
+const snapshotListeners = new Set<SnapshotListener>();
 let snapshot: WalletSnapshot | null = null;
 
 export const walletStore = {
-  /** Latest snapshot, or null when no useWallet() has loaded yet. */
   getSnapshot(): WalletSnapshot | null {
     return snapshot;
   },
-  /** Persist a new snapshot (does not notify — useWallet owns its own state). */
   setSnapshot(next: WalletSnapshot) {
     snapshot = next;
   },
-  /** Subscribe to refresh requests. Returns an unsubscribe fn. */
   subscribe(listener: Listener): () => void {
-    listeners.add(listener);
-    return () => { listeners.delete(listener); };
+    refreshListeners.add(listener);
+    return () => { refreshListeners.delete(listener); };
   },
-  /** Notify every subscriber to refetch their wallet from the server. */
+  subscribeSnapshot(listener: SnapshotListener): () => void {
+    snapshotListeners.add(listener);
+    return () => { snapshotListeners.delete(listener); };
+  },
+  /** Notify subscribers to refetch from server. Deduped by useWallet. */
   requestRefresh() {
-    listeners.forEach((l) => {
-      try { l(); } catch { /* noop */ }
-    });
+    refreshListeners.forEach((l) => { try { l(); } catch { /* noop */ } });
+  },
+  /** Push a fresh snapshot to every mounted instance without an extra DB read. */
+  broadcast(next: WalletSnapshot) {
+    snapshotListeners.forEach((l) => { try { l(next); } catch { /* noop */ } });
   },
 };

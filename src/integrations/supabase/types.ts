@@ -4731,6 +4731,8 @@ export type Database = {
           email: string
         }[]
       }
+      get_my_unread_dm_counts: { Args: never; Returns: Json }
+      get_my_unread_notification_counts: { Args: never; Returns: Json }
       get_or_create_my_invite_code: { Args: never; Returns: string }
       get_post_public_voters: {
         Args: { _limit?: number; _post_id: string }

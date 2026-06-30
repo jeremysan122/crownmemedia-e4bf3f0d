@@ -5,6 +5,13 @@ import { walletStore, type WalletSnapshot } from "@/stores/walletStore";
 
 export type WalletState = WalletSnapshot;
 
+// Module-level dedupe: when multiple components (AppShell + DesktopHeader +
+// Wallet page) mount useWallet() at the same time we collapse them into one
+// in-flight fetch and one shared snapshot, then broadcast updates via
+// walletStore. This stops the duplicate-mount pattern that was driving
+// ~81k wallet single-row reads per scan window.
+let inflight: Promise<void> | null = null;
+
 export function useWallet() {
   const { user } = useAuth();
 
@@ -17,87 +24,78 @@ export function useWallet() {
     },
   );
 
-  const readWallet = useCallback(async () => {
-    if (!user) return;
-
-    const { data } = await supabase
-      .from("wallets")
-      .select("shekel_balance, total_earned, total_spent")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    return data;
-  }, [user]);
-
   const refreshWallet = useCallback(async () => {
     if (!user) return;
-
-    let data = await readWallet();
-
-    if (data) {
-      const next: WalletState = {
-        shekelBalance: Number(data.shekel_balance),
-        totalEarned: Number(data.total_earned),
-        totalSpent: Number(data.total_spent),
-        loading: false,
-      };
-      walletStore.setSnapshot(next);
-      setWallet(next);
-    } else {
-      // Wallet is normally created by the signup trigger; this RPC safely ensures one exists.
-      await supabase.rpc("ensure_my_wallet");
-
-      data = await readWallet();
-      if (data) {
-        const next: WalletState = {
-          shekelBalance: Number(data.shekel_balance),
-          totalEarned: Number(data.total_earned),
-          totalSpent: Number(data.total_spent),
-          loading: false,
-        };
+    if (inflight) return inflight;
+    inflight = (async () => {
+      try {
+        let { data } = await supabase
+          .from("wallets")
+          .select("shekel_balance, total_earned, total_spent")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!data) {
+          await supabase.rpc("ensure_my_wallet");
+          ({ data } = await supabase
+            .from("wallets")
+            .select("shekel_balance, total_earned, total_spent")
+            .eq("user_id", user.id)
+            .maybeSingle());
+        }
+        const next: WalletState = data
+          ? {
+              shekelBalance: Number(data.shekel_balance),
+              totalEarned: Number(data.total_earned),
+              totalSpent: Number(data.total_spent),
+              loading: false,
+            }
+          : { shekelBalance: 0, totalEarned: 0, totalSpent: 0, loading: false };
         walletStore.setSnapshot(next);
-        setWallet(next);
-        return;
+        // Broadcast so every other mounted useWallet() updates from cache,
+        // without each one re-querying the database.
+        walletStore.broadcast(next);
+      } finally {
+        inflight = null;
       }
+    })();
+    return inflight;
+  }, [user]);
 
-      setWallet((w) => {
-        const next = { ...w, loading: false };
-        walletStore.setSnapshot(next);
-        return next;
-      });
+  // Initial load + sync to broadcast updates from other instances.
+  useEffect(() => {
+    if (!user) {
+      setWallet({ shekelBalance: 0, totalEarned: 0, totalSpent: 0, loading: false });
+      return;
     }
-  }, [user, readWallet]);
+    // Adopt cached snapshot if present; only fetch if stale or missing.
+    const snap = walletStore.getSnapshot();
+    if (snap && !snap.loading) {
+      setWallet(snap);
+    } else {
+      refreshWallet();
+    }
+    // Subscribe to refresh requests AND snapshot pushes from other instances.
+    const unsubRefresh = walletStore.subscribe(() => { refreshWallet(); });
+    const unsubSnap = walletStore.subscribeSnapshot((s) => setWallet(s));
+    return () => { unsubRefresh(); unsubSnap(); };
+  }, [user?.id, refreshWallet]);
 
-  useEffect(() => {
-    refreshWallet();
-  }, [refreshWallet]);
-
-  // Cross-component refresh: any code can call
-  // `walletStore.requestRefresh()` to force every mounted useWallet()
-  // instance to re-fetch — used after daily-reward claims, spin-wheel
-  // payouts, gift sends, etc. so the header pill stays in sync with
-  // whichever page triggered the change.
-  useEffect(() => {
-    return walletStore.subscribe(() => { refreshWallet(); });
-  }, [refreshWallet]);
-
-  // Polling fallback. wallets is no longer in the Realtime publication
-  // (to prevent CDC leaks across users), so refresh on focus + every 30s.
+  // Refresh on focus/visibility (no polling). Wallet changes are also
+  // pushed via explicit walletStore.requestRefresh() after purchases,
+  // gifts, daily-reward claims, payouts and refunds.
   useEffect(() => {
     if (!user) return;
-    const onFocus = () => refreshWallet();
-    const interval = window.setInterval(refreshWallet, 30_000);
+    const onFocus = () => {
+      if (document.visibilityState === "visible") refreshWallet();
+    };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     return () => {
-      window.clearInterval(interval);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, refreshWallet]);
 
-  // Optimistic local-only adjustment, used for instant feedback before server confirms.
   const applyDelta = useCallback((shekelDelta: number, spentDelta = 0) => {
     setWallet((w) => {
       const next = {
@@ -106,13 +104,10 @@ export function useWallet() {
         totalSpent: w.totalSpent + spentDelta,
       };
       walletStore.setSnapshot(next);
+      walletStore.broadcast(next);
       return next;
     });
   }, []);
 
-  return {
-    wallet,
-    refreshWallet,
-    applyDelta,
-  };
+  return { wallet, refreshWallet, applyDelta };
 }
