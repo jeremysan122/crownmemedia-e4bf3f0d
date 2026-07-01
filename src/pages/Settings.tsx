@@ -429,7 +429,15 @@ export default function Settings() {
                 await downloadMyData(profile.id, profile.username);
                 toast.success("Download started", { id: t });
               } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Export failed", { id: t });
+                logRawError(e, "export");
+                const msg = toFriendlyMessage(e, "export");
+                const failed = (e as any)?.failedSections as string[] | undefined;
+                toast.error(
+                  failed?.length
+                    ? `${msg} Missing sections: ${failed.join(", ")}.`
+                    : msg,
+                  { id: t },
+                );
               }
             }}
           >
