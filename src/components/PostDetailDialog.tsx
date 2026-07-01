@@ -78,6 +78,13 @@ export default function PostDetailDialog({ post, onClose }: Props) {
   const open = !!post;
   const isBelowDesktop = useIsBelowDesktop();
   const [commentsOverlayOpen, setCommentsOverlayOpen] = useState(false);
+  // Canonical target IDs for repost attribution. Interactions (votes, comments,
+  // gifts, share, reports, realtime) must always target the ORIGINAL post so a
+  // repost never fragments engagement, while display data (author, media,
+  // caption, category, location, stats) comes from the original when present.
+  const interactionPostId = (post?.parent_post_id ?? post?.id) ?? null;
+  const displayPost: any = (post as any)?.parent ?? post;
+  const displayProfile = displayPost?.profile ?? post?.profile;
   const [activeImage, setActiveImage] = useState(0);
   const [myVotes, setMyVotes] = useState<Set<VoteType>>(new Set());
   const [counts, setCounts] = useState({ crown: 0, fire: 0, diamond: 0, dislike: 0, total: 0, score: 0, comments: 0 });
