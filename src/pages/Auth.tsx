@@ -512,7 +512,10 @@ export default function Auth() {
                     const { error } = await supabase.auth.resetPasswordForEmail(email, {
                       redirectTo: `${window.location.origin}/reset-password`,
                     });
-                    if (error) { logRawError(error, "auth"); }
+                    if (error) {
+                      const { logRawError } = await import("@/lib/settingsSecurityErrors");
+                      logRawError(error, "auth");
+                    }
                     // Always show a neutral message to avoid email enumeration.
                     toast.success("If that email is registered, a reset link is on the way.");
                   }}
