@@ -44,6 +44,7 @@ const GENERIC_BY_CONTEXT: Record<ErrorContext, string> = {
   reset: "Couldn't send reset email. Try again.",
   login: "Couldn't sign you in. Try again.",
   signup: "Couldn't complete signup. Try again.",
+  auth: "Something went wrong. Try again.",
   verification: "Couldn't update verification. Try again.",
   notifications: "Couldn't update notifications. Try again.",
   generic: "Something went wrong. Try again.",
