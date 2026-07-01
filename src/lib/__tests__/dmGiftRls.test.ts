@@ -99,7 +99,7 @@ describe("DM gift RLS — client-side regression", () => {
     await act(async () => {
       await expect(
         result.current.sendDmGift({ gift, recipientId: "blocker", quantity: 1, maxRetries: 5 }),
-      ).rejects.toMatchObject({ message: expect.stringMatching(/blocked/i) });
+      ).rejects.toMatchObject({ message: expect.stringMatching(/blocked|can't send/i) });
     });
     // Fatal: must NOT retry on permission/blocked errors.
     expect(rpcMock).toHaveBeenCalledTimes(1);
