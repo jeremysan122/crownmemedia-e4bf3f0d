@@ -704,12 +704,15 @@ export default function Profile() {
             {(() => {
               const showLiked = isMe || (prof.liked_posts_public ?? true);
               const showSaved = isMe;
-              // +1 for the new Scrolls tab. Profile now separates normal Posts
-              // from vertical Scrolls (shorts/reels) per the content-type split.
-              const colCount = 4 + (showLiked ? 1 : 0) + (showSaved ? 1 : 0);
-              const colsClass = colCount === 6 ? "grid-cols-6" : colCount === 5 ? "grid-cols-5" : "grid-cols-4";
-              const imagePosts = filterByContentType(posts as any, "post") as typeof posts;
-              const scrollPosts = filterByContentType(posts as any, "scroll") as typeof posts;
+              // +1 for Scrolls, +1 for Reposts. Profile separates originals from
+              // reposts so leaderboard/crown attribution isn't credited to the
+              // reposter.
+              const colCount = 5 + (showLiked ? 1 : 0) + (showSaved ? 1 : 0);
+              const colsClass = colCount === 7 ? "grid-cols-7" : colCount === 6 ? "grid-cols-6" : colCount === 5 ? "grid-cols-5" : "grid-cols-4";
+              const originals = (posts as any[]).filter((p) => !p.parent_post_id);
+              const repostRows = (posts as any[]).filter((p) => !!p.parent_post_id);
+              const imagePosts = filterByContentType(originals as any, "post") as typeof posts;
+              const scrollPosts = filterByContentType(originals as any, "scroll") as typeof posts;
               const renderTile = (p: typeof posts[number], showPlay: boolean) => (
                 <div
                   key={p.id}
