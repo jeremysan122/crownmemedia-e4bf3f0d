@@ -787,11 +787,8 @@ export default function Feed() {
           ) : loadError ? (
             <FeedErrorState
               onRetry={() => {
-                // Bumping followingIds reference would refetch, but the simplest
-                // trigger is to toggle through the loader path by clearing error
-                // and re-running the same effect via a no-op tab set.
                 setLoadError(null);
-                setTab((t) => t);
+                setReloadKey((k) => k + 1);
               }}
               onGoGlobal={tab !== "global" ? () => { setTab("global"); setCatFilter("all"); } : undefined}
               message={loadError}
