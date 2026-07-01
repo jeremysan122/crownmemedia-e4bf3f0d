@@ -463,8 +463,9 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
     const mentionIds = Array.from(new Set(mentions.map((m) => m.id))).filter(Boolean);
 
+    const targetId = post.parent_post_id ?? post.id;
     const { error: insertErr } = await supabase.from("comments").insert({
-      post_id: post.id,
+      post_id: targetId,
       user_id: user.id,
       body: validation.value,
       parent_id: replyTo?.id ?? null,
@@ -480,9 +481,9 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
     recordComment();
 
-    // Optimistic UI: notify PostCard to apply the +1% Crown Score bonus immediately
+    // Optimistic UI: notify PostCard to apply the +1% Crown Score bonus immediately (target = original post)
     window.dispatchEvent(
-      new CustomEvent("crownme:comment-added", { detail: { postId: post.id } }),
+      new CustomEvent("crownme:comment-added", { detail: { postId: targetId } }),
     );
 
     // Clear persisted draft for this thread context
