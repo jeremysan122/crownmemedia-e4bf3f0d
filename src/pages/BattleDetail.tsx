@@ -247,6 +247,17 @@ export default function BattleDetail() {
               </span>
               <Link to="/battles" className="text-primary hover:underline">All battles</Link>
             </div>
+
+            {status === "live" && (
+              <div className="px-3 pb-3">
+                <Link
+                  to={`/battles?b=${battle.id}`}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2 rounded-md bg-gradient-gold text-primary-foreground font-bold gold-shadow text-sm"
+                >
+                  Open in Battles to vote →
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </div>
