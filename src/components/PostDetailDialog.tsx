@@ -865,14 +865,14 @@ export default function PostDetailDialog({ post, onClose }: Props) {
               fetchPostById() from src/lib/postQuery.ts. */}
           {/* Header */}
           <header className="flex items-center justify-between gap-2 p-3 border-b border-border">
-            <Link to={`/${post.profile.username}`} onClick={onClose} className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className={post.profile.crowns_held > 0 ? "crown-ring shrink-0" : "shrink-0"}>
+            <Link to={`/${displayProfile?.username ?? ""}`} onClick={onClose} className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div className={(displayProfile?.crowns_held ?? 0) > 0 ? "crown-ring shrink-0" : "shrink-0"}>
                 <div className="size-9 rounded-full bg-muted overflow-hidden ring-1 ring-border">
-                  {post.profile.profile_photo_url ? (
-                    <img loading="lazy" src={post.profile.profile_photo_url} alt={post.profile.username} className="w-full h-full object-cover" />
+                  {displayProfile?.profile_photo_url ? (
+                    <img loading="lazy" src={displayProfile.profile_photo_url} alt={displayProfile.username} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
-                      {post.profile.username[0]?.toUpperCase()}
+                      {displayProfile?.username?.[0]?.toUpperCase()}
                     </div>
                   )}
                 </div>
@@ -880,14 +880,20 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1 min-w-0">
-                  <span className="font-semibold text-sm truncate">@{post.profile.username}</span>
-                  {post.profile.crowns_held > 0 && <Crown size={11} className="text-primary shrink-0" fill="currentColor" />}
+                  <span className="font-semibold text-sm truncate">@{displayProfile?.username}</span>
+                  {(displayProfile?.crowns_held ?? 0) > 0 && <Crown size={11} className="text-primary shrink-0" fill="currentColor" />}
                 </div>
 
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
                   <MapPin size={9} className="shrink-0" />
-                  <span className="truncate">{locationLabel(post)}</span>
+                  <span className="truncate">{locationLabel(displayPost)}</span>
                 </div>
+                {post?.parent_post_id && post?.profile?.username && post.profile.username !== displayProfile?.username && (
+                  <div className="text-[10px] text-muted-foreground italic mt-0.5">
+                    <Repeat2 size={9} className="inline mr-1" />
+                    Reposted by <Link to={`/${post.profile.username}`} onClick={onClose} className="hover:underline">@{post.profile.username}</Link>
+                  </div>
+                )}
               </div>
             </Link>
 
