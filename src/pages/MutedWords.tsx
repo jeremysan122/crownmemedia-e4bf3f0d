@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 
 type Row = { id: string; word: string };
 
