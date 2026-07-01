@@ -6,8 +6,9 @@ import { useSeoMeta } from "@/hooks/useSeoMeta";
 import CrownLoader from "@/components/CrownLoader";
 import RetryState from "@/components/states/RetryState";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
-import { ArrowLeft, MessageCircle, Share2, Volume2, VolumeX, Heart, Send } from "lucide-react";
+import { ArrowLeft, MessageCircle, Share2, Volume2, VolumeX, Heart, Send, Repeat2 } from "lucide-react";
 import DmSharePicker from "@/components/messages/DmSharePicker";
+import RepostDialog from "@/components/RepostDialog";
 import { sendDmShare } from "@/lib/dmShare";
 import { CrownIcon } from "@/components/CrownIcon";
 import { toast } from "sonner";
@@ -48,6 +49,7 @@ export default function Shorts() {
   const [activeProgress, setActiveProgress] = useState(0); // 0..1 for the visible Scroll
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [dmShareScroll, setDmShareScroll] = useState<Short | null>(null);
+  const [repostScroll, setRepostScroll] = useState<Short | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   // Desktop ≥1024px → right-side comments panel; below → bottom slide-up sheet.
   const [isDesktop, setIsDesktop] = useState(() =>
@@ -357,6 +359,20 @@ export default function Shorts() {
                   <span className="text-xs font-semibold">Send</span>
                 </button>
 
+                {user?.id !== p.user_id && (
+                  <button
+                    type="button"
+                    onClick={() => setRepostScroll(p)}
+                    aria-label="Repost this scroll"
+                    className="flex flex-col items-center gap-1 active:scale-95 transition"
+                  >
+                    <span className="size-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
+                      <Repeat2 className="size-6" />
+                    </span>
+                    <span className="text-xs font-semibold">Repost</span>
+                  </button>
+                )}
+
                 <button
                   onClick={() => share(p)}
                   aria-label="Share"
@@ -416,6 +432,15 @@ export default function Shorts() {
           }
         }}
       />
+
+      {repostScroll && (
+        <RepostDialog
+          open={!!repostScroll}
+          onOpenChange={(o) => { if (!o) setRepostScroll(null); }}
+          parent={repostScroll as any}
+        />
+      )}
+
 
     </main>
   );
