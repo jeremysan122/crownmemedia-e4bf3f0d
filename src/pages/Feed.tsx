@@ -340,11 +340,12 @@ export default function Feed() {
       if (cancelled) return;
       if (error) {
         // Never surface raw database/PostgREST errors (e.g. "permission denied
-        // for table posts") to end users — log for diagnostics only.
+        // for table posts") to end users — log for diagnostics only. Preserve
+        // any previously-rendered posts so the screen doesn't flash blank on
+        // a transient failure; the FeedErrorState banner surfaces retry.
         console.error("[Feed] load failed:", error);
         toast.error("Couldn't load posts right now");
         setLoadError("Couldn't load posts right now.");
-        setPosts([]);
         setLoading(false);
         return;
       }
@@ -356,7 +357,7 @@ export default function Feed() {
     };
     load();
     return () => { cancelled = true; };
-  }, [tab, catFilter, hubSlug, topicSlug, tagFilter, sort, timeWindow, profile?.city, profile?.state, user?.id, followingIds, buildQuery, feedFilters]);
+  }, [tab, catFilter, hubSlug, topicSlug, tagFilter, sort, timeWindow, profile?.city, profile?.state, user?.id, followingIds, buildQuery, feedFilters, reloadKey]);
 
 
   // LOAD MORE (infinite scroll)
