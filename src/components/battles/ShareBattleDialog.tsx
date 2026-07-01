@@ -210,6 +210,11 @@ export default function ShareBattleDialog({
             <Loader2 size={20} className="animate-spin text-muted-foreground" />
           ) : pngUrl ? (
             <img loading="lazy" src={pngUrl} alt="Battle share card preview" className="w-full h-full object-contain" />
+          ) : buildError ? (
+            <div className="text-center px-4 py-6 space-y-1">
+              <div className="text-xs font-semibold text-foreground">Preview unavailable</div>
+              <div className="text-[11px] text-muted-foreground">You can still share the link below.</div>
+            </div>
           ) : (
             <span className="text-xs text-muted-foreground">Preview unavailable</span>
           )}
