@@ -4461,6 +4461,66 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_list_boost_bundles: {
+        Args: never
+        Returns: {
+          active: boolean
+          boost_type: string
+          created_at: string
+          duration_hours: number
+          id: string
+          label: string
+          sort_order: number
+          stripe_price_id: string
+          usd: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "boost_bundles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      admin_list_royal_pass_plans: {
+        Args: never
+        Returns: {
+          active: boolean
+          created_at: string
+          description: string
+          id: string
+          interval: string
+          name: string
+          sort_order: number
+          stripe_price_id: string
+          updated_at: string
+          usd: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "royal_pass_plans"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      admin_list_shekel_bundles: {
+        Args: never
+        Returns: {
+          active: boolean
+          created_at: string
+          id: string
+          label: string
+          shekels: number
+          sort_order: number
+          stripe_price_id: string
+          usd: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "shekel_bundles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       admin_list_users: {
         Args: { _limit?: number; _query?: string }
         Returns: {
