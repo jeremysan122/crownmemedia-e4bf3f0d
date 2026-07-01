@@ -1223,7 +1223,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
       {/* Universal mobile/tablet comments popup. Same component used in Feed,
           Profile, Scrolls/Shorts so commenting feels identical everywhere. */}
       <CommentsDrawer
-        postId={commentsOverlayOpen && post ? post.id : null}
+        postId={commentsOverlayOpen && post ? ((post as any).parent_post_id ?? post.id) : null}
         onClose={() => setCommentsOverlayOpen(false)}
       />
     </Dialog>
