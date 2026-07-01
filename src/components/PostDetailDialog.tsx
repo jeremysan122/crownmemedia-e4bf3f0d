@@ -325,19 +325,20 @@ export default function PostDetailDialog({ post, onClose }: Props) {
     };
   }, [post]);
 
-  // Re-sync live state when the active post changes.
+  // Re-sync live state when the active post/original changes.
   useEffect(() => {
-    if (!post) return;
-    setLiveCaption(post.caption);
-    setLiveCover(post.image_url);
-    setLiveFilter(isValidFilter(post.filter ?? null) ? (post.filter as FilterId) : null);
-    setLiveEditedAt(post.edited_at ?? null);
-  }, [post?.id, post?.caption, post?.image_url, post?.filter, post?.edited_at]);
+    if (!displayPost) return;
+    setLiveCaption(displayPost.caption);
+    setLiveCover(displayPost.image_url);
+    setLiveFilter(isValidFilter(displayPost.filter ?? null) ? (displayPost.filter as FilterId) : null);
+    setLiveEditedAt(displayPost.edited_at ?? null);
+  }, [displayPost?.id, displayPost?.caption, displayPost?.image_url, displayPost?.filter, displayPost?.edited_at]);
   useEffect(() => {
-    if (!post) return;
+    if (!displayPost) return;
     const onUpdated = (e: Event) => {
       const d = (e as CustomEvent).detail;
-      if (!d || d.id !== post.id) return;
+      // Accept updates targeting either the visible row or the original.
+      if (!d || (d.id !== displayPost.id && d.id !== interactionPostId)) return;
       if (typeof d.caption === "string") setLiveCaption(d.caption);
       if (typeof d.image_url === "string") setLiveCover(d.image_url);
       if (d.filter !== undefined) setLiveFilter(isValidFilter(d.filter) ? d.filter : null);
@@ -345,7 +346,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
     };
     window.addEventListener("post:updated", onUpdated);
     return () => window.removeEventListener("post:updated", onUpdated);
-  }, [post?.id]);
+  }, [displayPost?.id, interactionPostId]);
 
   const { bump: bumpFilterStreak } = useFilterStreaks();
 
