@@ -501,8 +501,11 @@ export default function CrownMap() {
     set("exact", exactName ? "1" : "", "");
     set("min", minScore, "");
     const qs = next.toString();
-    if (typeof window === "undefined") return `/crown-map${qs ? `?${qs}` : ""}`;
-    return `${window.location.origin}/crown-map${qs ? `?${qs}` : ""}`;
+    // Canonical Crown Map route is `/map` (see App.tsx routes + BottomNav /
+    // DesktopSidebar / FeedRightRail). The legacy `/crown-map` path is kept
+    // as a client-side redirect in App.tsx so older shared links keep working.
+    if (typeof window === "undefined") return `/map${qs ? `?${qs}` : ""}`;
+    return `${window.location.origin}/map${qs ? `?${qs}` : ""}`;
   }, [scope, category, query, view, mineOnly, heat, holderQ, exactName, minScore]);
 
   const shareLabel = useMemo(() => {
