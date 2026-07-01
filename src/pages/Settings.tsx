@@ -37,7 +37,7 @@ export default function Settings() {
       .from("profiles")
       .update({ liked_posts_public: next } as any)
       .eq("id", profile.id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { logRawError(error, "privacy"); toast.error(toFriendlyMessage(error, "privacy")); return; }
     await refreshProfile();
     toast.success(next ? "Liked posts are now visible to others" : "Liked posts are now private");
   };
@@ -49,7 +49,7 @@ export default function Settings() {
       .from("profiles")
       .update({ vote_privacy: value } as any)
       .eq("id", profile.id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { logRawError(error, "privacy"); toast.error(toFriendlyMessage(error, "privacy")); return; }
     await refreshProfile();
     toast.success(next ? "Your voting activity is now public" : "Your voting activity is now private");
   };
