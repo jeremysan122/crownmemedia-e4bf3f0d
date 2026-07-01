@@ -300,12 +300,10 @@ export default function Auth() {
         if (error) {
           if (/email.*not.*confirmed|not.*verified/i.test(error.message)) {
             setUnverifiedEmail(parsed.data.email);
-            toast.error("Verify your email to sign in.");
-          } else if (/rate|too many/i.test(error.message)) {
-            toast.error("Too many sign-in attempts. Please wait a moment.");
-          } else {
-            toast.error(error.message.includes("Invalid") ? "Invalid email or password" : error.message);
           }
+          const { toFriendlyMessage, logRawError } = await import("@/lib/settingsSecurityErrors");
+          logRawError(error, "login");
+          toast.error(toFriendlyMessage(error, "login"));
           return;
         }
         persistRemember();
