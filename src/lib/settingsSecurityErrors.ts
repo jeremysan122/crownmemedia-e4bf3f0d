@@ -23,6 +23,7 @@ export type ErrorContext =
   | "reset"
   | "login"
   | "signup"
+  | "auth"
   | "verification"
   | "notifications"
   | "generic";
