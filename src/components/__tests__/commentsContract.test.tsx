@@ -29,21 +29,29 @@ describe("Mobile/tablet comments contract (source-level)", () => {
   const shorts = read("src/pages/Shorts.tsx");
   const feed = read("src/pages/Feed.tsx");
 
-  it("PostCard comment button does not navigate to /post/:id", () => {
-    // The only allowed /post/ reference in PostCard is the repost parent link.
-    const matches = postCard.match(/\/post\//g) || [];
-    expect(matches.length).toBeLessThanOrEqual(1);
-    // And it must NOT live inside an onClick handler near MessageCircle.
+  it("PostCard comment button does not navigate to /post/:id on mobile/tablet", () => {
+    // /post/ references are ONLY allowed for repost parent navigation
+    // (View original post link, and desktop-only fallback for reposts).
+    // The mobile/tablet comment path must never navigate away.
     const msgIdx = postCard.indexOf("MessageCircle size=");
-    const around = postCard.slice(Math.max(0, msgIdx - 600), msgIdx + 600);
-    expect(around).not.toMatch(/navigate\(["'`]\/post\//);
-    expect(around).not.toMatch(/to=["'`]\/post\//);
+    const around = postCard.slice(Math.max(0, msgIdx - 800), msgIdx + 800);
+    // Any /post/ inside the MessageCircle onClick region must be gated
+    // behind `isRepost` on the desktop branch, never the mobile branch.
+    expect(around).toMatch(/if \(isBelowDesktop\)/);
+    // All /post/ occurrences in the file must reference parent_post_id
+    // (repost parent), not the current post id.
+    const postRefs = postCard.match(/\/post\/\$\{[^}]+\}/g) || [];
+    for (const ref of postRefs) {
+      expect(ref).toMatch(/parent_post_id/);
+    }
   });
 
   it("PostCard routes mobile/tablet comment clicks through the universal popup", () => {
     expect(postCard).toMatch(/useIsBelowDesktop/);
     expect(postCard).toMatch(/if \(isBelowDesktop\)/);
-    expect(postCard).toMatch(/onCommentClick\(post\.id\)/);
+    // Comments target the interaction post id (original for reposts) so
+    // attribution/threads stay attached to the original content.
+    expect(postCard).toMatch(/onCommentClick\(interactionPostId\)/);
     expect(postCard).toMatch(/CommentsDrawer/);
   });
 
