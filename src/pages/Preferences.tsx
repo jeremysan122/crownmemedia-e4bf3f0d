@@ -84,7 +84,8 @@ export default function Preferences() {
     const next = { ...p, ...patch };
     setP(next);
     // Prefer server-authoritative RPC when available; fall back to direct update.
-    const { error } = await supabase.rpc("update_my_preferences", { _patch: patch as any } as any).then(
+    const rpc = (supabase.rpc as any)("update_my_preferences", { _patch: patch });
+    const { error } = await rpc.then(
       (res: any) => res,
       (err: any) => ({ error: err }),
     );
