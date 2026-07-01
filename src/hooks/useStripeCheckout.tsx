@@ -56,7 +56,6 @@ export function useStripeCheckout() {
         </DialogHeader>
         <div className="px-3 pb-3 overflow-y-auto flex-1 min-h-0">
           <StripeEmbeddedCheckoutMount
-            priceId={opts.priceId}
             fnName={opts.fnName}
             extraBody={opts.extraBody}
             onComplete={handleComplete}

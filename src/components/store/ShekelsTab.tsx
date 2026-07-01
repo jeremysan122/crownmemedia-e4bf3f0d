@@ -6,7 +6,6 @@ import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
 interface Bundle {
   id: string;
-  stripe_price_id: string;
   shekels: number;
   usd: number;
   label: string;
@@ -21,9 +20,10 @@ export default function ShekelsTab() {
 
   useEffect(() => {
     (async () => {
+      // NOTE: never select stripe_price_id — resolved server-side.
       const { data } = await supabase
         .from("shekel_bundles")
-        .select("id, stripe_price_id, shekels, usd, label, sort_order")
+        .select("id, shekels, usd, label, sort_order")
         .eq("active", true)
         .order("sort_order", { ascending: true });
       setBundles((data as Bundle[]) ?? []);
@@ -33,8 +33,8 @@ export default function ShekelsTab() {
 
   const buy = (b: Bundle) => {
     openCheckout({
-      priceId: b.stripe_price_id,
       fnName: "create-checkout",
+      extraBody: { bundle_id: b.id },
       title: `${b.label} — ${formatShekels(Number(b.shekels))} Shekels`,
       returnUrl: `${window.location.origin}/store/success`,
     });
@@ -116,7 +116,7 @@ export default function ShekelsTab() {
       </div>
 
       <p className="text-center text-[10px] text-muted-foreground pt-2">
-        1 ₪ = $0.001 · Shekels never expire
+        1 ₪ = $0.01 · Bundles may include bonus Shekels · Shekels never expire
       </p>
       {checkoutElement}
     </div>

@@ -2,26 +2,42 @@ import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe
 import { useCallback, useRef } from "react";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { supabase } from "@/integrations/supabase/client";
+import { friendlyMonetizationError, type MonetizationScope } from "@/lib/monetizationErrors";
 
 export interface StripeEmbeddedCheckoutProps {
-  /** Lovable Payments price ID (e.g. "shekels_starter_pouch"). */
-  priceId: string;
+  /**
+   * Optional label used only for UI/logging. Never sent to the edge function.
+   * Stripe price IDs are resolved server-side from bundle_id/plan_id/etc.
+   */
+  priceId?: string;
   /** Edge function name to call to create the session. */
   fnName: "create-checkout" | "create-royal-pass-checkout" | "create-verification-checkout";
-  /** Extra body fields to send (e.g. target_post_id for boosts). */
+  /**
+   * Extra body fields to send. MUST include the internal catalog id
+   * (bundle_id / boost_bundle_id / plan_id / target_post_id).
+   * The client MUST NEVER send stripe_price_id here.
+   */
   extraBody?: Record<string, unknown>;
   /** Called after checkout completes (session is paid). Receives sessionId. */
   onComplete?: (sessionId: string) => void;
 }
+
+const SCOPE_BY_FN: Record<StripeEmbeddedCheckoutProps["fnName"], MonetizationScope> = {
+  "create-checkout": "checkout",
+  "create-royal-pass-checkout": "royal_pass_checkout",
+  "create-verification-checkout": "verification_checkout",
+};
 
 /**
  * Renders Stripe's embedded checkout inline. Uses `redirect_on_completion: 'never'`
  * server-side so Stripe never navigates the top window — the parent React app
  * stays mounted, which avoids losing the auth session inside iframed previews
  * (storage partitioning) and gives us a clean SPA route transition on success.
+ *
+ * The client MUST NEVER send stripe_price_id. Send bundle_id / boost_bundle_id /
+ * plan_id in `extraBody`; the edge function resolves the Stripe price server-side.
  */
 export function StripeEmbeddedCheckoutMount({
-  priceId,
   fnName,
   extraBody,
   onComplete,
@@ -33,17 +49,18 @@ export function StripeEmbeddedCheckoutMount({
   const fetchClientSecret = useCallback(async (): Promise<string> => {
     const { data, error } = await supabase.functions.invoke(fnName, {
       body: {
-        price_id: priceId,
         environment: getStripeEnvironment(),
-        ...extraBody,
+        ...(extraBody ?? {}),
       },
     });
     if (error || !data?.clientSecret) {
-      throw new Error((error as Error | undefined)?.message || "Failed to create checkout session");
+      // Log raw for diagnostics, throw friendly for user surfaces
+      console.error(`[${fnName}] checkout create failed:`, error ?? data);
+      throw new Error(friendlyMonetizationError(SCOPE_BY_FN[fnName], error ?? data));
     }
     sessionIdRef.current = (data as { sessionId?: string }).sessionId ?? null;
     return data.clientSecret as string;
-  }, [fnName, priceId, extraBody]);
+  }, [fnName, extraBody]);
 
   const handleComplete = useCallback(() => {
     onCompleteRef.current?.(sessionIdRef.current ?? "");
