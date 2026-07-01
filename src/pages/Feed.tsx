@@ -238,6 +238,9 @@ export default function Feed() {
   const [newPosts, setNewPosts] = useState<FeedPost[]>([]);
   const [followingIds, setFollowingIds] = useState<string[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Bumping this forces the load effect to re-run for Retry, without clobbering
+  // the tab/filter state or clearing previously-rendered posts.
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Block + muted-word filters (loaded once per user, applied to query
   // results AND realtime INSERTs).
