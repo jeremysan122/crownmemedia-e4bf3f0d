@@ -732,7 +732,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
             On desktop the media region is a fixed square sized to dialog height
             (Instagram-web layout); the comments column flexes to the remaining width. */}
         <div
-          className={`relative w-full ${postMediaFrameClass(post)} shrink-0 md:w-auto md:h-full md:aspect-square md:flex-none flex items-center justify-center min-h-0 overflow-hidden bg-card`}
+          className={`relative w-full ${postMediaFrameClass(post)} shrink-0 lg:w-auto lg:h-full lg:aspect-square lg:flex-none flex items-center justify-center min-h-0 overflow-hidden bg-card`}
           onDoubleClick={() => !myVotes.has("crown") && onVote("crown")}
           {...doubleTapHandlers}
         >
