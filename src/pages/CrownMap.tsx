@@ -169,6 +169,29 @@ export default function CrownMap() {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState<number | null>(null);
+  // Friendly error surface — never render raw Supabase/PostgREST text. When a
+  // reload fails transiently we keep the previous rows visible behind the
+  // banner so the map/list doesn't flash empty.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Debounced mirrors of text/number filters so a user typing "Los Angeles"
+  // fires ONE fetch, not ten. Only debounced values are used by fetchPage.
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  const [debouncedHolder, setDebouncedHolder] = useState(holderQ);
+  const [debouncedMinScore, setDebouncedMinScore] = useState(minScore);
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQuery(query), 350);
+    return () => window.clearTimeout(t);
+  }, [query]);
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedHolder(holderQ), 350);
+    return () => window.clearTimeout(t);
+  }, [holderQ]);
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedMinScore(minScore), 350);
+    return () => window.clearTimeout(t);
+  }, [minScore]);
 
   const [flashKeys, setFlashKeys] = useState<Record<string, number>>({});
   const flashTimer = useRef<Record<string, number>>({});
@@ -218,61 +241,99 @@ export default function CrownMap() {
     setLoading(true);
     const from = nextPage * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
-    const holder = holderQ.trim().toLowerCase().replace(/^@/, "");
+    const holder = debouncedHolder.trim().toLowerCase().replace(/^@/, "");
     // Use an inner join when filtering by holder so pagination doesn't drop matches
     // that live on later pages. Without `!inner`, the embedded profile filter would
     // only narrow the embedded select — the parent row would still come back.
     const joinSpec = holder
       ? "profile:profiles!crowns_user_id_fkey!inner(username, profile_photo_url)"
       : "profile:profiles!crowns_user_id_fkey(username, profile_photo_url)";
+    // `count: "estimated"` uses the pg_class row-estimate instead of a full
+    // COUNT(*) scan — the UI only needs a "load more?" signal and an
+    // approximate total, so an exact count on every keystroke was pure waste.
     let q = supabase
       .from("crowns")
       .select(
         `region_name, region_type, user_id, post_id, crown_score, category, ${joinSpec}`,
-        { count: "exact" },
+        { count: "estimated" },
       )
       .eq("active", true)
       .eq("category", category);
 
     if (scope !== "all") q = q.eq("region_type", scope);
-    if (query.trim()) {
-      if (exactName) q = q.ilike("region_name", query.trim());
-      else q = q.ilike("region_name", `%${query.trim()}%`);
+    if (debouncedQuery.trim()) {
+      if (exactName) q = q.ilike("region_name", debouncedQuery.trim());
+      else q = q.ilike("region_name", `%${debouncedQuery.trim()}%`);
     }
     if (mineOnly && user) q = q.eq("user_id", user.id);
-    const min = parseFloat(minScore);
+    const min = parseFloat(debouncedMinScore);
     if (!isNaN(min) && min > 0) q = q.gte("crown_score", min);
     if (holder) q = q.ilike("profile.username", `%${holder}%`);
 
     const { data, count, error } = await q.order("crown_score", { ascending: false }).range(from, to);
 
-    const rows: Row[] = (!error ? ((data as any) || []) : []);
+    if (error) {
+      // Log the raw error for developer diagnostics; users only see a friendly
+      // message so we never leak "permission denied for table crowns" or
+      // similar PostgREST/RLS text into the UI. Previous rows stay visible.
+      // eslint-disable-next-line no-console
+      console.error("[CrownMap] fetch failed", error);
+      setLoadError("Couldn't load Crown Map right now.");
+      setLoading(false);
+      return;
+    }
 
-    if (!error) {
-      setRegions((prev) => (replace ? rows : [...prev, ...rows]));
-      // Seed lastScore baseline so subsequent realtime events compute deltas correctly
-      rows.forEach((r) => {
-        const k = `${r.region_type}:${r.region_name}`;
-        if (lastScoreRef.current[k] == null) lastScoreRef.current[k] = r.crown_score;
-      });
-      setHasMore((data?.length ?? 0) === PAGE_SIZE && (count == null || from + (data?.length ?? 0) < count));
-      setTotal(count ?? null);
-      setPage(nextPage);
-      if (replace) {
-        setChangesSinceRefresh(0);
-        setPendingChanges(0);
-        setLastRefreshAt(Date.now());
-      }
+    const rows: Row[] = (data as any) || [];
+    setLoadError(null);
+    setRegions((prev) => (replace ? rows : [...prev, ...rows]));
+    // Seed lastScore baseline so subsequent realtime events compute deltas correctly
+    rows.forEach((r) => {
+      const k = `${r.region_type}:${r.region_name}`;
+      if (lastScoreRef.current[k] == null) lastScoreRef.current[k] = r.crown_score;
+    });
+    setHasMore((data?.length ?? 0) === PAGE_SIZE && (count == null || from + (data?.length ?? 0) < count));
+    setTotal(count ?? null);
+    setPage(nextPage);
+    if (replace) {
+      setChangesSinceRefresh(0);
+      setPendingChanges(0);
+      setLastRefreshAt(Date.now());
     }
     setLoading(false);
-  }, [category, scope, query, exactName, mineOnly, user, minScore, holderQ]);
+  }, [category, scope, debouncedQuery, exactName, mineOnly, user, debouncedMinScore, debouncedHolder]);
 
   useEffect(() => {
     setRegions([]);
     setPage(0);
     setHasMore(true);
     fetchPage(0, true);
-  }, [fetchPage]);
+    // reloadKey lets the "Try again" button re-run the current filters.
+  }, [fetchPage, reloadKey]);
+
+  /**
+   * Whether a realtime row still matches every ACTIVE filter. Used to reject
+   * realtime updates that would otherwise leak "Los Angeles" pins into a
+   * "New York" search, other users' rows into "My crowns only", low-score
+   * rows past a min-score filter, or non-matching holders past a holder
+   * search. Called BEFORE we mutate the visible list.
+   */
+  const rowMatchesFilters = useCallback((row: any): boolean => {
+    if (!row) return false;
+    if (row.category !== category) return false;
+    if (scope !== "all" && row.region_type !== scope) return false;
+    if (mineOnly && user && row.user_id !== user.id) return false;
+    const min = parseFloat(debouncedMinScore);
+    if (!isNaN(min) && min > 0 && (row.crown_score ?? 0) < min) return false;
+    const rn = String(row.region_name ?? "").toLowerCase();
+    const qStr = debouncedQuery.trim().toLowerCase();
+    if (qStr) {
+      if (exactName) { if (rn !== qStr) return false; }
+      else if (!rn.includes(qStr)) return false;
+    }
+    // Holder username is only known after we re-fetch the row (profile join),
+    // so upsertRow re-validates the fetched username below.
+    return true;
+  }, [category, scope, mineOnly, user, debouncedMinScore, debouncedQuery, exactName]);
 
   const upsertRow = useCallback(async (region_type: Row["region_type"], region_name: string) => {
     const { data } = await supabase
@@ -284,6 +345,19 @@ export default function CrownMap() {
       .eq("region_name", region_name)
       .maybeSingle();
     if (!data) {
+      setRegions((prev) => prev.filter((r) => !(r.region_type === region_type && r.region_name === region_name)));
+      return;
+    }
+    // Re-validate against every active filter using the freshly joined row —
+    // this catches the holder-username filter that the payload alone can't
+    // resolve, plus any filter change that raced the realtime callback.
+    if (!rowMatchesFilters(data)) {
+      setRegions((prev) => prev.filter((r) => !(r.region_type === region_type && r.region_name === region_name)));
+      return;
+    }
+    const holder = debouncedHolder.trim().toLowerCase().replace(/^@/, "");
+    const username = (data as any).profile?.username?.toLowerCase?.() ?? "";
+    if (holder && !username.includes(holder)) {
       setRegions((prev) => prev.filter((r) => !(r.region_type === region_type && r.region_name === region_name)));
       return;
     }
@@ -328,8 +402,19 @@ export default function CrownMap() {
         (payload: any) => {
           const row = (payload.new || payload.old) as any;
           if (!row || !row.region_name || !row.region_type) return;
-          const key = `${row.region_type}:${row.region_name}`;
 
+          // Fast reject: if the payload itself already fails the active
+          // filters (scope/mineOnly/min score/query), skip the DB re-fetch
+          // entirely so realtime never leaks rows outside the current view.
+          // Holder-username filter is validated inside upsertRow after the
+          // profile join resolves.
+          if (!rowMatchesFilters(row)) {
+            // Still remove any stale copy from the visible list.
+            setRegions((prev) => prev.filter((r) => !(r.region_type === row.region_type && r.region_name === row.region_name)));
+            return;
+          }
+
+          const key = `${row.region_type}:${row.region_name}`;
           setChangesSinceRefresh((n) => n + 1);
           setLiveBlink((n) => n + 1);
 
@@ -351,7 +436,7 @@ export default function CrownMap() {
         },
       ),
     undefined,
-    [category, upsertRow],
+    [category, upsertRow, rowMatchesFilters],
   );
 
   useEffect(() => () => {
@@ -416,8 +501,11 @@ export default function CrownMap() {
     set("exact", exactName ? "1" : "", "");
     set("min", minScore, "");
     const qs = next.toString();
-    if (typeof window === "undefined") return `/crown-map${qs ? `?${qs}` : ""}`;
-    return `${window.location.origin}/crown-map${qs ? `?${qs}` : ""}`;
+    // Canonical Crown Map route is `/map` (see App.tsx routes + BottomNav /
+    // DesktopSidebar / FeedRightRail). The legacy `/crown-map` path is kept
+    // as a client-side redirect in App.tsx so older shared links keep working.
+    if (typeof window === "undefined") return `/map${qs ? `?${qs}` : ""}`;
+    return `${window.location.origin}/map${qs ? `?${qs}` : ""}`;
   }, [scope, category, query, view, mineOnly, heat, holderQ, exactName, minScore]);
 
   const shareLabel = useMemo(() => {
@@ -935,7 +1023,30 @@ export default function CrownMap() {
             </div>
           </div>
 
-          {filtered.length === 0 && !loading && view === "list" && (
+          {loadError && (
+            <div
+              role="alert"
+              className="royal-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-destructive/40"
+            >
+              <div className="text-sm">
+                <p className="font-medium">Couldn't load Crown Map right now.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  This is usually a transient network hiccup. Your filters are preserved.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setReloadKey((n) => n + 1)}
+                disabled={loading}
+              >
+                {loading ? "Retrying…" : "Try again"}
+              </Button>
+            </div>
+          )}
+
+          {/* Empty state only shows AFTER a successful query with zero rows. */}
+          {!loadError && filtered.length === 0 && !loading && view === "list" && (
             <div className="royal-card p-8 text-center space-y-3 animate-fade-in">
               <Crown size={36} className="mx-auto text-primary opacity-60" fill="currentColor" />
               <div>

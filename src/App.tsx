@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -177,6 +177,8 @@ const App = () => (
               <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
               <Route path="/leaderboard/c/:mainSlug" element={<ProtectedRoute><CategoryLeaderboard /></ProtectedRoute>} />
               <Route path="/map" element={<ProtectedRoute><CrownMap /></ProtectedRoute>} />
+              {/* Legacy /crown-map links (older shares before the route rename) — preserve query string. */}
+              <Route path="/crown-map" element={<CrownMapLegacyRedirect />} />
               <Route path="/battles" element={<ProtectedRoute><Battles /></ProtectedRoute>} />
               <Route path="/battles/:id" element={<ProtectedRoute><BattleDetail /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
@@ -268,5 +270,14 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
+
+/**
+ * Legacy CrownMap redirect: preserves the query string (scope, category, q,
+ * view, mine, heat, holder, exact, min) so older shared links keep working.
+ */
+function CrownMapLegacyRedirect() {
+  const { search, hash } = useLocation();
+  return <Navigate to={`/map${search}${hash}`} replace />;
+}
 
 export default App;
