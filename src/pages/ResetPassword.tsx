@@ -6,13 +6,9 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import BrandLogo from "@/components/BrandLogo";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+import { scorePassword } from "@/lib/passwordStrength";
 
-/**
- * Password reset landing page. Supabase appends a recovery token to the URL
- * hash (`#type=recovery&access_token=...`) which the JS client automatically
- * picks up via `onAuthStateChange("PASSWORD_RECOVERY")`. We then let the user
- * choose a new password and call `updateUser`.
- */
 export default function ResetPassword() {
   const nav = useNavigate();
   const [ready, setReady] = useState(false);
@@ -21,12 +17,9 @@ export default function ResetPassword() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // If the hash carries a recovery token, Supabase will fire PASSWORD_RECOVERY.
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setReady(true);
     });
-    // Also accept users who land here with an existing session (e.g. they
-    // already clicked the link and just want to set a new password).
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) setReady(true);
     });
@@ -35,12 +28,18 @@ export default function ResetPassword() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 8) return toast.error("Password must be at least 8 characters");
-    if (password !== confirm) return toast.error("Passwords don't match");
+    // Keep in sync with signupValidation.ts: min 8 chars, must score >= 2.
+    if (password.length < 8) return toast.error("Password must be at least 8 characters.");
+    const score = scorePassword(password).score;
+    if (score < 2) return toast.error("Choose a stronger password.");
+    if (password !== confirm) return toast.error("Passwords don't match.");
     setSaving(true);
     const { error } = await supabase.auth.updateUser({ password });
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      logRawError(error, "password");
+      return toast.error(toFriendlyMessage(error, "password"));
+    }
     toast.success("Password updated — you're signed in");
     nav("/feed", { replace: true });
   };

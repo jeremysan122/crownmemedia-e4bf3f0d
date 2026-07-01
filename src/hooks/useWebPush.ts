@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 
 const VAPID_PUBLIC_KEY_ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/web-push-public-key`;
 
@@ -20,13 +21,6 @@ function bufToBase64(buf: ArrayBuffer | null) {
 
 export type PushState = "unsupported" | "denied" | "off" | "on" | "loading";
 
-/**
- * Hook that manages the user's Web Push subscription.
- * - Detects browser support and permission
- * - Registers /sw.js
- * - Calls the `web-push-public-key` edge function to retrieve the server VAPID public key
- * - Subscribes / unsubscribes and persists the subscription via `save_push_subscription` RPC
- */
 export function useWebPush() {
   const [state, setState] = useState<PushState>("loading");
 
@@ -55,9 +49,16 @@ export function useWebPush() {
   const enable = useCallback(async () => {
     if (!supported) return;
     setState("loading");
+    let browserSub: PushSubscription | null = null;
     try {
       const perm = await Notification.requestPermission();
-      if (perm !== "granted") { setState(perm === "denied" ? "denied" : "off"); return; }
+      if (perm !== "granted") {
+        setState(perm === "denied" ? "denied" : "off");
+        toast.error(perm === "denied"
+          ? "Push permission denied. Enable notifications in your browser settings."
+          : "Couldn't enable push notifications. Try again.");
+        return;
+      }
 
       const res = await fetch(VAPID_PUBLIC_KEY_ENDPOINT);
       if (!res.ok) throw new Error("VAPID public key unavailable");
@@ -65,15 +66,15 @@ export function useWebPush() {
       if (!publicKey) throw new Error("Push not configured");
 
       const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
+      browserSub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
 
-      const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
-      const endpoint = json.endpoint ?? sub.endpoint;
-      const p256dh = json.keys?.p256dh ?? bufToBase64(sub.getKey("p256dh"));
-      const authKey = json.keys?.auth ?? bufToBase64(sub.getKey("auth"));
+      const json = browserSub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+      const endpoint = json.endpoint ?? browserSub.endpoint;
+      const p256dh = json.keys?.p256dh ?? bufToBase64(browserSub.getKey("p256dh"));
+      const authKey = json.keys?.auth ?? bufToBase64(browserSub.getKey("auth"));
 
       const { error } = await supabase.rpc("save_push_subscription", {
         _endpoint: endpoint,
@@ -81,13 +82,18 @@ export function useWebPush() {
         _auth: authKey,
         _user_agent: navigator.userAgent.slice(0, 200),
       });
-      if (error) throw error;
+      if (error) {
+        // Server-side save failed — roll back the browser subscription so
+        // the UI state stays truthful and we don't leak a phantom sub.
+        try { await browserSub.unsubscribe(); } catch { /* noop */ }
+        throw error;
+      }
 
       setState("on");
       toast.success("Push notifications enabled");
-    } catch (e: any) {
-      console.error("push enable failed", e);
-      toast.error(e?.message ?? "Could not enable push");
+    } catch (e: unknown) {
+      logRawError(e, "push_enable");
+      toast.error(toFriendlyMessage(e, "push_enable"));
       await refresh();
     }
   }, [supported, refresh]);
@@ -104,8 +110,9 @@ export function useWebPush() {
       }
       setState("off");
       toast.success("Push notifications disabled");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Could not disable push");
+    } catch (e: unknown) {
+      logRawError(e, "push_disable");
+      toast.error(toFriendlyMessage(e, "push_disable"));
       await refresh();
     }
   }, [refresh]);

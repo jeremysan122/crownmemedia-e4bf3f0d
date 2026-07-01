@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useWebPush } from "@/hooks/useWebPush";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 
 export default function Settings() {
   useSeoMeta({ title: "Settings · CrownMe", noIndex: true });
@@ -36,7 +37,7 @@ export default function Settings() {
       .from("profiles")
       .update({ liked_posts_public: next } as any)
       .eq("id", profile.id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { logRawError(error, "privacy"); toast.error(toFriendlyMessage(error, "privacy")); return; }
     await refreshProfile();
     toast.success(next ? "Liked posts are now visible to others" : "Liked posts are now private");
   };
@@ -48,7 +49,7 @@ export default function Settings() {
       .from("profiles")
       .update({ vote_privacy: value } as any)
       .eq("id", profile.id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { logRawError(error, "privacy"); toast.error(toFriendlyMessage(error, "privacy")); return; }
     await refreshProfile();
     toast.success(next ? "Your voting activity is now public" : "Your voting activity is now private");
   };
@@ -80,7 +81,7 @@ export default function Settings() {
     const next = { ...priv, ...patch };
     setPriv(next);
     const { error } = await supabase.from("profiles").update(patch as any).eq("id", profile.id);
-    if (error) { toast.error(error.message); setPriv(priv); return; }
+    if (error) { logRawError(error, "privacy"); toast.error(toFriendlyMessage(error, "privacy")); setPriv(priv); return; }
     toast.success("Privacy updated");
   };
   return (
@@ -428,7 +429,15 @@ export default function Settings() {
                 await downloadMyData(profile.id, profile.username);
                 toast.success("Download started", { id: t });
               } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Export failed", { id: t });
+                logRawError(e, "export");
+                const msg = toFriendlyMessage(e, "export");
+                const failed = (e as any)?.failedSections as string[] | undefined;
+                toast.error(
+                  failed?.length
+                    ? `${msg} Missing sections: ${failed.join(", ")}.`
+                    : msg,
+                  { id: t },
+                );
               }
             }}
           >

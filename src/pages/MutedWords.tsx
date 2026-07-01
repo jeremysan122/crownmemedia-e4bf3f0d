@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 
 type Row = { id: string; word: string };
 
@@ -26,7 +27,7 @@ export default function MutedWords() {
       .select("id, word")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-    if (error) { toast.error(error.message); return; }
+    if (error) { logRawError(error, "muted"); toast.error(toFriendlyMessage(error, "muted")); return; }
     setRows((data as any[])?.map((r) => ({ id: r.id, word: r.word })) ?? []);
   };
 
@@ -41,7 +42,7 @@ export default function MutedWords() {
     setBusy(false);
     if (error) {
       if ((error as any).code === "23505") toast("Already muted");
-      else toast.error(error.message);
+      else { logRawError(error, "muted"); toast.error(toFriendlyMessage(error, "muted")); }
       return;
     }
     setInput("");
@@ -50,7 +51,7 @@ export default function MutedWords() {
 
   const remove = async (id: string) => {
     const { error } = await supabase.from("muted_words" as any).delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { logRawError(error, "muted"); toast.error(toFriendlyMessage(error, "muted")); return; }
     setRows((r) => r.filter((x) => x.id !== id));
   };
 
@@ -59,7 +60,8 @@ export default function MutedWords() {
       <div className="px-4 py-4 space-y-4">
         <h1 className="font-display text-2xl text-gold">Muted words</h1>
         <p className="text-[12px] text-muted-foreground">
-          Posts and comments containing these words are hidden from your feed.
+          Muted words are saved and used by supported surfaces. Full enforcement
+          across every feed, comment, and notification lands in v1.1.
           Case-insensitive, exact word match.
         </p>
 

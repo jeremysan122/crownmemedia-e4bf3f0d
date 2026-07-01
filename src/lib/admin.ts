@@ -50,14 +50,12 @@ export async function logAdminAction(
 // ---------- Role check ----------
 
 export async function getMyAdminRoles(): Promise<AdminRole[]> {
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) return [];
-  const { data, error } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", u.user.id);
+  // Uses the SECURITY DEFINER RPC `get_my_admin_roles` so the client never
+  // needs SELECT on `user_roles`. RPC internally scopes to auth.uid() and
+  // returns empty for anon.
+  const { data, error } = await supabase.rpc("get_my_admin_roles");
   if (error) return [];
-  return (data ?? []).map((r) => r.role as AdminRole);
+  return ((data as { role: string }[] | null) ?? []).map((r) => r.role as AdminRole);
 }
 
 export async function isAdmin(): Promise<boolean> {

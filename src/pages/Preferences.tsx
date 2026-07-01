@@ -15,8 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { CATEGORIES, CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
 import { toast } from "sonner";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { Link } from "react-router-dom";
 import { ChevronRight, Languages, Image as ImageIcon, AtSign, MessageCircle, Eye, Volume2, Clock, Bell, Swords, Lock, Trash2, Info, KeyRound } from "lucide-react";
 
@@ -81,12 +83,28 @@ export default function Preferences() {
     const prev = p;
     const next = { ...p, ...patch };
     setP(next);
-    const { error } = await supabase.from("profiles").update(patch as any).eq("id", profile.id);
+    // Prefer server-authoritative RPC when available; fall back to direct update.
+    const rpc = (supabase.rpc as any)("update_my_preferences", { _patch: patch });
+    const { error } = await rpc.then(
+      (res: any) => res,
+      (err: any) => ({ error: err }),
+    );
     if (error) {
-      setP(prev);
-      toast.error(error.message);
+      // Fallback to direct update if the RPC isn't deployed yet.
+      const { error: e2 } = await supabase.from("profiles").update(patch as any).eq("id", profile.id);
+      if (e2) {
+        setP(prev);
+        logRawError(e2, "settings", { patchKeys: Object.keys(patch) });
+        toast.error(toFriendlyMessage(e2, "settings"));
+      }
     }
   };
+
+  const ComingSoon = () => (
+    <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-amber-500/40 text-amber-500">
+      Coming soon
+    </Badge>
+  );
 
   if (!p) {
     return (
@@ -106,7 +124,7 @@ export default function Preferences() {
     </section>
   );
 
-  const Row = ({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) => (
+  const Row = ({ title, hint, children }: { title: React.ReactNode; hint?: string; children: React.ReactNode }) => (
     <div className="flex items-center gap-3 py-1.5">
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold">{title}</div>
@@ -165,10 +183,13 @@ export default function Preferences() {
           </Row>
         </Section>
 
-        {/* Tagging & mentions */}
+        {/* Tagging & mentions — enforcement lands in v1.1; controls disabled until then */}
         <Section title="Tagging & mentions" icon={AtSign}>
-          <Row title="Who can tag me">
-            <Select value={p.who_can_tag} onValueChange={(v) => save({ who_can_tag: v as Prefs["who_can_tag"] })}>
+          <p className="text-[11px] text-amber-500">
+            Server-side enforcement lands in v1.1. Controls below are visible for reference only.
+          </p>
+          <Row title={<><span>Who can tag me</span><ComingSoon /></>}>
+            <Select value={p.who_can_tag} disabled onValueChange={() => {}}>
               <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="everyone">Everyone</SelectItem>
@@ -177,8 +198,8 @@ export default function Preferences() {
               </SelectContent>
             </Select>
           </Row>
-          <Row title="Who can @mention me">
-            <Select value={p.who_can_mention} onValueChange={(v) => save({ who_can_mention: v as Prefs["who_can_mention"] })}>
+          <Row title={<><span>Who can @mention me</span><ComingSoon /></>}>
+            <Select value={p.who_can_mention} disabled onValueChange={() => {}}>
               <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="everyone">Everyone</SelectItem>
@@ -187,15 +208,15 @@ export default function Preferences() {
               </SelectContent>
             </Select>
           </Row>
-          <Row title="Review tags before they appear" hint="Tags by others wait for your approval.">
-            <Switch checked={p.tag_review_required} onCheckedChange={(v) => save({ tag_review_required: v })} />
+          <Row title={<><span>Review tags before they appear</span><ComingSoon /></>} hint="Tags by others wait for your approval.">
+            <Switch checked={p.tag_review_required} disabled onCheckedChange={() => {}} />
           </Row>
         </Section>
 
-        {/* Direct messages */}
+        {/* Direct messages — enforcement lands in v1.1 */}
         <Section title="Direct messages" icon={MessageCircle}>
-          <Row title="Who can message me">
-            <Select value={p.who_can_dm} onValueChange={(v) => save({ who_can_dm: v as Prefs["who_can_dm"] })}>
+          <Row title={<><span>Who can message me</span><ComingSoon /></>} hint="Full DM privacy enforcement ships in v1.1.">
+            <Select value={p.who_can_dm} disabled onValueChange={() => {}}>
               <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="everyone">Everyone</SelectItem>
@@ -324,7 +345,8 @@ export default function Preferences() {
                 }
                 toast.success("Cache cleared");
               } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Failed to clear cache");
+                logRawError(e, "settings");
+                toast.error("Couldn't clear cache. Try again.");
               }
             }}>Clear</Button>
           </Row>
@@ -354,7 +376,7 @@ function ChangePasswordSection() {
     setBusy(true);
     const { error } = await supabase.auth.updateUser({ password: pw });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { logRawError(error, "password"); toast.error(toFriendlyMessage(error, "password")); return; }
     setPw(""); setPw2("");
     toast.success("Password updated");
   };

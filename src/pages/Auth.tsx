@@ -262,16 +262,15 @@ export default function Auth() {
         if (error) {
           if (/18 or older/i.test(error.message)) {
             trackEvent("age_gate_blocked_underage", { metadata: { source: "auth_signup_server" } });
-            toast.error("You must be 18 or older to register.");
           } else if (/agree to the Terms/i.test(error.message)) {
+            const { logRawError } = await import("@/lib/settingsSecurityErrors");
+            logRawError(error, "signup");
             toast.error("You must agree to the Terms and Community Guidelines.");
-          } else if (/already|registered|exists|duplicate/i.test(error.message)) {
-            toast.error("This email or username is already in use.");
-          } else if (/rate|too many/i.test(error.message)) {
-            toast.error("Too many attempts. Please wait a moment and try again.");
-          } else {
-            toast.error(error.message);
+            return;
           }
+          const { toFriendlyMessage, logRawError } = await import("@/lib/settingsSecurityErrors");
+          logRawError(error, "signup");
+          toast.error(toFriendlyMessage(error, "signup"));
           return;
         }
         persistRemember();
@@ -301,12 +300,10 @@ export default function Auth() {
         if (error) {
           if (/email.*not.*confirmed|not.*verified/i.test(error.message)) {
             setUnverifiedEmail(parsed.data.email);
-            toast.error("Verify your email to sign in.");
-          } else if (/rate|too many/i.test(error.message)) {
-            toast.error("Too many sign-in attempts. Please wait a moment.");
-          } else {
-            toast.error(error.message.includes("Invalid") ? "Invalid email or password" : error.message);
           }
+          const { toFriendlyMessage, logRawError } = await import("@/lib/settingsSecurityErrors");
+          logRawError(error, "login");
+          toast.error(toFriendlyMessage(error, "login"));
           return;
         }
         persistRemember();
@@ -332,11 +329,13 @@ export default function Auth() {
         options: { emailRedirectTo: `${window.location.origin}/feed`, shouldCreateUser: false },
       });
       if (error) {
-        if (/rate|too many/i.test(error.message)) toast.error("Too many requests. Try again in a minute.");
-        else toast.error(error.message);
+        const { toFriendlyMessage, logRawError } = await import("@/lib/settingsSecurityErrors");
+        logRawError(error, "login");
+        toast.error(toFriendlyMessage(error, "login"));
         return;
       }
-      toast.success("Magic link sent — check your inbox");
+      // Neutral copy avoids email enumeration.
+      toast.success("If an account exists, we sent a sign-in link.");
     } finally {
       setMagicSending(false);
     }
@@ -346,8 +345,13 @@ export default function Auth() {
     const email = unverifiedEmail || form.email.trim();
     if (!email) return;
     const { error } = await supabase.auth.resend({ type: "signup", email });
-    if (error) toast.error(error.message);
-    else toast.success("Verification email resent");
+    if (error) {
+      const { toFriendlyMessage, logRawError } = await import("@/lib/settingsSecurityErrors");
+      logRawError(error, "signup");
+      toast.error(toFriendlyMessage(error, "signup"));
+    } else {
+      toast.success("Verification email resent");
+    }
   };
 
   // ============ Check inbox state ============
@@ -508,8 +512,12 @@ export default function Auth() {
                     const { error } = await supabase.auth.resetPasswordForEmail(email, {
                       redirectTo: `${window.location.origin}/reset-password`,
                     });
-                    if (error) toast.error(error.message);
-                    else toast.success("Check your email for a reset link");
+                    if (error) {
+                      const { logRawError } = await import("@/lib/settingsSecurityErrors");
+                      logRawError(error, "auth");
+                    }
+                    // Always show a neutral message to avoid email enumeration.
+                    toast.success("If that email is registered, a reset link is on the way.");
                   }}
                 >
                   Forgot password?

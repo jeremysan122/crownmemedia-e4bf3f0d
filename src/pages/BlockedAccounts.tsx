@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Loader2, Ban, UserCheck, BellOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { Link } from "react-router-dom";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -36,7 +37,8 @@ export default function BlockedAccounts() {
       .eq("blocker_id", user.id)
       .order("created_at", { ascending: false });
     if (error) {
-      toast({ title: "Couldn't load blocks", description: error.message, variant: "destructive" });
+      logRawError(error, "blocked_load");
+      toast({ title: toFriendlyMessage(error, "blocked_load"), variant: "destructive" });
       setLoading(false);
       return;
     }
@@ -66,7 +68,8 @@ export default function BlockedAccounts() {
       .eq("blocked_id", row.blocked_id);
     setBusy(null);
     if (error) {
-      toast({ title: "Couldn't unblock", description: error.message, variant: "destructive" });
+      logRawError(error, "blocked_unblock");
+      toast({ title: toFriendlyMessage(error, "blocked_unblock"), variant: "destructive" });
       return;
     }
     setRows((prev) => prev.filter((r) => r.id !== row.id));
@@ -84,7 +87,8 @@ export default function BlockedAccounts() {
     setMuteAllBusy(false);
     setMuteAllOpen(false);
     if (error) {
-      toast({ title: "Couldn't mute all", description: error.message, variant: "destructive" });
+      logRawError(error, "blocked_unblock");
+      toast({ title: toFriendlyMessage(error, "blocked_unblock"), variant: "destructive" });
       return;
     }
     toast({
