@@ -7,7 +7,6 @@ import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
 interface Bundle {
   id: string;
-  stripe_price_id: string;
   shekels: number;
   usd: number;
   label: string;
@@ -31,9 +30,10 @@ export default function AddShekelsModal({
     if (!open) return;
     (async () => {
       setLoading(true);
+      // NOTE: never select stripe_price_id — resolved server-side.
       const { data } = await supabase
         .from("shekel_bundles")
-        .select("id, stripe_price_id, shekels, usd, label, sort_order")
+        .select("id, shekels, usd, label, sort_order")
         .eq("active", true)
         .order("sort_order", { ascending: true });
       setBundles((data as Bundle[]) || []);
@@ -44,8 +44,8 @@ export default function AddShekelsModal({
   const buy = (b: Bundle) => {
     onOpenChange(false);
     openCheckout({
-      priceId: b.stripe_price_id,
       fnName: "create-checkout",
+      extraBody: { bundle_id: b.id },
       title: `${b.label} — ${formatShekels(Number(b.shekels))} Shekels`,
       returnUrl: `${window.location.origin}/store/success`,
     });

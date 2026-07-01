@@ -181,6 +181,11 @@ Deno.serve(async (req) => {
     const periodEnd = item?.current_period_end ?? sub.current_period_end;
     const renewsAt = periodEnd ? new Date(periodEnd * 1000).toISOString() : null;
 
+    // IMPORTANT: paid verification is a FAST-TRACK / PRIORITY REVIEW product,
+    // NOT auto-approval. Payment never sets profiles.verified = true and never
+    // sets verification_requests.status = 'approved'. Admin still reviews the
+    // submitted documents. If the user hasn't submitted a request yet, we
+    // create a `priority_review` placeholder so the admin queue picks it up.
     const { data: existing } = await supabase
       .from("verification_requests")
       .select("id, status")
@@ -190,13 +195,14 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (existing) {
+      // Preserve current status ('pending' | 'priority_review' | 'approved' | 'rejected')
+      // Only update billing linkage; never flip to 'approved' from payment alone.
       await supabase
         .from("verification_requests")
         .update({
           subscription_active: isActive,
           subscription_id: sub.id,
           subscription_renews_at: renewsAt,
-          status: isActive ? "approved" : existing.status,
           updated_at: new Date().toISOString(),
         })
         .eq("id", existing.id);
@@ -204,25 +210,20 @@ Deno.serve(async (req) => {
       await supabase.from("verification_requests").insert({
         user_id: userId,
         plan: "subscription",
-        legal_name: "(via subscription)",
+        legal_name: "(via subscription — pending user submission)",
         category: "subscription",
-        reason: "Auto-created via $1.99/mo subscription",
-        status: isActive ? "approved" : "pending",
+        reason: "Paid priority-review slot. Awaiting user documents + admin review.",
+        status: "priority_review",
         subscription_active: isActive,
         subscription_id: sub.id,
         subscription_renews_at: renewsAt,
       });
     }
 
-    await supabase
-      .from("profiles")
-      .update({
-        verified: isActive,
-        verified_at: isActive ? new Date().toISOString() : null,
-        verification_plan: isActive ? "subscription" : null,
-      })
-      .eq("id", userId);
-    console.log(`[stripe-webhook] verification user=${userId} active=${isActive}`);
+    // Do NOT touch profiles.verified from payment. Admin approval is required.
+    console.log(
+      `[stripe-webhook] verification user=${userId} active=${isActive} — priority review only, no auto-approve`,
+    );
   }
 
   try {

@@ -12,7 +12,6 @@ interface Plan {
   description: string;
   usd: number;
   interval: string;
-  stripe_price_id: string;
 }
 
 const PERKS = [
@@ -33,9 +32,10 @@ export default function RoyalPassCard() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // NOTE: never select stripe_price_id — resolved server-side.
       const { data } = await supabase
         .from("royal_pass_plans")
-        .select("id, name, description, usd, interval, stripe_price_id")
+        .select("id, name, description, usd, interval")
         .eq("active", true)
         .order("sort_order", { ascending: true });
       if (cancelled) return;
@@ -50,7 +50,6 @@ export default function RoyalPassCard() {
   const subscribe = (plan: Plan) => {
     if (!user) return;
     openCheckout({
-      priceId: plan.stripe_price_id,
       fnName: "create-royal-pass-checkout",
       extraBody: { plan_id: plan.id },
       title: plan.name,

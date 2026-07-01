@@ -454,14 +454,13 @@ export default function Verification() {
             className="w-full"
             onClick={() =>
               openVerificationCheckout({
-                priceId: "verification_monthly",
                 fnName: "create-verification-checkout",
-                title: "CrownMe Verified · Monthly",
+                title: "CrownMe Verified · Priority Review",
                 returnUrl: `${window.location.origin}/verification`,
               })
             }
           >
-            <Crown className="h-4 w-4 mr-2" /> Subscribe $1.99/mo & fast-track
+            <Crown className="h-4 w-4 mr-2" /> Subscribe $1.99/mo · Priority review (not auto-approval)
           </Button>
         )}
 

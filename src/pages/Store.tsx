@@ -53,7 +53,6 @@ const DESC_MAP: Record<string, string> = {
 
 interface BoostBundle {
   id: string;
-  stripe_price_id: string;
   boost_type: string;
   label: string;
   usd: number;
@@ -107,9 +106,10 @@ export default function Store() {
     if (tab !== "boosts") return;
     (async () => {
       setLoading(true);
+      // NOTE: never select stripe_price_id — resolved server-side.
       const { data } = await supabase
         .from("boost_bundles")
-        .select("id, stripe_price_id, boost_type, label, usd, duration_hours, sort_order")
+        .select("id, boost_type, label, usd, duration_hours, sort_order")
         .eq("active", true)
         .order("sort_order", { ascending: true });
       setBoosts((data as BoostBundle[]) || []);
@@ -150,11 +150,13 @@ export default function Store() {
   const startCheckout = (b: BoostBundle, postId?: string) => {
     if (!user) return;
     openCheckout({
-      priceId: b.stripe_price_id,
       fnName: "create-checkout",
       title: b.label,
       returnUrl: `${window.location.origin}/store/success`,
-      extraBody: postId ? { target_post_id: postId } : undefined,
+      extraBody: {
+        boost_bundle_id: b.id,
+        ...(postId ? { target_post_id: postId } : {}),
+      },
     });
   };
 
