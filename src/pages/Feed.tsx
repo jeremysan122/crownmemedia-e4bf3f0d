@@ -397,7 +397,10 @@ export default function Feed() {
 
   // REALTIME — UPDATE/DELETE patch + INSERT queue for "new posts" pill.
   const matchesCurrentFilters = useCallback((p: any): boolean => {
-    if (!p || p.is_removed) return false;
+    if (!p) return false;
+    if (p.is_removed || p.is_archived) return false;
+    // Feed is post-only; Scrolls have their own surface.
+    if (p.content_type && p.content_type !== "post") return false;
     if (isFilteredOut(p, feedFilters)) return false;
     if (catFilter !== "all" && p.category !== catFilter) return false;
     if (hubSlug && p.main_category_slug !== hubSlug) return false;
