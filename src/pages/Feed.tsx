@@ -288,6 +288,8 @@ export default function Feed() {
       .from("posts")
       .select(POST_SELECT)
       .eq("is_removed", false)
+      // Archived posts belong only to the owner's archive view — never in Feed.
+      .eq("is_archived", false)
       // Main feed shows posts only. Vertical Scrolls live on /shorts under
       // their own immersive surface — mixing them into the grid feed makes
       // for a broken layout. Legacy rows that were inserted before
