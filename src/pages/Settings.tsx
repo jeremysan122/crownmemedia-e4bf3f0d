@@ -81,7 +81,7 @@ export default function Settings() {
     const next = { ...priv, ...patch };
     setPriv(next);
     const { error } = await supabase.from("profiles").update(patch as any).eq("id", profile.id);
-    if (error) { toast.error(error.message); setPriv(priv); return; }
+    if (error) { logRawError(error, "privacy"); toast.error(toFriendlyMessage(error, "privacy")); setPriv(priv); return; }
     toast.success("Privacy updated");
   };
   return (
