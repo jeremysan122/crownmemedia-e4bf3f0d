@@ -987,22 +987,22 @@ export default function PostDetailDialog({ post, onClose }: Props) {
           >
             {liveCaption && (
               <div className="flex gap-2">
-                <Link to={`/${post.profile.username}`} onClick={onClose} className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
-                  {post.profile.profile_photo_url && (
-                    <img loading="lazy" src={post.profile.profile_photo_url} className="w-full h-full object-cover" alt="" />
+                <Link to={`/${displayProfile?.username ?? ""}`} onClick={onClose} className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
+                  {displayProfile?.profile_photo_url && (
+                    <img loading="lazy" src={displayProfile.profile_photo_url} className="w-full h-full object-cover" alt="" />
                   )}
                 </Link>
 
                 <div className="flex-1">
                   <p className="text-sm leading-snug">
-                    <Link to={`/${post.profile.username}`} onClick={onClose} className="font-bold mr-1.5 hover:underline">
-                      @{post.profile.username}
+                    <Link to={`/${displayProfile?.username ?? ""}`} onClick={onClose} className="font-bold mr-1.5 hover:underline">
+                      @{displayProfile?.username}
                     </Link>
                     {liveCaption}
                   </p>
 
                   <span className="text-[10px] text-muted-foreground">
-                    {timeAgo(post.created_at)}{liveEditedAt && <span className="ml-1 italic">· edited</span>}
+                    {timeAgo(displayPost.created_at)}{liveEditedAt && <span className="ml-1 italic">· edited</span>}
                   </span>
                 </div>
               </div>
