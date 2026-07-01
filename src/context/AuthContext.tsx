@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data: prof } = await supabase.rpc("get_my_profile").maybeSingle();
       setProfile(prof as Profile | null);
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", uid);
+      const { data: roles } = await supabase.rpc("get_my_admin_roles");
       const adminRoles = ["admin", "super_admin", "finance_admin", "security_admin", "content_admin", "support_admin"];
       const moderatorRoles = [...adminRoles, "moderator"];
       setIsAdmin(!!roles?.some((r) => adminRoles.includes(r.role as string)));
