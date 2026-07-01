@@ -958,23 +958,23 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 </summary>
                 <div className="mt-2">
                   <RankHistoryTimeline
-                    postId={post.parent_post_id ?? post.id}
+                    postId={interactionPostId ?? displayPost.id}
                     scope={liveRank.scope}
                     region={liveRank.region}
-                    category={post.category}
-                    subcategorySlug={(post as any).subcategory_slug ?? null}
-                    mainCategorySlug={(post as any).main_category_slug ?? null}
+                    category={displayPost.category}
+                    subcategorySlug={(displayPost as any).subcategory_slug ?? null}
+                    mainCategorySlug={(displayPost as any).main_category_slug ?? null}
                   />
                 </div>
               </details>
               <div className="hidden sm:block px-3 pt-3">
                 <RankHistoryTimeline
-                  postId={post.parent_post_id ?? post.id}
+                  postId={interactionPostId ?? displayPost.id}
                   scope={liveRank.scope}
                   region={liveRank.region}
-                  category={post.category}
-                  subcategorySlug={(post as any).subcategory_slug ?? null}
-                  mainCategorySlug={(post as any).main_category_slug ?? null}
+                  category={displayPost.category}
+                  subcategorySlug={(displayPost as any).subcategory_slug ?? null}
+                  mainCategorySlug={(displayPost as any).main_category_slug ?? null}
                 />
               </div>
             </>
