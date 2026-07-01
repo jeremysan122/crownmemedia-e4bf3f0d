@@ -736,7 +736,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
             On desktop the media region is a fixed square sized to dialog height
             (Instagram-web layout); the comments column flexes to the remaining width. */}
         <div
-          className={`relative w-full ${postMediaFrameClass(post)} shrink-0 lg:w-auto lg:h-full lg:aspect-square lg:flex-none flex items-center justify-center min-h-0 overflow-hidden bg-card`}
+          className={`relative w-full ${postMediaFrameClass(displayPost)} shrink-0 lg:w-auto lg:h-full lg:aspect-square lg:flex-none flex items-center justify-center min-h-0 overflow-hidden bg-card`}
           onDoubleClick={() => !myVotes.has("crown") && onVote("crown")}
           {...doubleTapHandlers}
         >
@@ -761,15 +761,15 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
             return (
               <>
-                {post.media_type === "video" && post.video_url ? (
+                {displayPost.media_type === "video" && displayPost.video_url ? (
                   <div className="w-full h-full max-w-full max-h-full">
                     <PostMedia
-                      src={post.video_url}
-                      poster={post.video_poster_url ?? images[0]}
+                      src={displayPost.video_url}
+                      poster={displayPost.video_poster_url ?? images[0]}
                       mediaType="video"
                       autoPlay
                       filter={postFilter}
-                      alt={post.caption || "Video post"}
+                      alt={displayPost.caption || "Video post"}
                       className="w-full h-full object-cover"
                       boost={!!filterBoost}
                       boostType={filterBoost ?? undefined}
@@ -784,7 +784,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                       <div key={src + i} className="w-full h-full flex-shrink-0 snap-center">
                         <PostMedia
                           src={src}
-                          alt={post.alt_texts?.[i] || (post.caption ? `${post.caption} (${i + 1}/${images.length})` : `Photo ${i + 1}`)}
+                          alt={displayPost.alt_texts?.[i] || (displayPost.caption ? `${displayPost.caption} (${i + 1}/${images.length})` : `Photo ${i + 1}`)}
                           filter={postFilter}
                           className="w-full h-full object-cover"
                           boost={!!filterBoost && i === activeImage}
@@ -796,7 +796,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 ) : (
                   <PostMedia
                     src={images[0]}
-                    alt={post.alt_texts?.[0] || post.caption || "Post"}
+                    alt={displayPost.alt_texts?.[0] || displayPost.caption || "Post"}
                     filter={postFilter}
                     className="w-full h-full object-cover"
                     boost={!!filterBoost}
