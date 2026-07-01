@@ -271,4 +271,13 @@ const App = () => (
   </QueryClientProvider>
 );
 
+/**
+ * Legacy CrownMap redirect: preserves the query string (scope, category, q,
+ * view, mine, heat, holder, exact, min) so older shared links keep working.
+ */
+function CrownMapLegacyRedirect() {
+  const { search, hash } = useLocation();
+  return <Navigate to={`/map${search}${hash}`} replace />;
+}
+
 export default App;
