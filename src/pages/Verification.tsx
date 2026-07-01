@@ -304,7 +304,7 @@ export default function Verification() {
               <Link to="/edit-profile"><Upload className="h-4 w-4 mr-2" /> Update profile info</Link>
             </Button>
             <Button asChild variant="outline" className="justify-start">
-              <Link to="/legal/community-guidelines"><ShieldCheck className="h-4 w-4 mr-2" /> Verification rules</Link>
+              <Link to="/conduct"><ShieldCheck className="h-4 w-4 mr-2" /> Verification rules</Link>
             </Button>
             <Button asChild variant="outline" className="justify-start">
               <a href="mailto:support@crownmemedia.com?subject=Verification%20support"><MessageCircle className="h-4 w-4 mr-2" /> Contact support</a>
@@ -378,7 +378,7 @@ export default function Verification() {
           <li>• Account must be <span className="text-foreground">unique</span> — only one verified account per person or entity (language-specific accounts excepted).</li>
           <li>• Account must be <span className="text-foreground">complete</span> — public profile, bio, profile photo, and recent activity.</li>
           <li>• Account must be <span className="text-foreground">active on CrownMe</span> — at least 10,000 CrownMe followers plus the activity requirements in the progress card above (battles won, crowns held, votes received, posts published).</li>
-          <li>• Account must follow the <Link to="/legal/community-guidelines" className="text-primary hover:underline">Community Guidelines</Link> and <Link to="/legal/terms" className="text-primary hover:underline">Terms of Service</Link>.</li>
+          <li>• Account must follow the <Link to="/conduct" className="text-primary hover:underline">Community Guidelines</Link> and <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link>.</li>
         </ul>
       </Card>
 
@@ -405,7 +405,7 @@ export default function Verification() {
         <div className="grid sm:grid-cols-3 gap-3 text-xs text-muted-foreground">
           <div className="flex items-start gap-2"><FileText className="h-4 w-4 mt-0.5 text-primary shrink-0" /><span>Stored in an encrypted, access-restricted bucket — never public.</span></div>
           <div className="flex items-start gap-2"><Eye className="h-4 w-4 mt-0.5 text-primary shrink-0" /><span>Visible only to authorized Trust & Safety reviewers.</span></div>
-          <div className="flex items-start gap-2"><ShieldCheck className="h-4 w-4 mt-0.5 text-primary shrink-0" /><span>Deleted after review per our <Link to="/legal/privacy" className="text-primary hover:underline">Privacy Policy</Link>.</span></div>
+          <div className="flex items-start gap-2"><ShieldCheck className="h-4 w-4 mt-0.5 text-primary shrink-0" /><span>Deleted after review per our <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.</span></div>
         </div>
       </Card>
 
