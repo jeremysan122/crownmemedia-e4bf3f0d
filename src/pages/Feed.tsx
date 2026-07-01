@@ -420,14 +420,28 @@ export default function Feed() {
     const onUpdated = (e: Event) => {
       const d = (e as CustomEvent).detail;
       if (!d?.id) return;
-      setPosts((prev) => prev.map((p) => p.id === d.id
-        ? { ...p, ...(d.caption !== undefined ? { caption: d.caption } : {}), ...(d.image_url !== undefined ? { image_url: d.image_url } : {}), ...(d.filter !== undefined ? { filter: d.filter } : {}), ...(d.edited_at !== undefined ? { edited_at: d.edited_at } : {}) }
-        : p));
+      setPosts((prev) => prev.map((p) => {
+        // Patch the row itself if it's the target.
+        if (p.id === d.id) {
+          return { ...p, ...(d.caption !== undefined ? { caption: d.caption } : {}), ...(d.image_url !== undefined ? { image_url: d.image_url } : {}), ...(d.filter !== undefined ? { filter: d.filter } : {}), ...(d.edited_at !== undefined ? { edited_at: d.edited_at } : {}) };
+        }
+        // If a repost's original updated, patch the parent metadata.
+        if ((p as any).parent_post_id === d.id && (p as any).parent) {
+          const parent = (p as any).parent;
+          return { ...p, parent: { ...parent, ...(d.caption !== undefined ? { caption: d.caption } : {}), ...(d.image_url !== undefined ? { image_url: d.image_url } : {}), ...(d.filter !== undefined ? { filter: d.filter } : {}) } } as any;
+        }
+        return p;
+      }));
     };
     const onDeleted = (e: Event) => {
       const d = (e as CustomEvent).detail;
       if (!d?.id) return;
-      setPosts((prev) => prev.filter((p) => p.id !== d.id));
+      setPosts((prev) => prev.flatMap((p) => {
+        if (p.id === d.id) return [];
+        // A repost whose original was deleted should show "unavailable" fallback.
+        if ((p as any).parent_post_id === d.id) return [{ ...p, parent: null } as any];
+        return [p];
+      }));
     };
     window.addEventListener("post:updated", onUpdated);
     window.addEventListener("post:deleted", onDeleted);
@@ -449,14 +463,44 @@ export default function Feed() {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "posts" }, (payload) => {
         const n: any = payload.new;
         if (!n) return;
-        setPosts((prev) => prev.map((p) => p.id === n.id
-          ? { ...p, caption: n.caption ?? p.caption, image_url: n.image_url ?? p.image_url, filter: n.filter ?? p.filter, edited_at: n.edited_at ?? p.edited_at, crown_score: n.crown_score ?? p.crown_score, vote_count: n.vote_count ?? p.vote_count, comment_count: n.comment_count ?? p.comment_count }
-          : p));
+        setPosts((prev) => {
+          const next: FeedPost[] = [];
+          for (const p of prev) {
+            // Direct row patch — but if it no longer matches, drop it.
+            if (p.id === n.id) {
+              const merged = { ...p, ...n, profile: (p as any).profile, parent: (p as any).parent } as FeedPost;
+              if (!matchesCurrentFilters(merged)) continue;
+              next.push(merged);
+              continue;
+            }
+            // Parent (original) updated → propagate to any repost referencing it.
+            if ((p as any).parent_post_id === n.id) {
+              const parent = (p as any).parent;
+              // If original became removed/archived, clear parent so UI shows fallback.
+              if (n.is_removed || n.is_archived) {
+                next.push({ ...p, parent: null } as any);
+              } else if (parent) {
+                next.push({ ...p, parent: { ...parent, ...n } } as any);
+              } else {
+                next.push(p);
+              }
+              continue;
+            }
+            next.push(p);
+          }
+          return next;
+        });
+        // Also prune from newPosts pill if it stopped matching.
+        setNewPosts((prev) => prev.map((p) => p.id === n.id ? ({ ...p, ...n, profile: (p as any).profile } as FeedPost) : p).filter((p) => matchesCurrentFilters(p)));
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "posts" }, (payload) => {
         const o: any = payload.old;
         if (!o?.id) return;
-        setPosts((prev) => prev.filter((p) => p.id !== o.id));
+        setPosts((prev) => prev.flatMap((p) => {
+          if (p.id === o.id) return [];
+          if ((p as any).parent_post_id === o.id) return [{ ...p, parent: null } as any];
+          return [p];
+        }));
         setNewPosts((prev) => prev.filter((p) => p.id !== o.id));
       })
       .subscribe();
