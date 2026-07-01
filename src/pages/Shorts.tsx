@@ -359,12 +359,13 @@ export default function Shorts() {
                   <span className="text-xs font-semibold">Send</span>
                 </button>
 
-                {user?.id !== p.user_id && (
+                {!!user?.id && user.id !== p.user_id && (
                   <button
                     type="button"
                     onClick={() => setRepostScroll(p)}
                     aria-label="Repost this scroll"
-                    className="flex flex-col items-center gap-1 active:scale-95 transition"
+                    disabled={!!repostScroll}
+                    className="flex flex-col items-center gap-1 active:scale-95 transition disabled:opacity-60"
                   >
                     <span className="size-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
                       <Repeat2 className="size-6" />
