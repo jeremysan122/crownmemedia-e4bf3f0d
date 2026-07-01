@@ -948,7 +948,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 </summary>
                 <div className="mt-2">
                   <RankHistoryTimeline
-                    postId={post.id}
+                    postId={post.parent_post_id ?? post.id}
                     scope={liveRank.scope}
                     region={liveRank.region}
                     category={post.category}
@@ -959,7 +959,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
               </details>
               <div className="hidden sm:block px-3 pt-3">
                 <RankHistoryTimeline
-                  postId={post.id}
+                  postId={post.parent_post_id ?? post.id}
                   scope={liveRank.scope}
                   region={liveRank.region}
                   category={post.category}
@@ -1206,7 +1206,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
             username: post.profile.username,
             avatarUrl: post.profile.profile_photo_url ?? undefined,
           }}
-          postId={post.id}
+          postId={post.parent_post_id ?? post.id}
           onSent={(gift, qty) => {
             setActiveGift(gift);
             setActiveGiftQty(qty);
