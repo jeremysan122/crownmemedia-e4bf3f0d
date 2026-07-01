@@ -188,7 +188,7 @@ export default function Preferences() {
           <p className="text-[11px] text-amber-500">
             Server-side enforcement lands in v1.1. Controls below are visible for reference only.
           </p>
-          <Row title={<>Who can tag me <ComingSoon /></> as any}>
+          <Row title={<><span>Who can tag me</span><ComingSoon /></>}>
             <Select value={p.who_can_tag} disabled onValueChange={() => {}}>
               <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -198,7 +198,7 @@ export default function Preferences() {
               </SelectContent>
             </Select>
           </Row>
-          <Row title={<>Who can @mention me <ComingSoon /></> as any}>
+          <Row title={<><span>Who can @mention me</span><ComingSoon /></>}>
             <Select value={p.who_can_mention} disabled onValueChange={() => {}}>
               <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -208,14 +208,14 @@ export default function Preferences() {
               </SelectContent>
             </Select>
           </Row>
-          <Row title={<>Review tags before they appear <ComingSoon /></> as any} hint="Tags by others wait for your approval.">
+          <Row title={<><span>Review tags before they appear</span><ComingSoon /></>} hint="Tags by others wait for your approval.">
             <Switch checked={p.tag_review_required} disabled onCheckedChange={() => {}} />
           </Row>
         </Section>
 
         {/* Direct messages — enforcement lands in v1.1 */}
         <Section title="Direct messages" icon={MessageCircle}>
-          <Row title={<>Who can message me <ComingSoon /></> as any} hint="Full DM privacy enforcement ships in v1.1.">
+          <Row title={<><span>Who can message me</span><ComingSoon /></>} hint="Full DM privacy enforcement ships in v1.1.">
             <Select value={p.who_can_dm} disabled onValueChange={() => {}}>
               <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
