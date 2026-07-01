@@ -232,7 +232,8 @@ export default function PostDetailDialog({ post, onClose }: Props) {
     setCounts((c) => ({ ...c, total: post.vote_count, score: post.crown_score, comments: post.comment_count }));
 
     (async () => {
-      const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: post.id });
+      const targetId = post.parent_post_id ?? post.id;
+      const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: targetId });
       if (stats) {
         const c2 = ((stats as { counts?: Record<string, number> }).counts) ?? {};
         const byType = { crown: c2.crown ?? 0, fire: c2.fire ?? 0, diamond: c2.diamond ?? 0, dislike: c2.dislike ?? 0 };
@@ -244,14 +245,14 @@ export default function PostDetailDialog({ post, onClose }: Props) {
       const { data: cmts } = await supabase
         .from("comments")
         .select(COMMENT_COLUMNS)
-        .eq("post_id", post.id)
+        .eq("post_id", targetId)
         .eq("is_removed", false)
         .order("created_at", { ascending: false });
 
       setComments((cmts as any) || []);
       loadCommentReactions(((cmts as any) || []).map((c: CommentRow) => c.id));
 
-      // Mark reply / mention notifications for this post as read once viewed.
+      // Mark reply / mention notifications for the ORIGINAL post as read once viewed.
       if (user) {
         await supabase
           .from("notifications")
@@ -259,7 +260,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
           .eq("user_id", user.id)
           .eq("read", false)
           .eq("type", "comment")
-          .contains("payload", { post_id: post.id });
+          .contains("payload", { post_id: targetId });
       }
     })();
   }, [post, user]);
