@@ -433,6 +433,15 @@ export default function Shorts() {
         }}
       />
 
+      {repostScroll && (
+        <RepostDialog
+          open={!!repostScroll}
+          onOpenChange={(o) => { if (!o) setRepostScroll(null); }}
+          parent={repostScroll as any}
+        />
+      )}
+
+
     </main>
   );
 }
