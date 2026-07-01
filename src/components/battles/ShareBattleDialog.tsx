@@ -52,6 +52,24 @@ export default function ShareBattleDialog({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pngUrl, setPngUrl] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
+  const [buildError, setBuildError] = useState(false);
+  const prevPngUrlRef = useRef<string | null>(null);
+
+  // Revoke old blob URLs whenever we produce a new one or the dialog closes.
+  useEffect(() => {
+    return () => {
+      if (prevPngUrlRef.current) {
+        URL.revokeObjectURL(prevPngUrlRef.current);
+        prevPngUrlRef.current = null;
+      }
+    };
+  }, []);
+  useEffect(() => {
+    if (pngUrl && prevPngUrlRef.current && prevPngUrlRef.current !== pngUrl) {
+      URL.revokeObjectURL(prevPngUrlRef.current);
+    }
+    prevPngUrlRef.current = pngUrl;
+  }, [pngUrl]);
 
   const search = new URLSearchParams(filters ?? "");
   search.set("b", battleId);
