@@ -415,8 +415,34 @@ export default function Battles() {
     const ch = supabase.channel("battles-live")
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "battles" }, (payload: any) => {
         const row = payload.new as Battle;
-        updateRowEverywhere(row.id, (b) => ({ ...b, ...row }));
         const prev = prevStatusRef.current[row.id];
+        // Re-run tabPredicate per tab: patch where it still belongs, remove
+        // where it no longer belongs. Unsafe rows (blocked/removed) vanish
+        // everywhere. We do NOT insert freshly-matching rows into tabs the
+        // viewer hasn't loaded yet — they'll appear on next load/refetch or
+        // via the "new battles available" banner below.
+        setPerTab((s) => {
+          const nowMs = Date.now();
+          const next = { ...s };
+          for (const k of TAB_KEYS) {
+            const idx = next[k].rows.findIndex((b) => b.id === row.id);
+            const isPresent = idx >= 0;
+            const merged = isPresent ? { ...next[k].rows[idx], ...row } : row;
+            const safeCtx = { blockedIds };
+            const safe = k === "declined"
+              ? !blockedIds.has(merged.challenger_id) && !blockedIds.has(merged.opponent_id)
+              : isSafeBattleForList(merged as any, safeCtx);
+            const belongs = safe && tabPredicate(k, merged as any, user?.id ?? null, nowMs);
+            if (isPresent && belongs) {
+              const rows = next[k].rows.slice();
+              rows[idx] = merged;
+              next[k] = { ...next[k], rows };
+            } else if (isPresent && !belongs) {
+              next[k] = { ...next[k], rows: next[k].rows.filter((b) => b.id !== row.id) };
+            }
+          }
+          return next;
+        });
         if (prev && prev.status !== "completed" && row.status === "completed" && row.winner_id) {
           setFreshWins((s) => { const n = new Set(s); n.add(row.id); return n; });
         }
