@@ -2828,6 +2828,7 @@ export type Database = {
           ai_suggested_main_category_slug: string | null
           alt_texts: string[]
           archived_at: string | null
+          aspect_ratio: string | null
           battle_wins: number
           caption: string | null
           category: Database["public"]["Enums"]["crown_category"]
@@ -2886,6 +2887,7 @@ export type Database = {
           ai_suggested_main_category_slug?: string | null
           alt_texts?: string[]
           archived_at?: string | null
+          aspect_ratio?: string | null
           battle_wins?: number
           caption?: string | null
           category?: Database["public"]["Enums"]["crown_category"]
@@ -2944,6 +2946,7 @@ export type Database = {
           ai_suggested_main_category_slug?: string | null
           alt_texts?: string[]
           archived_at?: string | null
+          aspect_ratio?: string | null
           battle_wins?: number
           caption?: string | null
           category?: Database["public"]["Enums"]["crown_category"]
@@ -4818,6 +4821,7 @@ export type Database = {
           ai_suggested_main_category_slug: string | null
           alt_texts: string[]
           archived_at: string | null
+          aspect_ratio: string | null
           battle_wins: number
           caption: string | null
           category: Database["public"]["Enums"]["crown_category"]
