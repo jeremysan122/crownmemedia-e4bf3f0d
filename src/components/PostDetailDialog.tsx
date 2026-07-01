@@ -78,6 +78,13 @@ export default function PostDetailDialog({ post, onClose }: Props) {
   const open = !!post;
   const isBelowDesktop = useIsBelowDesktop();
   const [commentsOverlayOpen, setCommentsOverlayOpen] = useState(false);
+  // Canonical target IDs for repost attribution. Interactions (votes, comments,
+  // gifts, share, reports, realtime) must always target the ORIGINAL post so a
+  // repost never fragments engagement, while display data (author, media,
+  // caption, category, location, stats) comes from the original when present.
+  const interactionPostId = (post?.parent_post_id ?? post?.id) ?? null;
+  const displayPost: any = (post as any)?.parent ?? post;
+  const displayProfile = displayPost?.profile ?? post?.profile;
   const [activeImage, setActiveImage] = useState(0);
   const [myVotes, setMyVotes] = useState<Set<VoteType>>(new Set());
   const [counts, setCounts] = useState({ crown: 0, fire: 0, diamond: 0, dislike: 0, total: 0, score: 0, comments: 0 });
@@ -225,7 +232,8 @@ export default function PostDetailDialog({ post, onClose }: Props) {
     setCounts((c) => ({ ...c, total: post.vote_count, score: post.crown_score, comments: post.comment_count }));
 
     (async () => {
-      const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: post.id });
+      const targetId = post.parent_post_id ?? post.id;
+      const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: targetId });
       if (stats) {
         const c2 = ((stats as { counts?: Record<string, number> }).counts) ?? {};
         const byType = { crown: c2.crown ?? 0, fire: c2.fire ?? 0, diamond: c2.diamond ?? 0, dislike: c2.dislike ?? 0 };
@@ -237,14 +245,14 @@ export default function PostDetailDialog({ post, onClose }: Props) {
       const { data: cmts } = await supabase
         .from("comments")
         .select(COMMENT_COLUMNS)
-        .eq("post_id", post.id)
+        .eq("post_id", targetId)
         .eq("is_removed", false)
         .order("created_at", { ascending: false });
 
       setComments((cmts as any) || []);
       loadCommentReactions(((cmts as any) || []).map((c: CommentRow) => c.id));
 
-      // Mark reply / mention notifications for this post as read once viewed.
+      // Mark reply / mention notifications for the ORIGINAL post as read once viewed.
       if (user) {
         await supabase
           .from("notifications")
@@ -252,7 +260,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
           .eq("user_id", user.id)
           .eq("read", false)
           .eq("type", "comment")
-          .contains("payload", { post_id: post.id });
+          .contains("payload", { post_id: targetId });
       }
     })();
   }, [post, user]);
@@ -261,17 +269,18 @@ export default function PostDetailDialog({ post, onClose }: Props) {
     if (!post) return;
 
     let cancelled = false;
+    const targetId = post.parent_post_id ?? post.id;
 
-    const ch = supabase.channel(`post-detail-${post.id}-${Math.random().toString(36).slice(2, 9)}`);
+    const ch = supabase.channel(`post-detail-${targetId}-${Math.random().toString(36).slice(2, 9)}`);
 
     ch.on(
       "postgres_changes",
-      { event: "*", schema: "public", table: "comments", filter: `post_id=eq.${post.id}` },
+      { event: "*", schema: "public", table: "comments", filter: `post_id=eq.${targetId}` },
       async () => {
         const { data } = await supabase
           .from("comments")
           .select(COMMENT_COLUMNS)
-          .eq("post_id", post.id)
+          .eq("post_id", targetId)
           .eq("is_removed", false)
           .order("created_at", { ascending: false });
 
@@ -283,9 +292,9 @@ export default function PostDetailDialog({ post, onClose }: Props) {
       },
     ).on(
       "postgres_changes",
-      { event: "*", schema: "public", table: "votes", filter: `post_id=eq.${post.id}` },
+      { event: "*", schema: "public", table: "votes", filter: `post_id=eq.${targetId}` },
       async () => {
-        const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: post.id });
+        const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: targetId });
         if (cancelled || !stats) return;
         const c2 = ((stats as { counts?: Record<string, number> }).counts) ?? {};
         const byType = { crown: c2.crown ?? 0, fire: c2.fire ?? 0, diamond: c2.diamond ?? 0, dislike: c2.dislike ?? 0 };
@@ -293,7 +302,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
       },
     ).on(
       "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "posts", filter: `id=eq.${post.id}` },
+      { event: "UPDATE", schema: "public", table: "posts", filter: `id=eq.${targetId}` },
       (payload) => {
         const row: any = payload.new;
 
@@ -392,7 +401,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
     setScoreBump(true);
     setTimeout(() => setScoreBump(false), 700);
 
-    await toggleVote(post.id, user.id, t);
+    await toggleVote(post.parent_post_id ?? post.id, user.id, t);
   };
 
   const startReply = (c: CommentRow) => {
@@ -454,8 +463,9 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
     const mentionIds = Array.from(new Set(mentions.map((m) => m.id))).filter(Boolean);
 
+    const targetId = post.parent_post_id ?? post.id;
     const { error: insertErr } = await supabase.from("comments").insert({
-      post_id: post.id,
+      post_id: targetId,
       user_id: user.id,
       body: validation.value,
       parent_id: replyTo?.id ?? null,
@@ -471,9 +481,9 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
     recordComment();
 
-    // Optimistic UI: notify PostCard to apply the +1% Crown Score bonus immediately
+    // Optimistic UI: notify PostCard to apply the +1% Crown Score bonus immediately (target = original post)
     window.dispatchEvent(
-      new CustomEvent("crownme:comment-added", { detail: { postId: post.id } }),
+      new CustomEvent("crownme:comment-added", { detail: { postId: targetId } }),
     );
 
     // Clear persisted draft for this thread context
@@ -695,7 +705,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
-        className="p-0 gap-0 max-w-[100vw] w-full h-[100svh] md:w-[min(96vw,1280px)] md:max-w-[1280px] md:h-[min(90vh,800px)] md:rounded-2xl md:my-3 bg-card border-border overflow-hidden flex flex-col md:flex-row [&>button]:hidden overscroll-contain"
+        className="p-0 gap-0 max-w-[100vw] w-full h-[100svh] lg:w-[min(96vw,1280px)] lg:max-w-[1280px] lg:h-[min(90vh,800px)] lg:rounded-2xl lg:my-3 bg-card border-border overflow-hidden flex flex-col lg:flex-row [&>button]:hidden overscroll-contain"
       >
         <VisuallyHidden>
           <DialogTitle>Post details</DialogTitle>
@@ -722,7 +732,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
             On desktop the media region is a fixed square sized to dialog height
             (Instagram-web layout); the comments column flexes to the remaining width. */}
         <div
-          className={`relative w-full ${postMediaFrameClass(post)} shrink-0 md:w-auto md:h-full md:aspect-square md:flex-none flex items-center justify-center min-h-0 overflow-hidden bg-card`}
+          className={`relative w-full ${postMediaFrameClass(post)} shrink-0 lg:w-auto lg:h-full lg:aspect-square lg:flex-none flex items-center justify-center min-h-0 overflow-hidden bg-card`}
           onDoubleClick={() => !myVotes.has("crown") && onVote("crown")}
           {...doubleTapHandlers}
         >
@@ -845,7 +855,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
         </div>
 
         {/* Side panel */}
-        <div className="flex flex-col flex-1 md:basis-[40%] min-h-0 md:min-w-0 border-t md:border-t-0 md:border-l border-border">
+        <div className="flex flex-col flex-1 lg:basis-[40%] min-h-0 lg:min-w-0 border-t lg:border-t-0 lg:border-l border-border">
           {/* Posts must use the canonical post ID and shared PostDetailDialog.
               Profile and feed must display the same database row — load via
               fetchPostById() from src/lib/postQuery.ts. */}
@@ -938,7 +948,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 </summary>
                 <div className="mt-2">
                   <RankHistoryTimeline
-                    postId={post.id}
+                    postId={post.parent_post_id ?? post.id}
                     scope={liveRank.scope}
                     region={liveRank.region}
                     category={post.category}
@@ -949,7 +959,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
               </details>
               <div className="hidden sm:block px-3 pt-3">
                 <RankHistoryTimeline
-                  postId={post.id}
+                  postId={post.parent_post_id ?? post.id}
                   scope={liveRank.scope}
                   region={liveRank.region}
                   category={post.category}
@@ -1196,7 +1206,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
             username: post.profile.username,
             avatarUrl: post.profile.profile_photo_url ?? undefined,
           }}
-          postId={post.id}
+          postId={post.parent_post_id ?? post.id}
           onSent={(gift, qty) => {
             setActiveGift(gift);
             setActiveGiftQty(qty);
@@ -1217,7 +1227,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
           if (!v) setReportCommentId(null);
         }}
         commentId={reportCommentId ?? undefined}
-        postId={post?.id}
+        postId={post ? (post.parent_post_id ?? post.id) : undefined}
       />
 
       {/* Universal mobile/tablet comments popup. Same component used in Feed,
