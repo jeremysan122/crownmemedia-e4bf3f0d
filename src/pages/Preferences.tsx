@@ -15,8 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { CATEGORIES, CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
 import { toast } from "sonner";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { Link } from "react-router-dom";
 import { ChevronRight, Languages, Image as ImageIcon, AtSign, MessageCircle, Eye, Volume2, Clock, Bell, Swords, Lock, Trash2, Info, KeyRound } from "lucide-react";
 
