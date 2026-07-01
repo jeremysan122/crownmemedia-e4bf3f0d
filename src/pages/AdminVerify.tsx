@@ -54,9 +54,10 @@ export default function AdminVerify() {
 
   const reload = async () => {
     setBusy(true);
+    // stripe_price_id is admin-only — must go through SECURITY DEFINER RPCs
     const [s, b, l] = await Promise.all([
-      supabase.from("shekel_bundles").select("*").order("sort_order"),
-      supabase.from("boost_bundles").select("*").order("sort_order"),
+      supabase.rpc("admin_list_shekel_bundles"),
+      supabase.rpc("admin_list_boost_bundles"),
       supabase.from("shekel_ledger").select("*").order("created_at", { ascending: false }).limit(500),
     ]);
     setShekels((s.data as ShekelBundle[]) || []);

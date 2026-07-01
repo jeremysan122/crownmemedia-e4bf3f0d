@@ -30,10 +30,12 @@ export default function AdminBundles() {
 
 
   const load = async () => {
-    const { data } = await supabase
-      .from("shekel_bundles")
-      .select("*")
-      .order("sort_order", { ascending: true });
+    // stripe_price_id is admin-only, fetched via the SECURITY DEFINER RPC
+    const { data, error } = await supabase.rpc("admin_list_shekel_bundles");
+    if (error) {
+      toast.error("Couldn't load bundles");
+      return;
+    }
     setBundles((data as Bundle[]) || []);
   };
   useEffect(() => { if (isModerator) load(); }, [isModerator]);
