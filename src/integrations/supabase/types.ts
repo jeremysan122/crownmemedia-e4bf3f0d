@@ -257,10 +257,12 @@ export type Database = {
       }
       battles: {
         Row: {
+          accepted_at: string | null
           challenger_id: string
           challenger_post_id: string
           challenger_votes: number
           created_at: string
+          duration_seconds: number | null
           ends_at: string | null
           id: string
           opponent_id: string
@@ -270,10 +272,12 @@ export type Database = {
           winner_id: string | null
         }
         Insert: {
+          accepted_at?: string | null
           challenger_id: string
           challenger_post_id: string
           challenger_votes?: number
           created_at?: string
+          duration_seconds?: number | null
           ends_at?: string | null
           id?: string
           opponent_id: string
@@ -283,10 +287,12 @@ export type Database = {
           winner_id?: string | null
         }
         Update: {
+          accepted_at?: string | null
           challenger_id?: string
           challenger_post_id?: string
           challenger_votes?: number
           created_at?: string
+          duration_seconds?: number | null
           ends_at?: string | null
           id?: string
           opponent_id?: string
@@ -4434,6 +4440,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_battle: {
+        Args: { _battle_id: string; _opponent_post_id: string }
+        Returns: undefined
+      }
       admin_broadcast_notification: {
         Args: {
           _body: string
@@ -4594,6 +4604,14 @@ export type Database = {
         Args: { _post_ids: string[]; _vote_type: string }
         Returns: number
       }
+      create_battle_challenge: {
+        Args: {
+          _challenger_post_id: string
+          _duration_seconds: number
+          _opponent_id: string
+        }
+        Returns: string
+      }
       create_repost: {
         Args: {
           p_caption?: string
@@ -4603,6 +4621,7 @@ export type Database = {
         Returns: Json
       }
       deactivate_my_account: { Args: never; Returns: undefined }
+      decline_battle: { Args: { _battle_id: string }; Returns: undefined }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -4779,6 +4798,14 @@ export type Database = {
             Returns: Json
           }
       is_any_admin: { Args: { _uid: string }; Returns: boolean }
+      is_battle_eligible_post: {
+        Args: { _owner_id: string; _post_id: string }
+        Returns: boolean
+      }
+      is_challengeable_user: {
+        Args: { _target: string; _viewer: string }
+        Returns: boolean
+      }
       is_feature_enabled: { Args: { _key: string }; Returns: boolean }
       is_royal_pass_active: { Args: { _user_id: string }; Returns: boolean }
       is_thread_muted: {
