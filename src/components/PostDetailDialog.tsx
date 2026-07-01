@@ -992,18 +992,6 @@ export default function PostDetailDialog({ post, onClose }: Props) {
               <p className="text-center text-sm text-muted-foreground py-6">Be the first to comment</p>
             )}
 
-            {isBelowDesktop && (
-              <button
-                type="button"
-                onClick={() => setCommentsOverlayOpen(true)}
-                className="w-full text-center text-sm text-primary font-semibold py-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
-              >
-                {counts.comments > 0
-                  ? `View ${counts.comments} comment${counts.comments === 1 ? "" : "s"}`
-                  : "Add a comment"}
-              </button>
-            )}
-
             {!isBelowDesktop && (<>
 
 
@@ -1071,12 +1059,14 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 <button
                   type="button"
                   onClick={() => isBelowDesktop && setCommentsOverlayOpen(true)}
-                  aria-label="Comments"
-                  className="flex items-center gap-1 px-2 min-h-[44px] min-w-[44px] justify-center text-muted-foreground touch-manipulation hover:text-foreground"
+                  aria-label={`Open comments${counts.comments ? ` (${counts.comments})` : ""}`}
+                  className="flex items-center gap-1.5 px-2 min-h-[44px] rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 touch-manipulation transition"
                 >
                   <MessageCircle size={18} />
-                  <span className="text-xs tabular-nums">{counts.comments}</span>
+                  <span className="text-xs tabular-nums font-semibold">{counts.comments}</span>
+                  {isBelowDesktop && <span className="sr-only">Open comments</span>}
                 </button>
+
 
                 <button
                   onClick={() => setGiftOpen(true)}
@@ -1233,7 +1223,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
       {/* Universal mobile/tablet comments popup. Same component used in Feed,
           Profile, Scrolls/Shorts so commenting feels identical everywhere. */}
       <CommentsDrawer
-        postId={commentsOverlayOpen && post ? post.id : null}
+        postId={commentsOverlayOpen && post ? ((post as any).parent_post_id ?? post.id) : null}
         onClose={() => setCommentsOverlayOpen(false)}
       />
     </Dialog>

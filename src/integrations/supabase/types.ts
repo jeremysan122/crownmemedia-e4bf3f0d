@@ -4606,6 +4606,7 @@ export type Database = {
       }
       dm_pair_folder: { Args: { _a: string; _b: string }; Returns: string }
       dm_typing_topic_allowed: { Args: { _topic: string }; Returns: boolean }
+      email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number

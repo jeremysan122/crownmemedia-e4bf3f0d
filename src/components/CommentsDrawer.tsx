@@ -395,10 +395,15 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
           "bg-card border-border flex flex-col p-0",
           isSide
             ? "h-[100dvh] w-full sm:max-w-[440px] sm:w-[440px] border-l rounded-none"
-            : "h-[85dvh] max-h-[85dvh] rounded-t-2xl",
+            : "h-[85dvh] max-h-[calc(100dvh-env(safe-area-inset-top,0px)-0.5rem)] rounded-t-2xl",
         )}
       >
-        <SheetHeader className="px-4 pt-4 pb-2 shrink-0">
+        {!isSide && (
+          <div className="pt-2 pb-1 flex justify-center shrink-0" aria-hidden="true">
+            <div className="h-1.5 w-10 rounded-full bg-muted-foreground/40" />
+          </div>
+        )}
+        <SheetHeader className={cn("px-4 pb-2 shrink-0", isSide ? "pt-4" : "pt-1")}>
           <SheetTitle className="font-display text-gold">
             Comments{totalCount > 0 ? ` · ${totalCount}` : ""}
           </SheetTitle>
