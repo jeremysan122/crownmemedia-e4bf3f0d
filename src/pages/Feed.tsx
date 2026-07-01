@@ -336,8 +336,11 @@ export default function Feed() {
       const { data, error } = await q;
       if (cancelled) return;
       if (error) {
-        toast.error("Failed to load posts");
-        setLoadError(error.message || "Network error");
+        // Never surface raw database/PostgREST errors (e.g. "permission denied
+        // for table posts") to end users — log for diagnostics only.
+        console.error("[Feed] load failed:", error);
+        toast.error("Couldn't load posts right now");
+        setLoadError("Couldn't load posts right now.");
         setPosts([]);
         setLoading(false);
         return;
