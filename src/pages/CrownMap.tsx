@@ -169,6 +169,29 @@ export default function CrownMap() {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState<number | null>(null);
+  // Friendly error surface — never render raw Supabase/PostgREST text. When a
+  // reload fails transiently we keep the previous rows visible behind the
+  // banner so the map/list doesn't flash empty.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Debounced mirrors of text/number filters so a user typing "Los Angeles"
+  // fires ONE fetch, not ten. Only debounced values are used by fetchPage.
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  const [debouncedHolder, setDebouncedHolder] = useState(holderQ);
+  const [debouncedMinScore, setDebouncedMinScore] = useState(minScore);
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQuery(query), 350);
+    return () => window.clearTimeout(t);
+  }, [query]);
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedHolder(holderQ), 350);
+    return () => window.clearTimeout(t);
+  }, [holderQ]);
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedMinScore(minScore), 350);
+    return () => window.clearTimeout(t);
+  }, [minScore]);
 
   const [flashKeys, setFlashKeys] = useState<Record<string, number>>({});
   const flashTimer = useRef<Record<string, number>>({});
