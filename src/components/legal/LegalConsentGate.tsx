@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   getOutstandingConsents,
@@ -7,36 +7,72 @@ import {
 import { type LegalDoc } from "@/lib/legalDocs";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, ScrollText } from "lucide-react";
+import { Loader2, ScrollText, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 
 /**
  * Sits inside the authenticated app. If the signed-in user has not accepted
  * the CURRENT version of any required policy (Terms, Privacy, Community,
  * CSAE), shows a blocking modal until they re-consent.
+ *
+ * FAIL CLOSED: if we cannot verify consent status (network error, RPC error,
+ * RLS refusal), we block the app with a Retry surface rather than silently
+ * letting the user in without legal cover.
  */
 export default function LegalConsentGate({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [outstanding, setOutstanding] = useState<LegalDoc[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (!user) { setOutstanding(null); return; }
-    let cancelled = false;
-    (async () => {
-      try {
-        const docs = await getOutstandingConsents(user.id);
-        if (!cancelled) setOutstanding(docs);
-      } catch {
-        if (!cancelled) setOutstanding([]);
-      }
-    })();
-    return () => { cancelled = true; };
+  const load = useCallback(async () => {
+    if (!user) { setOutstanding(null); setLoadError(false); return; }
+    setLoadError(false);
+    setOutstanding(null);
+    try {
+      const docs = await getOutstandingConsents(user.id);
+      setOutstanding(docs);
+    } catch (e) {
+      logRawError(e, "legal");
+      setLoadError(true);
+    }
   }, [user]);
 
-  if (!user || !outstanding || outstanding.length === 0) return <>{children}</>;
+  useEffect(() => { load(); }, [load]);
+
+  if (!user) return <>{children}</>;
+
+  // FAIL CLOSED: we couldn't confirm consent status.
+  if (loadError) {
+    return (
+      <div className="fixed inset-0 z-[120] bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-sm royal-card p-5 space-y-4 text-center">
+          <div className="flex items-center justify-center gap-2 text-amber-500">
+            <AlertTriangle size={18} />
+            <h2 className="font-display text-lg">Can't verify policies</h2>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            We couldn't confirm your accepted policy versions. For your safety we've paused the app until we can check again.
+          </p>
+          <Button onClick={load} className="w-full">Retry</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Still checking, or nothing outstanding — allow through only once we know.
+  if (outstanding === null) {
+    return (
+      <div className="fixed inset-0 z-[120] bg-background flex items-center justify-center p-4">
+        <Loader2 className="size-6 animate-spin opacity-60" />
+      </div>
+    );
+  }
+
+  if (outstanding.length === 0) return <>{children}</>;
 
   const allOk = outstanding.every((d) => checked[d.slug]);
 
@@ -48,7 +84,8 @@ export default function LegalConsentGate({ children }: { children: React.ReactNo
       toast.success("Thanks — your acceptance is on file.");
       setOutstanding([]);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not record acceptance.");
+      logRawError(e, "legal");
+      toast.error(toFriendlyMessage(e, "legal"));
     } finally {
       setBusy(false);
     }
@@ -93,3 +130,4 @@ export default function LegalConsentGate({ children }: { children: React.ReactNo
     </>
   );
 }
+
