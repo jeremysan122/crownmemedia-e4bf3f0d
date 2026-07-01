@@ -68,7 +68,8 @@ export default function BlockedAccounts() {
       .eq("blocked_id", row.blocked_id);
     setBusy(null);
     if (error) {
-      toast({ title: "Couldn't unblock", description: error.message, variant: "destructive" });
+      logRawError(error, "blocked_unblock");
+      toast({ title: toFriendlyMessage(error, "blocked_unblock"), variant: "destructive" });
       return;
     }
     setRows((prev) => prev.filter((r) => r.id !== row.id));
