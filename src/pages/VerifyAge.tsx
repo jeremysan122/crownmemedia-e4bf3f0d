@@ -50,8 +50,9 @@ export default function VerifyAge() {
       toast.success("Age verified");
       nav("/feed", { replace: true });
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Verification failed";
-      setError(msg);
+      const { toFriendlyMessage, logRawError } = await import("@/lib/settingsSecurityErrors");
+      logRawError(e, "age");
+      setError(toFriendlyMessage(e, "age"));
     } finally {
       setSubmitting(false);
     }
