@@ -269,8 +269,11 @@ export default function Battles() {
   }, [user?.id, perTab, fetchPage]);
 
   // ---- Initial mount: restore from sessionStorage or fetch fresh ----
+  // Gated on blocksLoaded so cached rows involving blocked users cannot
+  // flash on-screen before the block list is available.
   useEffect(() => {
     if (!user) { setInitialHydrating(false); return; }
+    if (!blocksLoaded) return;
     if (restoredRef.current) return;
     restoredRef.current = true;
     const restored = loadPersistedState<Battle>(user.id);
@@ -282,8 +285,6 @@ export default function Battles() {
       setSort(restored.filters.sort);
       setHub(restored.filters.hub);
       setTopic(restored.filters.topic);
-      // Re-apply safety filter on rehydrated rows so a row that became
-      // unsafe while the user was away can never re-appear from cache.
       const filtered: Record<TabKey, PersistedTabState<Battle>> = emptyPerTab<Battle>();
       for (const k of TAB_KEYS) {
         const t = restored.perTab[k];
@@ -298,11 +299,10 @@ export default function Battles() {
       setInitialHydrating(false);
     } else {
       setInitialHydrating(false);
-      // Fresh load for the initial tab.
       const initial = (params.get("tab") as TabKey) || "active";
       void loadTab(initial, { reset: true });
     }
-  }, [user?.id]);
+  }, [user?.id, blocksLoaded]);
 
   // ---- Auto-load the active tab the first time it's viewed ----
   useEffect(() => {
