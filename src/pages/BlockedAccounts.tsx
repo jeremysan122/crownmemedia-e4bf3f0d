@@ -37,7 +37,8 @@ export default function BlockedAccounts() {
       .eq("blocker_id", user.id)
       .order("created_at", { ascending: false });
     if (error) {
-      toast({ title: "Couldn't load blocks", description: error.message, variant: "destructive" });
+      logRawError(error, "blocked_load");
+      toast({ title: toFriendlyMessage(error, "blocked_load"), variant: "destructive" });
       setLoading(false);
       return;
     }
