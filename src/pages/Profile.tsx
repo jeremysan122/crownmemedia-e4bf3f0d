@@ -24,7 +24,7 @@ import PostDetailDialog from "@/components/PostDetailDialog";
 import type { FeedPost } from "@/components/PostCard";
 import SensitiveThumb from "@/components/SensitiveThumb";
 import { useFeedFilters } from "@/hooks/useFeedFilters";
-import { fetchPostById } from "@/lib/postQuery";
+import { fetchPostById, hydrateParents } from "@/lib/postQuery";
 import UserListDialog from "@/components/profile/UserListDialog";
 import ShareProfileDialog from "@/components/profile/ShareProfileDialog";
 import RoleBadges from "@/components/profile/RoleBadges";
@@ -140,7 +140,7 @@ export default function Profile() {
     const load = async () => {
       const { data: p, error: pErr } = await supabase
         .from("profiles")
-        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, is_suspended, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public")
+        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public")
         .eq("username", targetUsername)
         .maybeSingle();
       if (cancelled) return;
@@ -150,7 +150,7 @@ export default function Profile() {
       const pid = (p as any).id;
 
       const [{ data: ps, error: psErr }, { data: cs }, { data: rs }] = await Promise.all([
-        supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at, is_sensitive, content_type, media_type, video_poster_url, parent_post_id").eq("user_id", pid).eq("is_removed", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
+        supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at, is_sensitive, content_type, media_type, video_poster_url, parent_post_id, aspect_ratio").eq("user_id", pid).eq("is_removed", false).eq("is_archived", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
         supabase.from("crowns").select("id, title, region_name, active, category, started_at, ended_at").eq("user_id", pid).order("started_at", { ascending: false }).limit(40),
         supabase.from("user_roles").select("role").eq("user_id", pid),
       ]);
@@ -159,6 +159,9 @@ export default function Profile() {
       if (psErr) console.error("Failed to load posts:", psErr);
       // Dedupe by id defensively to avoid duplicate keys / duplicated post-options menus
       const uniquePosts = Array.from(new Map(((ps as any) || []).map((row: any) => [row.id, row])).values());
+      // Hydrate parent metadata for reposts so the Reposts tab shows the original
+      // author/media context and the "unavailable" fallback for removed originals.
+      await hydrateParents(uniquePosts as any);
       setPosts(uniquePosts as any);
       setCrowns((cs as any) || []);
       setRoles(((rs as any) || []).map((r: any) => r.role));

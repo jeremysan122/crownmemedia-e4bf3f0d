@@ -178,24 +178,27 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
   const liveRank = useLiveRank(post);
   const priorityUsers = useMentionParticipants(post);
-  const { muted, toggle: toggleMute } = useThreadMute(post?.id ?? null);
+  // Mute/notification thread targets the ORIGINAL post — muting a repost shell
+  // must silence the underlying thread everyone else is replying on.
+  const { muted, toggle: toggleMute } = useThreadMute(interactionPostId);
 
   // Smoothly tween rank + score so live updates feel fluid, not jarring.
   const animatedRank = useAnimatedNumber(liveRank?.rank ?? 0, 700);
   const animatedScore = useAnimatedNumber(counts.score, 600);
 
-  // Live tracking of caption / cover / filter so edits made from PostCard or
-  // Profile reflect immediately inside the detail dialog.
-  const [liveCaption, setLiveCaption] = useState<string>(post?.caption ?? "");
-  const [liveCover, setLiveCover] = useState<string>(post?.image_url ?? "");
+  // Live tracking of caption / cover / filter sourced from the DISPLAYED post
+  // (= original when this is a repost shell). Edits to the original propagate
+  // through the realtime posts UPDATE filter above (targeted at interactionPostId).
+  const [liveCaption, setLiveCaption] = useState<string>(displayPost?.caption ?? "");
+  const [liveCover, setLiveCover] = useState<string>(displayPost?.image_url ?? "");
   const [liveFilter, setLiveFilter] = useState<FilterId | null>(
-    isValidFilter(post?.filter ?? null) ? (post!.filter as FilterId) : null
+    isValidFilter(displayPost?.filter ?? null) ? (displayPost!.filter as FilterId) : null
   );
-  const [liveEditedAt, setLiveEditedAt] = useState<string | null>(post?.edited_at ?? null);
-  const images = post
-    ? ((post.image_urls && post.image_urls.length > 0)
-        ? [liveCover || post.image_urls[0], ...post.image_urls.slice(1)]
-        : [liveCover || post.image_url])
+  const [liveEditedAt, setLiveEditedAt] = useState<string | null>(displayPost?.edited_at ?? null);
+  const images = displayPost
+    ? ((displayPost.image_urls && displayPost.image_urls.length > 0)
+        ? [liveCover || displayPost.image_urls[0], ...displayPost.image_urls.slice(1)]
+        : [liveCover || displayPost.image_url])
     : [];
   const isMulti = images.length > 1;
 
@@ -322,19 +325,20 @@ export default function PostDetailDialog({ post, onClose }: Props) {
     };
   }, [post]);
 
-  // Re-sync live state when the active post changes.
+  // Re-sync live state when the active post/original changes.
   useEffect(() => {
-    if (!post) return;
-    setLiveCaption(post.caption);
-    setLiveCover(post.image_url);
-    setLiveFilter(isValidFilter(post.filter ?? null) ? (post.filter as FilterId) : null);
-    setLiveEditedAt(post.edited_at ?? null);
-  }, [post?.id, post?.caption, post?.image_url, post?.filter, post?.edited_at]);
+    if (!displayPost) return;
+    setLiveCaption(displayPost.caption);
+    setLiveCover(displayPost.image_url);
+    setLiveFilter(isValidFilter(displayPost.filter ?? null) ? (displayPost.filter as FilterId) : null);
+    setLiveEditedAt(displayPost.edited_at ?? null);
+  }, [displayPost?.id, displayPost?.caption, displayPost?.image_url, displayPost?.filter, displayPost?.edited_at]);
   useEffect(() => {
-    if (!post) return;
+    if (!displayPost) return;
     const onUpdated = (e: Event) => {
       const d = (e as CustomEvent).detail;
-      if (!d || d.id !== post.id) return;
+      // Accept updates targeting either the visible row or the original.
+      if (!d || (d.id !== displayPost.id && d.id !== interactionPostId)) return;
       if (typeof d.caption === "string") setLiveCaption(d.caption);
       if (typeof d.image_url === "string") setLiveCover(d.image_url);
       if (d.filter !== undefined) setLiveFilter(isValidFilter(d.filter) ? d.filter : null);
@@ -342,7 +346,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
     };
     window.addEventListener("post:updated", onUpdated);
     return () => window.removeEventListener("post:updated", onUpdated);
-  }, [post?.id]);
+  }, [displayPost?.id, interactionPostId]);
 
   const { bump: bumpFilterStreak } = useFilterStreaks();
 
@@ -732,7 +736,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
             On desktop the media region is a fixed square sized to dialog height
             (Instagram-web layout); the comments column flexes to the remaining width. */}
         <div
-          className={`relative w-full ${postMediaFrameClass(post)} shrink-0 lg:w-auto lg:h-full lg:aspect-square lg:flex-none flex items-center justify-center min-h-0 overflow-hidden bg-card`}
+          className={`relative w-full ${postMediaFrameClass(displayPost)} shrink-0 lg:w-auto lg:h-full lg:aspect-square lg:flex-none flex items-center justify-center min-h-0 overflow-hidden bg-card`}
           onDoubleClick={() => !myVotes.has("crown") && onVote("crown")}
           {...doubleTapHandlers}
         >
@@ -757,15 +761,15 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
             return (
               <>
-                {post.media_type === "video" && post.video_url ? (
+                {displayPost.media_type === "video" && displayPost.video_url ? (
                   <div className="w-full h-full max-w-full max-h-full">
                     <PostMedia
-                      src={post.video_url}
-                      poster={post.video_poster_url ?? images[0]}
+                      src={displayPost.video_url}
+                      poster={displayPost.video_poster_url ?? images[0]}
                       mediaType="video"
                       autoPlay
                       filter={postFilter}
-                      alt={post.caption || "Video post"}
+                      alt={displayPost.caption || "Video post"}
                       className="w-full h-full object-cover"
                       boost={!!filterBoost}
                       boostType={filterBoost ?? undefined}
@@ -780,7 +784,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                       <div key={src + i} className="w-full h-full flex-shrink-0 snap-center">
                         <PostMedia
                           src={src}
-                          alt={post.alt_texts?.[i] || (post.caption ? `${post.caption} (${i + 1}/${images.length})` : `Photo ${i + 1}`)}
+                          alt={displayPost.alt_texts?.[i] || (displayPost.caption ? `${displayPost.caption} (${i + 1}/${images.length})` : `Photo ${i + 1}`)}
                           filter={postFilter}
                           className="w-full h-full object-cover"
                           boost={!!filterBoost && i === activeImage}
@@ -792,7 +796,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 ) : (
                   <PostMedia
                     src={images[0]}
-                    alt={post.alt_texts?.[0] || post.caption || "Post"}
+                    alt={displayPost.alt_texts?.[0] || displayPost.caption || "Post"}
                     filter={postFilter}
                     className="w-full h-full object-cover"
                     boost={!!filterBoost}
@@ -861,14 +865,14 @@ export default function PostDetailDialog({ post, onClose }: Props) {
               fetchPostById() from src/lib/postQuery.ts. */}
           {/* Header */}
           <header className="flex items-center justify-between gap-2 p-3 border-b border-border">
-            <Link to={`/${post.profile.username}`} onClick={onClose} className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className={post.profile.crowns_held > 0 ? "crown-ring shrink-0" : "shrink-0"}>
+            <Link to={`/${displayProfile?.username ?? ""}`} onClick={onClose} className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div className={(displayProfile?.crowns_held ?? 0) > 0 ? "crown-ring shrink-0" : "shrink-0"}>
                 <div className="size-9 rounded-full bg-muted overflow-hidden ring-1 ring-border">
-                  {post.profile.profile_photo_url ? (
-                    <img loading="lazy" src={post.profile.profile_photo_url} alt={post.profile.username} className="w-full h-full object-cover" />
+                  {displayProfile?.profile_photo_url ? (
+                    <img loading="lazy" src={displayProfile.profile_photo_url} alt={displayProfile.username} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
-                      {post.profile.username[0]?.toUpperCase()}
+                      {displayProfile?.username?.[0]?.toUpperCase()}
                     </div>
                   )}
                 </div>
@@ -876,14 +880,20 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1 min-w-0">
-                  <span className="font-semibold text-sm truncate">@{post.profile.username}</span>
-                  {post.profile.crowns_held > 0 && <Crown size={11} className="text-primary shrink-0" fill="currentColor" />}
+                  <span className="font-semibold text-sm truncate">@{displayProfile?.username}</span>
+                  {(displayProfile?.crowns_held ?? 0) > 0 && <Crown size={11} className="text-primary shrink-0" fill="currentColor" />}
                 </div>
 
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
                   <MapPin size={9} className="shrink-0" />
-                  <span className="truncate">{locationLabel(post)}</span>
+                  <span className="truncate">{locationLabel(displayPost)}</span>
                 </div>
+                {post?.parent_post_id && post?.profile?.username && post.profile.username !== displayProfile?.username && (
+                  <div className="text-[10px] text-muted-foreground italic mt-0.5">
+                    <Repeat2 size={9} className="inline mr-1" />
+                    Reposted by <Link to={`/${post.profile.username}`} onClick={onClose} className="hover:underline">@{post.profile.username}</Link>
+                  </div>
+                )}
               </div>
             </Link>
 
@@ -909,8 +919,8 @@ export default function PostDetailDialog({ post, onClose }: Props) {
             {liveRank == null ? (
               <span className="text-muted-foreground">Calculating royal rank…</span>
             ) : liveRank.rank == null ? (
-              <span className="text-muted-foreground">
-                Unranked in <span className="text-foreground font-semibold">{CATEGORY_LABEL[post.category]}</span>
+                <span className="text-muted-foreground">
+                Unranked in <span className="text-foreground font-semibold">{CATEGORY_LABEL[displayPost.category]}</span>
               </span>
             ) : (
               <span className="text-muted-foreground">
@@ -923,7 +933,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 </span>
                 {liveRank.total ? <span className="opacity-70"> / {liveRank.total}</span> : null}
                 {" "}in{" "}
-                <span className="text-foreground font-semibold">{CATEGORY_LABEL[post.category]}</span>
+                <span className="text-foreground font-semibold">{CATEGORY_LABEL[displayPost.category]}</span>
                 {" · "}
                 <span className="text-foreground">{liveRank.region}</span>
               </span>
@@ -948,23 +958,23 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 </summary>
                 <div className="mt-2">
                   <RankHistoryTimeline
-                    postId={post.parent_post_id ?? post.id}
+                    postId={interactionPostId ?? displayPost.id}
                     scope={liveRank.scope}
                     region={liveRank.region}
-                    category={post.category}
-                    subcategorySlug={(post as any).subcategory_slug ?? null}
-                    mainCategorySlug={(post as any).main_category_slug ?? null}
+                    category={displayPost.category}
+                    subcategorySlug={(displayPost as any).subcategory_slug ?? null}
+                    mainCategorySlug={(displayPost as any).main_category_slug ?? null}
                   />
                 </div>
               </details>
               <div className="hidden sm:block px-3 pt-3">
                 <RankHistoryTimeline
-                  postId={post.parent_post_id ?? post.id}
+                  postId={interactionPostId ?? displayPost.id}
                   scope={liveRank.scope}
                   region={liveRank.region}
-                  category={post.category}
-                  subcategorySlug={(post as any).subcategory_slug ?? null}
-                  mainCategorySlug={(post as any).main_category_slug ?? null}
+                  category={displayPost.category}
+                  subcategorySlug={(displayPost as any).subcategory_slug ?? null}
+                  mainCategorySlug={(displayPost as any).main_category_slug ?? null}
                 />
               </div>
             </>
@@ -977,22 +987,22 @@ export default function PostDetailDialog({ post, onClose }: Props) {
           >
             {liveCaption && (
               <div className="flex gap-2">
-                <Link to={`/${post.profile.username}`} onClick={onClose} className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
-                  {post.profile.profile_photo_url && (
-                    <img loading="lazy" src={post.profile.profile_photo_url} className="w-full h-full object-cover" alt="" />
+                <Link to={`/${displayProfile?.username ?? ""}`} onClick={onClose} className="size-8 rounded-full bg-muted overflow-hidden shrink-0">
+                  {displayProfile?.profile_photo_url && (
+                    <img loading="lazy" src={displayProfile.profile_photo_url} className="w-full h-full object-cover" alt="" />
                   )}
                 </Link>
 
                 <div className="flex-1">
                   <p className="text-sm leading-snug">
-                    <Link to={`/${post.profile.username}`} onClick={onClose} className="font-bold mr-1.5 hover:underline">
-                      @{post.profile.username}
+                    <Link to={`/${displayProfile?.username ?? ""}`} onClick={onClose} className="font-bold mr-1.5 hover:underline">
+                      @{displayProfile?.username}
                     </Link>
                     {liveCaption}
                   </p>
 
                   <span className="text-[10px] text-muted-foreground">
-                    {timeAgo(post.created_at)}{liveEditedAt && <span className="ml-1 italic">· edited</span>}
+                    {timeAgo(displayPost.created_at)}{liveEditedAt && <span className="ml-1 italic">· edited</span>}
                   </span>
                 </div>
               </div>
@@ -1094,7 +1104,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                   <Share2 size={18} />
                 </button>
 
-                {user && post.user_id !== user.id && (
+                {user && displayPost.user_id !== user.id && (
                   <button
                     onClick={() => setRepostOpen(true)}
                     className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-primary touch-manipulation"
@@ -1107,9 +1117,9 @@ export default function PostDetailDialog({ post, onClose }: Props) {
             </div>
 
             <div className="px-4 pb-2 pt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
-              <CategoryBadge category={post.category} label={CATEGORY_LABEL[post.category]} size="xs" />
+              <CategoryBadge category={displayPost.category} label={CATEGORY_LABEL[displayPost.category]} size="xs" />
               <span className="opacity-70">competing in</span>
-              <span className="font-semibold text-foreground">{CATEGORY_LABEL[post.category]}</span>
+              <span className="font-semibold text-foreground">{CATEGORY_LABEL[displayPost.category]}</span>
             </div>
 
             {!isBelowDesktop && (<>
@@ -1194,19 +1204,24 @@ export default function PostDetailDialog({ post, onClose }: Props) {
           </div>
         </div>
 
-        <ShareDialog open={shareOpen} onOpenChange={setShareOpen} post={post} />
+        {/* Share/Repost/Gift always target the ORIGINAL (displayPost) so the
+            share card credits the original author, reposting a repost shell
+            reposts the underlying original, and gifts go to the original
+            creator. postId uses interactionPostId so counters attach to the
+            canonical row. */}
+        <ShareDialog open={shareOpen} onOpenChange={setShareOpen} post={displayPost as any} />
 
-        <RepostDialog open={repostOpen} onOpenChange={setRepostOpen} parent={post} />
+        <RepostDialog open={repostOpen} onOpenChange={setRepostOpen} parent={displayPost as any} />
 
         <GiftPanel
           isOpen={giftOpen}
           onClose={() => setGiftOpen(false)}
           recipient={{
-            id: post.user_id,
-            username: post.profile.username,
-            avatarUrl: post.profile.profile_photo_url ?? undefined,
+            id: displayPost.user_id,
+            username: displayProfile?.username ?? "user",
+            avatarUrl: displayProfile?.profile_photo_url ?? undefined,
           }}
-          postId={post.parent_post_id ?? post.id}
+          postId={interactionPostId ?? displayPost.id}
           onSent={(gift, qty) => {
             setActiveGift(gift);
             setActiveGiftQty(qty);
