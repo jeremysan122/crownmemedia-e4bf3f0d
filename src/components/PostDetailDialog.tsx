@@ -1059,12 +1059,14 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 <button
                   type="button"
                   onClick={() => isBelowDesktop && setCommentsOverlayOpen(true)}
-                  aria-label="Comments"
-                  className="flex items-center gap-1 px-2 min-h-[44px] min-w-[44px] justify-center text-muted-foreground touch-manipulation hover:text-foreground"
+                  aria-label={`Open comments${counts.comments ? ` (${counts.comments})` : ""}`}
+                  className="flex items-center gap-1.5 px-2 min-h-[44px] rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 touch-manipulation transition"
                 >
                   <MessageCircle size={18} />
-                  <span className="text-xs tabular-nums">{counts.comments}</span>
+                  <span className="text-xs tabular-nums font-semibold">{counts.comments}</span>
+                  {isBelowDesktop && <span className="sr-only">Open comments</span>}
                 </button>
+
 
                 <button
                   onClick={() => setGiftOpen(true)}
