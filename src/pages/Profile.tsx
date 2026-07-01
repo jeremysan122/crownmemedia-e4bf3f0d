@@ -150,7 +150,7 @@ export default function Profile() {
       const pid = (p as any).id;
 
       const [{ data: ps, error: psErr }, { data: cs }, { data: rs }] = await Promise.all([
-        supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at, is_sensitive, content_type, media_type, video_poster_url, parent_post_id").eq("user_id", pid).eq("is_removed", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
+        supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at, is_sensitive, content_type, media_type, video_poster_url, parent_post_id, aspect_ratio").eq("user_id", pid).eq("is_removed", false).eq("is_archived", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
         supabase.from("crowns").select("id, title, region_name, active, category, started_at, ended_at").eq("user_id", pid).order("started_at", { ascending: false }).limit(40),
         supabase.from("user_roles").select("role").eq("user_id", pid),
       ]);
