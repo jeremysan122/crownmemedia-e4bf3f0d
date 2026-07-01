@@ -329,11 +329,13 @@ export default function Auth() {
         options: { emailRedirectTo: `${window.location.origin}/feed`, shouldCreateUser: false },
       });
       if (error) {
-        if (/rate|too many/i.test(error.message)) toast.error("Too many requests. Try again in a minute.");
-        else toast.error(error.message);
+        const { toFriendlyMessage, logRawError } = await import("@/lib/settingsSecurityErrors");
+        logRawError(error, "login");
+        toast.error(toFriendlyMessage(error, "login"));
         return;
       }
-      toast.success("Magic link sent — check your inbox");
+      // Neutral copy avoids email enumeration.
+      toast.success("If an account exists, we sent a sign-in link.");
     } finally {
       setMagicSending(false);
     }
@@ -343,8 +345,13 @@ export default function Auth() {
     const email = unverifiedEmail || form.email.trim();
     if (!email) return;
     const { error } = await supabase.auth.resend({ type: "signup", email });
-    if (error) toast.error(error.message);
-    else toast.success("Verification email resent");
+    if (error) {
+      const { toFriendlyMessage, logRawError } = await import("@/lib/settingsSecurityErrors");
+      logRawError(error, "signup");
+      toast.error(toFriendlyMessage(error, "signup"));
+    } else {
+      toast.success("Verification email resent");
+    }
   };
 
   // ============ Check inbox state ============
