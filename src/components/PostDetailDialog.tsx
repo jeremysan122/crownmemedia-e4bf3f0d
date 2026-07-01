@@ -269,17 +269,18 @@ export default function PostDetailDialog({ post, onClose }: Props) {
     if (!post) return;
 
     let cancelled = false;
+    const targetId = post.parent_post_id ?? post.id;
 
-    const ch = supabase.channel(`post-detail-${post.id}-${Math.random().toString(36).slice(2, 9)}`);
+    const ch = supabase.channel(`post-detail-${targetId}-${Math.random().toString(36).slice(2, 9)}`);
 
     ch.on(
       "postgres_changes",
-      { event: "*", schema: "public", table: "comments", filter: `post_id=eq.${post.id}` },
+      { event: "*", schema: "public", table: "comments", filter: `post_id=eq.${targetId}` },
       async () => {
         const { data } = await supabase
           .from("comments")
           .select(COMMENT_COLUMNS)
-          .eq("post_id", post.id)
+          .eq("post_id", targetId)
           .eq("is_removed", false)
           .order("created_at", { ascending: false });
 
@@ -291,9 +292,9 @@ export default function PostDetailDialog({ post, onClose }: Props) {
       },
     ).on(
       "postgres_changes",
-      { event: "*", schema: "public", table: "votes", filter: `post_id=eq.${post.id}` },
+      { event: "*", schema: "public", table: "votes", filter: `post_id=eq.${targetId}` },
       async () => {
-        const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: post.id });
+        const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: targetId });
         if (cancelled || !stats) return;
         const c2 = ((stats as { counts?: Record<string, number> }).counts) ?? {};
         const byType = { crown: c2.crown ?? 0, fire: c2.fire ?? 0, diamond: c2.diamond ?? 0, dislike: c2.dislike ?? 0 };
@@ -301,7 +302,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
       },
     ).on(
       "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "posts", filter: `id=eq.${post.id}` },
+      { event: "UPDATE", schema: "public", table: "posts", filter: `id=eq.${targetId}` },
       (payload) => {
         const row: any = payload.new;
 
