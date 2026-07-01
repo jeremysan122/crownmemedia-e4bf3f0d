@@ -708,7 +708,7 @@ export default function Profile() {
               // reposts so leaderboard/crown attribution isn't credited to the
               // reposter.
               const colCount = 5 + (showLiked ? 1 : 0) + (showSaved ? 1 : 0);
-              const colsClass = colCount === 7 ? "grid-cols-7" : colCount === 6 ? "grid-cols-6" : colCount === 5 ? "grid-cols-5" : "grid-cols-4";
+              const colsClass = colCount === 7 ? "md:grid-cols-7" : colCount === 6 ? "md:grid-cols-6" : colCount === 5 ? "md:grid-cols-5" : "md:grid-cols-4";
               const originals = (posts as any[]).filter((p) => !p.parent_post_id);
               const repostRows = (posts as any[]).filter((p) => !!p.parent_post_id);
               const imagePosts = filterByContentType(originals as any, "post") as typeof posts;
@@ -759,14 +759,16 @@ export default function Profile() {
               );
               return (
             <Tabs value={tab} onValueChange={setTab} className="mt-5">
-              <TabsList className={`grid w-full ${colsClass}`}>
-                <TabsTrigger value="posts" className="text-xs gap-1"><ImageIcon size={12} /> Posts</TabsTrigger>
-                <TabsTrigger value="scrolls" className="text-xs gap-1"><Play size={12} /> Scrolls</TabsTrigger>
-                <TabsTrigger value="reposts" className="text-xs gap-1"><Repeat2 size={12} /> Reposts</TabsTrigger>
-                <TabsTrigger value="crowns" className="text-xs gap-1"><Crown size={12} /> Crowns</TabsTrigger>
-                <TabsTrigger value="battles" className="text-xs gap-1"><Swords size={12} /> Battles</TabsTrigger>
-                {showLiked && <TabsTrigger value="liked" className="text-xs gap-1"><Heart size={12} /> Liked</TabsTrigger>}
-                {showSaved && <TabsTrigger value="saved" className="text-xs gap-1"><Bookmark size={12} /> Saved</TabsTrigger>}
+              <TabsList
+                className={`flex md:grid w-full ${colsClass} overflow-x-auto no-scrollbar gap-1 justify-start md:justify-stretch`}
+              >
+                <TabsTrigger value="posts" className="text-xs gap-1 shrink-0 px-2.5"><ImageIcon size={12} /> Posts</TabsTrigger>
+                <TabsTrigger value="scrolls" className="text-xs gap-1 shrink-0 px-2.5"><Play size={12} /> Scrolls</TabsTrigger>
+                <TabsTrigger value="reposts" className="text-xs gap-1 shrink-0 px-2.5"><Repeat2 size={12} /> Reposts</TabsTrigger>
+                <TabsTrigger value="crowns" className="text-xs gap-1 shrink-0 px-2.5"><Crown size={12} /> Crowns</TabsTrigger>
+                <TabsTrigger value="battles" className="text-xs gap-1 shrink-0 px-2.5"><Swords size={12} /> Battles</TabsTrigger>
+                {showLiked && <TabsTrigger value="liked" className="text-xs gap-1 shrink-0 px-2.5"><Heart size={12} /> Liked</TabsTrigger>}
+                {showSaved && <TabsTrigger value="saved" className="text-xs gap-1 shrink-0 px-2.5"><Bookmark size={12} /> Saved</TabsTrigger>}
               </TabsList>
 
               <TabsContent value="posts" className="mt-3">
