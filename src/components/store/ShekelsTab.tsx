@@ -116,7 +116,7 @@ export default function ShekelsTab() {
       </div>
 
       <p className="text-center text-[10px] text-muted-foreground pt-2">
-        1 ₪ = $0.01 · Bundles may include bonus Shekels · Shekels never expire
+        1 ₪ = $0.001 · Bundles may include bonus Shekels · Shekels never expire
       </p>
       {checkoutElement}
     </div>
