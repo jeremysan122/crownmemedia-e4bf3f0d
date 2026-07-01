@@ -124,7 +124,7 @@ export default function Preferences() {
     </section>
   );
 
-  const Row = ({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) => (
+  const Row = ({ title, hint, children }: { title: React.ReactNode; hint?: string; children: React.ReactNode }) => (
     <div className="flex items-center gap-3 py-1.5">
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold">{title}</div>
