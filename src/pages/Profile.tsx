@@ -799,6 +799,34 @@ export default function Profile() {
                 )}
               </TabsContent>
 
+              <TabsContent value="reposts" className="mt-3">
+                {repostRows.length > 0 ? (
+                  <>
+                    <p className="text-[11px] text-muted-foreground mb-2 px-1">
+                      Reposts don't earn crowns, ranks, or votes for this profile — all engagement credits the original author.
+                    </p>
+                    <div className="grid grid-cols-3 gap-1 lg:gap-2">
+                      {repostRows.map((p) => (
+                        <div key={p.id} className="relative">
+                          {renderTile(p as any, (p.content_type === "scroll" || p.media_type === "video"))}
+                          <div className="absolute top-1 left-1 z-10 glass rounded-full p-1 pointer-events-none" title="Repost">
+                            <Repeat2 size={10} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState
+                    icon={<Repeat2 size={28} className="text-muted-foreground" />}
+                    title={isMe ? "No reposts yet" : "No reposts yet"}
+                    body={isMe ? "When you repost someone's post, it appears here — original ownership stays with them." : "This royal hasn't reposted anything yet."}
+                  />
+                )}
+              </TabsContent>
+
+
+
 
 
               <TabsContent value="crowns" className="mt-3">
