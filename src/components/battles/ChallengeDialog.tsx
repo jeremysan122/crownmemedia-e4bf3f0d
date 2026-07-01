@@ -10,6 +10,7 @@ import { Search, Swords, Loader2 } from "lucide-react";
 import { CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
 import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
 import { RoyalThumbSkeleton } from "@/components/royal/RoyalSkeleton";
+import { battleErrorMessage } from "@/lib/battlesErrors";
 
 interface Props {
   open: boolean;
@@ -33,6 +34,7 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
   const [category, setCategory] = useState<CrownCategory>("overall");
   const [submitting, setSubmitting] = useState(false);
   const [loadingPosts, setLoadingPosts] = useState(false);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -42,32 +44,70 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
     }
     if (user) {
       setLoadingPosts(true);
-      supabase.from("posts").select("id, image_url, category, filter")
-        .eq("user_id", user.id).eq("is_removed", false)
-        .order("created_at", { ascending: false }).limit(24)
+      // Battle-eligible posts only: mine, not removed, not archived, not a repost, `post` content type.
+      supabase.from("posts").select("id, image_url, category, filter, is_archived, parent_post_id, content_type, moderation_status")
+        .eq("user_id", user.id)
+        .eq("is_removed", false)
+        .eq("is_archived", false)
+        .is("parent_post_id", null)
+        .order("created_at", { ascending: false }).limit(48)
         .then(({ data }) => {
-          const posts = (data as PostThumb[]) || [];
+          const posts = ((data as any[]) || [])
+            .filter((p) => (p.content_type == null || p.content_type === "post"))
+            .filter((p) => !p.moderation_status || !["removed", "flagged"].includes(p.moderation_status))
+            .map((p): PostThumb => ({ id: p.id, image_url: p.image_url, category: p.category, filter: p.filter }));
           setMyPosts(posts);
           if (posts[0]) { setPostId(posts[0].id); setCategory(posts[0].category); }
           setLoadingPosts(false);
         });
     }
     if (presetOpponentId) {
-      supabase.from("profiles").select("id, username, profile_photo_url")
+      supabase.from("profiles").select("id, username, profile_photo_url, is_banned, is_suspended")
         .eq("id", presetOpponentId).maybeSingle()
-        .then(({ data }) => { if (data) { setOpponent(data as UserResult); setStep(2); } });
+        .then(({ data }) => {
+          const d = data as any;
+          if (d && !d.is_banned && !d.is_suspended) {
+            setOpponent({ id: d.id, username: d.username, profile_photo_url: d.profile_photo_url });
+            setStep(2);
+          } else if (d) {
+            toast.error("This royal can't be challenged right now.");
+          }
+        });
     }
   }, [open, user, presetOpponentId]);
 
   useEffect(() => {
     if (!search.trim() || step !== 1) { setResults([]); return; }
+    setSearching(true);
     const t = setTimeout(async () => {
-      const { data } = await supabase.from("profiles")
-        .select("id, username, profile_photo_url")
-        .ilike("username", `%${search.trim()}%`)
-        .neq("id", user?.id || "")
-        .limit(8);
-      setResults((data as UserResult[]) || []);
+      try {
+        const [profRes, blkRes] = await Promise.all([
+          supabase.from("profiles")
+            .select("id, username, profile_photo_url, is_banned, is_suspended")
+            .ilike("username", `%${search.trim()}%`)
+            .neq("id", user?.id || "")
+            .limit(16),
+          user
+            ? supabase.from("blocks").select("blocker_id, blocked_id")
+                .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`)
+            : Promise.resolve({ data: [] as any[] }),
+        ]);
+        const blocked = new Set<string>();
+        for (const b of (blkRes.data as any[]) || []) {
+          blocked.add(b.blocker_id === user?.id ? b.blocked_id : b.blocker_id);
+        }
+        const filtered = ((profRes.data as any[]) || [])
+          .filter((p) => !p.is_banned && !p.is_suspended)
+          .filter((p) => !blocked.has(p.id))
+          .slice(0, 8)
+          .map((p): UserResult => ({ id: p.id, username: p.username, profile_photo_url: p.profile_photo_url }));
+        setResults(filtered);
+      } catch (e) {
+        console.error("[challenge] search failed", e);
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
     }, 250);
     return () => clearTimeout(t);
   }, [search, step, user]);
@@ -75,16 +115,18 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
   const submit = async () => {
     if (!user || !opponent || !postId) return;
     setSubmitting(true);
-    const endsAt = new Date(Date.now() + Math.round(parseFloat(duration) * 3600 * 1000)).toISOString();
-    const { error } = await supabase.from("battles").insert({
-      challenger_id: user.id,
-      opponent_id: opponent.id,
-      challenger_post_id: postId,
-      ends_at: endsAt,
-      status: "pending",
+    const durationSeconds = Math.round(parseFloat(duration) * 3600);
+    const { data, error } = await supabase.rpc("create_battle_challenge", {
+      _opponent_id: opponent.id,
+      _challenger_post_id: postId,
+      _duration_seconds: durationSeconds,
     });
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
+    if (error || !data) {
+      console.error("[challenge] rpc failed", error);
+      toast.error(battleErrorMessage("challenge", error));
+      return;
+    }
     toast.success(`Challenge sent to @${opponent.username}`);
     onOpenChange(false);
     onCreated?.();
@@ -118,7 +160,14 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
                   <span className="text-sm font-medium truncate">@{u.username}</span>
                 </button>
               ))}
-              {search && !results.length && <p className="text-xs text-muted-foreground text-center py-6">No royals found</p>}
+              {search && !searching && !results.length && (
+                <p className="text-xs text-muted-foreground text-center py-6">No challengeable royals found</p>
+              )}
+              {searching && (
+                <p className="text-xs text-muted-foreground text-center py-6 inline-flex items-center gap-2 justify-center w-full">
+                  <Loader2 size={12} className="animate-spin" /> Searching…
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -147,7 +196,7 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
                   ))}
                 </div>
               ) : myPosts.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No posts yet — upload one first.</p>
+                <p className="text-xs text-muted-foreground py-4 text-center">No eligible posts — upload one first.</p>
               ) : (
                 <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
                   {myPosts.map((p) => (
@@ -181,6 +230,7 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
                     <SelectItem value="12">12 hours</SelectItem>
                     <SelectItem value="24">24 hours</SelectItem>
                     <SelectItem value="48">48 hours</SelectItem>
+                    <SelectItem value="72">72 hours</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

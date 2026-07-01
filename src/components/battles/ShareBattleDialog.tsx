@@ -52,6 +52,24 @@ export default function ShareBattleDialog({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pngUrl, setPngUrl] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
+  const [buildError, setBuildError] = useState(false);
+  const prevPngUrlRef = useRef<string | null>(null);
+
+  // Revoke old blob URLs whenever we produce a new one or the dialog closes.
+  useEffect(() => {
+    return () => {
+      if (prevPngUrlRef.current) {
+        URL.revokeObjectURL(prevPngUrlRef.current);
+        prevPngUrlRef.current = null;
+      }
+    };
+  }, []);
+  useEffect(() => {
+    if (pngUrl && prevPngUrlRef.current && prevPngUrlRef.current !== pngUrl) {
+      URL.revokeObjectURL(prevPngUrlRef.current);
+    }
+    prevPngUrlRef.current = pngUrl;
+  }, [pngUrl]);
 
   const search = new URLSearchParams(filters ?? "");
   search.set("b", battleId);
@@ -63,22 +81,23 @@ export default function ShareBattleDialog({
     let cancelled = false;
     (async () => {
       setBuilding(true);
+      setBuildError(false);
       setPngUrl(null);
       try {
         const canvas = canvasRef.current ?? document.createElement("canvas");
         canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext("2d")!;
-        // Background — luxury dark gradient
         const bg = ctx.createLinearGradient(0, 0, W, H);
         bg.addColorStop(0, "#0b0712");
         bg.addColorStop(1, "#1a0f24");
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, W, H);
 
-        // Photo slots
         const slotW = 460, slotH = 460, slotY = 110;
         const leftX = 60, rightX = W - 60 - slotW;
 
+        // Never fail the whole card if a photo is CORS-blocked — draw a
+        // placeholder instead. The logo is a local asset so it must load.
         const [logoImg, leftImg, rightImg] = await Promise.all([
           loadImage(logo),
           challengerImage ? loadImage(challengerImage).catch(() => null) : Promise.resolve(null),
@@ -86,20 +105,16 @@ export default function ShareBattleDialog({
         ]);
         if (cancelled) return;
 
-        // Left photo
         if (leftImg) drawCover(ctx, leftImg, leftX, slotY, slotW, slotH);
         else { ctx.fillStyle = "#2a1a3a"; ctx.fillRect(leftX, slotY, slotW, slotH); }
-        // Right photo
         if (rightImg) drawCover(ctx, rightImg, rightX, slotY, slotW, slotH);
         else { ctx.fillStyle = "#2a1a3a"; ctx.fillRect(rightX, slotY, slotW, slotH); }
 
-        // Gold borders
         ctx.strokeStyle = "#d4af37";
         ctx.lineWidth = 4;
         ctx.beginPath(); ctx.roundRect(leftX, slotY, slotW, slotH, 24); ctx.stroke();
         ctx.beginPath(); ctx.roundRect(rightX, slotY, slotW, slotH, 24); ctx.stroke();
 
-        // VS badge in middle
         const vsX = W / 2, vsY = slotY + slotH / 2;
         const vsR = 70;
         const grad = ctx.createRadialGradient(vsX, vsY, 10, vsX, vsY, vsR);
@@ -113,7 +128,6 @@ export default function ShareBattleDialog({
         ctx.textBaseline = "middle";
         ctx.fillText("VS", vsX, vsY + 4);
 
-        // Header — logo + brand
         ctx.drawImage(logoImg, 60, 30, 60, 60);
         ctx.fillStyle = "#d4af37";
         ctx.font = "bold 32px sans-serif";
@@ -124,7 +138,6 @@ export default function ShareBattleDialog({
         ctx.font = "600 18px sans-serif";
         ctx.fillText("CROWN BATTLE", 132, 95);
 
-        // Usernames + votes (bottom)
         ctx.textAlign = "center";
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 32px sans-serif";
@@ -135,7 +148,6 @@ export default function ShareBattleDialog({
         ctx.fillText(`${challengerVotes} votes`, leftX + slotW / 2, H - 38);
         ctx.fillText(`${opponentVotes} votes`, rightX + slotW / 2, H - 38);
 
-        // CTA
         ctx.fillStyle = "#a89060";
         ctx.font = "600 16px sans-serif";
         ctx.textAlign = "right";
@@ -144,13 +156,15 @@ export default function ShareBattleDialog({
         const blob: Blob | null = await new Promise((r) => canvas.toBlob(r, "image/png", 0.92));
         if (cancelled) return;
         if (blob) setPngUrl(URL.createObjectURL(blob));
+        else setBuildError(true);
       } catch (e) {
-        console.error("share card build failed", e);
+        console.error("[battles] share card build failed", e);
+        if (!cancelled) setBuildError(true);
       } finally {
         if (!cancelled) setBuilding(false);
       }
     })();
-    return () => { cancelled = true; if (pngUrl) URL.revokeObjectURL(pngUrl); };
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, battleId, challengerImage, opponentImage]);
 
@@ -196,6 +210,11 @@ export default function ShareBattleDialog({
             <Loader2 size={20} className="animate-spin text-muted-foreground" />
           ) : pngUrl ? (
             <img loading="lazy" src={pngUrl} alt="Battle share card preview" className="w-full h-full object-contain" />
+          ) : buildError ? (
+            <div className="text-center px-4 py-6 space-y-1">
+              <div className="text-xs font-semibold text-foreground">Preview unavailable</div>
+              <div className="text-[11px] text-muted-foreground">You can still share the link below.</div>
+            </div>
           ) : (
             <span className="text-xs text-muted-foreground">Preview unavailable</span>
           )}

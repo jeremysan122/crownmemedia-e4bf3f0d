@@ -58,6 +58,32 @@ export function canVoteOnBattle(
   return deriveBattleStatus(b, ctx.nowMs ?? Date.now()) === "live";
 }
 
+// ---------- Accept timing ----------
+//
+// A pending challenge stores an intended `duration_seconds`. `ends_at` MUST
+// be recomputed at accept time so any delay while the invite sat pending
+// does not eat into the active battle window.
+//
+// Fallbacks:
+//  - if duration_seconds is missing on legacy pending battles, default to
+//    24 hours (86_400s).
+//  - duration is clamped to the server-enforced range [15m, 72h] so a
+//    stale/malformed value can never produce a zero-length or infinite battle.
+export const BATTLE_DURATION_MIN_SEC = 15 * 60;
+export const BATTLE_DURATION_MAX_SEC = 72 * 60 * 60;
+export const BATTLE_DURATION_DEFAULT_SEC = 24 * 60 * 60;
+
+export function computeAcceptedEndsAtMs(
+  durationSeconds: number | null | undefined,
+  acceptedAtMs: number,
+): number {
+  const raw = typeof durationSeconds === "number" && Number.isFinite(durationSeconds) && durationSeconds > 0
+    ? durationSeconds
+    : BATTLE_DURATION_DEFAULT_SEC;
+  const clamped = Math.max(BATTLE_DURATION_MIN_SEC, Math.min(BATTLE_DURATION_MAX_SEC, raw));
+  return acceptedAtMs + clamped * 1000;
+}
+
 // ---------- Safety filtering ----------
 
 export function isSafeBattleForList(

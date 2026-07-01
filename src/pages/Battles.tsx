@@ -127,16 +127,44 @@ export default function Battles() {
   const inFlightVotes = useRef<Set<string>>(new Set());
   const [submittingVotes, setSubmittingVotes] = useState<Set<string>>(new Set());
   const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+  const [blocksLoaded, setBlocksLoaded] = useState(false);
   // Scroll restoration — capture pending scrollY across hydration so we can apply it after the first render with rows.
   const pendingScrollY = useRef<number | null>(null);
+  // Lightweight "new battles available" banner instead of hard-refetching on unrelated INSERTs.
+  const [pendingRefreshTab, setPendingRefreshTab] = useState<TabKey | null>(null);
 
   useEffect(() => {
-    if (!user) { setBlockedIds(new Set()); return; }
+    if (!user) { setBlockedIds(new Set()); setBlocksLoaded(true); return; }
+    setBlocksLoaded(false);
     (async () => {
-      const { data } = await supabase.from("blocks").select("blocked_id").eq("blocker_id", user.id);
-      setBlockedIds(new Set(((data as any[]) || []).map((r) => r.blocked_id)));
+      const { data } = await supabase.from("blocks").select("blocked_id, blocker_id")
+        .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+      const ids = new Set<string>();
+      for (const b of (data as any[]) || []) {
+        ids.add(b.blocker_id === user.id ? b.blocked_id : b.blocker_id);
+      }
+      setBlockedIds(ids);
+      setBlocksLoaded(true);
     })();
   }, [user?.id]);
+
+  // Once blocks resolve, re-scrub every loaded tab so any restored/cached
+  // battle involving a (newly-)blocked user disappears immediately.
+  useEffect(() => {
+    if (!blocksLoaded) return;
+    setPerTab((s) => {
+      const next = { ...s };
+      for (const k of TAB_KEYS) {
+        const scrubbed = k === "declined"
+          ? next[k].rows.filter((b) => !blockedIds.has(b.challenger_id) && !blockedIds.has(b.opponent_id))
+          : next[k].rows.filter((b) => isSafeBattleForList(b as any, { blockedIds }));
+        if (scrubbed.length !== next[k].rows.length) {
+          next[k] = { ...next[k], rows: scrubbed };
+        }
+      }
+      return next;
+    });
+  }, [blocksLoaded, blockedIds]);
 
   // ---- Fetch one page for a specific tab using its own cursor ----
   // The Active tab is platform-wide (any user's live battles), while the
@@ -241,8 +269,11 @@ export default function Battles() {
   }, [user?.id, perTab, fetchPage]);
 
   // ---- Initial mount: restore from sessionStorage or fetch fresh ----
+  // Gated on blocksLoaded so cached rows involving blocked users cannot
+  // flash on-screen before the block list is available.
   useEffect(() => {
     if (!user) { setInitialHydrating(false); return; }
+    if (!blocksLoaded) return;
     if (restoredRef.current) return;
     restoredRef.current = true;
     const restored = loadPersistedState<Battle>(user.id);
@@ -254,8 +285,6 @@ export default function Battles() {
       setSort(restored.filters.sort);
       setHub(restored.filters.hub);
       setTopic(restored.filters.topic);
-      // Re-apply safety filter on rehydrated rows so a row that became
-      // unsafe while the user was away can never re-appear from cache.
       const filtered: Record<TabKey, PersistedTabState<Battle>> = emptyPerTab<Battle>();
       for (const k of TAB_KEYS) {
         const t = restored.perTab[k];
@@ -270,11 +299,10 @@ export default function Battles() {
       setInitialHydrating(false);
     } else {
       setInitialHydrating(false);
-      // Fresh load for the initial tab.
       const initial = (params.get("tab") as TabKey) || "active";
       void loadTab(initial, { reset: true });
     }
-  }, [user?.id]);
+  }, [user?.id, blocksLoaded]);
 
   // ---- Auto-load the active tab the first time it's viewed ----
   useEffect(() => {
@@ -387,18 +415,49 @@ export default function Battles() {
     const ch = supabase.channel("battles-live")
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "battles" }, (payload: any) => {
         const row = payload.new as Battle;
-        updateRowEverywhere(row.id, (b) => ({ ...b, ...row }));
         const prev = prevStatusRef.current[row.id];
+        // Re-run tabPredicate per tab: patch where it still belongs, remove
+        // where it no longer belongs. Unsafe rows (blocked/removed) vanish
+        // everywhere. We do NOT insert freshly-matching rows into tabs the
+        // viewer hasn't loaded yet — they'll appear on next load/refetch or
+        // via the "new battles available" banner below.
+        setPerTab((s) => {
+          const nowMs = Date.now();
+          const next = { ...s };
+          for (const k of TAB_KEYS) {
+            const idx = next[k].rows.findIndex((b) => b.id === row.id);
+            const isPresent = idx >= 0;
+            const merged = isPresent ? { ...next[k].rows[idx], ...row } : row;
+            const safeCtx = { blockedIds };
+            const safe = k === "declined"
+              ? !blockedIds.has(merged.challenger_id) && !blockedIds.has(merged.opponent_id)
+              : isSafeBattleForList(merged as any, safeCtx);
+            const belongs = safe && tabPredicate(k, merged as any, user?.id ?? null, nowMs);
+            if (isPresent && belongs) {
+              const rows = next[k].rows.slice();
+              rows[idx] = merged;
+              next[k] = { ...next[k], rows };
+            } else if (isPresent && !belongs) {
+              next[k] = { ...next[k], rows: next[k].rows.filter((b) => b.id !== row.id) };
+            }
+          }
+          return next;
+        });
         if (prev && prev.status !== "completed" && row.status === "completed" && row.winner_id) {
           setFreshWins((s) => { const n = new Set(s); n.add(row.id); return n; });
         }
         invalidateOfficialResult(row.id);
         prevStatusRef.current[row.id] = { status: row.status, winner: row.winner_id };
       })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "battles" }, () => {
-        // A brand-new battle was created. Refresh the current tab from cursor=null
-        // so it can land at the top without breaking other tabs' cursors.
-        void loadTab(tab, { reset: true });
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "battles" }, (payload: any) => {
+        const row = payload.new as Battle;
+        if (!row) return;
+        // Only signal a refresh when the new row *could* belong to the current
+        // tab and viewer — avoids resetting the page on every unrelated insert.
+        const nowMs = Date.now();
+        const safe = row && !blockedIds.has(row.challenger_id) && !blockedIds.has(row.opponent_id);
+        const couldMatch = safe && tabPredicate(tab, row as any, user?.id ?? null, nowMs);
+        if (couldMatch) setPendingRefreshTab(tab);
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "battles" }, (payload: any) => {
         const id = (payload.old as { id?: string } | null)?.id;
@@ -479,8 +538,9 @@ export default function Battles() {
         challenger_votes: x.challenger_votes - (isC ? 1 : 0),
         opponent_votes: x.opponent_votes - (isC ? 0 : 1),
       }));
+      console.error("[battles] vote failed", error);
       void trackEvent("battle_vote_failed", { metadata: { battle_id: b.id } });
-      toast.error("Couldn't record your vote. Tap to retry.", {
+      toast.error("Couldn't record your vote. Try again.", {
         action: { label: "Retry", onClick: () => void vote(b, forUserId) },
       });
     } else {
@@ -960,7 +1020,19 @@ export default function Battles() {
             </div>
           )}
 
-          <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
+          {pendingRefreshTab === tab && (
+            <button
+              type="button"
+              onClick={() => { setPendingRefreshTab(null); void loadTab(tab, { reset: true }); }}
+              className="w-full mb-2 py-2 px-3 rounded-md bg-primary/15 text-primary text-xs font-semibold hover:bg-primary/20 transition inline-flex items-center justify-center gap-2"
+              aria-label="New battles available — refresh"
+            >
+              <Sparkles size={12} /> New battles available — tap to refresh
+            </button>
+          )}
+
+          <Tabs value={tab} onValueChange={(v) => { setTab(v as TabKey); setPendingRefreshTab(null); }}>
+
             <TabsList className="w-full grid grid-cols-5 h-9">
               <TabsTrigger value="active" className="text-xs">Active</TabsTrigger>
               <TabsTrigger value="pending" className="text-xs relative">
