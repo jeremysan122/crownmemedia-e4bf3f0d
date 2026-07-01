@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Crown, MessageCircle, Settings as SettingsIcon, Share2, Edit3, Camera, Image as ImageIcon, Swords, Heart, Plus, Trash2, Sparkles, Search, Flag, Move, Check, X, MoreVertical, Bookmark, BarChart3, Zap, Pin, PinOff, Archive, Play } from "lucide-react";
+import { Crown, MessageCircle, Settings as SettingsIcon, Share2, Edit3, Camera, Image as ImageIcon, Swords, Heart, Plus, Trash2, Sparkles, Search, Flag, Move, Check, X, MoreVertical, Bookmark, BarChart3, Zap, Pin, PinOff, Archive, Play, Repeat2 } from "lucide-react";
 import { filterByContentType } from "@/lib/contentType";
 
 import EditPostDialog from "@/components/EditPostDialog";
@@ -75,7 +75,7 @@ export default function Profile() {
   const nav = useNavigate();
   const [prof, setProf] = useState<ProfileFull | null>(null);
   const [crownVoteTotal, setCrownVoteTotal] = useState<number>(0);
-  const [posts, setPosts] = useState<{ id: string; image_url: string; crown_score: number; filter: string | null; pinned_at?: string | null; is_sensitive?: boolean | null; content_type?: string | null; media_type?: string | null; video_poster_url?: string | null }[]>([]);
+  const [posts, setPosts] = useState<{ id: string; image_url: string; crown_score: number; filter: string | null; pinned_at?: string | null; is_sensitive?: boolean | null; content_type?: string | null; media_type?: string | null; video_poster_url?: string | null; parent_post_id?: string | null }[]>([]);
   const [crowns, setCrowns] = useState<{ id: string; title: string; region_name: string; active: boolean; category: string; started_at: string | null; ended_at: string | null }[]>([]);
   const [liked, setLiked] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null; filter?: string | null; media_type?: string | null; video_poster_url?: string | null; image_urls?: string[] | null }[]>([]);
   const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null; filter?: string | null; media_type?: string | null; video_poster_url?: string | null; image_urls?: string[] | null }[]>([]);
@@ -150,7 +150,7 @@ export default function Profile() {
       const pid = (p as any).id;
 
       const [{ data: ps, error: psErr }, { data: cs }, { data: rs }] = await Promise.all([
-        supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at, is_sensitive, content_type, media_type, video_poster_url").eq("user_id", pid).eq("is_removed", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
+        supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at, is_sensitive, content_type, media_type, video_poster_url, parent_post_id").eq("user_id", pid).eq("is_removed", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
         supabase.from("crowns").select("id, title, region_name, active, category, started_at, ended_at").eq("user_id", pid).order("started_at", { ascending: false }).limit(40),
         supabase.from("user_roles").select("role").eq("user_id", pid),
       ]);
@@ -704,12 +704,15 @@ export default function Profile() {
             {(() => {
               const showLiked = isMe || (prof.liked_posts_public ?? true);
               const showSaved = isMe;
-              // +1 for the new Scrolls tab. Profile now separates normal Posts
-              // from vertical Scrolls (shorts/reels) per the content-type split.
-              const colCount = 4 + (showLiked ? 1 : 0) + (showSaved ? 1 : 0);
-              const colsClass = colCount === 6 ? "grid-cols-6" : colCount === 5 ? "grid-cols-5" : "grid-cols-4";
-              const imagePosts = filterByContentType(posts as any, "post") as typeof posts;
-              const scrollPosts = filterByContentType(posts as any, "scroll") as typeof posts;
+              // +1 for Scrolls, +1 for Reposts. Profile separates originals from
+              // reposts so leaderboard/crown attribution isn't credited to the
+              // reposter.
+              const colCount = 5 + (showLiked ? 1 : 0) + (showSaved ? 1 : 0);
+              const colsClass = colCount === 7 ? "grid-cols-7" : colCount === 6 ? "grid-cols-6" : colCount === 5 ? "grid-cols-5" : "grid-cols-4";
+              const originals = (posts as any[]).filter((p) => !p.parent_post_id);
+              const repostRows = (posts as any[]).filter((p) => !!p.parent_post_id);
+              const imagePosts = filterByContentType(originals as any, "post") as typeof posts;
+              const scrollPosts = filterByContentType(originals as any, "scroll") as typeof posts;
               const renderTile = (p: typeof posts[number], showPlay: boolean) => (
                 <div
                   key={p.id}
@@ -759,6 +762,7 @@ export default function Profile() {
               <TabsList className={`grid w-full ${colsClass}`}>
                 <TabsTrigger value="posts" className="text-xs gap-1"><ImageIcon size={12} /> Posts</TabsTrigger>
                 <TabsTrigger value="scrolls" className="text-xs gap-1"><Play size={12} /> Scrolls</TabsTrigger>
+                <TabsTrigger value="reposts" className="text-xs gap-1"><Repeat2 size={12} /> Reposts</TabsTrigger>
                 <TabsTrigger value="crowns" className="text-xs gap-1"><Crown size={12} /> Crowns</TabsTrigger>
                 <TabsTrigger value="battles" className="text-xs gap-1"><Swords size={12} /> Battles</TabsTrigger>
                 {showLiked && <TabsTrigger value="liked" className="text-xs gap-1"><Heart size={12} /> Liked</TabsTrigger>}
@@ -794,6 +798,34 @@ export default function Profile() {
                   />
                 )}
               </TabsContent>
+
+              <TabsContent value="reposts" className="mt-3">
+                {repostRows.length > 0 ? (
+                  <>
+                    <p className="text-[11px] text-muted-foreground mb-2 px-1">
+                      Reposts don't earn crowns, ranks, or votes for this profile — all engagement credits the original author.
+                    </p>
+                    <div className="grid grid-cols-3 gap-1 lg:gap-2">
+                      {repostRows.map((p) => (
+                        <div key={p.id} className="relative">
+                          {renderTile(p as any, (p.content_type === "scroll" || p.media_type === "video"))}
+                          <div className="absolute top-1 left-1 z-10 glass rounded-full p-1 pointer-events-none" title="Repost">
+                            <Repeat2 size={10} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState
+                    icon={<Repeat2 size={28} className="text-muted-foreground" />}
+                    title={isMe ? "No reposts yet" : "No reposts yet"}
+                    body={isMe ? "When you repost someone's post, it appears here — original ownership stays with them." : "This royal hasn't reposted anything yet."}
+                  />
+                )}
+              </TabsContent>
+
+
 
 
 
