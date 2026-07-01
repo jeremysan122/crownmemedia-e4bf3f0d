@@ -1104,7 +1104,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                   <Share2 size={18} />
                 </button>
 
-                {user && post.user_id !== user.id && (
+                {user && displayPost.user_id !== user.id && (
                   <button
                     onClick={() => setRepostOpen(true)}
                     className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-primary touch-manipulation"
@@ -1117,9 +1117,9 @@ export default function PostDetailDialog({ post, onClose }: Props) {
             </div>
 
             <div className="px-4 pb-2 pt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
-              <CategoryBadge category={post.category} label={CATEGORY_LABEL[post.category]} size="xs" />
+              <CategoryBadge category={displayPost.category} label={CATEGORY_LABEL[displayPost.category]} size="xs" />
               <span className="opacity-70">competing in</span>
-              <span className="font-semibold text-foreground">{CATEGORY_LABEL[post.category]}</span>
+              <span className="font-semibold text-foreground">{CATEGORY_LABEL[displayPost.category]}</span>
             </div>
 
             {!isBelowDesktop && (<>
