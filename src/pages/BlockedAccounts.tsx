@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Loader2, Ban, UserCheck, BellOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { Link } from "react-router-dom";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
