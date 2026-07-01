@@ -120,10 +120,11 @@ export function useGiftSend() {
       }
     }
 
-    const msg = errorMessage(lastErr);
+    const raw = errorMessage(lastErr);
+    const msg = friendlyMonetizationError("gift_send", lastErr ?? raw);
     setError(msg);
     setIsSending(false);
-    throw lastErr instanceof Error ? lastErr : new Error(msg);
+    throw new Error(msg);
   };
 
   const sendDmGift = async ({ gift, recipientId, quantity, idempotencyKey, maxRetries = 2 }: Omit<SendArgs, "postId">): Promise<{ success: boolean; transaction_id: string; message_id: string; total?: number; deduped?: boolean }> => {
@@ -151,10 +152,11 @@ export function useGiftSend() {
         await sleep(350 * Math.pow(2.5, attempt));
       }
     }
-    const msg = errorMessage(lastErr);
+    const raw = errorMessage(lastErr);
+    const msg = friendlyMonetizationError("gift_send_dm", lastErr ?? raw);
     setError(msg);
     setIsSending(false);
-    throw lastErr instanceof Error ? lastErr : new Error(msg);
+    throw new Error(msg);
   };
 
   return { sendGift, sendDmGift, isSending, error };
