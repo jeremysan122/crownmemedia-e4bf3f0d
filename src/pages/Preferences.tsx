@@ -375,7 +375,7 @@ function ChangePasswordSection() {
     setBusy(true);
     const { error } = await supabase.auth.updateUser({ password: pw });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { logRawError(error, "password"); toast.error(toFriendlyMessage(error, "password")); return; }
     setPw(""); setPw2("");
     toast.success("Password updated");
   };
