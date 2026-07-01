@@ -238,6 +238,9 @@ export default function Feed() {
   const [newPosts, setNewPosts] = useState<FeedPost[]>([]);
   const [followingIds, setFollowingIds] = useState<string[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Bumping this forces the load effect to re-run for Retry, without clobbering
+  // the tab/filter state or clearing previously-rendered posts.
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Block + muted-word filters (loaded once per user, applied to query
   // results AND realtime INSERTs).
@@ -337,11 +340,12 @@ export default function Feed() {
       if (cancelled) return;
       if (error) {
         // Never surface raw database/PostgREST errors (e.g. "permission denied
-        // for table posts") to end users — log for diagnostics only.
+        // for table posts") to end users — log for diagnostics only. Preserve
+        // any previously-rendered posts so the screen doesn't flash blank on
+        // a transient failure; the FeedErrorState banner surfaces retry.
         console.error("[Feed] load failed:", error);
         toast.error("Couldn't load posts right now");
         setLoadError("Couldn't load posts right now.");
-        setPosts([]);
         setLoading(false);
         return;
       }
@@ -353,7 +357,7 @@ export default function Feed() {
     };
     load();
     return () => { cancelled = true; };
-  }, [tab, catFilter, hubSlug, topicSlug, tagFilter, sort, timeWindow, profile?.city, profile?.state, user?.id, followingIds, buildQuery, feedFilters]);
+  }, [tab, catFilter, hubSlug, topicSlug, tagFilter, sort, timeWindow, profile?.city, profile?.state, user?.id, followingIds, buildQuery, feedFilters, reloadKey]);
 
 
   // LOAD MORE (infinite scroll)
@@ -783,11 +787,8 @@ export default function Feed() {
           ) : loadError ? (
             <FeedErrorState
               onRetry={() => {
-                // Bumping followingIds reference would refetch, but the simplest
-                // trigger is to toggle through the loader path by clearing error
-                // and re-running the same effect via a no-op tab set.
                 setLoadError(null);
-                setTab((t) => t);
+                setReloadKey((k) => k + 1);
               }}
               onGoGlobal={tab !== "global" ? () => { setTab("global"); setCatFilter("all"); } : undefined}
               message={loadError}
