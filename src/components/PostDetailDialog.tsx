@@ -178,24 +178,27 @@ export default function PostDetailDialog({ post, onClose }: Props) {
 
   const liveRank = useLiveRank(post);
   const priorityUsers = useMentionParticipants(post);
-  const { muted, toggle: toggleMute } = useThreadMute(post?.id ?? null);
+  // Mute/notification thread targets the ORIGINAL post — muting a repost shell
+  // must silence the underlying thread everyone else is replying on.
+  const { muted, toggle: toggleMute } = useThreadMute(interactionPostId);
 
   // Smoothly tween rank + score so live updates feel fluid, not jarring.
   const animatedRank = useAnimatedNumber(liveRank?.rank ?? 0, 700);
   const animatedScore = useAnimatedNumber(counts.score, 600);
 
-  // Live tracking of caption / cover / filter so edits made from PostCard or
-  // Profile reflect immediately inside the detail dialog.
-  const [liveCaption, setLiveCaption] = useState<string>(post?.caption ?? "");
-  const [liveCover, setLiveCover] = useState<string>(post?.image_url ?? "");
+  // Live tracking of caption / cover / filter sourced from the DISPLAYED post
+  // (= original when this is a repost shell). Edits to the original propagate
+  // through the realtime posts UPDATE filter above (targeted at interactionPostId).
+  const [liveCaption, setLiveCaption] = useState<string>(displayPost?.caption ?? "");
+  const [liveCover, setLiveCover] = useState<string>(displayPost?.image_url ?? "");
   const [liveFilter, setLiveFilter] = useState<FilterId | null>(
-    isValidFilter(post?.filter ?? null) ? (post!.filter as FilterId) : null
+    isValidFilter(displayPost?.filter ?? null) ? (displayPost!.filter as FilterId) : null
   );
-  const [liveEditedAt, setLiveEditedAt] = useState<string | null>(post?.edited_at ?? null);
-  const images = post
-    ? ((post.image_urls && post.image_urls.length > 0)
-        ? [liveCover || post.image_urls[0], ...post.image_urls.slice(1)]
-        : [liveCover || post.image_url])
+  const [liveEditedAt, setLiveEditedAt] = useState<string | null>(displayPost?.edited_at ?? null);
+  const images = displayPost
+    ? ((displayPost.image_urls && displayPost.image_urls.length > 0)
+        ? [liveCover || displayPost.image_urls[0], ...displayPost.image_urls.slice(1)]
+        : [liveCover || displayPost.image_url])
     : [];
   const isMulti = images.length > 1;
 
