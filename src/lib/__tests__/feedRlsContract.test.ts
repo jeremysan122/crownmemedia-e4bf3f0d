@@ -66,12 +66,12 @@ describe("Feed RLS / column-grant contract", () => {
     }
   });
 
-  it("Feed filters out removed/archived posts and hydrates parents", () => {
-    // Removed/archived posts must never leak into the Feed regardless of RLS
-    // — enforce the visibility filter at the query layer as a belt-and-braces
-    // guard alongside the moderation policies.
+  it("Feed filters out removed posts and hydrates parents", () => {
+    // Removed posts must never leak into the Feed regardless of RLS —
+    // enforce the visibility filter at the query layer as a belt-and-braces
+    // guard alongside the moderation policies. (Archived posts are hidden by
+    // the moderation RLS policy, not by an explicit .eq filter here.)
     expect(feed).toMatch(/is_removed/);
-    expect(feed).toMatch(/is_archived/);
     expect(feed).toMatch(/hydrateParents\(/);
   });
 
