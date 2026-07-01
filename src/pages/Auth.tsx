@@ -262,16 +262,15 @@ export default function Auth() {
         if (error) {
           if (/18 or older/i.test(error.message)) {
             trackEvent("age_gate_blocked_underage", { metadata: { source: "auth_signup_server" } });
-            toast.error("You must be 18 or older to register.");
           } else if (/agree to the Terms/i.test(error.message)) {
+            const { logRawError } = await import("@/lib/settingsSecurityErrors");
+            logRawError(error, "signup");
             toast.error("You must agree to the Terms and Community Guidelines.");
-          } else if (/already|registered|exists|duplicate/i.test(error.message)) {
-            toast.error("This email or username is already in use.");
-          } else if (/rate|too many/i.test(error.message)) {
-            toast.error("Too many attempts. Please wait a moment and try again.");
-          } else {
-            toast.error(error.message);
+            return;
           }
+          const { toFriendlyMessage, logRawError } = await import("@/lib/settingsSecurityErrors");
+          logRawError(error, "signup");
+          toast.error(toFriendlyMessage(error, "signup"));
           return;
         }
         persistRemember();
