@@ -134,7 +134,7 @@ export default function Verification() {
         toast.error("Not yet eligible — keep building toward each requirement below.");
       }
     } catch (e: any) {
-      toast.error(e?.message ?? "Could not submit verification");
+      logRawError(e, "verification"); toast.error(toFriendlyMessage(e, "verification"));
     } finally {
       setClaimingStandard(false);
     }
@@ -195,7 +195,7 @@ export default function Verification() {
         .select("*").eq("id", data as string).maybeSingle();
       setRequest(req as Request);
     } catch (e: any) {
-      toast.error(e.message ?? "Submission failed");
+      logRawError(e, "verification"); toast.error(toFriendlyMessage(e, "verification"));
     } finally {
       setSubmitting(false);
     }
@@ -281,7 +281,7 @@ export default function Verification() {
                     if (!url) throw new Error("Could not open the billing portal");
                     window.location.href = url;
                   } catch (e: any) {
-                    toast.error(e?.message ?? "Could not open billing portal");
+                    logRawError(e, "verification"); toast.error("Couldn't open the billing portal. Try again.");
                   }
                 }}
               >
