@@ -855,7 +855,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
         </div>
 
         {/* Side panel */}
-        <div className="flex flex-col flex-1 md:basis-[40%] min-h-0 md:min-w-0 border-t md:border-t-0 md:border-l border-border">
+        <div className="flex flex-col flex-1 lg:basis-[40%] min-h-0 lg:min-w-0 border-t lg:border-t-0 lg:border-l border-border">
           {/* Posts must use the canonical post ID and shared PostDetailDialog.
               Profile and feed must display the same database row — load via
               fetchPostById() from src/lib/postQuery.ts. */}
