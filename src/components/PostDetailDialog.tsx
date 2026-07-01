@@ -919,8 +919,8 @@ export default function PostDetailDialog({ post, onClose }: Props) {
             {liveRank == null ? (
               <span className="text-muted-foreground">Calculating royal rank…</span>
             ) : liveRank.rank == null ? (
-              <span className="text-muted-foreground">
-                Unranked in <span className="text-foreground font-semibold">{CATEGORY_LABEL[post.category]}</span>
+                <span className="text-muted-foreground">
+                Unranked in <span className="text-foreground font-semibold">{CATEGORY_LABEL[displayPost.category]}</span>
               </span>
             ) : (
               <span className="text-muted-foreground">
@@ -933,7 +933,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
                 </span>
                 {liveRank.total ? <span className="opacity-70"> / {liveRank.total}</span> : null}
                 {" "}in{" "}
-                <span className="text-foreground font-semibold">{CATEGORY_LABEL[post.category]}</span>
+                <span className="text-foreground font-semibold">{CATEGORY_LABEL[displayPost.category]}</span>
                 {" · "}
                 <span className="text-foreground">{liveRank.region}</span>
               </span>
