@@ -762,6 +762,7 @@ export default function Profile() {
               <TabsList className={`grid w-full ${colsClass}`}>
                 <TabsTrigger value="posts" className="text-xs gap-1"><ImageIcon size={12} /> Posts</TabsTrigger>
                 <TabsTrigger value="scrolls" className="text-xs gap-1"><Play size={12} /> Scrolls</TabsTrigger>
+                <TabsTrigger value="reposts" className="text-xs gap-1"><Repeat2 size={12} /> Reposts</TabsTrigger>
                 <TabsTrigger value="crowns" className="text-xs gap-1"><Crown size={12} /> Crowns</TabsTrigger>
                 <TabsTrigger value="battles" className="text-xs gap-1"><Swords size={12} /> Battles</TabsTrigger>
                 {showLiked && <TabsTrigger value="liked" className="text-xs gap-1"><Heart size={12} /> Liked</TabsTrigger>}
