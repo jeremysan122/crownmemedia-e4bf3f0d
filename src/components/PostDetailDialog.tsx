@@ -1227,7 +1227,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
           if (!v) setReportCommentId(null);
         }}
         commentId={reportCommentId ?? undefined}
-        postId={post?.id}
+        postId={post ? (post.parent_post_id ?? post.id) : undefined}
       />
 
       {/* Universal mobile/tablet comments popup. Same component used in Feed,
