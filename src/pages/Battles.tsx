@@ -449,10 +449,15 @@ export default function Battles() {
         invalidateOfficialResult(row.id);
         prevStatusRef.current[row.id] = { status: row.status, winner: row.winner_id };
       })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "battles" }, () => {
-        // A brand-new battle was created. Refresh the current tab from cursor=null
-        // so it can land at the top without breaking other tabs' cursors.
-        void loadTab(tab, { reset: true });
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "battles" }, (payload: any) => {
+        const row = payload.new as Battle;
+        if (!row) return;
+        // Only signal a refresh when the new row *could* belong to the current
+        // tab and viewer — avoids resetting the page on every unrelated insert.
+        const nowMs = Date.now();
+        const safe = row && !blockedIds.has(row.challenger_id) && !blockedIds.has(row.opponent_id);
+        const couldMatch = safe && tabPredicate(tab, row as any, user?.id ?? null, nowMs);
+        if (couldMatch) setPendingRefreshTab(tab);
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "battles" }, (payload: any) => {
         const id = (payload.old as { id?: string } | null)?.id;
