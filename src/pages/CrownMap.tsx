@@ -1023,7 +1023,30 @@ export default function CrownMap() {
             </div>
           </div>
 
-          {filtered.length === 0 && !loading && view === "list" && (
+          {loadError && (
+            <div
+              role="alert"
+              className="royal-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-destructive/40"
+            >
+              <div className="text-sm">
+                <p className="font-medium">Couldn't load Crown Map right now.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  This is usually a transient network hiccup. Your filters are preserved.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setReloadKey((n) => n + 1)}
+                disabled={loading}
+              >
+                {loading ? "Retrying…" : "Try again"}
+              </Button>
+            </div>
+          )}
+
+          {/* Empty state only shows AFTER a successful query with zero rows. */}
+          {!loadError && filtered.length === 0 && !loading && view === "list" && (
             <div className="royal-card p-8 text-center space-y-3 animate-fade-in">
               <Crown size={36} className="mx-auto text-primary opacity-60" fill="currentColor" />
               <div>
