@@ -8,6 +8,7 @@ import { Loader2, Check, X } from "lucide-react";
 import { CrownCategory } from "@/lib/crown";
 import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
 import { RoyalThumbSkeleton } from "@/components/royal/RoyalSkeleton";
+import { battleErrorMessage } from "@/lib/battlesErrors";
 
 interface Props {
   open: boolean;
@@ -34,12 +35,20 @@ export default function AcceptBattleDialog({ open, onOpenChange, battle, onResol
     setPostId("");
     setLoadingPosts(true);
     const cat = battle?.challenger_post?.category;
-    let q = supabase.from("posts").select("id, image_url, category, filter")
-      .eq("user_id", user.id).eq("is_removed", false)
-      .order("created_at", { ascending: false }).limit(24);
+    // Battle-eligible only.
+    let q = supabase.from("posts")
+      .select("id, image_url, category, filter, parent_post_id, content_type, moderation_status")
+      .eq("user_id", user.id)
+      .eq("is_removed", false)
+      .eq("is_archived", false)
+      .is("parent_post_id", null)
+      .order("created_at", { ascending: false }).limit(48);
     if (cat) q = q.eq("category", cat);
     q.then(({ data }) => {
-      const ps = (data as PostThumb[]) || [];
+      const ps = ((data as any[]) || [])
+        .filter((p) => (p.content_type == null || p.content_type === "post"))
+        .filter((p) => !p.moderation_status || !["removed", "flagged"].includes(p.moderation_status))
+        .map((p): PostThumb => ({ id: p.id, image_url: p.image_url, category: p.category, filter: p.filter }));
       setPosts(ps);
       if (ps[0]) setPostId(ps[0].id);
       setLoadingPosts(false);
@@ -49,11 +58,16 @@ export default function AcceptBattleDialog({ open, onOpenChange, battle, onResol
   const accept = async () => {
     if (!battle || !postId) return;
     setBusy(true);
-    const { error } = await supabase.from("battles")
-      .update({ opponent_post_id: postId, status: "active" as any })
-      .eq("id", battle.id);
+    const { error } = await supabase.rpc("accept_battle", {
+      _battle_id: battle.id,
+      _opponent_post_id: postId,
+    });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      console.error("[accept-battle] rpc failed", error);
+      toast.error(battleErrorMessage("accept", error));
+      return;
+    }
     toast.success("Challenge accepted — let the duel begin");
     onOpenChange(false);
     onResolved?.();
@@ -62,11 +76,13 @@ export default function AcceptBattleDialog({ open, onOpenChange, battle, onResol
   const decline = async () => {
     if (!battle) return;
     setBusy(true);
-    const { error } = await supabase.from("battles")
-      .update({ status: "declined" as any })
-      .eq("id", battle.id);
+    const { error } = await supabase.rpc("decline_battle", { _battle_id: battle.id });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      console.error("[decline-battle] rpc failed", error);
+      toast.error(battleErrorMessage("decline", error));
+      return;
+    }
     toast.info("Challenge declined");
     onOpenChange(false);
     onResolved?.();
@@ -123,7 +139,7 @@ export default function AcceptBattleDialog({ open, onOpenChange, battle, onResol
           </div>
         ) : posts.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-3">
-            You have no posts in this category. Upload one to accept.
+            You have no eligible posts in this category. Upload one to accept.
           </p>
         ) : (
           <div className="grid grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
