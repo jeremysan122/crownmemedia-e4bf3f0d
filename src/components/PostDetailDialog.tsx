@@ -1204,19 +1204,24 @@ export default function PostDetailDialog({ post, onClose }: Props) {
           </div>
         </div>
 
-        <ShareDialog open={shareOpen} onOpenChange={setShareOpen} post={post} />
+        {/* Share/Repost/Gift always target the ORIGINAL (displayPost) so the
+            share card credits the original author, reposting a repost shell
+            reposts the underlying original, and gifts go to the original
+            creator. postId uses interactionPostId so counters attach to the
+            canonical row. */}
+        <ShareDialog open={shareOpen} onOpenChange={setShareOpen} post={displayPost as any} />
 
-        <RepostDialog open={repostOpen} onOpenChange={setRepostOpen} parent={post} />
+        <RepostDialog open={repostOpen} onOpenChange={setRepostOpen} parent={displayPost as any} />
 
         <GiftPanel
           isOpen={giftOpen}
           onClose={() => setGiftOpen(false)}
           recipient={{
-            id: post.user_id,
-            username: post.profile.username,
-            avatarUrl: post.profile.profile_photo_url ?? undefined,
+            id: displayPost.user_id,
+            username: displayProfile?.username ?? "user",
+            avatarUrl: displayProfile?.profile_photo_url ?? undefined,
           }}
-          postId={post.parent_post_id ?? post.id}
+          postId={interactionPostId ?? displayPost.id}
           onSent={(gift, qty) => {
             setActiveGift(gift);
             setActiveGiftQty(qty);
