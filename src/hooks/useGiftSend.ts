@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { RoyalGift } from "@/types/gifts";
+import { friendlyMonetizationError } from "@/lib/monetizationErrors";
 
 interface SendArgs {
   gift: RoyalGift;
