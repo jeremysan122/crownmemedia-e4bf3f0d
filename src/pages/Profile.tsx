@@ -24,7 +24,7 @@ import PostDetailDialog from "@/components/PostDetailDialog";
 import type { FeedPost } from "@/components/PostCard";
 import SensitiveThumb from "@/components/SensitiveThumb";
 import { useFeedFilters } from "@/hooks/useFeedFilters";
-import { fetchPostById } from "@/lib/postQuery";
+import { fetchPostById, hydrateParents } from "@/lib/postQuery";
 import UserListDialog from "@/components/profile/UserListDialog";
 import ShareProfileDialog from "@/components/profile/ShareProfileDialog";
 import RoleBadges from "@/components/profile/RoleBadges";
