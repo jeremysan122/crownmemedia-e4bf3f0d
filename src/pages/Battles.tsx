@@ -538,8 +538,9 @@ export default function Battles() {
         challenger_votes: x.challenger_votes - (isC ? 1 : 0),
         opponent_votes: x.opponent_votes - (isC ? 0 : 1),
       }));
+      console.error("[battles] vote failed", error);
       void trackEvent("battle_vote_failed", { metadata: { battle_id: b.id } });
-      toast.error("Couldn't record your vote. Tap to retry.", {
+      toast.error("Couldn't record your vote. Try again.", {
         action: { label: "Retry", onClick: () => void vote(b, forUserId) },
       });
     } else {
