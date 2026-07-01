@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { ShieldCheck, Crown, Upload, Loader2, ArrowLeft, CheckCircle2, Lock, Clock, FileText, Eye, MessageCircle, Sparkles, Circle } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { Link, useNavigate } from "react-router-dom";
