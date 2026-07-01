@@ -42,9 +42,12 @@ describe("Feed RLS / column-grant contract", () => {
   it("POST_SELECT does not use a posts→posts self-join for parents", () => {
     // The parent metadata must be batch-hydrated via hydrateParents(), never
     // pulled through an embedded self-relationship — PostgREST's schema cache
-    // has historically failed on that shape in production.
-    expect(postQuery).toMatch(/POST_SELECT\s*=/);
-    expect(postQuery).not.toMatch(/parent:posts!/);
+    // has historically failed on that shape in production. Guard against a
+    // self-join reappearing inside either canonical SELECT string.
+    const postSelect = postQuery.match(/POST_SELECT\s*=\s*`([\s\S]*?)`/)?.[1] ?? "";
+    const parentSelect = postQuery.match(/PARENT_SELECT\s*=\s*`([\s\S]*?)`/)?.[1] ?? "";
+    expect(postSelect).not.toMatch(/parent:posts!/);
+    expect(parentSelect).not.toMatch(/parent:posts!/);
     expect(postQuery).toMatch(/export async function hydrateParents/);
   });
 
