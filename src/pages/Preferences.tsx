@@ -345,7 +345,8 @@ export default function Preferences() {
                 }
                 toast.success("Cache cleared");
               } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Failed to clear cache");
+                logRawError(e, "settings");
+                toast.error("Couldn't clear cache. Try again.");
               }
             }}>Clear</Button>
           </Row>
