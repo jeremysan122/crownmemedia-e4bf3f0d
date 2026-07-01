@@ -4729,6 +4729,12 @@ export type Database = {
       }
       get_creator_dashboard: { Args: { _user_id?: string }; Returns: Json }
       get_db_vitals: { Args: never; Returns: Json }
+      get_my_admin_roles: {
+        Args: never
+        Returns: {
+          role: string
+        }[]
+      }
       get_my_profile: {
         Args: never
         Returns: {
@@ -5063,6 +5069,7 @@ export type Database = {
         Returns: string
       }
       update_my_dob: { Args: { _dob: string }; Returns: undefined }
+      update_my_preferences: { Args: { _prefs: Json }; Returns: undefined }
       verification_eligibility_progress: {
         Args: { _user_id?: string }
         Returns: Json
