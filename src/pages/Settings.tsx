@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useWebPush } from "@/hooks/useWebPush";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 
 export default function Settings() {
   useSeoMeta({ title: "Settings · CrownMe", noIndex: true });
