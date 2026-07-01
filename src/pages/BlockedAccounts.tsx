@@ -87,7 +87,8 @@ export default function BlockedAccounts() {
     setMuteAllBusy(false);
     setMuteAllOpen(false);
     if (error) {
-      toast({ title: "Couldn't mute all", description: error.message, variant: "destructive" });
+      logRawError(error, "blocked_unblock");
+      toast({ title: toFriendlyMessage(error, "blocked_unblock"), variant: "destructive" });
       return;
     }
     toast({
