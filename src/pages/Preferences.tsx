@@ -183,10 +183,13 @@ export default function Preferences() {
           </Row>
         </Section>
 
-        {/* Tagging & mentions */}
+        {/* Tagging & mentions — enforcement lands in v1.1; controls disabled until then */}
         <Section title="Tagging & mentions" icon={AtSign}>
-          <Row title="Who can tag me">
-            <Select value={p.who_can_tag} onValueChange={(v) => save({ who_can_tag: v as Prefs["who_can_tag"] })}>
+          <p className="text-[11px] text-amber-500">
+            Server-side enforcement lands in v1.1. Controls below are visible for reference only.
+          </p>
+          <Row title={<>Who can tag me <ComingSoon /></> as any}>
+            <Select value={p.who_can_tag} disabled onValueChange={() => {}}>
               <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="everyone">Everyone</SelectItem>
@@ -195,8 +198,8 @@ export default function Preferences() {
               </SelectContent>
             </Select>
           </Row>
-          <Row title="Who can @mention me">
-            <Select value={p.who_can_mention} onValueChange={(v) => save({ who_can_mention: v as Prefs["who_can_mention"] })}>
+          <Row title={<>Who can @mention me <ComingSoon /></> as any}>
+            <Select value={p.who_can_mention} disabled onValueChange={() => {}}>
               <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="everyone">Everyone</SelectItem>
@@ -205,15 +208,15 @@ export default function Preferences() {
               </SelectContent>
             </Select>
           </Row>
-          <Row title="Review tags before they appear" hint="Tags by others wait for your approval.">
-            <Switch checked={p.tag_review_required} onCheckedChange={(v) => save({ tag_review_required: v })} />
+          <Row title={<>Review tags before they appear <ComingSoon /></> as any} hint="Tags by others wait for your approval.">
+            <Switch checked={p.tag_review_required} disabled onCheckedChange={() => {}} />
           </Row>
         </Section>
 
-        {/* Direct messages */}
+        {/* Direct messages — enforcement lands in v1.1 */}
         <Section title="Direct messages" icon={MessageCircle}>
-          <Row title="Who can message me">
-            <Select value={p.who_can_dm} onValueChange={(v) => save({ who_can_dm: v as Prefs["who_can_dm"] })}>
+          <Row title={<>Who can message me <ComingSoon /></> as any} hint="Full DM privacy enforcement ships in v1.1.">
+            <Select value={p.who_can_dm} disabled onValueChange={() => {}}>
               <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="everyone">Everyone</SelectItem>
