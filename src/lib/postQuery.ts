@@ -24,11 +24,13 @@ import type { FeedPost } from "@/components/PostCard";
 
 export const POST_SELECT = `
   id, user_id, image_url, image_urls, caption, category,
+  main_category_slug, subcategory_slug, hashtags,
   city, state, country, crown_score, vote_count, comment_count,
   share_count, battle_wins, created_at, edited_at, pinned_at,
   scheduled_for, parent_post_id, repost_caption, tagged_user_ids,
   media_type, video_url, video_poster_url, duration_ms, filter, alt_texts,
   aspect_ratio, is_sensitive, sensitive_reason, content_type,
+  is_removed, is_archived,
   profile:profiles!posts_user_id_fkey(
     username, profile_photo_url, crowns_held, gender,
     hide_likes, hide_comments, hide_views, verified
@@ -41,10 +43,12 @@ export const POST_SELECT = `
 // (interactions target the original — see PostCard `interactionPostId`).
 const PARENT_SELECT = `
   id, user_id, image_url, image_urls, caption, category,
+  main_category_slug, subcategory_slug, hashtags,
   city, state, country, created_at, is_removed, is_archived,
   crown_score, vote_count, comment_count, share_count, battle_wins,
   media_type, video_url, video_poster_url, filter, alt_texts,
   aspect_ratio, tagged_user_ids, is_sensitive, sensitive_reason,
+  content_type,
   profile:profiles!posts_user_id_fkey(
     username, profile_photo_url, crowns_held, gender,
     hide_likes, hide_comments, hide_views, verified
