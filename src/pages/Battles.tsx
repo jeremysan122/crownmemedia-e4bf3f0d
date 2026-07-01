@@ -127,16 +127,44 @@ export default function Battles() {
   const inFlightVotes = useRef<Set<string>>(new Set());
   const [submittingVotes, setSubmittingVotes] = useState<Set<string>>(new Set());
   const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+  const [blocksLoaded, setBlocksLoaded] = useState(false);
   // Scroll restoration — capture pending scrollY across hydration so we can apply it after the first render with rows.
   const pendingScrollY = useRef<number | null>(null);
+  // Lightweight "new battles available" banner instead of hard-refetching on unrelated INSERTs.
+  const [pendingRefreshTab, setPendingRefreshTab] = useState<TabKey | null>(null);
 
   useEffect(() => {
-    if (!user) { setBlockedIds(new Set()); return; }
+    if (!user) { setBlockedIds(new Set()); setBlocksLoaded(true); return; }
+    setBlocksLoaded(false);
     (async () => {
-      const { data } = await supabase.from("blocks").select("blocked_id").eq("blocker_id", user.id);
-      setBlockedIds(new Set(((data as any[]) || []).map((r) => r.blocked_id)));
+      const { data } = await supabase.from("blocks").select("blocked_id, blocker_id")
+        .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+      const ids = new Set<string>();
+      for (const b of (data as any[]) || []) {
+        ids.add(b.blocker_id === user.id ? b.blocked_id : b.blocker_id);
+      }
+      setBlockedIds(ids);
+      setBlocksLoaded(true);
     })();
   }, [user?.id]);
+
+  // Once blocks resolve, re-scrub every loaded tab so any restored/cached
+  // battle involving a (newly-)blocked user disappears immediately.
+  useEffect(() => {
+    if (!blocksLoaded) return;
+    setPerTab((s) => {
+      const next = { ...s };
+      for (const k of TAB_KEYS) {
+        const scrubbed = k === "declined"
+          ? next[k].rows.filter((b) => !blockedIds.has(b.challenger_id) && !blockedIds.has(b.opponent_id))
+          : next[k].rows.filter((b) => isSafeBattleForList(b as any, { blockedIds }));
+        if (scrubbed.length !== next[k].rows.length) {
+          next[k] = { ...next[k], rows: scrubbed };
+        }
+      }
+      return next;
+    });
+  }, [blocksLoaded, blockedIds]);
 
   // ---- Fetch one page for a specific tab using its own cursor ----
   // The Active tab is platform-wide (any user's live battles), while the
