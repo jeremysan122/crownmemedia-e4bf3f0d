@@ -402,8 +402,19 @@ export default function CrownMap() {
         (payload: any) => {
           const row = (payload.new || payload.old) as any;
           if (!row || !row.region_name || !row.region_type) return;
-          const key = `${row.region_type}:${row.region_name}`;
 
+          // Fast reject: if the payload itself already fails the active
+          // filters (scope/mineOnly/min score/query), skip the DB re-fetch
+          // entirely so realtime never leaks rows outside the current view.
+          // Holder-username filter is validated inside upsertRow after the
+          // profile join resolves.
+          if (!rowMatchesFilters(row)) {
+            // Still remove any stale copy from the visible list.
+            setRegions((prev) => prev.filter((r) => !(r.region_type === row.region_type && r.region_name === row.region_name)));
+            return;
+          }
+
+          const key = `${row.region_type}:${row.region_name}`;
           setChangesSinceRefresh((n) => n + 1);
           setLiveBlink((n) => n + 1);
 
@@ -425,7 +436,7 @@ export default function CrownMap() {
         },
       ),
     undefined,
-    [category, upsertRow],
+    [category, upsertRow, rowMatchesFilters],
   );
 
   useEffect(() => () => {
