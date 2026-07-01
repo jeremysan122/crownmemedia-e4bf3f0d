@@ -1020,7 +1020,19 @@ export default function Battles() {
             </div>
           )}
 
-          <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
+          {pendingRefreshTab === tab && (
+            <button
+              type="button"
+              onClick={() => { setPendingRefreshTab(null); void loadTab(tab, { reset: true }); }}
+              className="w-full mb-2 py-2 px-3 rounded-md bg-primary/15 text-primary text-xs font-semibold hover:bg-primary/20 transition inline-flex items-center justify-center gap-2"
+              aria-label="New battles available — refresh"
+            >
+              <Sparkles size={12} /> New battles available — tap to refresh
+            </button>
+          )}
+
+          <Tabs value={tab} onValueChange={(v) => { setTab(v as TabKey); setPendingRefreshTab(null); }}>
+
             <TabsList className="w-full grid grid-cols-5 h-9">
               <TabsTrigger value="active" className="text-xs">Active</TabsTrigger>
               <TabsTrigger value="pending" className="text-xs relative">
