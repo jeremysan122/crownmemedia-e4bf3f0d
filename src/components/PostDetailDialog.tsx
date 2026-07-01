@@ -401,7 +401,7 @@ export default function PostDetailDialog({ post, onClose }: Props) {
     setScoreBump(true);
     setTimeout(() => setScoreBump(false), 700);
 
-    await toggleVote(post.id, user.id, t);
+    await toggleVote(post.parent_post_id ?? post.id, user.id, t);
   };
 
   const startReply = (c: CommentRow) => {
