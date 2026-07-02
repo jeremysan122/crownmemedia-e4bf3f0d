@@ -1065,7 +1065,9 @@ function Inbox({ threads, unreadByThread, userId, reload, setThreads, loadMore, 
                     onClick={async () => {
                       const { error } = await supabase.rpc("mark_all_messages_read");
                       if (error) {
-                        toast({ title: "Couldn't mark all read", description: error.message, variant: "destructive" });
+                        logRawError(error, "generic", { op: "mark_all_read" });
+                        toast({ title: "Couldn't mark all read", description: toFriendlyMessage(error, "generic"), variant: "destructive" });
+
                       } else {
                         toast({ title: "All messages marked as read" });
                         await reload();
