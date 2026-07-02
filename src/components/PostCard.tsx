@@ -256,7 +256,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     const { error } = await supabase.from("blocks").insert({
       blocker_id: user.id, blocked_id: displayUserId,
     });
-    if (error) return toast.error(error.message);
+    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
     trackEvent("user_blocked", { metadata: { blocked_id: displayUserId } });
     toast.success(`Blocked @${displayProfile.username}`);
     setHidden(true);
@@ -265,7 +265,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     if (!user || !isOwner) return;
     if (!window.confirm("Delete this post permanently? This cannot be undone.")) return;
     const { error } = await supabase.from("posts").delete().eq("id", post.id).eq("user_id", user.id);
-    if (error) return toast.error(error.message);
+    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
     trackEvent("post_deleted", { metadata: { post_id: interactionPostId } });
     toast.success("Post deleted");
     setHidden(true);
@@ -279,7 +279,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       .update({ is_archived: true, archived_at: new Date().toISOString() } as any)
       .eq("id", post.id)
       .eq("user_id", user.id);
-    if (error) return toast.error(error.message);
+    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
     toast.success("Post archived — find it in Settings → Archived");
     setHidden(true);
     window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id: post.id } }));
@@ -295,7 +295,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       .eq("user_id", user.id);
     if (error) {
       setPinnedAt(pinnedAt); // revert
-      return toast.error(error.message);
+      { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
     }
     toast.success(next ? "Pinned to your profile" : "Unpinned");
     window.dispatchEvent(new CustomEvent("post:updated", { detail: { id: post.id, pinned_at: next } }));

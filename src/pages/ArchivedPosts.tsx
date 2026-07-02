@@ -46,7 +46,7 @@ export default function ArchivedPosts() {
       .from("posts")
       .update({ is_archived: false, archived_at: null } as any)
       .eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
     setPosts((p) => p.filter((x) => x.id !== id));
     toast.success("Post restored");
   };
@@ -54,7 +54,7 @@ export default function ArchivedPosts() {
   const remove = async (id: string) => {
     if (!confirm("Delete this post permanently?")) return;
     const { error } = await supabase.from("posts").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
     setPosts((p) => p.filter((x) => x.id !== id));
     window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id } }));
     toast.success("Post deleted");

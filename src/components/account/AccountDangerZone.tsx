@@ -50,7 +50,7 @@ export default function AccountDangerZone() {
     const { error } = await supabase.rpc("deactivate_my_account" as any);
     setBusy(false);
     setConfirmDeactivate(false);
-    if (error) return toast.error(error.message);
+    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
     toast.success("Account deactivated. Sign in again to reactivate.");
     await signOut();
     nav("/", { replace: true });
@@ -60,7 +60,7 @@ export default function AccountDangerZone() {
     setBusy(true);
     const { error } = await supabase.rpc("reactivate_my_account" as any);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
     toast.success("Welcome back — your account is active.");
     refetch();
   };
@@ -70,7 +70,7 @@ export default function AccountDangerZone() {
     const { error } = await supabase.rpc("request_account_deletion" as any);
     setBusy(false);
     setConfirmDelete(false);
-    if (error) return toast.error(error.message);
+    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
     toast.success("Deletion scheduled in 30 days. Cancel anytime before then.");
     refetch();
   };
@@ -79,7 +79,7 @@ export default function AccountDangerZone() {
     setBusy(true);
     const { error } = await supabase.rpc("cancel_account_deletion" as any);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
     toast.success("Deletion cancelled.");
     refetch();
   };

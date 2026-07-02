@@ -168,12 +168,12 @@ export default function PostDetailDialog({ post, onClose }: Props) {
         .delete()
         .eq("comment_id", commentId)
         .eq("user_id", user.id);
-      if (error) toast.error(error.message);
+      if (error) { logRawError(error, "generic"); toast.error(toFriendlyMessage(error, "generic")); }
     } else {
       const { error } = await supabase
         .from("comment_reactions")
         .insert({ comment_id: commentId, user_id: user.id });
-      if (error) toast.error(error.message);
+      if (error) { logRawError(error, "generic"); toast.error(toFriendlyMessage(error, "generic")); }
     }
   };
 
