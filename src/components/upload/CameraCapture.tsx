@@ -167,9 +167,10 @@ export default function CameraCapture({
         }
       } catch { /* noop */ }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Camera unavailable";
-      toast.error(msg);
+      console.error("[CameraCapture] camera init failed", e);
+      toast.error("Camera unavailable");
       onCancel();
+
     }
   };
 
