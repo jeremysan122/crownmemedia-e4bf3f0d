@@ -37,7 +37,7 @@ function ensureSubscribed(userId: string) {
   currentUserId = userId;
   currentMuted = new Set();
   channel = supabase
-    .channel(`muted-dm-${userId}`)
+    .channel(`muted-dm-${userId}-${crypto.randomUUID()}`)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "muted_dm_threads", filter: `user_id=eq.${userId}` },
