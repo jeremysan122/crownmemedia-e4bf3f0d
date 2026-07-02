@@ -66,6 +66,7 @@ Deno.serve(async (req) => {
     return json(200, { clientSecret: session.client_secret, sessionId: session.id });
   } catch (err) {
     console.error("create-verification-checkout error:", err);
-    return json(500, { error: (err as Error).message || "Failed to create checkout session" });
+    return json(500, { error: "Couldn't start verification checkout. Try again." });
   }
+
 });
