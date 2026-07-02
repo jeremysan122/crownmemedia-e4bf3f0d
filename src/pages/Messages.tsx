@@ -985,9 +985,11 @@ function Inbox({ threads, unreadByThread, userId, reload, setThreads, loadMore, 
     });
     setReportSubmitting(false);
     if (error) {
-      toast({ title: "Couldn't send report", description: error.message, variant: "destructive" });
+      logRawError(error, "generic", { op: "submit_report" });
+      toast({ title: "Couldn't send report", description: toFriendlyMessage(error, "generic"), variant: "destructive" });
       return;
     }
+
     toast({ title: "Report sent", description: "Our moderators will review this." });
     setReportTarget(null);
     setReportReasonCode("harassment");
