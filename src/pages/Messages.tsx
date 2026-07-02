@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { trackUsage, trackUsageEvent } from "@/lib/usageTrack";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
@@ -950,9 +952,11 @@ function Inbox({ threads, unreadByThread, userId, reload, setThreads, loadMore, 
     if (!userId) return;
     const { error } = await supabase.from("blocks").insert({ blocker_id: userId, blocked_id: otherId });
     if (error && !/duplicate/i.test(error.message)) {
-      toast({ title: "Couldn't block", description: error.message, variant: "destructive" });
+      logRawError(error, "generic", { op: "block_user" });
+      toast({ title: "Couldn't block", description: toFriendlyMessage(error, "generic"), variant: "destructive" });
       return;
     }
+
     toast({ title: `Blocked @${username ?? "user"}`, description: "They can no longer message you." });
     setThreads((prev) => prev.filter((x) => x.otherId !== otherId));
   };
@@ -981,9 +985,11 @@ function Inbox({ threads, unreadByThread, userId, reload, setThreads, loadMore, 
     });
     setReportSubmitting(false);
     if (error) {
-      toast({ title: "Couldn't send report", description: error.message, variant: "destructive" });
+      logRawError(error, "generic", { op: "submit_report" });
+      toast({ title: "Couldn't send report", description: toFriendlyMessage(error, "generic"), variant: "destructive" });
       return;
     }
+
     toast({ title: "Report sent", description: "Our moderators will review this." });
     setReportTarget(null);
     setReportReasonCode("harassment");
@@ -1059,7 +1065,9 @@ function Inbox({ threads, unreadByThread, userId, reload, setThreads, loadMore, 
                     onClick={async () => {
                       const { error } = await supabase.rpc("mark_all_messages_read");
                       if (error) {
-                        toast({ title: "Couldn't mark all read", description: error.message, variant: "destructive" });
+                        logRawError(error, "generic", { op: "mark_all_read" });
+                        toast({ title: "Couldn't mark all read", description: toFriendlyMessage(error, "generic"), variant: "destructive" });
+
                       } else {
                         toast({ title: "All messages marked as read" });
                         await reload();

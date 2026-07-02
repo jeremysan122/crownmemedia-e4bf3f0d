@@ -12,6 +12,8 @@ import AppShell from "@/components/AppShell";
 import { toast } from "sonner";
 import { haptic } from "@/lib/haptics";
 import { formatCountdown, formatLastUpdated, isUtcDayStale } from "@/lib/rewardsTime";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+
 
 
 type PrizeType = "shekels" | "battle_tickets" | "royal_pass_days" | "profile_boost_hours" | "bonus_spin" | "nothing";
@@ -181,10 +183,13 @@ export default function Rewards() {
     if (error) {
       // Roll back optimistic update and surface a retryable error state.
       setStreak(optimisticStreak);
-      setClaimError(error.message || "Couldn't claim — try again.");
-      toast.error(error.message || "Couldn't claim — try again.");
+      const friendly = toFriendlyMessage(error, "generic");
+      logRawError(error, "generic", { op: "claim_daily_reward" });
+      setClaimError(friendly);
+      toast.error(friendly);
       return;
     }
+
     const res = data as { ok: boolean; shekels_awarded?: number; bonus?: number; current_streak?: number; longest_streak?: number; already_claimed?: boolean };
     if (res.already_claimed) toast.info("Already claimed today — come back tomorrow.");
     else {
@@ -206,7 +211,7 @@ export default function Rewards() {
     setLastResult(null);
     haptic("medium");
     const { data, error } = await supabase.rpc("spin_daily_wheel");
-    if (error) { setSpinning(false); toast.error(error.message); return; }
+    if (error) { setSpinning(false); logRawError(error, "generic", { op: "spin_wheel" }); toast.error(toFriendlyMessage(error, "generic")); return; }
     const res = data as { ok: boolean; prize_id: string; label: string; prize_type: PrizeType; prize_value: number; used_bonus: boolean; bonus_spins_remaining: number };
     const idx = prizes.findIndex((p) => p.id === res.prize_id);
     const slice = 360 / prizes.length;

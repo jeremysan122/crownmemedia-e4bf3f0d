@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { trackUsageEvent } from "@/lib/usageTrack";
 import { fxBrokenCrown, fxVote } from "@/lib/giftFx";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+
 
 export type VoteType = "crown" | "fire" | "diamond" | "dislike";
 
@@ -40,7 +42,8 @@ export async function toggleVote(
     const { error } = await supabase.from("votes").delete().eq("id", existing.id);
     if (error) {
       trackUsageEvent("vote_failed", { postId, metadata: { vote_type: voteType, reason: "delete_error" } });
-      toast.error(error.message);
+      logRawError(error, "generic", { op: "vote_delete" });
+      toast.error(toFriendlyMessage(error, "generic"));
       return voteType;
     }
     trackEvent("vote_removed", { postId, metadata: { vote_type: voteType } });
@@ -53,7 +56,8 @@ export async function toggleVote(
     const { error: delErr } = await supabase.from("votes").delete().eq("id", existing.id);
     if (delErr) {
       trackUsageEvent("vote_failed", { postId, metadata: { vote_type: voteType, reason: "swap_delete_error" } });
-      toast.error(delErr.message);
+      logRawError(delErr, "generic", { op: "vote_swap_delete" });
+      toast.error(toFriendlyMessage(delErr, "generic"));
       return existing.vote_type as VoteType;
     }
   }
@@ -64,13 +68,16 @@ export async function toggleVote(
     vote_type: voteType,
   });
   if (error) {
-    const msg = /rate limit|too fast/i.test(error.message)
+    const rateLimited = /rate limit|too fast/i.test(error.message ?? "");
+    const msg = rateLimited
       ? "You're reacting too fast — slow down a moment"
-      : error.message;
-    trackUsageEvent("vote_failed", { postId, metadata: { vote_type: voteType, reason: /rate limit|too fast/i.test(error.message) ? "rate_limited" : "insert_error" } });
+      : toFriendlyMessage(error, "generic");
+    trackUsageEvent("vote_failed", { postId, metadata: { vote_type: voteType, reason: rateLimited ? "rate_limited" : "insert_error" } });
+    if (!rateLimited) logRawError(error, "generic", { op: "vote_insert" });
     toast.error(msg);
     return null;
   }
+
   trackEvent("vote_cast", { postId, metadata: { vote_type: voteType } });
   trackUsageEvent("vote_success", { postId, metadata: { vote_type: voteType, action: existing ? "swapped" : "cast" } });
   playVoteFx(voteType);

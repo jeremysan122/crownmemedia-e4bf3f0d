@@ -24,6 +24,7 @@ import type { RoyalGift } from "@/types/gifts";
 import { fxVote } from "@/lib/giftFx";
 import type { FeedPost } from "./PostCard";
 import { toast } from "sonner";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import MentionInput, { MentionInputHandle, MentionUser, renderMentions } from "./MentionInput";
 import { useLiveRank } from "@/hooks/useLiveRank";
 import RankHistoryTimeline from "./RankHistoryTimeline";
@@ -167,12 +168,12 @@ export default function PostDetailDialog({ post, onClose }: Props) {
         .delete()
         .eq("comment_id", commentId)
         .eq("user_id", user.id);
-      if (error) toast.error(error.message);
+      if (error) { logRawError(error, "generic"); toast.error(toFriendlyMessage(error, "generic")); }
     } else {
       const { error } = await supabase
         .from("comment_reactions")
         .insert({ comment_id: commentId, user_id: user.id });
-      if (error) toast.error(error.message);
+      if (error) { logRawError(error, "generic"); toast.error(toFriendlyMessage(error, "generic")); }
     }
   };
 

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { timeAgo } from "@/lib/crown";
 import { toast } from "sonner";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { Flag, Send, Flame, X, ChevronDown, ChevronUp } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
@@ -194,7 +195,7 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
         .eq("comment_id", commentId)
         .eq("user_id", user.id);
       if (error) {
-        toast.error(error.message);
+        { logRawError(error, "generic"); toast.error(toFriendlyMessage(error, "generic")); }
         setMyFires((prev) => new Set(prev).add(commentId));
         setFireCounts((prev) => ({ ...prev, [commentId]: (prev[commentId] || 0) + 1 }));
       } else {
@@ -205,7 +206,7 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
         .from("comment_reactions")
         .insert({ comment_id: commentId, user_id: user.id });
       if (error) {
-        toast.error(error.message);
+        { logRawError(error, "generic"); toast.error(toFriendlyMessage(error, "generic")); }
         setMyFires((prev) => { const next = new Set(prev); next.delete(commentId); return next; });
         setFireCounts((prev) => ({ ...prev, [commentId]: Math.max(0, (prev[commentId] || 0) - 1) }));
       } else {
@@ -272,7 +273,7 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
         setTopComments((prev) => prev.filter((c) => c.id !== optimisticId));
       }
       setText(body);
-      toast.error(error.message || "Could not post comment");
+      { logRawError(error, "generic"); toast.error(toFriendlyMessage(error, "generic") || "Could not post comment"); }
       return;
     }
 

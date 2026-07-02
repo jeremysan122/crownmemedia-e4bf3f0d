@@ -83,22 +83,14 @@ export default function Preferences() {
     const prev = p;
     const next = { ...p, ...patch };
     setP(next);
-    // Prefer server-authoritative RPC when available; fall back to direct update.
-    const rpc = (supabase.rpc as any)("update_my_preferences", { _patch: patch });
-    const { error } = await rpc.then(
-      (res: any) => res,
-      (err: any) => ({ error: err }),
-    );
+    const { error } = await supabase.rpc("update_my_preferences", { _prefs: patch as never });
     if (error) {
-      // Fallback to direct update if the RPC isn't deployed yet.
-      const { error: e2 } = await supabase.from("profiles").update(patch as any).eq("id", profile.id);
-      if (e2) {
-        setP(prev);
-        logRawError(e2, "settings", { patchKeys: Object.keys(patch) });
-        toast.error(toFriendlyMessage(e2, "settings"));
-      }
+      setP(prev);
+      logRawError(error, "settings", { patchKeys: Object.keys(patch) });
+      toast.error(toFriendlyMessage(error, "settings"));
     }
   };
+
 
   const ComingSoon = () => (
     <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-amber-500/40 text-amber-500">
