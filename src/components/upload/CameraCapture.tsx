@@ -449,8 +449,10 @@ export default function CameraCapture({
       setTimeout(() => URL.revokeObjectURL(url), 1500);
       toast.success(previewBlob.kind === "photo" ? "Saved — choose Save Image" : "Saved — choose Save Video");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save");
+      console.error("[CameraCapture] save failed", e);
+      toast.error("Could not save");
     }
+
   };
 
   const filteredCss = useMemo(() => cssFor(filter), [filter]);
