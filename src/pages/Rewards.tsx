@@ -12,6 +12,8 @@ import AppShell from "@/components/AppShell";
 import { toast } from "sonner";
 import { haptic } from "@/lib/haptics";
 import { formatCountdown, formatLastUpdated, isUtcDayStale } from "@/lib/rewardsTime";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+
 
 
 type PrizeType = "shekels" | "battle_tickets" | "royal_pass_days" | "profile_boost_hours" | "bonus_spin" | "nothing";
