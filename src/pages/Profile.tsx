@@ -495,7 +495,7 @@ export default function Profile() {
                     onClick={async () => {
                       if (!user) return;
                       const { error } = await supabase.from("profiles").update({ banner_position_y: draftPosY } as any).eq("id", user.id);
-                      if (error) { toast.error(error.message); return; }
+                      if (error) { logRawError(error, "generic"); toast.error(toFriendlyMessage(error, "generic")); return; }
                       setProf((p) => p ? { ...p, banner_position_y: draftPosY } : p);
                       setReframing(false);
                       toast.success("Cover reframed");
@@ -1218,7 +1218,7 @@ export default function Profile() {
                   .update({ pinned_at: next } as any)
                   .eq("id", menuPost.id)
                   .eq("user_id", user.id);
-                if (error) return toast.error(error.message);
+                if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
                 setPosts((prev) => prev.map((pp) => pp.id === menuPost.id ? { ...pp, pinned_at: next } : pp));
                 toast.success(next ? "Pinned to your profile" : "Unpinned");
               }}
@@ -1239,7 +1239,7 @@ export default function Profile() {
                   .update({ is_archived: true, archived_at: new Date().toISOString() } as any)
                   .eq("id", menuPost.id)
                   .eq("user_id", user.id);
-                if (error) return toast.error(error.message);
+                if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
                 setPosts((prev) => prev.filter((pp) => pp.id !== menuPost.id));
                 toast.success("Post archived — find it in Settings → Archived");
               }}
@@ -1328,7 +1328,7 @@ export default function Profile() {
                 const id = deletingPostId;
                 if (!id) return;
                 const { error } = await supabase.from("posts").delete().eq("id", id);
-                if (error) { toast.error(error.message); return; }
+                if (error) { logRawError(error, "generic"); toast.error(toFriendlyMessage(error, "generic")); return; }
                 setPosts((prev) => prev.filter((p) => p.id !== id));
                 window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id } }));
                 toast.success("Post deleted");
