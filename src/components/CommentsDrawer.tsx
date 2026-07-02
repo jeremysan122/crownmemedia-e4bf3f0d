@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { timeAgo } from "@/lib/crown";
 import { toast } from "sonner";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { Flag, Send, Flame, X, ChevronDown, ChevronUp } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";

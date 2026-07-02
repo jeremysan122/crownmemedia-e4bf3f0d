@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Archive, RotateCcw, Trash2, Crown } from "lucide-react";
 import { toast } from "sonner";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { Button } from "@/components/ui/button";
 import { formatScore } from "@/lib/crown";
 

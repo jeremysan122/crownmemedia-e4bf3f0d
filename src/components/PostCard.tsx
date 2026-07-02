@@ -29,6 +29,7 @@ import PostInsightsDialog from "./PostInsightsDialog";
 import RepostDialog from "./RepostDialog";
 import TaggedPeopleLine from "./TaggedPeopleLine";
 import { toast } from "sonner";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { trackEvent } from "@/lib/analytics";
 
 import { FilterId, isValidFilter, FILTER_BY_ID } from "@/lib/filters";

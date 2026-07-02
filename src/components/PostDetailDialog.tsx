@@ -24,6 +24,7 @@ import type { RoyalGift } from "@/types/gifts";
 import { fxVote } from "@/lib/giftFx";
 import type { FeedPost } from "./PostCard";
 import { toast } from "sonner";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import MentionInput, { MentionInputHandle, MentionUser, renderMentions } from "./MentionInput";
 import { useLiveRank } from "@/hooks/useLiveRank";
 import RankHistoryTimeline from "./RankHistoryTimeline";
