@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { trackUsage, trackUsageEvent } from "@/lib/usageTrack";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
