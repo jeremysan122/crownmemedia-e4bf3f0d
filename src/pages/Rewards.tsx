@@ -183,10 +183,13 @@ export default function Rewards() {
     if (error) {
       // Roll back optimistic update and surface a retryable error state.
       setStreak(optimisticStreak);
-      setClaimError(error.message || "Couldn't claim — try again.");
-      toast.error(error.message || "Couldn't claim — try again.");
+      const friendly = toFriendlyMessage(error, "generic");
+      logRawError(error, "generic", { op: "claim_daily_reward" });
+      setClaimError(friendly);
+      toast.error(friendly);
       return;
     }
+
     const res = data as { ok: boolean; shekels_awarded?: number; bonus?: number; current_streak?: number; longest_streak?: number; already_claimed?: boolean };
     if (res.already_claimed) toast.info("Already claimed today — come back tomorrow.");
     else {
