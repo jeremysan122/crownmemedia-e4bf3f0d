@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("send-web-push error:", err);
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
+    return new Response(JSON.stringify({ error: "Push delivery failed" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
