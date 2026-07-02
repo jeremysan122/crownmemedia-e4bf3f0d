@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { trackUsageEvent } from "@/lib/usageTrack";
 import { fxBrokenCrown, fxVote } from "@/lib/giftFx";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+
 
 export type VoteType = "crown" | "fire" | "diamond" | "dislike";
 
