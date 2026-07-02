@@ -211,7 +211,7 @@ export default function Rewards() {
     setLastResult(null);
     haptic("medium");
     const { data, error } = await supabase.rpc("spin_daily_wheel");
-    if (error) { setSpinning(false); toast.error(error.message); return; }
+    if (error) { setSpinning(false); logRawError(error, "generic", { op: "spin_wheel" }); toast.error(toFriendlyMessage(error, "generic")); return; }
     const res = data as { ok: boolean; prize_id: string; label: string; prize_type: PrizeType; prize_value: number; used_bonus: boolean; bonus_spins_remaining: number };
     const idx = prizes.findIndex((p) => p.id === res.prize_id);
     const slice = 360 / prizes.length;
