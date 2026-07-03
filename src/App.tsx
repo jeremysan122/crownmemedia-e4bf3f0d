@@ -115,6 +115,7 @@ const CategoryHub = lazy(() => import("./pages/CategoryHub"));
 const Discover = lazy(() => import("./pages/Discover"));
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
 import LegalConsentGate from "@/components/legal/LegalConsentGate";
+const Marketing = lazy(() => import("./pages/Marketing"));
 
 // React Query: sensible defaults so tab switches don't blank-flash and
 // background refetches don't dogpile the DB.
@@ -260,7 +261,7 @@ const App = () => (
               <Route path="/discover" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
               <Route path="/c/:mainSlug" element={<CategoryHub />} />
               <Route path="/c/:mainSlug/:subSlug" element={<CategoryHub />} />
-
+              <Route path="/marketing/:screen" element={<Marketing />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             </LegalConsentGate>
