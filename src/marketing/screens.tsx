@@ -15,15 +15,15 @@ const Logo = ({ size = 20 }: { size?: number }) => (
 );
 
 const Chip = ({ children, tone = "gold" }: { children: React.ReactNode; tone?: "gold" | "purple" | "crimson" | "green" | "blue" | "dark" }) => {
-  const map: Record<string, string> = {
-    gold: `background:${gold}22;color:${gold};border:1px solid ${gold}55`,
-    purple: `background:${purple}33;color:#c8a2f0;border:1px solid ${purple}88`,
-    crimson: `background:#e11d4822;color:#f87191;border:1px solid #e11d4855`,
-    green: `background:#10b98122;color:#4ade80;border:1px solid #10b98155`,
-    blue: `background:#3b82f622;color:#93c5fd;border:1px solid #3b82f655`,
-    dark: `background:#00000055;color:#e5e5e5;border:1px solid #ffffff22`,
+  const map: Record<string, React.CSSProperties> = {
+    gold: { background: `${gold}22`, color: gold, border: `1px solid ${gold}55` },
+    purple: { background: `${purple}33`, color: "#c8a2f0", border: `1px solid ${purple}88` },
+    crimson: { background: "#e11d4822", color: "#f87191", border: "1px solid #e11d4855" },
+    green: { background: "#10b98122", color: "#4ade80", border: "1px solid #10b98155" },
+    blue: { background: "#3b82f622", color: "#93c5fd", border: "1px solid #3b82f655" },
+    dark: { background: "#00000055", color: "#e5e5e5", border: "1px solid #ffffff22" },
   };
-  return <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ cssText: map[tone] } as any}>{children}</span>;
+  return <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full whitespace-nowrap inline-block" style={map[tone]}>{children}</span>;
 };
 
 const Avatar = ({ src, size = 36, ring }: { src: string; size?: number; ring?: boolean }) => (
