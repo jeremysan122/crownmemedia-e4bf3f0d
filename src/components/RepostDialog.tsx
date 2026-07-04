@@ -125,7 +125,7 @@ export default function RepostDialog({ open, onOpenChange, parent }: Props) {
         {error && (
           <div role="alert" className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
             <AlertCircle size={14} className="mt-0.5 shrink-0" />
-            <span>{error.message}{error.retryable ? " You can try again." : ""}</span>
+            <span>{error.message}{error.retryable && !/try again/i.test(error.message) ? " You can try again." : ""}</span>
           </div>
         )}
 
