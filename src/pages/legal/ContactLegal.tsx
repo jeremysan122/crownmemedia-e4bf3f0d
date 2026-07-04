@@ -2,7 +2,7 @@ import LegalShell, { H2, P } from "@/components/legal/LegalShell";
 
 export default function ContactLegal() {
   return (
-    <LegalShell title="Legal Contact & DPO" effectiveDate="May 2, 2026" lastUpdated="May 30, 2026">
+    <LegalShell title="Legal Contact & DPO" effectiveDate="May 2, 2026" lastUpdated="July 4, 2026" version="1.2">
       <P>
         CrownMe Media, is the
         controller of personal information processed through the Service. The official site is

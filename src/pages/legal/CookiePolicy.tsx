@@ -2,7 +2,7 @@ import LegalShell, { H2, P, UL } from "@/components/legal/LegalShell";
 
 export default function CookiePolicy() {
   return (
-    <LegalShell title="Cookie Policy" effectiveDate="May 2, 2026" lastUpdated="May 30, 2026">
+    <LegalShell title="Cookie Policy" effectiveDate="May 2, 2026" lastUpdated="July 4, 2026" version="1.2">
       <P>
         This Cookie Policy explains how CrownMe Media (operated by CrownMe Media) uses
         cookies and similar technologies (e.g., local storage, SDKs, pixels) on our web and

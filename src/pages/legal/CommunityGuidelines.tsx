@@ -2,7 +2,7 @@ import LegalShell, { H2, H3, P, UL } from "@/components/legal/LegalShell";
 
 export default function CommunityGuidelines() {
   return (
-    <LegalShell title="Community Guidelines" effectiveDate="May 2, 2026" lastUpdated="June 2, 2026" version="1.1" shellTitle="Conduct" pdfSlug="crownme-community-guidelines">
+    <LegalShell title="Community Guidelines" effectiveDate="May 2, 2026" lastUpdated="July 4, 2026" version="1.2" shellTitle="Conduct" pdfSlug="crownme-community-guidelines">
       <P>
         CrownMe Media is an 18+ social photo-sharing community where members earn crowns through
         positive engagement. These Community Guidelines explain what is and is not allowed.

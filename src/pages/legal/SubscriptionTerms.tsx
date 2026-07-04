@@ -2,7 +2,7 @@ import LegalShell, { H2, P, UL } from "@/components/legal/LegalShell";
 
 export default function SubscriptionTerms() {
   return (
-    <LegalShell title="Subscription Terms (Royal Pass)" effectiveDate="May 2, 2026" lastUpdated="May 30, 2026">
+    <LegalShell title="Subscription Terms (Royal Pass)" effectiveDate="May 2, 2026" lastUpdated="July 4, 2026" version="1.2">
       <H2>1. The Royal Pass</H2>
       <P>
         The Royal Pass is an optional auto-renewing subscription that unlocks premium
