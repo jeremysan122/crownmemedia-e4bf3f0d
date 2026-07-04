@@ -2,7 +2,7 @@ import LegalShell, { H2, P } from "@/components/legal/LegalShell";
 
 export default function Eula() {
   return (
-    <LegalShell title="End-User License Agreement" effectiveDate="May 2, 2026" lastUpdated="May 30, 2026" shellTitle="EULA">
+    <LegalShell title="End-User License Agreement" effectiveDate="May 2, 2026" lastUpdated="July 4, 2026" version="1.2" shellTitle="EULA">
       <P>
         This End-User License Agreement ("EULA") governs your use of the CrownMe Media mobile and
         web applications (the "App") provided by CrownMe Media ("Licensor").

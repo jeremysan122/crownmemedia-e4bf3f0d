@@ -2,7 +2,7 @@ import LegalShell, { H2, P, UL } from "@/components/legal/LegalShell";
 
 export default function AcceptableUse() {
   return (
-    <LegalShell title="Acceptable Use Policy" effectiveDate="May 2, 2026" lastUpdated="June 2, 2026" version="1.1">
+    <LegalShell title="Acceptable Use Policy" effectiveDate="May 2, 2026" lastUpdated="July 4, 2026" version="1.2">
       <P>
         This Acceptable Use Policy ("AUP") supplements our{" "}
         <a className="underline text-primary" href="/terms">Terms of Service</a> and{" "}

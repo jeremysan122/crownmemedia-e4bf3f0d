@@ -2,7 +2,7 @@ import LegalShell, { H2, P, UL } from "@/components/legal/LegalShell";
 
 export default function VirtualGoodsPolicy() {
   return (
-    <LegalShell title="Virtual Goods & No-Gambling Policy" effectiveDate="May 2, 2026" lastUpdated="May 30, 2026">
+    <LegalShell title="Virtual Goods & No-Gambling Policy" effectiveDate="May 2, 2026" lastUpdated="July 4, 2026" version="1.2">
       <H2>1. Entertainment Only</H2>
       <P>
         Shekels, crowns, royal gifts, the Royal Pass, boosts, ranks, leaderboard positions,

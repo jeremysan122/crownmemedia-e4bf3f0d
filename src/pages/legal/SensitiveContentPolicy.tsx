@@ -5,8 +5,8 @@ export default function SensitiveContentPolicy() {
     <LegalShell
       title="Sensitive Content Policy"
       effectiveDate="June 2, 2026"
-      lastUpdated="June 2, 2026"
-      version="1.0"
+      lastUpdated="July 4, 2026"
+      version="1.2"
       shellTitle="Sensitive Content"
       pdfSlug="crownme-sensitive-content"
       seoDescription="How CrownMe Media labels, blurs, gates, moderates and audits sensitive content across Feed, Profile, Post, Scrolls, Crown Map, Leaderboard, and Share Cards."

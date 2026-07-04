@@ -2,7 +2,7 @@ import LegalShell, { H2, P, UL } from "@/components/legal/LegalShell";
 
 export default function CsaePolicy() {
   return (
-    <LegalShell title="Child Safety & CSAE Standards" effectiveDate="May 2, 2026" lastUpdated="May 30, 2026">
+    <LegalShell title="Child Safety & CSAE Standards" effectiveDate="May 2, 2026" lastUpdated="July 4, 2026" version="1.2">
       <P>
         CrownMe Media, has zero tolerance for child sexual
         abuse and exploitation ("CSAE"). This document describes our standards in

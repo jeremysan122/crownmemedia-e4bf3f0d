@@ -2,7 +2,7 @@ import LegalShell, { H2, H3, P, UL } from "@/components/legal/LegalShell";
 
 export default function TermsOfService() {
   return (
-    <LegalShell title="Terms of Service" effectiveDate="May 2, 2026" lastUpdated="June 2, 2026" version="1.1" pdfSlug="crownme-terms">
+    <LegalShell title="Terms of Service" effectiveDate="May 2, 2026" lastUpdated="July 4, 2026" version="1.2" pdfSlug="crownme-terms">
       <P>
         Welcome to CrownMe Media, a social photo-sharing community operated by{" "}
         <strong>CrownMe Media</strong>, a Wisconsin limited liability company
