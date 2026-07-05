@@ -133,6 +133,7 @@ export default function Feed() {
   const { profile, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const tagFilter = (searchParams.get("tag") || "").toLowerCase().trim();
+  const qFilter = (searchParams.get("q") || "").trim();
 
   useEffect(() => { trackUsage("feed_opened"); }, []);
 
@@ -304,6 +305,7 @@ export default function Feed() {
     if (hubSlug) q = q.eq("main_category_slug", hubSlug);
     if (topicSlug) q = q.eq("subcategory_slug", topicSlug);
     if (tagFilter) q = q.contains("hashtags", [tagFilter]);
+    if (qFilter) q = q.ilike("caption", `%${qFilter.replace(/[%_]/g, (m) => `\\${m}`)}%`);
     if (sinceIso) q = q.gte("created_at", sinceIso);
 
     if (tab === "city" && profile?.city) q = q.eq("city", profile.city);
@@ -316,7 +318,7 @@ export default function Feed() {
       q = q.lt(orderColumn, opts.cursor.val as any);
     }
     return q;
-  }, [catFilter, hubSlug, topicSlug, tagFilter, sinceIso, tab, profile?.city, profile?.state, orderColumn]);
+  }, [catFilter, hubSlug, topicSlug, tagFilter, qFilter, sinceIso, tab, profile?.city, profile?.state, orderColumn]);
 
 
   // INITIAL / FILTER-CHANGE LOAD

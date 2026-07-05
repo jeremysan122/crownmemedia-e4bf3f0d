@@ -37,6 +37,7 @@ import RadiusSelector from "@/components/discover/RadiusSelector";
 import {
   makeKey as makeCacheKey, getCached, setCached, wireRealtimeInvalidation,
 } from "@/lib/discoverCache";
+import { useFeedFilters, isFilteredOut } from "@/hooks/useFeedFilters";
 
 
 interface HubStat {
@@ -63,12 +64,15 @@ interface RisingStar {
 
 interface TrendingPost {
   id: string;
+  user_id?: string;
   image_url: string | null;
   image_urls: string[] | null;
   video_poster_url: string | null;
   media_type: string | null;
   crown_score: number;
   caption: string | null;
+  is_sensitive?: boolean | null;
+  hashtags?: string[] | null;
   profile: { username: string; profile_photo_url: string | null } | null;
 }
 
@@ -123,6 +127,7 @@ export default function Discover() {
   const isRoyal = useIsRoyalPassUser(user?.id);
   const nav = useNavigate();
   const { mains, subs, loading } = useCategoryTree();
+  const feedFilters = useFeedFilters();
 
   const [windowSel, setWindowSel] = useState<Window>("7d");
   const [stats, setStats] = useState<Record<string, HubStat>>({});
@@ -287,7 +292,7 @@ export default function Discover() {
       let q = supabase
         .from("posts")
         .select(
-          "id, image_url, image_urls, video_poster_url, media_type, crown_score, caption, user_id, profile:profiles!posts_user_id_fkey(username, profile_photo_url)",
+          "id, image_url, image_urls, video_poster_url, media_type, crown_score, caption, hashtags, is_sensitive, user_id, profile:profiles!posts_user_id_fkey(username, profile_photo_url)",
         )
         .gte("created_at", since)
         .eq("is_removed", false)
@@ -1049,12 +1054,14 @@ export default function Discover() {
               <div className="grid grid-cols-3 gap-2">
                 {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="aspect-square" />)}
               </div>
-            ) : trendingPosts.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No trending posts yet in this window.</p>
-            ) : (
-              <>
-                <div className="grid grid-cols-3 gap-2">
-                  {trendingPosts.map((p) => {
+            ) : (() => {
+              const visibleTrending = trendingPosts.filter((p) => !isFilteredOut(p as any, feedFilters));
+              return visibleTrending.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No trending posts yet in this window.</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {visibleTrending.map((p) => {
                     const cover = postCover(p);
                     return (
                       <Link
@@ -1105,8 +1112,9 @@ export default function Discover() {
                     <span className="text-[11px] text-muted-foreground">No more results</span>
                   )}
                 </div>
-              </>
-            )}
+                </>
+              );
+            })()}
           </section>
 
           {/* Live Battles */}

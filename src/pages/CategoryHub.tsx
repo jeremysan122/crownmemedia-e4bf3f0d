@@ -13,6 +13,7 @@ import { Link, useParams } from "react-router-dom";
 import { Crown, Flame, TrendingUp, Trophy, Swords, Medal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useFeedFilters, isFilteredOut } from "@/hooks/useFeedFilters";
 import {
   fetchMainCategories,
   fetchSubcategories,
@@ -28,6 +29,8 @@ interface PostRow {
   caption: string | null;
   crown_score: number;
   vote_count: number;
+  is_sensitive?: boolean | null;
+  hashtags?: string[] | null;
   profile: { username: string; profile_photo_url: string | null } | null;
 }
 interface CrownRow {
@@ -46,6 +49,7 @@ interface BattleRow {
 export default function CategoryHub() {
   const { mainSlug, subSlug } = useParams();
   const { user } = useAuth();
+  const filters = useFeedFilters();
   const [mains, setMains] = useState<MainCategory[]>([]);
   const [subs, setSubs] = useState<Subcategory[]>([]);
   const [posts, setPosts] = useState<PostRow[]>([]);
@@ -77,8 +81,9 @@ export default function CategoryHub() {
     (async () => {
       let q = supabase
         .from("posts")
-        .select("id, user_id, image_url, caption, crown_score, vote_count, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
+        .select("id, user_id, image_url, caption, crown_score, vote_count, is_sensitive, hashtags, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
         .eq("is_removed", false)
+        .eq("is_archived", false)
         .order("crown_score", { ascending: false })
         .limit(50);
       if (sub) q = q.eq("subcategory_slug", sub.slug);
@@ -164,8 +169,12 @@ export default function CategoryHub() {
   };
 
   const reignHolder = crowns[0]?.user ?? null;
-  const top3 = posts.slice(0, 3);
-  const rest = posts.slice(3);
+  const visiblePosts = useMemo(
+    () => posts.filter((p) => !isFilteredOut(p as any, filters)),
+    [posts, filters]
+  );
+  const top3 = visiblePosts.slice(0, 3);
+  const rest = visiblePosts.slice(3);
 
   return (
     <main className="max-w-5xl mx-auto px-4 pb-24">
@@ -182,7 +191,7 @@ export default function CategoryHub() {
               onClick={onFollow}
               disabled={!user}
               className={`px-4 py-2 rounded-full text-xs font-bold backdrop-blur transition ${
-                following ? "bg-white/20 text-white" : "bg-white text-foreground hover:bg-white/90"
+                following ? "bg-white/20 text-white ring-1 ring-white/60" : "bg-white text-black hover:bg-white/90"
               }`}
             >
               {following ? "Following" : "Follow Category"}
