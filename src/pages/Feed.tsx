@@ -305,6 +305,7 @@ export default function Feed() {
     if (hubSlug) q = q.eq("main_category_slug", hubSlug);
     if (topicSlug) q = q.eq("subcategory_slug", topicSlug);
     if (tagFilter) q = q.contains("hashtags", [tagFilter]);
+    if (qFilter) q = q.ilike("caption", `%${qFilter.replace(/[%_]/g, (m) => `\\${m}`)}%`);
     if (sinceIso) q = q.gte("created_at", sinceIso);
 
     if (tab === "city" && profile?.city) q = q.eq("city", profile.city);
