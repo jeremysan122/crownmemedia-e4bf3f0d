@@ -63,12 +63,15 @@ interface RisingStar {
 
 interface TrendingPost {
   id: string;
+  user_id?: string;
   image_url: string | null;
   image_urls: string[] | null;
   video_poster_url: string | null;
   media_type: string | null;
   crown_score: number;
   caption: string | null;
+  is_sensitive?: boolean | null;
+  hashtags?: string[] | null;
   profile: { username: string; profile_photo_url: string | null } | null;
 }
 
