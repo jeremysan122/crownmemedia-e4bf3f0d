@@ -49,6 +49,7 @@ interface BattleRow {
 export default function CategoryHub() {
   const { mainSlug, subSlug } = useParams();
   const { user } = useAuth();
+  const filters = useFeedFilters();
   const [mains, setMains] = useState<MainCategory[]>([]);
   const [subs, setSubs] = useState<Subcategory[]>([]);
   const [posts, setPosts] = useState<PostRow[]>([]);
