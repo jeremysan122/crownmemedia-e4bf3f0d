@@ -127,6 +127,7 @@ export default function Discover() {
   const isRoyal = useIsRoyalPassUser(user?.id);
   const nav = useNavigate();
   const { mains, subs, loading } = useCategoryTree();
+  const feedFilters = useFeedFilters();
 
   const [windowSel, setWindowSel] = useState<Window>("7d");
   const [stats, setStats] = useState<Record<string, HubStat>>({});
