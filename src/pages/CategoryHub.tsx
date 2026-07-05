@@ -29,6 +29,8 @@ interface PostRow {
   caption: string | null;
   crown_score: number;
   vote_count: number;
+  is_sensitive?: boolean | null;
+  hashtags?: string[] | null;
   profile: { username: string; profile_photo_url: string | null } | null;
 }
 interface CrownRow {
