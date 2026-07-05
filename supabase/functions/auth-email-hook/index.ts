@@ -37,9 +37,9 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 
 // Configuration
 const SITE_NAME = "crownmemedia"
-const SENDER_DOMAIN = "support.crownmemedia.com"
+const SENDER_DOMAIN = "notify.crownmemedia.com"
 const ROOT_DOMAIN = "crownmemedia.com"
-const FROM_DOMAIN = "support.crownmemedia.com" // Domain shown in From address (may be root or sender subdomain)
+const FROM_DOMAIN = "notify.crownmemedia.com" // Domain shown in From address (may be root or sender subdomain)
 
 // Sample data for preview mode ONLY (not used in actual email sending).
 // URLs are baked in at scaffold time from the project's real data.
