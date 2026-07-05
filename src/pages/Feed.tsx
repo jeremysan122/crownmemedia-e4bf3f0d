@@ -318,7 +318,7 @@ export default function Feed() {
       q = q.lt(orderColumn, opts.cursor.val as any);
     }
     return q;
-  }, [catFilter, hubSlug, topicSlug, tagFilter, sinceIso, tab, profile?.city, profile?.state, orderColumn]);
+  }, [catFilter, hubSlug, topicSlug, tagFilter, qFilter, sinceIso, tab, profile?.city, profile?.state, orderColumn]);
 
 
   // INITIAL / FILTER-CHANGE LOAD
