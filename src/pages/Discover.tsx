@@ -1054,12 +1054,14 @@ export default function Discover() {
               <div className="grid grid-cols-3 gap-2">
                 {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="aspect-square" />)}
               </div>
-            ) : trendingPosts.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No trending posts yet in this window.</p>
-            ) : (
-              <>
-                <div className="grid grid-cols-3 gap-2">
-                  {trendingPosts.map((p) => {
+            ) : (() => {
+              const visibleTrending = trendingPosts.filter((p) => !isFilteredOut(p as any, feedFilters));
+              return visibleTrending.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No trending posts yet in this window.</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {visibleTrending.map((p) => {
                     const cover = postCover(p);
                     return (
                       <Link
