@@ -182,7 +182,7 @@ export default function CategoryHub() {
               onClick={onFollow}
               disabled={!user}
               className={`px-4 py-2 rounded-full text-xs font-bold backdrop-blur transition ${
-                following ? "bg-white/20 text-white" : "bg-white text-foreground hover:bg-white/90"
+                following ? "bg-white/20 text-white ring-1 ring-white/60" : "bg-white text-black hover:bg-white/90"
               }`}
             >
               {following ? "Following" : "Follow Category"}
