@@ -13,6 +13,7 @@ import { Link, useParams } from "react-router-dom";
 import { Crown, Flame, TrendingUp, Trophy, Swords, Medal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useFeedFilters, isFilteredOut } from "@/hooks/useFeedFilters";
 import {
   fetchMainCategories,
   fetchSubcategories,
