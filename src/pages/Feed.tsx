@@ -133,6 +133,7 @@ export default function Feed() {
   const { profile, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const tagFilter = (searchParams.get("tag") || "").toLowerCase().trim();
+  const qFilter = (searchParams.get("q") || "").trim();
 
   useEffect(() => { trackUsage("feed_opened"); }, []);
 
