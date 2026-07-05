@@ -290,7 +290,7 @@ export default function Discover() {
       let q = supabase
         .from("posts")
         .select(
-          "id, image_url, image_urls, video_poster_url, media_type, crown_score, caption, user_id, profile:profiles!posts_user_id_fkey(username, profile_photo_url)",
+          "id, image_url, image_urls, video_poster_url, media_type, crown_score, caption, hashtags, is_sensitive, user_id, profile:profiles!posts_user_id_fkey(username, profile_photo_url)",
         )
         .gte("created_at", since)
         .eq("is_removed", false)
