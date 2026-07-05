@@ -1112,8 +1112,9 @@ export default function Discover() {
                     <span className="text-[11px] text-muted-foreground">No more results</span>
                   )}
                 </div>
-              </>
-            )}
+                </>
+              );
+            })()}
           </section>
 
           {/* Live Battles */}
