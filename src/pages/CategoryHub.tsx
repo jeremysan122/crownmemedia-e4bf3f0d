@@ -169,8 +169,12 @@ export default function CategoryHub() {
   };
 
   const reignHolder = crowns[0]?.user ?? null;
-  const top3 = posts.slice(0, 3);
-  const rest = posts.slice(3);
+  const visiblePosts = useMemo(
+    () => posts.filter((p) => !isFilteredOut(p as any, filters)),
+    [posts, filters]
+  );
+  const top3 = visiblePosts.slice(0, 3);
+  const rest = visiblePosts.slice(3);
 
   return (
     <main className="max-w-5xl mx-auto px-4 pb-24">
