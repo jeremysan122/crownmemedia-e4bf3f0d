@@ -80,8 +80,9 @@ export default function CategoryHub() {
     (async () => {
       let q = supabase
         .from("posts")
-        .select("id, user_id, image_url, caption, crown_score, vote_count, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
+        .select("id, user_id, image_url, caption, crown_score, vote_count, is_sensitive, hashtags, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
         .eq("is_removed", false)
+        .eq("is_archived", false)
         .order("crown_score", { ascending: false })
         .limit(50);
       if (sub) q = q.eq("subcategory_slug", sub.slug);
