@@ -37,6 +37,7 @@ import RadiusSelector from "@/components/discover/RadiusSelector";
 import {
   makeKey as makeCacheKey, getCached, setCached, wireRealtimeInvalidation,
 } from "@/lib/discoverCache";
+import { useFeedFilters, isFilteredOut } from "@/hooks/useFeedFilters";
 
 
 interface HubStat {
