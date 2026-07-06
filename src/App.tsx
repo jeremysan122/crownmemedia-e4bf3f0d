@@ -15,6 +15,7 @@ import Splash from "./pages/Splash";
 import VerifyAge from "./pages/VerifyAge";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
+import OAuthConsent from "./pages/OAuthConsent";
 import Feed from "./pages/Feed";
 import NotFound from "./pages/NotFound";
 import CrownStolenBanner from "./components/CrownStolenBanner";
@@ -154,6 +155,7 @@ const App = () => (
               <Route path="/verify-age" element={<VerifyAge />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="/email-template-preview" element={<EmailTemplatePreview />} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
