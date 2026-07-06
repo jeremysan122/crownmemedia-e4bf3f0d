@@ -44,25 +44,9 @@ const loginSchema = z.object({
 
 type UsernameStatus = "idle" | "checking" | "available" | "taken" | "reserved" | "invalid";
 
-function safeNextPath(raw: string | null): string {
-  if (!raw) return "/feed";
-  try {
-    // Only allow same-origin relative paths starting with a single '/'
-    if (!raw.startsWith("/") || raw.startsWith("//")) return "/feed";
-    // Round-trip through URL to reject anything weird
-    const u = new URL(raw, window.location.origin);
-    if (u.origin !== window.location.origin) return "/feed";
-    return u.pathname + u.search + u.hash;
-  } catch {
-    return "/feed";
-  }
-}
-
 export default function Auth() {
   const [params] = useSearchParams();
   const nav = useNavigate();
-  const nextPath = safeNextPath(params.get("next"));
-  const nextQS = nextPath === "/feed" ? "" : `?next=${encodeURIComponent(nextPath)}`;
   const initialMode = params.get("mode") === "login" ? "login" : "signup";
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
   useSeoMeta({
