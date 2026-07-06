@@ -260,7 +260,7 @@ export default function Auth() {
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/feed`,
+            emailRedirectTo: `${window.location.origin}/feed${nextQS ? nextQS : ""}`,
             data: {
               username: parsed.data.username,
               first_name: parsed.data.first_name,
@@ -299,7 +299,7 @@ export default function Auth() {
         if (data.session) {
           await tryRedeemPendingInvite();
           toast.success("Welcome to CrownMe");
-          nav("/feed", { replace: true });
+          nav(nextPath, { replace: true });
         } else {
           setCheckInbox(parsed.data.email);
         }
@@ -325,7 +325,7 @@ export default function Auth() {
         persistRemember();
         await tryRedeemPendingInvite();
         toast.success("Welcome back");
-        nav("/feed", { replace: true });
+        nav(nextPath, { replace: true });
       }
     } finally {
       setLoading(false);
@@ -342,7 +342,7 @@ export default function Auth() {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${window.location.origin}/feed`, shouldCreateUser: false },
+        options: { emailRedirectTo: `${window.location.origin}/feed${nextQS ? nextQS : ""}`, shouldCreateUser: false },
       });
       if (error) {
         const { toFriendlyMessage, logRawError } = await import("@/lib/settingsSecurityErrors");
@@ -915,14 +915,14 @@ export default function Auth() {
                   setLoading(true);
                   try {
                     const result = await lovable.auth.signInWithOAuth("google", {
-                      redirect_uri: window.location.origin,
+                      redirect_uri: `${window.location.origin}/auth${nextQS}`,
                     });
                     if (result.error) {
                       toast.error("Google sign-in failed");
                       return;
                     }
                     if (result.redirected) return;
-                    nav("/feed", { replace: true });
+                    nav(nextPath, { replace: true });
                   } catch (e) {
                     toast.error("Google sign-in failed");
                   } finally {
@@ -945,14 +945,14 @@ export default function Auth() {
                   setLoading(true);
                   try {
                     const result = await lovable.auth.signInWithOAuth("apple", {
-                      redirect_uri: window.location.origin,
+                      redirect_uri: `${window.location.origin}/auth${nextQS}`,
                     });
                     if (result.error) {
                       toast.error("Apple sign-in failed");
                       return;
                     }
                     if (result.redirected) return;
-                    nav("/feed", { replace: true });
+                    nav(nextPath, { replace: true });
                   } catch (e) {
                     toast.error("Apple sign-in failed");
                   } finally {
