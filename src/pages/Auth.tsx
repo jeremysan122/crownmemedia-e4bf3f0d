@@ -44,25 +44,9 @@ const loginSchema = z.object({
 
 type UsernameStatus = "idle" | "checking" | "available" | "taken" | "reserved" | "invalid";
 
-function safeNextPath(raw: string | null): string {
-  if (!raw) return "/feed";
-  try {
-    // Only allow same-origin relative paths starting with a single '/'
-    if (!raw.startsWith("/") || raw.startsWith("//")) return "/feed";
-    // Round-trip through URL to reject anything weird
-    const u = new URL(raw, window.location.origin);
-    if (u.origin !== window.location.origin) return "/feed";
-    return u.pathname + u.search + u.hash;
-  } catch {
-    return "/feed";
-  }
-}
-
 export default function Auth() {
   const [params] = useSearchParams();
   const nav = useNavigate();
-  const nextPath = safeNextPath(params.get("next"));
-  const nextQS = nextPath === "/feed" ? "" : `?next=${encodeURIComponent(nextPath)}`;
   const initialMode = params.get("mode") === "login" ? "login" : "signup";
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
   useSeoMeta({
@@ -260,7 +244,7 @@ export default function Auth() {
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
-            emailRedirectTo: `${window.location.origin}${nextPath}`,
+            emailRedirectTo: `${window.location.origin}/feed`,
             data: {
               username: parsed.data.username,
               first_name: parsed.data.first_name,
@@ -299,7 +283,7 @@ export default function Auth() {
         if (data.session) {
           await tryRedeemPendingInvite();
           toast.success("Welcome to CrownMe");
-          nav(nextPath, { replace: true });
+          nav("/feed", { replace: true });
         } else {
           setCheckInbox(parsed.data.email);
         }
@@ -325,7 +309,7 @@ export default function Auth() {
         persistRemember();
         await tryRedeemPendingInvite();
         toast.success("Welcome back");
-        nav(nextPath, { replace: true });
+        nav("/feed", { replace: true });
       }
     } finally {
       setLoading(false);
@@ -342,7 +326,7 @@ export default function Auth() {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${window.location.origin}${nextPath}`, shouldCreateUser: false },
+        options: { emailRedirectTo: `${window.location.origin}/feed`, shouldCreateUser: false },
       });
       if (error) {
         const { toFriendlyMessage, logRawError } = await import("@/lib/settingsSecurityErrors");
@@ -915,14 +899,14 @@ export default function Auth() {
                   setLoading(true);
                   try {
                     const result = await lovable.auth.signInWithOAuth("google", {
-                      redirect_uri: `${window.location.origin}/auth${nextQS}`,
+                      redirect_uri: window.location.origin,
                     });
                     if (result.error) {
                       toast.error("Google sign-in failed");
                       return;
                     }
                     if (result.redirected) return;
-                    nav(nextPath, { replace: true });
+                    nav("/feed", { replace: true });
                   } catch (e) {
                     toast.error("Google sign-in failed");
                   } finally {
@@ -945,14 +929,14 @@ export default function Auth() {
                   setLoading(true);
                   try {
                     const result = await lovable.auth.signInWithOAuth("apple", {
-                      redirect_uri: `${window.location.origin}/auth${nextQS}`,
+                      redirect_uri: window.location.origin,
                     });
                     if (result.error) {
                       toast.error("Apple sign-in failed");
                       return;
                     }
                     if (result.redirected) return;
-                    nav(nextPath, { replace: true });
+                    nav("/feed", { replace: true });
                   } catch (e) {
                     toast.error("Apple sign-in failed");
                   } finally {
