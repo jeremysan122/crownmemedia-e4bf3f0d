@@ -260,7 +260,7 @@ export default function Auth() {
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/feed${nextQS ? nextQS : ""}`,
+            emailRedirectTo: `${window.location.origin}${nextPath}`,
             data: {
               username: parsed.data.username,
               first_name: parsed.data.first_name,
@@ -342,7 +342,7 @@ export default function Auth() {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${window.location.origin}/feed${nextQS ? nextQS : ""}`, shouldCreateUser: false },
+        options: { emailRedirectTo: `${window.location.origin}${nextPath}`, shouldCreateUser: false },
       });
       if (error) {
         const { toFriendlyMessage, logRawError } = await import("@/lib/settingsSecurityErrors");
