@@ -15,7 +15,6 @@ import Splash from "./pages/Splash";
 import VerifyAge from "./pages/VerifyAge";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
-import OAuthConsent from "./pages/OAuthConsent";
 import Feed from "./pages/Feed";
 import NotFound from "./pages/NotFound";
 import CrownStolenBanner from "./components/CrownStolenBanner";
