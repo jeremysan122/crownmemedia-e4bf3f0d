@@ -154,7 +154,6 @@ const App = () => (
               <Route path="/verify-age" element={<VerifyAge />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="/email-template-preview" element={<EmailTemplatePreview />} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
