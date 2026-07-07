@@ -71,10 +71,15 @@ interface TrendingPost {
   image_urls: string[] | null;
   video_poster_url: string | null;
   media_type: string | null;
+  content_type: string | null;
+  aspect_ratio: string | null;
+  filter: string | null;
   crown_score: number;
   caption: string | null;
   is_sensitive?: boolean | null;
   hashtags?: string[] | null;
+  main_category_slug: string | null;
+  subcategory_slug: string | null;
   profile: { username: string; profile_photo_url: string | null } | null;
 }
 
