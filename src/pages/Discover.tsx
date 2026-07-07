@@ -13,7 +13,9 @@
 //  10. Royal Pass spotlight (non-members)
 //  11. All Royal Hubs
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import PostPreviewTile from "@/components/PostPreviewTile";
+import DiscoverSearchResults from "@/components/discover/DiscoverSearchResults";
 import {
   TrendingUp, Crown, Flame, Sparkles, ArrowRight, Star, Zap, Trophy,
   Search, Swords, UserPlus, UserCheck, Gift, ShieldCheck, MapPin, RefreshCw, Loader2,
@@ -69,10 +71,15 @@ interface TrendingPost {
   image_urls: string[] | null;
   video_poster_url: string | null;
   media_type: string | null;
+  content_type: string | null;
+  aspect_ratio: string | null;
+  filter: string | null;
   crown_score: number;
   caption: string | null;
   is_sensitive?: boolean | null;
   hashtags?: string[] | null;
+  main_category_slug: string | null;
+  subcategory_slug: string | null;
   profile: { username: string; profile_photo_url: string | null } | null;
 }
 
@@ -155,8 +162,20 @@ export default function Discover() {
   const [geoRequesting, setGeoRequesting] = useState(false);
   const [gifters, setGifters] = useState<TopGifter[]>([]);
   const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // URL-driven hub/topic filter — /discover?hub=fashion-beauty&topic=makeup
+  const [urlParams, setUrlParams] = useSearchParams();
+  const hubFilter = urlParams.get("hub");
+  const topicFilter = urlParams.get("topic");
+  const hasFilter = !!(hubFilter || topicFilter);
+  const clearFilter = () => {
+    const next = new URLSearchParams(urlParams);
+    next.delete("hub"); next.delete("topic");
+    setUrlParams(next, { replace: true });
+  };
 
   const POSTS_PAGE = 9;
   const BATTLES_PAGE = 4;
@@ -292,7 +311,7 @@ export default function Discover() {
       let q = supabase
         .from("posts")
         .select(
-          "id, image_url, image_urls, video_poster_url, media_type, crown_score, caption, hashtags, is_sensitive, user_id, profile:profiles!posts_user_id_fkey(username, profile_photo_url)",
+          "id, image_url, image_urls, video_poster_url, media_type, content_type, aspect_ratio, filter, crown_score, caption, hashtags, is_sensitive, user_id, main_category_slug, subcategory_slug, profile:profiles!posts_user_id_fkey(username, profile_photo_url)",
         )
         .gte("created_at", since)
         .eq("is_removed", false)
@@ -300,6 +319,10 @@ export default function Discover() {
         .order("crown_score", { ascending: false })
         .order("id", { ascending: true })
         .limit(POSTS_PAGE);
+      // Apply hub/topic filter server-side so pagination cursors stay coherent
+      // with what the user sees. Topic is more specific than hub.
+      if (topicFilter) q = q.eq("subcategory_slug", topicFilter);
+      else if (hubFilter) q = q.eq("main_category_slug", hubFilter);
       // Stable keyset cursor: rows AFTER (score, id) tuple.
       if (cursor) {
         q = q.or(`crown_score.lt.${cursor.score},and(crown_score.eq.${cursor.score},id.gt.${cursor.id})`);
@@ -312,7 +335,7 @@ export default function Discover() {
       const nextCursor = last ? { score: Number(last.crown_score) || 0, id: String(last.id) } : null;
       return { rows, hasMore: all.length === POSTS_PAGE, nextCursor };
     },
-    [windowSel, blockedIds],
+    [windowSel, blockedIds, hubFilter, topicFilter],
   );
 
   useEffect(() => {
@@ -934,19 +957,53 @@ export default function Discover() {
             </button>
           </header>
 
-          {/* Search */}
-          <form onSubmit={onSearchSubmit} className="mb-5">
+          {/* Search — inline debounced results dropdown */}
+          <form
+            onSubmit={(e) => { onSearchSubmit(e); setShowSearch(false); }}
+            className="mb-5 relative"
+            onBlur={(e) => {
+              // Delay so click on a result registers before dropdown closes.
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                setTimeout(() => setShowSearch(false), 150);
+              }
+            }}
+          >
             <label className="relative block">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setShowSearch(true); }}
+                onFocus={() => setShowSearch(true)}
                 placeholder="Search posts, @users or #tags…"
                 className="w-full h-11 pl-10 pr-4 rounded-xl bg-card border border-border focus:border-primary/60 outline-none text-sm"
                 aria-label="Search CrownMe"
               />
             </label>
+            {showSearch && (
+              <DiscoverSearchResults
+                query={search}
+                onNavigate={() => { setShowSearch(false); setSearch(""); }}
+              />
+            )}
           </form>
+
+          {/* Active hub / topic filter chip */}
+          {hasFilter && (
+            <div className="mb-4 flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] text-muted-foreground">Filtered by</span>
+              <span className="text-xs font-bold px-2 py-1 rounded-full bg-primary/15 text-primary border border-primary/40">
+                {mains.find((m) => m.slug === hubFilter)?.label ?? hubFilter}
+                {topicFilter && ` · ${subs.find((s) => s.slug === topicFilter)?.label ?? topicFilter}`}
+              </span>
+              <button
+                type="button"
+                onClick={clearFilter}
+                className="text-[11px] px-2 py-1 rounded-full border border-border text-muted-foreground hover:text-primary hover:border-primary/40"
+              >
+                Clear filter
+              </button>
+            </div>
+          )}
 
           <section className="mb-6">
             <TrendingHashtags />
@@ -982,16 +1039,21 @@ export default function Discover() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {sortedMains.slice(0, 6).map((m) => {
                 const stat = stats[m.slug];
+                const isActive = hubFilter === m.slug;
                 return (
                   <Link
                     key={m.id}
-                    to={`/c/${m.slug}`}
-                    className={`relative rounded-2xl overflow-hidden p-4 bg-gradient-to-br ${m.gradient ?? "from-amber-400 to-yellow-600"} text-white shadow group hover:scale-[1.02] transition`}
+                    // Selecting a hub filters Discover inline instead of leaving.
+                    to={`/discover?hub=${m.slug}`}
+                    replace
+                    className={`relative rounded-2xl overflow-hidden p-4 bg-gradient-to-br ${m.gradient ?? "from-amber-400 to-yellow-600"} text-white shadow group hover:scale-[1.02] transition ${
+                      isActive ? "ring-2 ring-white/80 outline outline-2 outline-primary" : ""
+                    }`}
                   >
                     <div className="absolute inset-0 bg-black/25" />
                     <div className="relative">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-[10px] uppercase tracking-widest opacity-80">Hub</p>
+                        <p className="text-[10px] uppercase tracking-widest opacity-80">{isActive ? "Selected" : "Hub"}</p>
                         {(stat?.post_count ?? 0) > 0 && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded-full backdrop-blur">
                             <TrendingUp size={9} />Hot
@@ -1061,31 +1123,14 @@ export default function Discover() {
               ) : (
                 <>
                   <div className="grid grid-cols-3 gap-2">
-                    {visibleTrending.map((p) => {
-                    const cover = postCover(p);
-                    return (
-                      <Link
+                    {visibleTrending.map((p) => (
+                      <PostPreviewTile
                         key={p.id}
-                        to={`/post/${p.id}`}
-                        onClick={() => {
-                          void trackEvent("discover_trending_post_opened", { postId: p.id });
-                          void trackEvent("discover_trending_post_clicked", { postId: p.id });
-                        }}
-                        className="relative aspect-square rounded-xl overflow-hidden bg-muted group"
-                      >
-                        {cover && (
-                          <img src={cover} alt={p.caption ?? "Trending post"} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition" />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                        <div className="absolute bottom-1 left-1.5 right-1.5 flex items-center justify-between text-white">
-                          <span className="text-[10px] font-bold truncate">@{p.profile?.username ?? "?"}</span>
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-black/40 px-1.5 py-0.5 rounded-full">
-                            <Crown size={9} fill="currentColor" className="text-gold" />{p.crown_score}
-                          </span>
-                        </div>
-                      </Link>
-                    );
-                  })}
+                        post={p}
+                        // Handler tracks the impression + open events but
+                        // navigation is owned by PostPreviewTile's <Link>.
+                      />
+                    ))}
                   {postsLoadingMore && Array.from({ length: 3 }).map((_, i) => (
                     <Skeleton key={`pm-${i}`} className="aspect-square" />
                   ))}
