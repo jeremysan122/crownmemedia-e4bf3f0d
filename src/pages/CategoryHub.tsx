@@ -1,19 +1,17 @@
-// Category Hub — /c/:mainSlug and /c/:mainSlug/:subSlug  (Phase 2)
+// Category Hub — /c/:mainSlug and /c/:mainSlug/:subSlug
 //
-// Sections:
-//   - Hero (gradient, follow / leaderboard / compete CTAs)
-//   - Subcategory chip nav
-//   - Crown Holder strip (current reigning user)
-//   - Top Competitors podium (top 3 by crown_score)
-//   - Active Battles (open battles in this hub/topic)
-//   - Recent Winners (last 5 awarded crowns)
-//   - Trending Posts grid
+// IMPORTANT: All React hooks live ABOVE any conditional return so the hook
+// order is identical on every render. Previously `useMemo` calls for
+// visiblePosts/top3/rest ran after `if (!main)` bailouts, which triggered
+// "Rendered more hooks than during the previous render." on category
+// navigation (e.g. /c/fashion-beauty right after mount).
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Crown, Flame, TrendingUp, Trophy, Swords, Medal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useFeedFilters, isFilteredOut } from "@/hooks/useFeedFilters";
+import PostPreviewTile from "@/components/PostPreviewTile";
 import {
   fetchMainCategories,
   fetchSubcategories,
@@ -26,11 +24,19 @@ interface PostRow {
   id: string;
   user_id: string;
   image_url: string | null;
+  image_urls: string[] | null;
+  video_poster_url: string | null;
+  media_type: string | null;
+  content_type: string | null;
+  aspect_ratio: string | null;
+  filter: string | null;
   caption: string | null;
   crown_score: number;
   vote_count: number;
   is_sensitive?: boolean | null;
   hashtags?: string[] | null;
+  main_category_slug: string | null;
+  subcategory_slug: string | null;
   profile: { username: string; profile_photo_url: string | null } | null;
 }
 interface CrownRow {
@@ -45,6 +51,9 @@ interface BattleRow {
   ends_at: string | null;
   category: string | null;
 }
+
+const POST_PREVIEW_COLUMNS =
+  "id, user_id, image_url, image_urls, video_poster_url, media_type, content_type, aspect_ratio, filter, caption, crown_score, vote_count, is_sensitive, hashtags, main_category_slug, subcategory_slug, profile:profiles!posts_user_id_fkey(username, profile_photo_url)";
 
 export default function CategoryHub() {
   const { mainSlug, subSlug } = useParams();
@@ -74,14 +83,15 @@ export default function CategoryHub() {
     [subs, main]
   );
 
-  // Posts in this category
+  // Posts in this category — include full media/filter fields so previews render
+  // through PostPreviewTile with the same look as Feed / Profile / PostDetail.
   useEffect(() => {
     if (!mainSlug) return;
     setLoading(true);
     (async () => {
       let q = supabase
         .from("posts")
-        .select("id, user_id, image_url, caption, crown_score, vote_count, is_sensitive, hashtags, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
+        .select(POST_PREVIEW_COLUMNS)
         .eq("is_removed", false)
         .eq("is_archived", false)
         .order("crown_score", { ascending: false })
@@ -113,7 +123,6 @@ export default function CategoryHub() {
     })();
   }, [main?.id, sub?.id, mainSubs.length]);
 
-  // Active battles (best-effort; depends on existing battles table shape)
   useEffect(() => {
     if (!main) return;
     const legacyEnums = (sub ? [sub] : mainSubs)
@@ -132,7 +141,6 @@ export default function CategoryHub() {
     })();
   }, [main?.id, sub?.id, mainSubs.length]);
 
-  // Follow state
   useEffect(() => {
     if (!user?.id || !main) return;
     (async () => {
@@ -147,18 +155,17 @@ export default function CategoryHub() {
     })();
   }, [user?.id, main?.id, sub?.id]);
 
-  if (!main && mains.length > 0) {
-    return (
-      <main className="max-w-3xl mx-auto p-6 text-center">
-        <h1 className="font-display text-2xl mb-2">Category not found</h1>
-        <Link to="/discover" className="text-primary text-sm hover:underline">Browse all categories</Link>
-      </main>
-    );
-  }
-  if (!main) return <div className="p-6 text-muted-foreground text-sm">Loading…</div>;
+  // Derived values — kept above the early returns so hook order is stable.
+  const visiblePosts = useMemo(
+    () => posts.filter((p) => !isFilteredOut(p as any, filters)),
+    [posts, filters]
+  );
+  const reignHolder = crowns[0]?.user ?? null;
+  const top3 = visiblePosts.slice(0, 3);
+  const rest = visiblePosts.slice(3);
 
   const onFollow = async () => {
-    if (!user) return;
+    if (!user || !main) return;
     setFollowing((f) => !f);
     await toggleCategoryFollow({
       userId: user.id,
@@ -168,13 +175,16 @@ export default function CategoryHub() {
     });
   };
 
-  const reignHolder = crowns[0]?.user ?? null;
-  const visiblePosts = useMemo(
-    () => posts.filter((p) => !isFilteredOut(p as any, filters)),
-    [posts, filters]
-  );
-  const top3 = visiblePosts.slice(0, 3);
-  const rest = visiblePosts.slice(3);
+  // ── Conditional returns MUST come after every hook above. ─────────────
+  if (!main && mains.length > 0) {
+    return (
+      <main className="max-w-3xl mx-auto p-6 text-center">
+        <h1 className="font-display text-2xl mb-2">Category not found</h1>
+        <Link to="/discover" className="text-primary text-sm hover:underline">Browse all categories</Link>
+      </main>
+    );
+  }
+  if (!main) return <div className="p-6 text-muted-foreground text-sm">Loading…</div>;
 
   return (
     <main className="max-w-5xl mx-auto px-4 pb-24">
@@ -187,21 +197,34 @@ export default function CategoryHub() {
           {sub && <p className="text-xl font-semibold opacity-90 mb-2">→ {sub.label}</p>}
           {main.description && !sub && <p className="text-sm opacity-90 max-w-xl">{main.description}</p>}
           <div className="flex flex-wrap gap-2 mt-4">
-            <button
-              onClick={onFollow}
-              disabled={!user}
-              className={`px-4 py-2 rounded-full text-xs font-bold backdrop-blur transition ${
-                following ? "bg-white/20 text-white ring-1 ring-white/60" : "bg-white text-black hover:bg-white/90"
-              }`}
-            >
-              {following ? "Following" : "Follow Category"}
-            </button>
+            {/* Follow Category button — every state has explicit high-contrast
+                colors so the label is always readable (previously the disabled
+                signed-out state faded to white-on-white). */}
+            {user ? (
+              <button
+                onClick={onFollow}
+                className={`px-4 py-2 rounded-full text-xs font-bold backdrop-blur transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                  following
+                    ? "bg-black/50 text-white ring-1 ring-white/70 hover:bg-black/60"
+                    : "bg-white text-black hover:bg-white/90"
+                }`}
+              >
+                {following ? "Following" : "Follow Category"}
+              </button>
+            ) : (
+              <Link
+                to={`/auth?next=${encodeURIComponent(`/c/${main.slug}${sub ? `/${sub.slug}` : ""}`)}`}
+                className="px-4 py-2 rounded-full text-xs font-bold bg-white text-black hover:bg-white/90"
+              >
+                Sign in to follow
+              </Link>
+            )}
             <Link to={`/leaderboard/c/${main.slug}${sub ? `?topic=${sub.slug}` : ""}`}
-              className="px-4 py-2 rounded-full text-xs font-bold bg-black/30 text-white hover:bg-black/40">
+              className="px-4 py-2 rounded-full text-xs font-bold bg-black/40 text-white hover:bg-black/50">
               <Crown size={12} className="inline mr-1.5" />Leaderboard
             </Link>
             <Link to={`/upload?main=${main.slug}${sub ? `&sub=${sub.slug}` : ""}`}
-              className="px-4 py-2 rounded-full text-xs font-bold bg-black/30 text-white hover:bg-black/40">
+              className="px-4 py-2 rounded-full text-xs font-bold bg-black/40 text-white hover:bg-black/50">
               + Compete
             </Link>
           </div>
@@ -261,24 +284,18 @@ export default function CategoryHub() {
           </h2>
           <div className="grid grid-cols-3 gap-2">
             {top3.map((p, i) => (
-              <Link key={p.id} to={`/post/${p.id}`} className={`royal-card overflow-hidden hover:border-primary/40 transition ${
-                i === 0 ? "ring-2 ring-gold/60" : ""
-              }`}>
-                <div className="relative aspect-square bg-muted">
-                  {p.image_url && <img src={p.image_url} alt="" className="w-full h-full object-cover" />}
-                  <div className={`absolute top-1.5 left-1.5 size-6 rounded-full flex items-center justify-center text-[10px] font-black ${
+              <PostPreviewTile
+                key={p.id}
+                post={p}
+                className={i === 0 ? "ring-2 ring-gold/60" : ""}
+                badge={
+                  <div className={`absolute top-1.5 left-1.5 size-6 rounded-full flex items-center justify-center text-[10px] font-black z-10 ${
                     i === 0 ? "bg-gold text-black" : i === 1 ? "bg-slate-300 text-black" : "bg-amber-700 text-white"
                   }`}>
                     {i + 1}
                   </div>
-                </div>
-                <div className="p-2">
-                  <p className="text-[11px] font-bold truncate">@{p.profile?.username ?? "?"}</p>
-                  <p className="text-[10px] text-gold flex items-center gap-1">
-                    <Crown size={9} fill="currentColor" />{p.crown_score}
-                  </p>
-                </div>
-              </Link>
+                }
+              />
             ))}
           </div>
         </section>
@@ -339,7 +356,7 @@ export default function CategoryHub() {
           <TrendingUp size={16} className="text-primary" /> Trending Posts
         </h2>
         {loading && <p className="text-xs text-muted-foreground">Loading rankings…</p>}
-        {!loading && posts.length === 0 && (
+        {!loading && visiblePosts.length === 0 && (
           <div className="royal-card p-8 text-center">
             <Crown size={28} className="mx-auto text-muted-foreground mb-2" />
             <p className="font-semibold mb-1">The throne is vacant.</p>
@@ -352,27 +369,22 @@ export default function CategoryHub() {
         )}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {rest.map((p, i) => (
-            <Link key={p.id} to={`/post/${p.id}`} className="royal-card overflow-hidden hover:border-primary/40 transition group">
-              <div className="relative aspect-square bg-muted overflow-hidden">
-                {p.image_url && (
-                  <img loading="lazy" src={p.image_url} alt={p.caption ?? ""} className="w-full h-full object-cover group-hover:scale-105 transition" />
-                )}
-                <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur">
+            <PostPreviewTile
+              key={p.id}
+              post={p}
+              badge={
+                <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur z-10">
                   #{i + 4}
                 </div>
-                <div className="absolute bottom-2 right-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 text-gold text-[10px] font-bold backdrop-blur">
-                  <Crown size={10} fill="currentColor" />{p.crown_score}
-                </div>
-              </div>
-              <div className="p-2">
-                <p className="text-xs font-semibold truncate">@{p.profile?.username ?? "unknown"}</p>
-                <p className="text-[10px] text-muted-foreground flex items-center gap-2">
-                  <Flame size={10} />{p.vote_count} votes
-                </p>
-              </div>
-            </Link>
+              }
+            />
           ))}
         </div>
+        {rest.length > 0 && (
+          <p className="text-[10px] text-muted-foreground mt-3 flex items-center gap-2">
+            <Flame size={10} /> Ranked by crown score
+          </p>
+        )}
       </section>
     </main>
   );
