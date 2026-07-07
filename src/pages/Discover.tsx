@@ -311,7 +311,7 @@ export default function Discover() {
       let q = supabase
         .from("posts")
         .select(
-          "id, image_url, image_urls, video_poster_url, media_type, crown_score, caption, hashtags, is_sensitive, user_id, profile:profiles!posts_user_id_fkey(username, profile_photo_url)",
+          "id, image_url, image_urls, video_poster_url, media_type, content_type, aspect_ratio, filter, crown_score, caption, hashtags, is_sensitive, user_id, main_category_slug, subcategory_slug, profile:profiles!posts_user_id_fkey(username, profile_photo_url)",
         )
         .gte("created_at", since)
         .eq("is_removed", false)
@@ -319,6 +319,10 @@ export default function Discover() {
         .order("crown_score", { ascending: false })
         .order("id", { ascending: true })
         .limit(POSTS_PAGE);
+      // Apply hub/topic filter server-side so pagination cursors stay coherent
+      // with what the user sees. Topic is more specific than hub.
+      if (topicFilter) q = q.eq("subcategory_slug", topicFilter);
+      else if (hubFilter) q = q.eq("main_category_slug", hubFilter);
       // Stable keyset cursor: rows AFTER (score, id) tuple.
       if (cursor) {
         q = q.or(`crown_score.lt.${cursor.score},and(crown_score.eq.${cursor.score},id.gt.${cursor.id})`);
@@ -331,7 +335,7 @@ export default function Discover() {
       const nextCursor = last ? { score: Number(last.crown_score) || 0, id: String(last.id) } : null;
       return { rows, hasMore: all.length === POSTS_PAGE, nextCursor };
     },
-    [windowSel, blockedIds],
+    [windowSel, blockedIds, hubFilter, topicFilter],
   );
 
   useEffect(() => {
