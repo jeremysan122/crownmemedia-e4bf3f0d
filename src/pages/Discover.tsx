@@ -1039,16 +1039,21 @@ export default function Discover() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {sortedMains.slice(0, 6).map((m) => {
                 const stat = stats[m.slug];
+                const isActive = hubFilter === m.slug;
                 return (
                   <Link
                     key={m.id}
-                    to={`/c/${m.slug}`}
-                    className={`relative rounded-2xl overflow-hidden p-4 bg-gradient-to-br ${m.gradient ?? "from-amber-400 to-yellow-600"} text-white shadow group hover:scale-[1.02] transition`}
+                    // Selecting a hub filters Discover inline instead of leaving.
+                    to={`/discover?hub=${m.slug}`}
+                    replace
+                    className={`relative rounded-2xl overflow-hidden p-4 bg-gradient-to-br ${m.gradient ?? "from-amber-400 to-yellow-600"} text-white shadow group hover:scale-[1.02] transition ${
+                      isActive ? "ring-2 ring-white/80 outline outline-2 outline-primary" : ""
+                    }`}
                   >
                     <div className="absolute inset-0 bg-black/25" />
                     <div className="relative">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-[10px] uppercase tracking-widest opacity-80">Hub</p>
+                        <p className="text-[10px] uppercase tracking-widest opacity-80">{isActive ? "Selected" : "Hub"}</p>
                         {(stat?.post_count ?? 0) > 0 && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded-full backdrop-blur">
                             <TrendingUp size={9} />Hot
