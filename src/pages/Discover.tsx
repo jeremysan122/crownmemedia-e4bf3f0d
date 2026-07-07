@@ -13,7 +13,9 @@
 //  10. Royal Pass spotlight (non-members)
 //  11. All Royal Hubs
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import PostPreviewTile from "@/components/PostPreviewTile";
+import DiscoverSearchResults from "@/components/discover/DiscoverSearchResults";
 import {
   TrendingUp, Crown, Flame, Sparkles, ArrowRight, Star, Zap, Trophy,
   Search, Swords, UserPlus, UserCheck, Gift, ShieldCheck, MapPin, RefreshCw, Loader2,
