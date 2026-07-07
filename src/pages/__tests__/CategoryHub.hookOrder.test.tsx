@@ -7,21 +7,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-vi.mock("@/integrations/supabase/client", () => ({
-  supabase: {
-    from: () => {
-      const chain: any = {
-        select: () => chain,
-        eq: () => chain,
-        in: () => chain,
-        order: () => chain,
-        limit: () => Promise.resolve({ data: [], error: null }),
-        maybeSingle: () => Promise.resolve({ data: null, error: null }),
-      };
-      return chain;
+vi.mock("@/integrations/supabase/client", () => {
+  // Thenable chain — any chained method returns `chain`, and awaiting it
+  // resolves to `{ data: [], error: null }` so builder-style queries work.
+  const chain: any = new Proxy(
+    { then: (res: any) => res({ data: [], error: null }) },
+    {
+      get(target, prop) {
+        if (prop === "then") return target.then;
+        return () => chain;
+      },
     },
-  },
-}));
+  );
+  return { supabase: { from: () => chain } };
+});
 
 vi.mock("@/context/AuthContext", () => ({
   useAuth: () => ({ user: null, profile: null }),
