@@ -54,7 +54,7 @@ export default function DiscoverSearchResults({ query, onNavigate }: Props) {
     setLoading(true); setError(false);
     const t = setTimeout(async () => {
       try {
-        const tasks: Promise<any>[] = [];
+        const tasks: Array<PromiseLike<any>> = [];
         // Users (username / display_name) — skip when a tag is being typed.
         tasks.push(
           kind === "tag"
@@ -88,7 +88,7 @@ export default function DiscoverSearchResults({ query, onNavigate }: Props) {
                     .order("crown_score", { ascending: false })
                     .limit(6)),
         );
-        // Hubs & topics — only for free-text searches, and only from cached lists (cheap).
+        // Hubs & topics — only for free-text searches.
         tasks.push(
           kind === "text"
             ? supabase.from("main_categories").select("slug, label").ilike("label", like).limit(4)
