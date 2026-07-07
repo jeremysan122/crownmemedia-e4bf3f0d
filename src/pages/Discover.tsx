@@ -957,19 +957,53 @@ export default function Discover() {
             </button>
           </header>
 
-          {/* Search */}
-          <form onSubmit={onSearchSubmit} className="mb-5">
+          {/* Search — inline debounced results dropdown */}
+          <form
+            onSubmit={(e) => { onSearchSubmit(e); setShowSearch(false); }}
+            className="mb-5 relative"
+            onBlur={(e) => {
+              // Delay so click on a result registers before dropdown closes.
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                setTimeout(() => setShowSearch(false), 150);
+              }
+            }}
+          >
             <label className="relative block">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setShowSearch(true); }}
+                onFocus={() => setShowSearch(true)}
                 placeholder="Search posts, @users or #tags…"
                 className="w-full h-11 pl-10 pr-4 rounded-xl bg-card border border-border focus:border-primary/60 outline-none text-sm"
                 aria-label="Search CrownMe"
               />
             </label>
+            {showSearch && (
+              <DiscoverSearchResults
+                query={search}
+                onNavigate={() => { setShowSearch(false); setSearch(""); }}
+              />
+            )}
           </form>
+
+          {/* Active hub / topic filter chip */}
+          {hasFilter && (
+            <div className="mb-4 flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] text-muted-foreground">Filtered by</span>
+              <span className="text-xs font-bold px-2 py-1 rounded-full bg-primary/15 text-primary border border-primary/40">
+                {mains.find((m) => m.slug === hubFilter)?.label ?? hubFilter}
+                {topicFilter && ` · ${subs.find((s) => s.slug === topicFilter)?.label ?? topicFilter}`}
+              </span>
+              <button
+                type="button"
+                onClick={clearFilter}
+                className="text-[11px] px-2 py-1 rounded-full border border-border text-muted-foreground hover:text-primary hover:border-primary/40"
+              >
+                Clear filter
+              </button>
+            </div>
+          )}
 
           <section className="mb-6">
             <TrendingHashtags />
