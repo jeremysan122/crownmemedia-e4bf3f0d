@@ -1123,31 +1123,14 @@ export default function Discover() {
               ) : (
                 <>
                   <div className="grid grid-cols-3 gap-2">
-                    {visibleTrending.map((p) => {
-                    const cover = postCover(p);
-                    return (
-                      <Link
+                    {visibleTrending.map((p) => (
+                      <PostPreviewTile
                         key={p.id}
-                        to={`/post/${p.id}`}
-                        onClick={() => {
-                          void trackEvent("discover_trending_post_opened", { postId: p.id });
-                          void trackEvent("discover_trending_post_clicked", { postId: p.id });
-                        }}
-                        className="relative aspect-square rounded-xl overflow-hidden bg-muted group"
-                      >
-                        {cover && (
-                          <img src={cover} alt={p.caption ?? "Trending post"} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition" />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                        <div className="absolute bottom-1 left-1.5 right-1.5 flex items-center justify-between text-white">
-                          <span className="text-[10px] font-bold truncate">@{p.profile?.username ?? "?"}</span>
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-black/40 px-1.5 py-0.5 rounded-full">
-                            <Crown size={9} fill="currentColor" className="text-gold" />{p.crown_score}
-                          </span>
-                        </div>
-                      </Link>
-                    );
-                  })}
+                        post={p}
+                        // Handler tracks the impression + open events but
+                        // navigation is owned by PostPreviewTile's <Link>.
+                      />
+                    ))}
                   {postsLoadingMore && Array.from({ length: 3 }).map((_, i) => (
                     <Skeleton key={`pm-${i}`} className="aspect-square" />
                   ))}
