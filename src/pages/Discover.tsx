@@ -162,8 +162,20 @@ export default function Discover() {
   const [geoRequesting, setGeoRequesting] = useState(false);
   const [gifters, setGifters] = useState<TopGifter[]>([]);
   const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // URL-driven hub/topic filter — /discover?hub=fashion-beauty&topic=makeup
+  const [urlParams, setUrlParams] = useSearchParams();
+  const hubFilter = urlParams.get("hub");
+  const topicFilter = urlParams.get("topic");
+  const hasFilter = !!(hubFilter || topicFilter);
+  const clearFilter = () => {
+    const next = new URLSearchParams(urlParams);
+    next.delete("hub"); next.delete("topic");
+    setUrlParams(next, { replace: true });
+  };
 
   const POSTS_PAGE = 9;
   const BATTLES_PAGE = 4;
