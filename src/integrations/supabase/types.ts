@@ -1162,41 +1162,62 @@ export type Database = {
       crown_map_points: {
         Row: {
           category: string | null
+          city: string | null
+          country: string | null
+          crown_id: string | null
           id: string
           lat: number | null
           lng: number | null
+          location_precision: string
+          location_source: string | null
           metadata: Json
+          post_id: string | null
           rank: number | null
           refreshed_at: string
           region_name: string | null
           region_type: string
           score: number
+          state: string | null
           user_id: string
         }
         Insert: {
           category?: string | null
+          city?: string | null
+          country?: string | null
+          crown_id?: string | null
           id?: string
           lat?: number | null
           lng?: number | null
+          location_precision?: string
+          location_source?: string | null
           metadata?: Json
+          post_id?: string | null
           rank?: number | null
           refreshed_at?: string
           region_name?: string | null
           region_type: string
           score?: number
+          state?: string | null
           user_id: string
         }
         Update: {
           category?: string | null
+          city?: string | null
+          country?: string | null
+          crown_id?: string | null
           id?: string
           lat?: number | null
           lng?: number | null
+          location_precision?: string
+          location_source?: string | null
           metadata?: Json
+          post_id?: string | null
           rank?: number | null
           refreshed_at?: string
           region_name?: string | null
           region_type?: string
           score?: number
+          state?: string | null
           user_id?: string
         }
         Relationships: [
@@ -2888,6 +2909,10 @@ export type Database = {
           is_archived: boolean
           is_removed: boolean
           is_sensitive: boolean
+          location_captured_at: string | null
+          location_enabled: boolean
+          location_label: string | null
+          location_source: string | null
           main_category_slug: string | null
           media_height: number | null
           media_origin: string | null
@@ -2900,7 +2925,12 @@ export type Database = {
           parent_post_id: string | null
           photo_filter: string | null
           pinned_at: string | null
+          post_lat: number | null
+          post_lng: number | null
+          post_location_precision: string
           publish_status: string
+          region_name: string | null
+          region_type: string | null
           repost_caption: string | null
           royal_boost_until: string | null
           scheduled_for: string | null
@@ -2947,6 +2977,10 @@ export type Database = {
           is_archived?: boolean
           is_removed?: boolean
           is_sensitive?: boolean
+          location_captured_at?: string | null
+          location_enabled?: boolean
+          location_label?: string | null
+          location_source?: string | null
           main_category_slug?: string | null
           media_height?: number | null
           media_origin?: string | null
@@ -2959,7 +2993,12 @@ export type Database = {
           parent_post_id?: string | null
           photo_filter?: string | null
           pinned_at?: string | null
+          post_lat?: number | null
+          post_lng?: number | null
+          post_location_precision?: string
           publish_status?: string
+          region_name?: string | null
+          region_type?: string | null
           repost_caption?: string | null
           royal_boost_until?: string | null
           scheduled_for?: string | null
@@ -3006,6 +3045,10 @@ export type Database = {
           is_archived?: boolean
           is_removed?: boolean
           is_sensitive?: boolean
+          location_captured_at?: string | null
+          location_enabled?: boolean
+          location_label?: string | null
+          location_source?: string | null
           main_category_slug?: string | null
           media_height?: number | null
           media_origin?: string | null
@@ -3018,7 +3061,12 @@ export type Database = {
           parent_post_id?: string | null
           photo_filter?: string | null
           pinned_at?: string | null
+          post_lat?: number | null
+          post_lng?: number | null
+          post_location_precision?: string
           publish_status?: string
+          region_name?: string | null
+          region_type?: string | null
           repost_caption?: string | null
           royal_boost_until?: string | null
           scheduled_for?: string | null
@@ -4773,6 +4821,25 @@ export type Database = {
           score: number
         }[]
       }
+      get_crowned_post_map_points: {
+        Args: { _category?: string; _limit?: number; _region_type?: string }
+        Returns: {
+          category: string
+          city: string
+          country: string
+          lat: number
+          lng: number
+          location_precision: string
+          metadata: Json
+          post_id: string
+          rank: number
+          refreshed_at: string
+          region_name: string
+          region_type: string
+          score: number
+          state: string
+        }[]
+      }
       get_db_vitals: { Args: never; Returns: Json }
       get_my_admin_roles: {
         Args: never
@@ -4784,15 +4851,22 @@ export type Database = {
         Args: never
         Returns: {
           category: string | null
+          city: string | null
+          country: string | null
+          crown_id: string | null
           id: string
           lat: number | null
           lng: number | null
+          location_precision: string
+          location_source: string | null
           metadata: Json
+          post_id: string | null
           rank: number | null
           refreshed_at: string
           region_name: string | null
           region_type: string
           score: number
+          state: string | null
           user_id: string
         }[]
         SetofOptions: {
@@ -5005,6 +5079,10 @@ export type Database = {
           is_archived: boolean
           is_removed: boolean
           is_sensitive: boolean
+          location_captured_at: string | null
+          location_enabled: boolean
+          location_label: string | null
+          location_source: string | null
           main_category_slug: string | null
           media_height: number | null
           media_origin: string | null
@@ -5017,7 +5095,12 @@ export type Database = {
           parent_post_id: string | null
           photo_filter: string | null
           pinned_at: string | null
+          post_lat: number | null
+          post_lng: number | null
+          post_location_precision: string
           publish_status: string
+          region_name: string | null
+          region_type: string | null
           repost_caption: string | null
           royal_boost_until: string | null
           scheduled_for: string | null
