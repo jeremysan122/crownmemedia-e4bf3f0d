@@ -203,3 +203,42 @@ describe("client query contract carries repost_count", () => {
     expect(postCard).toMatch(/counts\.reposts\s*>\s*0/);
   });
 });
+
+describe("admin/moderator RPC contracts", () => {
+  it("admin_set_post_removed / admin_moderate_comment / admin_update_post are role-gated and definer", () => {
+    for (const name of [
+      "admin_set_post_removed",
+      "admin_moderate_comment",
+      "admin_update_post",
+      "admin_update_posts_bulk",
+    ]) {
+      const fn = allSql.match(new RegExp(`CREATE OR REPLACE FUNCTION public\\.${name}[\\s\\S]+?\\$\\$;`))?.[0];
+      expect(fn, `${name} must be defined`).toBeTruthy();
+    }
+    const setRemoved = allSql.match(/CREATE OR REPLACE FUNCTION public\.admin_set_post_removed[\s\S]+?\$\$;/)![0];
+    expect(setRemoved).toMatch(/has_role\(auth\.uid\(\)\s*,\s*'admin'::app_role\)/);
+    expect(setRemoved).toMatch(/has_role\(auth\.uid\(\)\s*,\s*'moderator'::app_role\)/);
+    expect(setRemoved).toMatch(/SECURITY DEFINER/);
+
+    const updatePost = allSql.match(/CREATE OR REPLACE FUNCTION public\.admin_update_post\(\s*_post_id[\s\S]+?\$\$;/)![0];
+    expect(updatePost).toMatch(/allowed\s+text\[\]\s*:=\s*ARRAY\[/);
+    expect(updatePost).toMatch(/Field % not allowed in admin_update_post/);
+    expect(updatePost).toMatch(/moderated_by\s*=\s*auth\.uid\(\)/);
+    expect(updatePost).toMatch(/moderated_at\s*=\s*now\(\)/);
+  });
+
+  it("client admin helpers route through the new RPCs (no direct posts/comments UPDATE from client)", () => {
+    const adminLib = readFileSync(join(process.cwd(), "src/lib/admin.ts"), "utf8");
+    const adminPage = readFileSync(join(process.cwd(), "src/pages/Admin.tsx"), "utf8");
+    const cmdCenter = readFileSync(join(process.cwd(), "src/pages/admin/CommandCenterContent.tsx"), "utf8");
+
+    for (const src of [adminLib, adminPage, cmdCenter]) {
+      expect(src).not.toMatch(/\.from\(\s*["']posts["']\s*\)\s*\.update\(/);
+      expect(src).not.toMatch(/\.from\(\s*["']comments["']\s*\)\s*\.update\(/);
+    }
+    expect(adminLib).toMatch(/rpc\(\s*["']admin_set_post_removed["']/);
+    expect(adminLib).toMatch(/rpc\(\s*["']admin_moderate_comment["']/);
+    expect(cmdCenter).toMatch(/rpc\(\s*["']admin_update_post["']/);
+    expect(cmdCenter).toMatch(/rpc\(\s*["']admin_update_posts_bulk["']/);
+  });
+});
