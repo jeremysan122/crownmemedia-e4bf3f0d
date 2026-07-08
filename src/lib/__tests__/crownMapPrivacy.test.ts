@@ -81,15 +81,17 @@ describe("crown_map_points privacy hardening", () => {
     );
   });
 
-  it("defines a refresh job that never caches exact coordinates and is admin/service-only", () => {
+  it("defines a refresh job that never caches exact user coordinates and is admin/service-only", () => {
     const fn = ALL_MIG.match(
-      /CREATE OR REPLACE FUNCTION public\.refresh_crown_map_points\(\)[\s\S]*?\$\$;/,
-    )?.[0];
+      /CREATE OR REPLACE FUNCTION public\.refresh_crown_map_points\(\)[\s\S]*?\$\$;/g,
+    )?.pop();
     expect(fn, "refresh_crown_map_points must exist").toBeTruthy();
     // Auth gate: signed-in callers must be admin; service_role has auth.uid() = NULL.
     expect(fn!).toMatch(/RAISE EXCEPTION 'not authorized'/);
-    // Coords must be inserted as NULL — no exact caching.
-    expect(fn!).toMatch(/NULL::double precision,\s*--?\s*exact coords intentionally not cached|NULL::double precision,\s*\n\s*NULL::double precision/);
+    // Must never source coords from profiles / device / exact user location.
+    expect(fn!).not.toMatch(/profiles\.\w*lat|profiles\.\w*lng|device_location|home_location|current_location/i);
+    // Coords are either NULL or looked up from the public center table only.
+    expect(fn!).toMatch(/NULL::double precision|geo_public_centers/);
     expect(ALL_MIG).toMatch(
       /GRANT EXECUTE ON FUNCTION public\.refresh_crown_map_points\(\) TO service_role/,
     );
