@@ -460,7 +460,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     const refetchAll = async () => {
       const [{ data: stats }, { data: postRow }, { count: cmtCount }] = await Promise.all([
         supabase.rpc("get_post_vote_stats", { _post_id: interactionPostId }),
-        supabase.from("posts").select("crown_score, comment_count, share_count, battle_wins").eq("id", interactionPostId).maybeSingle(),
+        supabase.from("posts").select("crown_score, comment_count, share_count, repost_count, battle_wins").eq("id", interactionPostId).maybeSingle(),
         supabase.from("comments").select("id", { count: "exact", head: true }).eq("post_id", interactionPostId).eq("is_removed", false),
       ]);
       if (cancelled) return;
@@ -473,6 +473,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         score: postRow?.crown_score ?? c.score,
         comments: typeof cmtCount === "number" ? cmtCount : (postRow?.comment_count ?? c.comments),
         shares: postRow?.share_count ?? c.shares,
+        reposts: postRow?.repost_count ?? c.reposts,
         battleWins: postRow?.battle_wins ?? c.battleWins,
       }));
     };
