@@ -31,6 +31,7 @@ import TaggedPeopleLine from "./TaggedPeopleLine";
 import { toast } from "sonner";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { trackEvent } from "@/lib/analytics";
+import ConfirmDialog from "./ConfirmDialog";
 
 import { FilterId, isValidFilter, FILTER_BY_ID } from "@/lib/filters";
 import PostMedia from "./PostMedia";
@@ -220,6 +221,10 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   const articleRef = useRef<HTMLElement | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [commentsDrawerOpen, setCommentsDrawerOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [archiveBusy, setArchiveBusy] = useState(false);
   const isMobile = useIsMobile();
   const isBelowDesktop = useIsBelowDesktop();
   const [hidden, setHidden] = useState(false);
@@ -262,25 +267,40 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     setHidden(true);
   };
   const deletePost = async () => {
-    if (!user || !isOwner) return;
-    if (!window.confirm("Delete this post permanently? This cannot be undone.")) return;
+    if (!user || !isOwner || deleteBusy) return;
+    setDeleteBusy(true);
     const { error } = await supabase.from("posts").delete().eq("id", post.id).eq("user_id", user.id);
-    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
+    if (error) {
+      setDeleteBusy(false);
+      logRawError(error, "generic", { feature: "post_delete", post_id: post.id, user_id: user.id, action: "delete" });
+      toast.error(toFriendlyMessage(error, "generic"));
+      return;
+    }
     trackEvent("post_deleted", { metadata: { post_id: interactionPostId } });
     toast.success("Post deleted");
+    setDeleteConfirmOpen(false);
+    setDeleteBusy(false);
     setHidden(true);
     window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id: post.id } }));
   };
 
   const archivePost = async () => {
-    if (!user || !isOwner) return;
+    if (!user || !isOwner || archiveBusy) return;
+    setArchiveBusy(true);
     const { error } = await supabase
       .from("posts")
       .update({ is_archived: true, archived_at: new Date().toISOString() } as any)
       .eq("id", post.id)
       .eq("user_id", user.id);
-    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
+    if (error) {
+      setArchiveBusy(false);
+      logRawError(error, "generic", { feature: "post_archive", post_id: post.id, user_id: user.id, action: "archive" });
+      toast.error(toFriendlyMessage(error, "generic"));
+      return;
+    }
     toast.success("Post archived — find it in Settings → Archived");
+    setArchiveConfirmOpen(false);
+    setArchiveBusy(false);
     setHidden(true);
     window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id: post.id } }));
   };
