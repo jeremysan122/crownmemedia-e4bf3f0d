@@ -88,13 +88,18 @@ describe("crown_map_points privacy hardening", () => {
     expect(fn, "refresh_crown_map_points must exist").toBeTruthy();
     // Auth gate: signed-in callers must be admin; service_role has auth.uid() = NULL.
     expect(fn!).toMatch(/RAISE EXCEPTION 'not authorized'/);
-    // Must never source coords from profiles / device / exact user location.
-    expect(fn!).not.toMatch(/profiles\.\w*lat|profiles\.\w*lng|device_location|home_location|current_location/i);
-    // Coords are either NULL or looked up from the public center table only.
-    expect(fn!).toMatch(/NULL::double precision|geo_public_centers/);
+    // Must never source coords from profiles / device / home. `current_location`
+    // is now the CONSENT flag on a post (posts.location_source), which is
+    // allowed — but profile/device/home fields are still forbidden.
+    expect(fn!).not.toMatch(/profiles\.\w*lat|profiles\.\w*lng|device_location|home_location/i);
+    // Coords are either NULL, looked up from geo_public_centers, or the
+    // crowned POST's own coords (only when the creator consented via
+    // location_source = 'current_location').
+    expect(fn!).toMatch(/geo_public_centers/);
     expect(ALL_MIG).toMatch(
       /GRANT EXECUTE ON FUNCTION public\.refresh_crown_map_points\(\) TO service_role/,
     );
+
   });
 });
 
