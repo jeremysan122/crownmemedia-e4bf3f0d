@@ -9,7 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { lookupGeo, fallbackCoord, type LatLng } from "@/lib/geoCoords";
+import { lookupGeo, type LatLng } from "@/lib/geoCoords";
 import { toast } from "sonner";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -1365,11 +1365,13 @@ function project(lat: number, lon: number, w: number, h: number) {
   return [x, y];
 }
 
-function geoFor(r: Row): { coord: LatLng; approximate: boolean } {
-  if (r.region_type === "global") return { coord: [0, 0], approximate: false };
+function geoFor(r: Row): { coord: LatLng | null } {
+  if (r.region_type === "global") return { coord: [0, 0] };
   const exact = lookupGeo(r.region_name, r.region_type as any);
-  if (exact) return { coord: exact, approximate: false };
-  return { coord: fallbackCoord(`${r.region_type}:${r.region_name}`), approximate: true };
+  // Unmapped regions return `null` — callers hide them from the map instead
+  // of dropping a fake pin from a deterministic hash (which lands in the
+  // ocean or on the wrong continent and misleads viewers).
+  return { coord: exact };
 }
 
 function MapView({
@@ -1397,17 +1399,18 @@ function MapView({
   // current token version, so we don't loop forever on a genuinely bad token.
   const refreshAttemptedRef = useRef<number | null>(null);
 
-  const points = useMemo(
-    () =>
-      rows
-        .filter((r) => r.region_type !== "global")
-        .map((r) => {
-          const { coord, approximate } = geoFor(r);
-          return { r, coord, approximate };
-        }),
+  const visibleRows = useMemo(
+    () => rows.filter((r) => r.region_type !== "global"),
     [rows],
   );
-  const approxCount = points.filter((p) => p.approximate).length;
+  const points = useMemo(
+    () =>
+      visibleRows
+        .map((r) => ({ r, coord: geoFor(r).coord }))
+        .filter((p): p is { r: Row; coord: LatLng } => p.coord !== null),
+    [visibleRows],
+  );
+  const unmappedCount = visibleRows.length - points.length;
   const maxScore = Math.max(1, ...points.map((p) => p.r.crown_score));
 
   // Init map once we have a token
@@ -1506,7 +1509,7 @@ function MapView({
         background:${mine ? "hsl(45 95% 55%)" : "hsl(45 90% 60%)"};
         border:2px solid rgba(0,0,0,0.6);
         box-shadow:0 0 ${Math.round(size * 0.6)}px hsl(45 95% 55% / ${0.35 + intensity * 0.5});
-        opacity:${p.approximate ? 0.7 : 0.95};
+        opacity:0.95;
         display:flex;align-items:center;justify-content:center;color:#1a1208;
         font-weight:800;font-size:${Math.max(10, Math.round(size * 0.42))}px;
         transform:translate(-50%, -50%);
@@ -1544,7 +1547,7 @@ function MapView({
             <span style="font-size:13px;font-weight:800;color:hsl(45 95% 65%)">${formatScore(p.r.crown_score)}</span>
           </div>
           <div style="margin-top:6px;font-size:10px;color:#777;font-style:italic">
-            ${markerMode === "posts" ? (postTarget ? "Click to view post" : "Click to view holder") : "Click to view profile"}${p.approximate ? " · approx. location" : ""}
+            ${markerMode === "posts" ? (postTarget ? "Click to view post" : "Click to view holder") : "Click to view profile"}
           </div>
         </div>
       `;
@@ -1740,7 +1743,7 @@ function MapView({
           </button>
         </div>
         <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-          <MapPin size={10} /> {points.length} mapped{approxCount > 0 ? ` · ${approxCount} approx.` : ""}
+          <MapPin size={10} /> {points.length} mapped{unmappedCount > 0 ? ` · ${unmappedCount} unmapped` : ""}
         </span>
       </div>
       <div ref={containerRef} className="w-full rounded-md overflow-hidden" style={{ height: "min(70vh, 560px)" }} />

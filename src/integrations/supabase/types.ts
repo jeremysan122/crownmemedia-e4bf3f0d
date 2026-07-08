@@ -1791,6 +1791,36 @@ export type Database = {
           },
         ]
       }
+      geo_public_centers: {
+        Row: {
+          created_at: string
+          lat: number
+          lng: number
+          region_name_display: string
+          region_name_key: string
+          region_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          lat: number
+          lng: number
+          region_name_display: string
+          region_name_key: string
+          region_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          lat?: number
+          lng?: number
+          region_name_display?: string
+          region_name_key?: string
+          region_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gift_transactions: {
         Row: {
           client_dedupe_key: string | null
