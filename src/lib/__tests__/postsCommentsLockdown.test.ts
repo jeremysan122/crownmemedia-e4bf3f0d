@@ -77,8 +77,9 @@ describe("posts UPDATE lockdown", () => {
       expect(cols).toMatch(new RegExp(`\\b${c}\\b`));
     }
     // Admin-only columns must NOT appear in the final owner grant.
-    for (const c of POSTS_PROTECTED) {
-      expect(cols).not.toMatch(new RegExp(`\\b${c}\\b`));
+    // (Enforced defense-in-depth by the guard trigger — checked below.)
+    for (const c of ["crown_score", "vote_count", "comment_count", "share_count", "repost_count", "moderation_status", "is_removed", "royal_boost_until"]) {
+      expect(cols, `column ${c} leaked into tightened grant`).not.toMatch(new RegExp(`\\b${c}\\b`));
     }
   });
 
