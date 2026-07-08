@@ -1509,7 +1509,7 @@ function MapView({
         background:${mine ? "hsl(45 95% 55%)" : "hsl(45 90% 60%)"};
         border:2px solid rgba(0,0,0,0.6);
         box-shadow:0 0 ${Math.round(size * 0.6)}px hsl(45 95% 55% / ${0.35 + intensity * 0.5});
-        opacity:${p.approximate ? 0.7 : 0.95};
+        opacity:0.95;
         display:flex;align-items:center;justify-content:center;color:#1a1208;
         font-weight:800;font-size:${Math.max(10, Math.round(size * 0.42))}px;
         transform:translate(-50%, -50%);
