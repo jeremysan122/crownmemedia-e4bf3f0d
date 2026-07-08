@@ -35,7 +35,7 @@ import FilterOverlay from "@/components/FilterOverlay";
 import TagPeopleInput, { type TaggedProfile } from "@/components/TagPeopleInput";
 import { cssFor, FilterId } from "@/lib/filters";
 import { trackEvent } from "@/lib/analytics";
-import { Calendar as CalendarIcon, Users, Hash } from "lucide-react";
+import { Calendar as CalendarIcon, Users, Hash, MapPin, ChevronDown } from "lucide-react";
 import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
 import CategoryPicker, { type CategoryPickerValue } from "@/components/categories/CategoryPicker";
 import { validateUploadSelection } from "@/lib/contentType";
