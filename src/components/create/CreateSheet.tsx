@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Image as ImageIcon, Clapperboard, FileText, Bookmark, X } from "lucide-react";
+import { Image as ImageIcon, Clapperboard, FileText, Bookmark } from "lucide-react";
 import { CrownIcon } from "@/components/CrownIcon";
 
 interface Props {
