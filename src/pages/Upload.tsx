@@ -35,7 +35,7 @@ import FilterOverlay from "@/components/FilterOverlay";
 import TagPeopleInput, { type TaggedProfile } from "@/components/TagPeopleInput";
 import { cssFor, FilterId } from "@/lib/filters";
 import { trackEvent } from "@/lib/analytics";
-import { Calendar as CalendarIcon, Users, Hash } from "lucide-react";
+import { Calendar as CalendarIcon, Users, Hash, MapPin, ChevronDown } from "lucide-react";
 import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcategory } from "@/lib/categories";
 import CategoryPicker, { type CategoryPickerValue } from "@/components/categories/CategoryPicker";
 import { validateUploadSelection } from "@/lib/contentType";
@@ -108,6 +108,16 @@ export default function Upload() {
   const [tagged, setTagged] = useState<TaggedProfile[]>([]);
   const [isSensitive, setIsSensitive] = useState(false);
   const [sensitiveReason, setSensitiveReason] = useState("");
+  // ── Post location (see /map). Default OFF — location is per-POST, never
+  // pulled from the user's profile or device silently. Exact coords only land
+  // on the post when the user explicitly picks "Use my current location".
+  const [locationMode, setLocationMode] = useState<"none" | "manual" | "current">("none");
+  const [postLat, setPostLat] = useState<number | null>(null);
+  const [postLng, setPostLng] = useState<number | null>(null);
+  const [locationCapturedAt, setLocationCapturedAt] = useState<string | null>(null);
+  const [locationBusy, setLocationBusy] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationOpen, setLocationOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   // ── Category system (Master Category + Topic + tags) ──
@@ -618,7 +628,14 @@ export default function Upload() {
     if (derivedSub && derivedMain && derivedSub.main_category_id !== derivedMain.id) {
       return "Topic doesn't belong to the chosen category";
     }
-    if (!city.trim() || !country.trim()) return "Location required";
+    // Location is now optional and per-POST — required only when the creator
+    // explicitly picked "Manual city".
+    if (locationMode === "manual" && (!city.trim() || !country.trim())) {
+      return "Enter city and country, or switch location off";
+    }
+    if (locationMode === "current" && (postLat == null || postLng == null)) {
+      return "Waiting for location — allow permission or switch to city/none";
+    }
     if (scheduledFor) {
       const t = new Date(scheduledFor).getTime();
       if (!Number.isFinite(t)) return "Invalid scheduled time";
@@ -634,7 +651,7 @@ export default function Upload() {
     });
     if (ctErr) return ctErr;
     return null;
-  }, [mode, photos, video, city, country, scheduledFor, pickerVal.mainSlug, pickerVal.subSlug, derivedSub, derivedMain, contentType]);
+  }, [mode, photos, video, city, country, scheduledFor, pickerVal.mainSlug, pickerVal.subSlug, derivedSub, derivedMain, contentType, locationMode, postLat, postLng]);
 
   const cancelUpload = () => {
     cancelledRef.current = true;
@@ -893,9 +910,12 @@ export default function Upload() {
         image_urls: imageUrls,
         caption: finalCaption,
         category,
-        city: city.trim(),
-        state: state.trim(),
-        country: country.trim(),
+        // city/state/country only when the creator picked manual location.
+        // Never send silently — the Crown Map pins the crowned POST, and we
+        // don't want stale profile-defaults leaking into a "no location" post.
+        city: locationMode === "manual" ? city.trim() : null,
+        state: locationMode === "manual" ? state.trim() : null,
+        country: locationMode === "manual" ? country.trim() : null,
         media_type: mode === "photo" ? "image" : "video",
         video_url: videoUrl,
         video_poster_url: videoPosterUrl,
@@ -916,6 +936,25 @@ export default function Upload() {
         main_category_slug: derivedMain?.slug ?? null,
         subcategory_slug: derivedSub?.slug ?? null,
         content_type: contentType,
+        // Per-post location. `location_source='none'` (the default) tells the
+        // publish RPC + trigger to store nothing sensitive on the row.
+        location_enabled: locationMode !== "none",
+        location_source: locationMode === "current" ? "current_location"
+                       : locationMode === "manual"  ? "manual"
+                       : "none",
+        location_label: locationMode === "current" && postLat != null && postLng != null
+          ? `${postLat.toFixed(4)}, ${postLng.toFixed(4)}`
+          : locationMode === "manual"
+          ? [city.trim(), state.trim(), country.trim()].filter(Boolean).join(", ")
+          : null,
+        region_name: locationMode === "manual" ? (city.trim() || null) : null,
+        region_type: locationMode === "manual" && city.trim() ? "city" : null,
+        post_lat: locationMode === "current" ? postLat : null,
+        post_lng: locationMode === "current" ? postLng : null,
+        post_location_precision: locationMode === "current" ? "exact"
+                               : locationMode === "manual"  ? "city"
+                               : "none",
+        location_captured_at: locationMode === "current" ? locationCapturedAt : null,
       };
 
       const { data: published, error } = await supabase.rpc("publish_post_idempotent" as any, {
@@ -1768,12 +1807,136 @@ export default function Upload() {
           )}
         </div>
 
-        {/* Location */}
-        <div className="grid grid-cols-2 gap-3">
-          <div><Label>City</Label><Input value={city} onChange={(e) => setCity(e.target.value)} className="bg-input" required /></div>
-          <div><Label>State</Label><Input value={state} onChange={(e) => setState(e.target.value)} className="bg-input" /></div>
+        {/* Location — per-POST, OFF by default. Crown Map pins the crowned
+            POST, never the user. Exact GPS only if the creator explicitly
+            picks "Use my current location". */}
+        <div className="rounded-xl border border-border bg-card/40 p-3 space-y-3">
+          <button
+            type="button"
+            onClick={() => setLocationOpen((v) => !v)}
+            className="w-full flex items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-2 text-foreground min-w-0">
+              <MapPin size={14} className="text-primary shrink-0" />
+              <div className="min-w-0 text-left">
+                <div className="text-xs font-bold uppercase tracking-widest">Add location</div>
+                <div className="text-[11px] text-muted-foreground truncate">
+                  {locationMode === "none" && "No location — post won't be pinned on the map"}
+                  {locationMode === "manual" && (
+                    city.trim()
+                      ? `City · ${[city.trim(), state.trim(), country.trim()].filter(Boolean).join(", ")}`
+                      : "Manual — enter city/state/country below"
+                  )}
+                  {locationMode === "current" && (
+                    postLat != null && postLng != null
+                      ? `Current location · ${postLat.toFixed(3)}, ${postLng.toFixed(3)}`
+                      : "Use my current location (waiting for permission)"
+                  )}
+                </div>
+              </div>
+            </div>
+            <ChevronDown
+              size={14}
+              className={`text-muted-foreground transition-transform ${locationOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {locationOpen && (
+            <>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { id: "none", label: "None" },
+                  { id: "manual", label: "City" },
+                  { id: "current", label: "Current" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setLocationMode(opt.id);
+                      setLocationError(null);
+                      if (opt.id !== "current") {
+                        setPostLat(null);
+                        setPostLng(null);
+                        setLocationCapturedAt(null);
+                      }
+                      if (opt.id === "current") {
+                        if (typeof navigator === "undefined" || !navigator.geolocation) {
+                          setLocationError("Your browser doesn't support location.");
+                          return;
+                        }
+                        setLocationBusy(true);
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            setPostLat(pos.coords.latitude);
+                            setPostLng(pos.coords.longitude);
+                            setLocationCapturedAt(new Date().toISOString());
+                            setLocationBusy(false);
+                          },
+                          (err) => {
+                            setLocationBusy(false);
+                            setLocationMode("manual");
+                            setLocationError(
+                              err.code === 1
+                                ? "Location permission was denied. You can choose a city manually."
+                                : "Couldn't get your location. Try again or choose a city manually.",
+                            );
+                          },
+                          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+                        );
+                      }
+                    }}
+                    className={`h-9 rounded-lg text-[11px] font-bold uppercase tracking-widest border transition ${
+                      locationMode === opt.id
+                        ? "bg-gradient-gold text-primary-foreground border-transparent gold-shadow"
+                        : "bg-card/60 border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {locationBusy && (
+                <div className="text-[11px] text-muted-foreground flex items-center gap-2">
+                  <Loader2 size={12} className="animate-spin" /> Getting your location…
+                </div>
+              )}
+              {locationError && (
+                <div className="text-[11px] text-destructive">{locationError}</div>
+              )}
+
+              {locationMode === "manual" && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[11px]">City</Label>
+                      <Input value={city} onChange={(e) => setCity(e.target.value)} className="bg-input h-9 text-xs" />
+                    </div>
+                    <div>
+                      <Label className="text-[11px]">State</Label>
+                      <Input value={state} onChange={(e) => setState(e.target.value)} className="bg-input h-9 text-xs" />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-[11px]">Country</Label>
+                    <Input value={country} onChange={(e) => setCountry(e.target.value)} className="bg-input h-9 text-xs" />
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                Location is attached to this post only. CrownMe does not use this
+                to pin your profile or home location.
+                {locationMode === "current" && (
+                  <> Exact location may place this post close to where it was
+                  created — you can choose <b>City</b> instead.</>
+                )}
+              </p>
+            </>
+          )}
         </div>
-        <div><Label>Country</Label><Input value={country} onChange={(e) => setCountry(e.target.value)} className="bg-input" required /></div>
+
 
         {/* Tag people */}
         <div className="rounded-xl border border-border bg-card/40 p-3">

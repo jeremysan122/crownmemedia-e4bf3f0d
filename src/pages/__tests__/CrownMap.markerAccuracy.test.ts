@@ -29,8 +29,11 @@ describe("CrownMap.tsx marker accuracy", () => {
   });
 
   it("geoFor returns a nullable coord", () => {
-    expect(SRC).toMatch(/function geoFor\([^)]*\)\s*:\s*\{\s*coord:\s*LatLng\s*\|\s*null\s*\}/);
+    // Now includes `precision` alongside `coord` so the UI can label pins,
+    // but the coord itself must still be nullable so unmapped rows are hidden.
+    expect(SRC).toMatch(/function geoFor\([^)]*\)\s*:\s*\{\s*coord:\s*LatLng\s*\|\s*null\s*;/);
   });
+
 
   it("filters out unmapped rows before rendering markers", () => {
     expect(SRC).toMatch(/\.filter\(\(p\)[^)]*=>\s*p\.coord\s*!==\s*null/);

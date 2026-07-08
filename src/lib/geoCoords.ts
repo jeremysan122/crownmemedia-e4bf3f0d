@@ -318,12 +318,69 @@ export function lookupGeo(
 }
 
 /**
- * Deterministic decorative fallback — DO NOT use for visible map pins.
+ * Resolve a crowned POST to a public map coordinate.
  *
- * Retained only for tests and any legacy caller that needs a stable pseudo
- * coordinate for hashing / dev fixtures. Visible Crown Map markers must call
- * `lookupGeo()` and hide the row when it returns `null`, otherwise pins land
- * in fake random positions and mislead users.
+ * Priority (matches refresh_crown_map_points on the server so pins and cache
+ * always agree):
+ *   1. Exact post coords — ONLY when the user explicitly consented via
+ *      `location_enabled = true` AND `location_source = 'current_location'`.
+ *   2. Safe city center resolved from `posts.city`.
+ *   3. Safe region center resolved from the crown's `region_name` +
+ *      `region_type` (state / country fallback).
+ *   4. Safe state, then safe country center from `posts.state` / `posts.country`.
+ *
+ * Returns `{ coord: null }` when nothing matches. Callers MUST treat that as
+ * "unmapped" and hide the marker — never invent a coordinate. Profile / device /
+ * home location is intentionally never consulted here.
+ */
+export function lookupPostGeo(input: {
+  post_lat?: number | null;
+  post_lng?: number | null;
+  location_enabled?: boolean | null;
+  location_source?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  region_type?: "country" | "state" | "city" | "global" | null;
+  region_name?: string | null;
+}): { coord: LatLng | null; precision: "exact" | "city" | "state" | "country" | "none" } {
+  if (
+    input.location_enabled === true &&
+    input.location_source === "current_location" &&
+    typeof input.post_lat === "number" &&
+    typeof input.post_lng === "number" &&
+    Number.isFinite(input.post_lat) &&
+    Number.isFinite(input.post_lng)
+  ) {
+    return { coord: [input.post_lat, input.post_lng], precision: "exact" };
+  }
+  if (input.city && input.city.trim()) {
+    const c = lookupGeo(input.city, "city");
+    if (c) return { coord: c, precision: "city" };
+  }
+  if (input.region_name && input.region_type && input.region_type !== "global") {
+    const r = lookupGeo(input.region_name, input.region_type);
+    if (r) {
+      return {
+        coord: r,
+        precision: input.region_type === "country" ? "country" : "state",
+      };
+    }
+  }
+  if (input.state && input.state.trim()) {
+    const s = lookupGeo(input.state, "state");
+    if (s) return { coord: s, precision: "state" };
+  }
+  if (input.country && input.country.trim()) {
+    const c = lookupGeo(input.country, "country");
+    if (c) return { coord: c, precision: "country" };
+  }
+  return { coord: null, precision: "none" };
+}
+
+/**
+ * Deterministic decorative fallback — DO NOT use for visible map pins.
+ * Retained only for tests and legacy hashing fixtures.
  */
 export function fallbackCoord(name: string): LatLng {
   let h = 2166136261;
@@ -337,3 +394,4 @@ export function fallbackCoord(name: string): LatLng {
   const lon = u2 * 340 - 170;
   return [lat, lon];
 }
+
