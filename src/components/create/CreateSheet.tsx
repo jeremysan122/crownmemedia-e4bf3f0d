@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Image as ImageIcon, Clapperboard, FileText, Bookmark, X } from "lucide-react";
+import { Image as ImageIcon, Clapperboard, FileText, Bookmark } from "lucide-react";
 import { CrownIcon } from "@/components/CrownIcon";
 
 interface Props {
@@ -72,13 +72,6 @@ export default function CreateSheet({ open, onOpenChange }: Props) {
             <CrownIcon className="size-5 text-primary" />
             <SheetTitle className="font-display tracking-wide text-base">Create</SheetTitle>
           </div>
-          <button
-            onClick={() => onOpenChange(false)}
-            aria-label="Close"
-            className="p-2 -mr-2 rounded-full text-muted-foreground hover:bg-muted"
-          >
-            <X size={18} />
-          </button>
         </SheetHeader>
 
         <div className="px-4 pt-2 pb-6 space-y-2.5">

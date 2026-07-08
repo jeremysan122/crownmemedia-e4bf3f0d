@@ -11,7 +11,7 @@ import { z } from "zod";
 import { Eye, EyeOff, Loader2, Check, X, Mail, AlertTriangle } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { calculateAge } from "@/lib/crown";
-import { lovable } from "@/integrations/lovable";
+
 import { trackEvent } from "@/lib/analytics";
 import { scorePassword } from "@/lib/passwordStrength";
 import { isReservedUsername } from "@/lib/reservedUsernames";
@@ -891,65 +891,7 @@ export default function Auth() {
 
           {!(mode === "signup" && signupStep === 2) && (
             <>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={loading}
-                onClick={async () => {
-                  setLoading(true);
-                  try {
-                    const result = await lovable.auth.signInWithOAuth("google", {
-                      redirect_uri: window.location.origin,
-                    });
-                    if (result.error) {
-                      toast.error("Google sign-in failed");
-                      return;
-                    }
-                    if (result.redirected) return;
-                    nav("/feed", { replace: true });
-                  } catch (e) {
-                    toast.error("Google sign-in failed");
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                className="w-full h-11 bg-card hover:bg-card/80 border-border text-foreground font-medium"
-              >
-                <svg className="size-5" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.2.8 3.9 1.5l2.7-2.6C17 3.3 14.7 2.3 12 2.3 6.9 2.3 2.8 6.4 2.8 11.5S6.9 20.7 12 20.7c6.9 0 9.5-4.8 9.5-7.4 0-.5-.06-.9-.13-1.3H12z"/>
-                </svg>
-                Continue with Google
-              </Button>
 
-              <Button
-                type="button"
-                variant="outline"
-                disabled={loading}
-                onClick={async () => {
-                  setLoading(true);
-                  try {
-                    const result = await lovable.auth.signInWithOAuth("apple", {
-                      redirect_uri: window.location.origin,
-                    });
-                    if (result.error) {
-                      toast.error("Apple sign-in failed");
-                      return;
-                    }
-                    if (result.redirected) return;
-                    nav("/feed", { replace: true });
-                  } catch (e) {
-                    toast.error("Apple sign-in failed");
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                className="w-full h-11 mt-2 bg-foreground hover:bg-foreground/90 text-background border-foreground font-medium"
-              >
-                <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M17.05 12.04c-.03-2.86 2.34-4.24 2.45-4.31-1.34-1.96-3.42-2.23-4.16-2.26-1.77-.18-3.46 1.04-4.36 1.04-.91 0-2.3-1.02-3.78-.99-1.94.03-3.74 1.13-4.74 2.86-2.02 3.5-.52 8.68 1.45 11.52.96 1.39 2.1 2.95 3.58 2.9 1.44-.06 1.99-.93 3.73-.93 1.74 0 2.23.93 3.75.9 1.55-.03 2.53-1.42 3.48-2.82 1.1-1.62 1.55-3.19 1.57-3.27-.03-.01-3.01-1.16-3.04-4.6zM14.18 3.62c.79-.96 1.33-2.29 1.18-3.62-1.14.05-2.53.76-3.35 1.71-.73.84-1.38 2.2-1.21 3.5 1.28.1 2.58-.65 3.38-1.59z"/>
-                </svg>
-                Continue with Apple
-              </Button>
 
               <button
                 type="button"
