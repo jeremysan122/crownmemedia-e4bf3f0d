@@ -628,7 +628,14 @@ export default function Upload() {
     if (derivedSub && derivedMain && derivedSub.main_category_id !== derivedMain.id) {
       return "Topic doesn't belong to the chosen category";
     }
-    if (!city.trim() || !country.trim()) return "Location required";
+    // Location is now optional and per-POST — required only when the creator
+    // explicitly picked "Manual city".
+    if (locationMode === "manual" && (!city.trim() || !country.trim())) {
+      return "Enter city and country, or switch location off";
+    }
+    if (locationMode === "current" && (postLat == null || postLng == null)) {
+      return "Waiting for location — allow permission or switch to city/none";
+    }
     if (scheduledFor) {
       const t = new Date(scheduledFor).getTime();
       if (!Number.isFinite(t)) return "Invalid scheduled time";
@@ -644,7 +651,7 @@ export default function Upload() {
     });
     if (ctErr) return ctErr;
     return null;
-  }, [mode, photos, video, city, country, scheduledFor, pickerVal.mainSlug, pickerVal.subSlug, derivedSub, derivedMain, contentType]);
+  }, [mode, photos, video, city, country, scheduledFor, pickerVal.mainSlug, pickerVal.subSlug, derivedSub, derivedMain, contentType, locationMode, postLat, postLng]);
 
   const cancelUpload = () => {
     cancelledRef.current = true;
