@@ -11,7 +11,7 @@ import { z } from "zod";
 import { Eye, EyeOff, Loader2, Check, X, Mail, AlertTriangle } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { calculateAge } from "@/lib/crown";
-import { lovable } from "@/integrations/lovable";
+
 import { trackEvent } from "@/lib/analytics";
 import { scorePassword } from "@/lib/passwordStrength";
 import { isReservedUsername } from "@/lib/reservedUsernames";
