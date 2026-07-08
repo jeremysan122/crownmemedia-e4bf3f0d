@@ -108,7 +108,7 @@ describe("comments UPDATE lockdown", () => {
   it("revokes broad UPDATE and final grant is body+edited_at only", () => {
     expect(allSql).toMatch(/REVOKE\s+UPDATE\s+ON\s+public\.comments\s+FROM\s+authenticated/i);
     const grantBlocks = [...allSql.matchAll(
-      /GRANT UPDATE\s*\(([\s\S]+?)\)\s*ON\s+public\.comments\s+TO\s+authenticated/gi,
+      /GRANT UPDATE\s*\(([^)]+)\)\s*ON\s+public\.comments\s+TO\s+authenticated/gi,
     )];
     expect(grantBlocks.length).toBeGreaterThan(0);
     const cols = grantBlocks[grantBlocks.length - 1][1];
