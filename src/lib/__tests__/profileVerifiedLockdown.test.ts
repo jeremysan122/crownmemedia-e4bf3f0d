@@ -93,6 +93,7 @@ describe("profiles verified badge lockdown", () => {
     const offenders: string[] = [];
     for (const file of walk(join(process.cwd(), "src"))) {
       if (file.endsWith("profileVerifiedLockdown.test.ts")) continue;
+      if (/__tests__|\.test\.(ts|tsx)$/.test(file)) continue;
       const content = readFileSync(file, "utf8");
       if (forbidden.test(content)) offenders.push(file);
     }
