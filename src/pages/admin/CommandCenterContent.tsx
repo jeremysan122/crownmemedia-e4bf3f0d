@@ -178,7 +178,10 @@ export default function CommandCenterContent() {
   };
 
   const updatePost = async (id: string, patch: Record<string, any>) => {
-    const { error } = await (supabase as any).from("posts").update(patch).eq("id", id);
+    const { error } = await supabase.rpc("admin_update_post" as never, {
+      _post_id: id,
+      _patch: patch,
+    } as never);
     if (error) { toast.error(error.message); return false; }
     // If an AI verdict exists for this post, snapshot it into the audit log so
     // there is a permanent record of *what the human overrode*. The standard
