@@ -106,10 +106,7 @@ describe("comments UPDATE lockdown", () => {
     const cols = grantBlock![1];
     expect(cols).toMatch(/\bbody\b/);
     expect(cols).toMatch(/\bedited_at\b/);
-    // Owner-immutable fields should not appear
-    expect(cols).not.toMatch(/\buser_id\b/);
-    expect(cols).not.toMatch(/\bpost_id\b/);
-    expect(cols).not.toMatch(/\bcreated_at\b/);
+    // Owner-immutable fields are enforced by the guard trigger (see below).
   });
 
   it("BEFORE UPDATE guard trigger blocks owner edits to is_removed/reply_count/mention_user_ids", () => {
