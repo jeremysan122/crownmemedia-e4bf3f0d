@@ -1788,6 +1788,89 @@ function MapView({
   );
 }
 
+/* --------------------- Unmapped Crowned Posts --------------------- */
+
+/**
+ * Crowned posts that hold an active crown but cannot be placed on the map
+ * (no consented exact coords, no city match, no region match). Never hide
+ * these silently and NEVER invent a coordinate — we surface them here so
+ * the creator can still add a city on the post to bring it back to the map.
+ */
+function UnmappedCrownedPosts({ rows, category }: { rows: Row[]; category: CrownCategory }) {
+  const navigate = useNavigate();
+  const { unmapped } = useMemo(() => classifyCrownRows(rows), [rows]);
+  // Global rows always resolve to [0,0] — never fall into `unmapped` — so we
+  // only need to hide the whole section when nothing is unmapped.
+  if (unmapped.length === 0) return null;
+
+  return (
+    <section
+      aria-label="Unmapped crowned posts"
+      data-testid="unmapped-crowned-posts"
+      className="royal-card p-4 space-y-3"
+    >
+      <div className="flex items-center gap-2">
+        <MapPin size={14} className="text-muted-foreground" />
+        <h3 className="font-display text-sm uppercase tracking-widest text-foreground">
+          Unmapped crowned posts
+        </h3>
+        <span className="text-[11px] text-muted-foreground">· {unmapped.length}</span>
+      </div>
+      <p className="text-[11px] text-muted-foreground leading-snug">
+        These crowned posts don't have a location attached yet, so they aren't
+        shown as map pins. Opening a post and adding a city will bring it back
+        to the map.
+      </p>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {unmapped.slice(0, 24).map((r) => {
+          const img = r.post?.image_url ?? null;
+          const caption = (r.post?.caption ?? "").trim();
+          const openPost = () => {
+            if (r.post_id) navigate(`/post/${r.post_id}`);
+            else if (r.profile?.username) navigate(`/${encodeURIComponent(r.profile.username)}`);
+          };
+          return (
+            <li
+              key={`${r.post_id ?? r.user_id}:${r.region_type}:${r.region_name}`}
+              className="flex items-center gap-3 rounded-lg border border-border bg-card/40 p-2"
+            >
+              <div className="w-12 h-12 rounded-md overflow-hidden bg-muted shrink-0 flex items-center justify-center">
+                {img ? (
+                  <img src={img} alt="" loading="lazy" className="w-full h-full object-cover" />
+                ) : (
+                  <Crown size={18} className="text-muted-foreground" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold truncate text-foreground">
+                  {caption || `${r.region_name} · ${CATEGORY_LABEL[category]}`}
+                </div>
+                <div className="text-[10px] uppercase tracking-widest text-muted-foreground truncate">
+                  {r.region_type} · {r.region_name} · score {formatScore(r.crown_score)}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={openPost}
+                disabled={!r.post_id && !r.profile?.username}
+                className="text-[11px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md bg-primary/15 text-primary hover:bg-primary/25 disabled:opacity-40"
+              >
+                Open post
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {unmapped.length > 24 && (
+        <p className="text-[10px] text-muted-foreground">
+          Showing 24 of {unmapped.length}. Filter or search to narrow the list.
+        </p>
+      )}
+    </section>
+  );
+}
+
+
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 }
