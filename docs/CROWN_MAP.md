@@ -7,99 +7,117 @@
 - **Share URLs** built in `CrownMap.tsx` use `/map`. All filters round-trip:
   `scope`, `category`, `q`, `view`, `mine`, `heat`, `holder`, `exact`, `min`.
 
-## Data source (intentional decision)
+## Data source
 
-Crown Map currently reads from **`public.crowns`** with an embedded
-`profiles` join. `public.crown_map_points` exists as a reserved
-denormalized read table for a future phase but is **intentionally unused
-at launch**:
+Crown Map's client read path continues to query **`public.crowns`** (joined
+with `profiles`) for the visible list/map — that path is fast (~14 active
+crowns), well-tested, and locked for launch.
 
-| Table | Rows (prod) | Status |
-| --- | --- | --- |
-| `crowns` | ~14 (active) | Live read source |
-| `crown_map_points` | 0 | Reserved / not yet backfilled |
+`public.crown_map_points` is now **activated** as a privacy-safe cache /
+future denormalized read table. It is **never queried directly from the
+browser**. All client access goes through security-definer RPCs that
+enforce what a caller may see.
 
-Rationale:
-- With only ~14 active crowns, an indexed join on `profiles` is well under
-  20ms and adds zero cost — a denormalized cache would be pure overhead.
-- The refresh/backfill job for `crown_map_points` is deferred to v1.1
-  along with the native shell and IAP work already scheduled.
-- We are **not dropping the table** (per no-delete policy) — this doc is
-  the single source of truth that it is reserved-not-dead.
+| Surface                                 | Read source                                       |
+| --------------------------------------- | ------------------------------------------------- |
+| Crown Map list + map pins (v1.0)        | `public.crowns` (RLS-gated)                       |
+| Safe public aggregate (anon-callable)   | `public.get_crown_map_public_points(...)`         |
+| Owner-only raw points                   | `public.get_my_crown_map_points()`                |
+| Admin/security debug                    | Direct `crown_map_points` (RLS-gated to admins)   |
+| Refresh job (service_role / admin only) | `public.refresh_crown_map_points()`               |
 
-If Crown Map ever becomes a DB-load contributor (>1% of Cloud spend or
-p95 > 200ms), migrate the read path to `crown_map_points` and add a
-trigger on `crowns` that upserts into `crown_map_points`.
+## Privacy policy for `crown_map_points`
 
-## RLS / grants
+- **Never publicly exposed:** `user_id`, exact `lat`/`lng`, address,
+  device location, or any identifier that pinpoints a person.
+- **Publicly exposed only via `get_crown_map_public_points`:** aggregate
+  region info — `region_type`, `region_name`, `category`, `score`,
+  `rank`, `crown_count`, `post_count`, `coarse_lat`/`coarse_lng`
+  (rounded to ~11 km), and `refreshed_at`.
+- **Refresh policy:** `refresh_crown_map_points()` never writes exact
+  coords — the `lat`/`lng` columns are populated as `NULL` until a
+  future phase intentionally attaches public post location. Coarse
+  coordinates are computed at read time inside the RPC and are always
+  aggregate-averaged, never per-user.
 
-- `/map` route is protected (`ProtectedRoute`), so **authenticated-only**.
-- `public.crown_map_points`: `SELECT` granted to `authenticated` only.
-- `public.crowns`: existing RLS unchanged; readable to `authenticated`.
-- **Docs previously said anon could read `crown_map_points` — corrected
-  here.** Authenticated-only is the intentional launch posture.
+## RLS / grants (post-launch hardening)
+
+### `public.crown_map_points`
+- `anon`: **no access** (no GRANT, no policy).
+- `authenticated`: `SELECT` only; RLS restricts to `auth.uid() = user_id`.
+- `admin` / `security_admin`: `SELECT` all rows for moderation/debug.
+- `admin`: `INSERT`/`UPDATE`/`DELETE` via the admin-write policy.
+- `service_role`: full access (bypasses RLS) — used by the refresh job.
+
+Previous state (fixed in this pass): a single policy `USING (true)` for
+`authenticated` allowed every signed-in user to read every row —
+including `user_id`, `lat`, `lng`. That policy is dropped.
+
+### RPCs
+- `get_crown_map_public_points(_category, _region_type, _limit)` —
+  `SECURITY DEFINER`, `STABLE`, executable by `anon` + `authenticated`.
+  Returns aggregate/coarse rows only.
+- `get_my_crown_map_points()` — `SECURITY DEFINER`, `STABLE`,
+  executable by `authenticated` only. Returns `auth.uid()` rows only.
+- `refresh_crown_map_points()` — `SECURITY DEFINER`, executable by
+  `service_role`. Raises `not authorized` if a signed-in caller lacks
+  the `admin` role.
 
 ## Private schema grants
 
 The concerning `GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA private TO
 authenticated, anon` from migration `20260610085040` was **already
-superseded** by migration `20260610153902`, which:
-
-1. `REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA private FROM authenticated, anon`
-2. Grants execute **only** on the specific public-safe wrappers:
-   `bump_filter_streak`, `ensure_my_wallet`, `is_royal_pass_active`,
-   `purchase_boost`, `send_royal_gift`.
-3. Sets `ALTER DEFAULT PRIVILEGES ... REVOKE EXECUTE ON FUNCTIONS FROM
-   authenticated, anon` so **future** private helpers are not
-   auto-exposed.
-
-No further migration is needed for this finding.
+superseded** by migration `20260610153902` (see previous revision of
+this doc for details). No further action needed.
 
 ## Share cards audit
 
-`share_cards` policy (`invalidated_at IS NULL`, authenticated `SELECT`)
-exposes only:
-- `image_path` (public storage path of a pre-rendered card image)
-- `metadata` (already sanitized by the generator)
-- `is_sensitive_safe` flag
-
-Sensitivity/visibility gating happens at **generation time** (the edge
-function refuses to mint a card for deleted / hidden / private /
-sensitive-blocked / non-approved content and stamps `invalidated_at` when
-the underlying content changes state). The read policy therefore does
-not need per-user visibility joins.
+Unchanged. `share_cards` policy (`invalidated_at IS NULL`, authenticated
+`SELECT`) exposes only pre-rendered, sanitized card data. Sensitivity
+gating happens at generation time.
 
 ## Realtime correctness
 
-`useRealtimeChannel` on `crowns` now guards every incoming payload with
-`rowMatchesFilters()` before mutating visible state:
-
-- `scope`, `category`, `mineOnly`, min-score, region query (exact/partial)
-  are validated from the payload directly.
-- Holder-username is re-validated inside `upsertRow` after the
-  `profiles` join resolves.
-- Non-matching rows are proactively removed from the visible list so a
-  filter-change race can't leave stale pins.
+Unchanged. `useRealtimeChannel` on `crowns` guards every incoming
+payload with `rowMatchesFilters()` before mutating visible state.
 
 ## Performance / DB usage
 
-- Text/number filters (`q`, `holder`, `min score`) are debounced 350ms →
-  one fetch per burst, not per keystroke.
-- `count: "estimated"` replaces `count: "exact"` (pg_class row-estimate,
-  no COUNT scan).
-- Mobile "Apply filters" still commits a single fetch (guarded by the
-  existing `crownMapMobileFilters` test).
+Unchanged. Debounced text/number filters (350ms), `count: "estimated"`,
+mobile "Apply filters" one-shot commit.
 
 ## Error / retry UX
 
-- `loadError` state renders a friendly banner + "Try again" button
-  driven by `reloadKey`.
-- Raw Supabase / PostgREST / RLS error text is only ever `console.error`'d.
-- Empty state only renders when `!loadError && !loading && rows === 0`.
+Unchanged. `loadError` banner + "Try again". Raw Supabase/PostgREST/RLS
+error text is only ever `console.error`'d.
+
+## Deferred features (v1.1+) — labeling audit
+
+These are intentionally scoped out of launch and either **disabled** or
+**clearly labeled** in the UI so no one thinks they're active:
+
+- **MutedWords** (`src/pages/MutedWords.tsx`): copy states "Full
+  enforcement across every feed, comment, and notification lands in
+  v1.1." The list is persisted; enforcement expands next.
+- **Preferences** — `who_can_tag`, `who_can_mention`, `who_can_dm`,
+  `tag_review_required`: rendered as **disabled** "Coming soon"
+  controls; no fake settings are saved to the DB.
+- **RestrictedAccounts**: copy notes that downstream enforcement expands
+  in v1.1.
+- **Data export**: server-side audited flow is v1.1.
+- **RankHistoryTimeline**: empty-state renders "Rank history coming
+  soon" with a friendly message.
+- **Native app / Capacitor / RevenueCat / IAP / native push**: scaffolding
+  lives in `docs/NATIVE_APP_PLAN.md` and does not affect the PWA build.
 
 ## Test coverage
 
-- `crownMapContracts.test.ts` — locks: `/map` share URL, legacy redirect,
-  no `count:"exact"`, realtime filter guard, debounced filters, friendly
-  error UI, empty-state gating.
-- `crownMapMobileFilters.test.ts` — locks mobile Apply flow (unchanged).
+- `crownMapContracts.test.ts` — locks `/map` canonical route, legacy
+  redirect, no `count:"exact"`, realtime filter guard, debounced
+  filters, friendly error UI, empty-state gating.
+- `crownMapMobileFilters.test.ts` — locks mobile Apply flow.
+- `crownMapPrivacy.test.ts` — locks: `crown_map_points` RLS is
+  owner-or-admin (no `USING (true)` policy), safe public RPC exists
+  with anon `EXECUTE`, owner-only + refresh RPCs exist with correct
+  grants, and no `user_id`/exact-`lat`/`lng` field leaks from the
+  public RPC.

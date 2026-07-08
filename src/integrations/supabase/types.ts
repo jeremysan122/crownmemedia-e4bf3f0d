@@ -4728,12 +4728,49 @@ export type Database = {
         }[]
       }
       get_creator_dashboard: { Args: { _user_id?: string }; Returns: Json }
+      get_crown_map_public_points: {
+        Args: { _category?: string; _limit?: number; _region_type?: string }
+        Returns: {
+          category: string
+          coarse_lat: number
+          coarse_lng: number
+          crown_count: number
+          post_count: number
+          rank: number
+          refreshed_at: string
+          region_name: string
+          region_type: string
+          score: number
+        }[]
+      }
       get_db_vitals: { Args: never; Returns: Json }
       get_my_admin_roles: {
         Args: never
         Returns: {
           role: string
         }[]
+      }
+      get_my_crown_map_points: {
+        Args: never
+        Returns: {
+          category: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          metadata: Json
+          rank: number | null
+          refreshed_at: string
+          region_name: string | null
+          region_type: string
+          score: number
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "crown_map_points"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_my_profile: {
         Args: never
@@ -5003,6 +5040,7 @@ export type Database = {
         Returns: undefined
       }
       redeem_invite_code: { Args: { _code: string }; Returns: Json }
+      refresh_crown_map_points: { Args: never; Returns: number }
       refresh_crowns_for_post: {
         Args: { _post_id: string }
         Returns: undefined
