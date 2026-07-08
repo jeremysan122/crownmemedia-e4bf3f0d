@@ -92,7 +92,7 @@ describe("profiles verified badge lockdown", () => {
       /\.update\(\s*\{[^}]*verified\s*:\s*true/;
     const offenders: string[] = [];
     for (const file of walk(join(process.cwd(), "src"))) {
-      // The admin RPC file is exempt (it calls the RPC, not a direct update).
+      if (file.endsWith("profileVerifiedLockdown.test.ts")) continue;
       const content = readFileSync(file, "utf8");
       if (forbidden.test(content)) offenders.push(file);
     }
