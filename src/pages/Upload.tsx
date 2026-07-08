@@ -108,6 +108,16 @@ export default function Upload() {
   const [tagged, setTagged] = useState<TaggedProfile[]>([]);
   const [isSensitive, setIsSensitive] = useState(false);
   const [sensitiveReason, setSensitiveReason] = useState("");
+  // ── Post location (see /map). Default OFF — location is per-POST, never
+  // pulled from the user's profile or device silently. Exact coords only land
+  // on the post when the user explicitly picks "Use my current location".
+  const [locationMode, setLocationMode] = useState<"none" | "manual" | "current">("none");
+  const [postLat, setPostLat] = useState<number | null>(null);
+  const [postLng, setPostLng] = useState<number | null>(null);
+  const [locationCapturedAt, setLocationCapturedAt] = useState<string | null>(null);
+  const [locationBusy, setLocationBusy] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationOpen, setLocationOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   // ── Category system (Master Category + Topic + tags) ──
