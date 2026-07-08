@@ -9,7 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { lookupGeo, type LatLng } from "@/lib/geoCoords";
+import { lookupGeo, lookupPostGeo, type LatLng } from "@/lib/geoCoords";
 import { toast } from "sonner";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
