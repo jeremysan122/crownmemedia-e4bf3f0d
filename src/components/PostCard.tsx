@@ -769,11 +769,11 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
                       ? <><PinOff size={14} className="mr-2" /> Unpin from profile</>
                       : <><Pin size={14} className="mr-2" /> Pin to profile</>}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={archivePost}>
+                  <DropdownMenuItem onClick={() => setArchiveConfirmOpen(true)}>
                     <Archive size={14} className="mr-2" /> Archive
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={deletePost} className="text-destructive focus:text-destructive">
+                  <DropdownMenuItem onClick={() => setDeleteConfirmOpen(true)} className="text-destructive focus:text-destructive">
                     <Trash2 size={14} className="mr-2" /> Delete post
                   </DropdownMenuItem>
                 </>
@@ -1267,6 +1267,26 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         onOpenChange={setReportOpen}
         postId={interactionPostId}
         reportedUserId={displayUserId}
+      />
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete post?"
+        description="This can't be undone."
+        confirmLabel="Delete post"
+        destructive
+        loading={deleteBusy}
+        onConfirm={deletePost}
+      />
+      <ConfirmDialog
+        open={archiveConfirmOpen}
+        onOpenChange={setArchiveConfirmOpen}
+        title="Remove post?"
+        description="This post will no longer appear publicly. You can restore it from Settings → Archived."
+        confirmLabel="Remove post"
+        destructive
+        loading={archiveBusy}
+        onConfirm={archivePost}
       />
     </article>
   );
