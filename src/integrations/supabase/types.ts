@@ -2932,6 +2932,7 @@ export type Database = {
           region_name: string | null
           region_type: string | null
           repost_caption: string | null
+          repost_count: number
           royal_boost_until: string | null
           scheduled_for: string | null
           sensitive_reason: string | null
@@ -3000,6 +3001,7 @@ export type Database = {
           region_name?: string | null
           region_type?: string | null
           repost_caption?: string | null
+          repost_count?: number
           royal_boost_until?: string | null
           scheduled_for?: string | null
           sensitive_reason?: string | null
@@ -3068,6 +3070,7 @@ export type Database = {
           region_name?: string | null
           region_type?: string | null
           repost_caption?: string | null
+          repost_count?: number
           royal_boost_until?: string | null
           scheduled_for?: string | null
           sensitive_reason?: string | null
@@ -5124,6 +5127,7 @@ export type Database = {
           region_name: string | null
           region_type: string | null
           repost_caption: string | null
+          repost_count: number
           royal_boost_until: string | null
           scheduled_for: string | null
           sensitive_reason: string | null
@@ -5170,6 +5174,8 @@ export type Database = {
         }[]
       }
       recalc_post_score: { Args: { _post_id: string }; Returns: undefined }
+      recalculate_all_repost_counts: { Args: never; Returns: number }
+      recalculate_repost_count: { Args: { _post_id: string }; Returns: number }
       record_profile_visit: {
         Args: { _profile_id: string }
         Returns: undefined
