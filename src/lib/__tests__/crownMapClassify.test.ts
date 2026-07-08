@@ -53,6 +53,8 @@ describe("classifyCrownRows", () => {
   it("ignores exact coords when user did not consent", () => {
     const { mapped, unmapped } = classifyCrownRows([
       base({
+        region_type: "city",
+        region_name: "Nowhereville",
         post: {
           city: null, state: null, country: null,
           location_enabled: false, location_source: "manual",
@@ -63,6 +65,7 @@ describe("classifyCrownRows", () => {
     expect(unmapped).toHaveLength(1);
     expect(mapped).toHaveLength(0);
   });
+
 
   it("splits mapped vs unmapped in one pass", () => {
     const { mapped, unmapped } = classifyCrownRows([
