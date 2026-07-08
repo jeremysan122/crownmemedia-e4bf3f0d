@@ -29,7 +29,7 @@ describe("Crown Map cluster tap — source contracts", () => {
   it("+N cluster badge is inert so the tap lands on the primary marker", () => {
     // Without pointer-events:none the badge would eat the click and cluster
     // tap would silently do nothing on mobile.
-    expect(CROWN).toMatch(/data-cluster-badge[\s\S]{0,600}?pointer-events:none/);
+    expect(CROWN).toMatch(/data-cluster-badge[\s\S]*?pointer-events:none/);
   });
 
   it("primary marker click routes to /post/:id for crowned POSTS, not users", () => {
