@@ -2932,6 +2932,7 @@ export type Database = {
           region_name: string | null
           region_type: string | null
           repost_caption: string | null
+          repost_count: number
           royal_boost_until: string | null
           scheduled_for: string | null
           sensitive_reason: string | null
@@ -3000,6 +3001,7 @@ export type Database = {
           region_name?: string | null
           region_type?: string | null
           repost_caption?: string | null
+          repost_count?: number
           royal_boost_until?: string | null
           scheduled_for?: string | null
           sensitive_reason?: string | null
@@ -3068,6 +3070,7 @@ export type Database = {
           region_name?: string | null
           region_type?: string | null
           repost_caption?: string | null
+          repost_count?: number
           royal_boost_until?: string | null
           scheduled_for?: string | null
           sensitive_reason?: string | null
@@ -4639,6 +4642,10 @@ export type Database = {
           username: string
         }[]
       }
+      admin_moderate_comment: {
+        Args: { _comment_id: string; _removed: boolean }
+        Returns: undefined
+      }
       admin_set_creator_reward: {
         Args: { _reward_id: string; _status: string }
         Returns: {
@@ -4682,9 +4689,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_set_post_removed: {
+        Args: { _post_id: string; _removed: boolean }
+        Returns: undefined
+      }
       admin_set_prize_stock: {
         Args: { _id: string; _stock: number }
         Returns: undefined
+      }
+      admin_update_post: {
+        Args: { _patch: Json; _post_id: string }
+        Returns: undefined
+      }
+      admin_update_posts_bulk: {
+        Args: { _patch: Json; _post_ids: string[] }
+        Returns: number
       }
       admin_upsert_spin_prize: {
         Args: {
@@ -5124,6 +5143,7 @@ export type Database = {
           region_name: string | null
           region_type: string | null
           repost_caption: string | null
+          repost_count: number
           royal_boost_until: string | null
           scheduled_for: string | null
           sensitive_reason: string | null
@@ -5170,6 +5190,8 @@ export type Database = {
         }[]
       }
       recalc_post_score: { Args: { _post_id: string }; Returns: undefined }
+      recalculate_all_repost_counts: { Args: never; Returns: number }
+      recalculate_repost_count: { Args: { _post_id: string }; Returns: number }
       record_profile_visit: {
         Args: { _profile_id: string }
         Returns: undefined

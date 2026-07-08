@@ -60,6 +60,7 @@ export interface FeedPost {
   vote_count: number;
   comment_count: number;
   share_count: number;
+  repost_count?: number | null;
   battle_wins?: number;
   created_at: string;
   edited_at?: string | null;
@@ -96,6 +97,7 @@ export interface FeedPost {
     vote_count?: number | null;
     comment_count?: number | null;
     share_count?: number | null;
+    repost_count?: number | null;
     battle_wins?: number | null;
     media_type?: "image" | "video" | null;
     video_url?: string | null;
@@ -187,6 +189,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         vote_count: post.parent!.vote_count ?? 0,
         comment_count: post.parent!.comment_count ?? 0,
         share_count: post.parent!.share_count ?? 0,
+        repost_count: post.parent!.repost_count ?? 0,
         crown_score: post.parent!.crown_score ?? 0,
         battle_wins: post.parent!.battle_wins ?? 0,
       }
@@ -194,13 +197,14 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         vote_count: post.vote_count,
         comment_count: post.comment_count,
         share_count: post.share_count ?? 0,
+        repost_count: post.repost_count ?? 0,
         crown_score: post.crown_score,
         battle_wins: post.battle_wins ?? 0,
       };
   const [counts, setCounts] = useState({
     crown: 0, fire: 0, diamond: 0, dislike: 0,
     total: seed.vote_count, score: seed.crown_score, comments: seed.comment_count,
-    shares: seed.share_count, battleWins: seed.battle_wins,
+    shares: seed.share_count, reposts: seed.repost_count, battleWins: seed.battle_wins,
   });
   const [burst, setBurst] = useState<VoteType | null>(null);
   // Timer refs — clear on component unmount to prevent setState on unmounted component.
@@ -456,7 +460,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     const refetchAll = async () => {
       const [{ data: stats }, { data: postRow }, { count: cmtCount }] = await Promise.all([
         supabase.rpc("get_post_vote_stats", { _post_id: interactionPostId }),
-        supabase.from("posts").select("crown_score, comment_count, share_count, battle_wins").eq("id", interactionPostId).maybeSingle(),
+        supabase.from("posts").select("crown_score, comment_count, share_count, repost_count, battle_wins").eq("id", interactionPostId).maybeSingle(),
         supabase.from("comments").select("id", { count: "exact", head: true }).eq("post_id", interactionPostId).eq("is_removed", false),
       ]);
       if (cancelled) return;
@@ -469,6 +473,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         score: postRow?.crown_score ?? c.score,
         comments: typeof cmtCount === "number" ? cmtCount : (postRow?.comment_count ?? c.comments),
         shares: postRow?.share_count ?? c.shares,
+        reposts: postRow?.repost_count ?? c.reposts,
         battleWins: postRow?.battle_wins ?? c.battleWins,
       }));
     };
@@ -525,6 +530,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
             score: row.crown_score ?? c.score,
             comments: row.comment_count ?? c.comments,
             shares: row.share_count ?? c.shares,
+            reposts: row.repost_count ?? c.reposts,
             battleWins: row.battle_wins ?? c.battleWins,
           }));
           if (typeof row.caption === "string") setLiveCaption(row.caption);
@@ -1105,8 +1111,9 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           {/* Hide repost button on repost shells — the server blocks reposts
               of reposts and we surface a "View original" link instead. */}
           {!isOwner && !isRepost && (
-            <button type="button" onClick={() => setRepostOpen(true)} className="p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/50 active:scale-95 transition" aria-label="Repost">
+            <button type="button" onClick={() => setRepostOpen(true)} className="flex items-center gap-1 p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/50 active:scale-95 transition" aria-label={`Repost${counts.reposts ? ` (${counts.reposts} reposts)` : ""}`}>
               <Repeat2 size={18} />
+              {counts.reposts > 0 && <span className="text-[11px] tabular-nums">{counts.reposts}</span>}
             </button>
           )}
           <button
