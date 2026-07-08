@@ -4531,6 +4531,28 @@ export type Database = {
         }
         Returns: number
       }
+      admin_decide_sensitive_appeal: {
+        Args: { _appeal_id: string; _decision: string; _notes?: string }
+        Returns: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_type: string
+          id: string
+          moderator_notes: string | null
+          post_id: string | null
+          status: Database["public"]["Enums"]["sensitive_appeal_status"]
+          updated_at: string
+          user_id: string
+          user_statement: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sensitive_appeals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_decide_verification: {
         Args: {
           _decision: Database["public"]["Enums"]["verification_status"]
@@ -5228,6 +5250,28 @@ export type Database = {
       verify_web_push_trigger_secret: {
         Args: { _secret: string }
         Returns: boolean
+      }
+      withdraw_my_sensitive_appeal: {
+        Args: { _appeal_id: string }
+        Returns: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_type: string
+          id: string
+          moderator_notes: string | null
+          post_id: string | null
+          status: Database["public"]["Enums"]["sensitive_appeal_status"]
+          updated_at: string
+          user_id: string
+          user_statement: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sensitive_appeals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
