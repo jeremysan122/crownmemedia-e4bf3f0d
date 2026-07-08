@@ -10,6 +10,7 @@ import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { lookupGeo, lookupPostGeo, type LatLng } from "@/lib/geoCoords";
+import { classifyCrownRows } from "@/lib/crownMapClassify";
 import { toast } from "sonner";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -38,7 +39,10 @@ type Row = {
     post_lat: number | null;
     post_lng: number | null;
     post_location_precision: string | null;
+    image_url?: string | null;
+    caption?: string | null;
   } | null;
+
 };
 
 
@@ -267,7 +271,7 @@ export default function CrownMap() {
     let q = supabase
       .from("crowns")
       .select(
-        `region_name, region_type, user_id, post_id, crown_score, category, ${joinSpec}, post:posts!crowns_post_id_fkey(city, state, country, location_enabled, location_source, post_lat, post_lng, post_location_precision)`,
+        `region_name, region_type, user_id, post_id, crown_score, category, ${joinSpec}, post:posts!crowns_post_id_fkey(city, state, country, location_enabled, location_source, post_lat, post_lng, post_location_precision, image_url, caption)`,
         { count: "estimated" },
       )
       .eq("active", true)
@@ -351,7 +355,7 @@ export default function CrownMap() {
   const upsertRow = useCallback(async (region_type: Row["region_type"], region_name: string) => {
     const { data } = await supabase
       .from("crowns")
-      .select("region_name, region_type, user_id, post_id, crown_score, category, profile:profiles!crowns_user_id_fkey(username, profile_photo_url), post:posts!crowns_post_id_fkey(city, state, country, location_enabled, location_source, post_lat, post_lng, post_location_precision)")
+      .select("region_name, region_type, user_id, post_id, crown_score, category, profile:profiles!crowns_user_id_fkey(username, profile_photo_url), post:posts!crowns_post_id_fkey(city, state, country, location_enabled, location_source, post_lat, post_lng, post_location_precision, image_url, caption)")
       .eq("active", true)
       .eq("category", category)
       .eq("region_type", region_type)
@@ -1084,7 +1088,7 @@ export default function CrownMap() {
           )}
 
           {view === "map" && (
-            <div id="crownmap-panel-map" role="tabpanel" aria-labelledby="crownmap-tab-map" tabIndex={0}>
+            <div id="crownmap-panel-map" role="tabpanel" aria-labelledby="crownmap-tab-map" tabIndex={0} className="space-y-4">
               <MapView
                 rows={filtered}
                 category={category}
@@ -1094,8 +1098,10 @@ export default function CrownMap() {
                 isBookmarked={isBookmarked}
                 onToggleBookmark={toggleBookmark}
               />
+              <UnmappedCrownedPosts rows={filtered} category={category} />
             </div>
           )}
+
 
           {view === "list" && (
             <div id="crownmap-panel-list" role="tabpanel" aria-labelledby="crownmap-tab-list" tabIndex={0} className="space-y-6">
@@ -1644,6 +1650,87 @@ function MapView({
 
   }, [flashKeys, points]);
 
+  // Lightweight client-side clustering: markers that project within a small
+  // pixel bucket at the current zoom get merged into the top-scoring one
+  // with a "+N" badge, so dense city clusters don't turn into a mess of
+  // overlapping crowns on mobile. Clicking still opens the primary post —
+  // zooming in naturally splits the cluster on the next moveend.
+  //
+  // Deliberately does NOT switch the marker system to a Mapbox GeoJSON
+  // cluster source (which would require rebuilding popups + interactions
+  // from scratch). Unmapped posts never enter `points` and so are never
+  // clustered — their own dedicated section handles them.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const bucketPx = 44;
+    const runCluster = () => {
+      // Reset badges + visibility from any previous pass.
+      markersRef.current.forEach((m) => {
+        const el = m.getElement();
+        el.style.display = "";
+        const inner = el.firstElementChild as HTMLElement | null;
+        if (!inner) return;
+        const existing = inner.querySelector("[data-cluster-badge]");
+        if (existing) existing.remove();
+      });
+      if (points.length < 2) return;
+
+      const buckets = new Map<string, { primary: number; extras: number[] }>();
+      points.forEach((p, i) => {
+        let px;
+        try {
+          px = map.project([p.coord[1], p.coord[0]]);
+        } catch {
+          return;
+        }
+        const key = `${Math.round(px.x / bucketPx)}:${Math.round(px.y / bucketPx)}`;
+        const cur = buckets.get(key);
+        if (!cur) {
+          buckets.set(key, { primary: i, extras: [] });
+        } else {
+          // Keep the higher-scoring marker as the primary — clicking the
+          // cluster should land on the most notable crowned post.
+          if (points[i].r.crown_score > points[cur.primary].r.crown_score) {
+            cur.extras.push(cur.primary);
+            cur.primary = i;
+          } else {
+            cur.extras.push(i);
+          }
+        }
+      });
+
+      buckets.forEach((b) => {
+        if (b.extras.length === 0) return;
+        b.extras.forEach((i) => {
+          const m = markersRef.current[i];
+          if (m) m.getElement().style.display = "none";
+        });
+        const primary = markersRef.current[b.primary];
+        if (!primary) return;
+        const inner = primary.getElement().firstElementChild as HTMLElement | null;
+        if (!inner) return;
+        const badge = document.createElement("span");
+        badge.dataset.clusterBadge = "1";
+        badge.setAttribute("aria-label", `${b.extras.length + 1} crowned posts here`);
+        badge.textContent = `+${b.extras.length}`;
+        badge.style.cssText =
+          "position:absolute;bottom:-4px;right:-8px;background:hsl(45 95% 55%);color:#1a1208;font-size:9px;font-weight:800;padding:1px 5px;border-radius:9999px;border:1.5px solid #000;pointer-events:none;line-height:1.1;";
+        inner.appendChild(badge);
+      });
+    };
+
+    runCluster();
+    map.on("moveend", runCluster);
+    map.on("zoomend", runCluster);
+    return () => {
+      map.off("moveend", runCluster);
+      map.off("zoomend", runCluster);
+    };
+  }, [points]);
+
+
+
   // Heat overlay: register a real Mapbox heatmap layer driven by crown_score.
   // Rebuilds the GeoJSON source whenever points change; toggles opacity on `heat`.
   useEffect(() => {
@@ -1784,6 +1871,89 @@ function MapView({
     </div>
   );
 }
+
+/* --------------------- Unmapped Crowned Posts --------------------- */
+
+/**
+ * Crowned posts that hold an active crown but cannot be placed on the map
+ * (no consented exact coords, no city match, no region match). Never hide
+ * these silently and NEVER invent a coordinate — we surface them here so
+ * the creator can still add a city on the post to bring it back to the map.
+ */
+function UnmappedCrownedPosts({ rows, category }: { rows: Row[]; category: CrownCategory }) {
+  const navigate = useNavigate();
+  const { unmapped } = useMemo(() => classifyCrownRows(rows), [rows]);
+  // Global rows always resolve to [0,0] — never fall into `unmapped` — so we
+  // only need to hide the whole section when nothing is unmapped.
+  if (unmapped.length === 0) return null;
+
+  return (
+    <section
+      aria-label="Unmapped crowned posts"
+      data-testid="unmapped-crowned-posts"
+      className="royal-card p-4 space-y-3"
+    >
+      <div className="flex items-center gap-2">
+        <MapPin size={14} className="text-muted-foreground" />
+        <h3 className="font-display text-sm uppercase tracking-widest text-foreground">
+          Unmapped crowned posts
+        </h3>
+        <span className="text-[11px] text-muted-foreground">· {unmapped.length}</span>
+      </div>
+      <p className="text-[11px] text-muted-foreground leading-snug">
+        These crowned posts don't have a location attached yet, so they aren't
+        shown as map pins. Opening a post and adding a city will bring it back
+        to the map.
+      </p>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {unmapped.slice(0, 24).map((r) => {
+          const img = r.post?.image_url ?? null;
+          const caption = (r.post?.caption ?? "").trim();
+          const openPost = () => {
+            if (r.post_id) navigate(`/post/${r.post_id}`);
+            else if (r.profile?.username) navigate(`/${encodeURIComponent(r.profile.username)}`);
+          };
+          return (
+            <li
+              key={`${r.post_id ?? r.user_id}:${r.region_type}:${r.region_name}`}
+              className="flex items-center gap-3 rounded-lg border border-border bg-card/40 p-2"
+            >
+              <div className="w-12 h-12 rounded-md overflow-hidden bg-muted shrink-0 flex items-center justify-center">
+                {img ? (
+                  <img src={img} alt="" loading="lazy" className="w-full h-full object-cover" />
+                ) : (
+                  <Crown size={18} className="text-muted-foreground" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold truncate text-foreground">
+                  {caption || `${r.region_name} · ${CATEGORY_LABEL[category]}`}
+                </div>
+                <div className="text-[10px] uppercase tracking-widest text-muted-foreground truncate">
+                  {r.region_type} · {r.region_name} · score {formatScore(r.crown_score)}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={openPost}
+                disabled={!r.post_id && !r.profile?.username}
+                className="text-[11px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md bg-primary/15 text-primary hover:bg-primary/25 disabled:opacity-40"
+              >
+                Open post
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {unmapped.length > 24 && (
+        <p className="text-[10px] text-muted-foreground">
+          Showing 24 of {unmapped.length}. Filter or search to narrow the list.
+        </p>
+      )}
+    </section>
+  );
+}
+
 
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));

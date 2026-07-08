@@ -118,6 +118,8 @@ export default function Upload() {
   const [locationBusy, setLocationBusy] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationOpen, setLocationOpen] = useState(false);
+  const [locationPermissionDenied, setLocationPermissionDenied] = useState(false);
+  const cityInputRef = useRef<HTMLInputElement | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   // ── Category system (Master Category + Topic + tags) ──
@@ -1875,11 +1877,16 @@ export default function Upload() {
                           },
                           (err) => {
                             setLocationBusy(false);
-                            setLocationMode("manual");
+                            // Stay in "current" mode so the denied banner
+                            // renders inline (it explains the raw permission
+                            // outcome without ever leaking the browser's
+                            // native error text). The user picks the next
+                            // step from the banner buttons themselves.
+                            setLocationPermissionDenied(err.code === 1);
                             setLocationError(
                               err.code === 1
-                                ? "Location permission was denied. You can choose a city manually."
-                                : "Couldn't get your location. Try again or choose a city manually.",
+                                ? "denied"
+                                : "unavailable",
                             );
                           },
                           { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
@@ -1903,7 +1910,56 @@ export default function Upload() {
                 </div>
               )}
               {locationError && (
-                <div className="text-[11px] text-destructive">{locationError}</div>
+                <div
+                  role="alert"
+                  data-testid="location-denied-banner"
+                  className="rounded-lg border border-primary/40 bg-primary/10 p-3 space-y-2"
+                >
+                  <div className="flex items-start gap-2">
+                    <MapPin size={14} className="text-primary shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold uppercase tracking-widest text-foreground">
+                        {locationError === "denied"
+                          ? "Location permission was denied"
+                          : "Couldn't get your location"}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-snug mt-1">
+                        No problem — you can still add a city manually and
+                        your post can appear on the Crown Map.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLocationMode("manual");
+                        setLocationError(null);
+                        setLocationPermissionDenied(false);
+                        // Give React a tick to mount the manual inputs
+                        // before we try to focus the city field.
+                        requestAnimationFrame(() => cityInputRef.current?.focus());
+                      }}
+                      className="text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-md bg-gradient-gold text-primary-foreground gold-shadow"
+                    >
+                      Choose city manually
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLocationMode("none");
+                        setLocationError(null);
+                        setLocationPermissionDenied(false);
+                        setPostLat(null);
+                        setPostLng(null);
+                        setLocationCapturedAt(null);
+                      }}
+                      className="text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground"
+                    >
+                      Keep location off
+                    </button>
+                  </div>
+                </div>
               )}
 
               {locationMode === "manual" && (
@@ -1911,7 +1967,7 @@ export default function Upload() {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <Label className="text-[11px]">City</Label>
-                      <Input value={city} onChange={(e) => setCity(e.target.value)} className="bg-input h-9 text-xs" />
+                      <Input ref={cityInputRef} value={city} onChange={(e) => setCity(e.target.value)} className="bg-input h-9 text-xs" />
                     </div>
                     <div>
                       <Label className="text-[11px]">State</Label>
