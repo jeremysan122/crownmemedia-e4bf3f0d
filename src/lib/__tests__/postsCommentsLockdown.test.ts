@@ -68,8 +68,9 @@ describe("posts UPDATE lockdown", () => {
   it("revokes broad UPDATE and grants only owner-safe columns", () => {
     expect(allSql).toMatch(/REVOKE\s+UPDATE\s+ON\s+public\.posts\s+FROM\s+authenticated/i);
     // Locate the FINAL grant block (last occurrence wins in migration order).
+    // Use [^)] to prevent the non-greedy match from crossing block boundaries.
     const grantBlocks = [...allSql.matchAll(
-      /GRANT UPDATE\s*\(([\s\S]+?)\)\s*ON\s+public\.posts\s+TO\s+authenticated/gi,
+      /GRANT UPDATE\s*\(([^)]+)\)\s*ON\s+public\.posts\s+TO\s+authenticated/gi,
     )];
     expect(grantBlocks.length).toBeGreaterThan(0);
     const cols = grantBlocks[grantBlocks.length - 1][1];
