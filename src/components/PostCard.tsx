@@ -189,6 +189,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         vote_count: post.parent!.vote_count ?? 0,
         comment_count: post.parent!.comment_count ?? 0,
         share_count: post.parent!.share_count ?? 0,
+        repost_count: post.parent!.repost_count ?? 0,
         crown_score: post.parent!.crown_score ?? 0,
         battle_wins: post.parent!.battle_wins ?? 0,
       }
@@ -196,13 +197,14 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         vote_count: post.vote_count,
         comment_count: post.comment_count,
         share_count: post.share_count ?? 0,
+        repost_count: post.repost_count ?? 0,
         crown_score: post.crown_score,
         battle_wins: post.battle_wins ?? 0,
       };
   const [counts, setCounts] = useState({
     crown: 0, fire: 0, diamond: 0, dislike: 0,
     total: seed.vote_count, score: seed.crown_score, comments: seed.comment_count,
-    shares: seed.share_count, battleWins: seed.battle_wins,
+    shares: seed.share_count, reposts: seed.repost_count, battleWins: seed.battle_wins,
   });
   const [burst, setBurst] = useState<VoteType | null>(null);
   // Timer refs — clear on component unmount to prevent setState on unmounted component.
