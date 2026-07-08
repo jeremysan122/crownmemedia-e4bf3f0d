@@ -48,8 +48,12 @@ export default function Admin() {
 
   const resolve = async (id: string, action: "remove" | "dismiss", r: ReportRow) => {
     if (action === "remove") {
-      if (r.post_id) await supabase.from("posts").update({ is_removed: true }).eq("id", r.post_id);
-      if (r.comment_id) await supabase.from("comments").update({ is_removed: true }).eq("id", r.comment_id);
+      if (r.post_id) {
+        await supabase.rpc("admin_set_post_removed" as never, { _post_id: r.post_id, _removed: true } as never);
+      }
+      if (r.comment_id) {
+        await supabase.rpc("admin_moderate_comment" as never, { _comment_id: r.comment_id, _removed: true } as never);
+      }
       if (r.reported_user_id) await supabase.from("profiles").update({ is_suspended: true }).eq("id", r.reported_user_id);
     }
     await supabase.from("reports").update({ status: action === "remove" ? "resolved" : "dismissed" }).eq("id", id);
