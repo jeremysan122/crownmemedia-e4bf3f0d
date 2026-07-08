@@ -1547,7 +1547,7 @@ function MapView({
             <span style="font-size:13px;font-weight:800;color:hsl(45 95% 65%)">${formatScore(p.r.crown_score)}</span>
           </div>
           <div style="margin-top:6px;font-size:10px;color:#777;font-style:italic">
-            ${markerMode === "posts" ? (postTarget ? "Click to view post" : "Click to view holder") : "Click to view profile"}${p.approximate ? " · approx. location" : ""}
+            ${markerMode === "posts" ? (postTarget ? "Click to view post" : "Click to view holder") : "Click to view profile"}
           </div>
         </div>
       `;
