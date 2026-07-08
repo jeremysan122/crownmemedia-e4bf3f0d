@@ -118,6 +118,8 @@ export default function Upload() {
   const [locationBusy, setLocationBusy] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationOpen, setLocationOpen] = useState(false);
+  const [locationPermissionDenied, setLocationPermissionDenied] = useState(false);
+  const cityInputRef = useRef<HTMLInputElement | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   // ── Category system (Master Category + Topic + tags) ──
