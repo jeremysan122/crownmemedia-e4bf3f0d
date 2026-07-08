@@ -102,16 +102,19 @@ describe("posts UPDATE lockdown", () => {
 });
 
 describe("comments UPDATE lockdown", () => {
-  it("revokes broad UPDATE and grants only body/edited_at (plus mod-writable, trigger-gated)", () => {
+  it("revokes broad UPDATE and final grant is body+edited_at only", () => {
     expect(allSql).toMatch(/REVOKE\s+UPDATE\s+ON\s+public\.comments\s+FROM\s+authenticated/i);
-    const grantBlock = allSql.match(
-      /GRANT UPDATE\s*\(([\s\S]+?)\)\s*ON\s+public\.comments\s+TO\s+authenticated/i,
-    );
-    expect(grantBlock).toBeTruthy();
-    const cols = grantBlock![1];
+    const grantBlocks = [...allSql.matchAll(
+      /GRANT UPDATE\s*\(([\s\S]+?)\)\s*ON\s+public\.comments\s+TO\s+authenticated/gi,
+    )];
+    expect(grantBlocks.length).toBeGreaterThan(0);
+    const cols = grantBlocks[grantBlocks.length - 1][1];
     expect(cols).toMatch(/\bbody\b/);
     expect(cols).toMatch(/\bedited_at\b/);
-    // Owner-immutable fields are enforced by the guard trigger (see below).
+    for (const c of ["is_removed", "reply_count", "mention_user_ids", "user_id", "post_id", "created_at"]) {
+      expect(cols).not.toMatch(new RegExp(`\\b${c}\\b`));
+    }
+  });
   });
 
   it("BEFORE UPDATE guard trigger blocks owner edits to is_removed/reply_count/mention_user_ids", () => {
