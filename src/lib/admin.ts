@@ -78,10 +78,10 @@ export async function removePost(postId: string, reason: string, notes?: string)
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) throw new Error("Not authenticated");
 
-  const { error: e1 } = await supabase
-    .from("posts")
-    .update({ is_removed: true })
-    .eq("id", postId);
+  const { error: e1 } = await supabase.rpc("admin_set_post_removed" as never, {
+    _post_id: postId,
+    _removed: true,
+  } as never);
   if (e1) throw e1;
 
   const { error: e2 } = await supabase.from("content_takedowns").insert({
@@ -101,10 +101,10 @@ export async function reversePostTakedown(takedownId: string, postId: string) {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) throw new Error("Not authenticated");
 
-  const { error: e1 } = await supabase
-    .from("posts")
-    .update({ is_removed: false })
-    .eq("id", postId);
+  const { error: e1 } = await supabase.rpc("admin_set_post_removed" as never, {
+    _post_id: postId,
+    _removed: false,
+  } as never);
   if (e1) throw e1;
 
   const { error: e2 } = await supabase
@@ -119,10 +119,10 @@ export async function removeComment(commentId: string, reason: string) {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) throw new Error("Not authenticated");
 
-  const { error: e1 } = await supabase
-    .from("comments")
-    .update({ is_removed: true })
-    .eq("id", commentId);
+  const { error: e1 } = await supabase.rpc("admin_moderate_comment" as never, {
+    _comment_id: commentId,
+    _removed: true,
+  } as never);
   if (e1) throw e1;
 
   const { error: e2 } = await supabase.from("content_takedowns").insert({
