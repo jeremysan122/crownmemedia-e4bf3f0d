@@ -5,7 +5,7 @@
 
 ## What the rule detects
 
-RLS policies that use overly permissive expressions like `USING (true)` or `WITH CHECK (true)` for `UPDATE`, `DELETE`, or `INSERT`. `SELECT` policies with `USING (true)` are intentionally excluded because that pattern is often used deliberately for public read access.
+RLS policies whose `USING`/`WITH CHECK` expression is `true` (or otherwise unconditional) for `UPDATE`, `DELETE`, or `INSERT`. `SELECT` policies with `USING (true)` are excluded because that pattern is often intentional for public reads.
 
 ## The finding
 
@@ -14,61 +14,53 @@ Triggered by ONE policy: `Profiles: deny self-mutation of protected fields` on `
 ```sql
 CREATE POLICY "Profiles: deny self-mutation of protected fields"
 ON public.profiles
+AS RESTRICTIVE          -- <-- critical: this policy is RESTRICTIVE, not permissive
 FOR UPDATE
-TO public
-USING (true)                          -- <-- the flagged expression
+TO authenticated
+USING (true)            -- <-- the flagged expression
 WITH CHECK (
-  public.has_role(auth.uid(), 'admin'::app_role)
-  OR public.has_role(auth.uid(), 'moderator'::app_role)
+  public.has_role(auth.uid(), 'admin'::public.app_role)
+  OR public.has_role(auth.uid(), 'moderator'::public.app_role)
   OR (
-    -- counters (must be unchanged)
-    is_suspended       = (SELECT p.is_suspended       FROM public.profiles p WHERE p.id = profiles.id)
-    AND crowns_held    = (SELECT p.crowns_held        FROM public.profiles p WHERE p.id = profiles.id)
-    AND crowns_total   = (SELECT p.crowns_total       FROM public.profiles p WHERE p.id = profiles.id)
-    AND battle_wins    = (SELECT p.battle_wins        FROM public.profiles p WHERE p.id = profiles.id)
-    AND followers_count= (SELECT p.followers_count    FROM public.profiles p WHERE p.id = profiles.id)
-    AND following_count= (SELECT p.following_count    FROM public.profiles p WHERE p.id = profiles.id)
-    AND votes_received = (SELECT p.votes_received     FROM public.profiles p WHERE p.id = profiles.id)
-    AND votes_given    = (SELECT p.votes_given        FROM public.profiles p WHERE p.id = profiles.id)
-    -- moderation state (must be unchanged)
-    AND NOT (is_banned              IS DISTINCT FROM (SELECT p.is_banned              FROM public.profiles p WHERE p.id = profiles.id))
-    AND NOT (banned_at              IS DISTINCT FROM (SELECT p.banned_at              FROM public.profiles p WHERE p.id = profiles.id))
-    AND NOT (banned_by              IS DISTINCT FROM (SELECT p.banned_by              FROM public.profiles p WHERE p.id = profiles.id))
-    AND NOT (banned_reason          IS DISTINCT FROM (SELECT p.banned_reason          FROM public.profiles p WHERE p.id = profiles.id))
-    AND NOT (deactivated_at         IS DISTINCT FROM (SELECT p.deactivated_at         FROM public.profiles p WHERE p.id = profiles.id))
-    AND NOT (deletion_requested_at  IS DISTINCT FROM (SELECT p.deletion_requested_at  FROM public.profiles p WHERE p.id = profiles.id))
-    -- verified badge (must be unchanged)  ← added by profiles_verified_badge_self_escalation lockdown
-    AND NOT (verified               IS DISTINCT FROM (SELECT p.verified               FROM public.profiles p WHERE p.id = profiles.id))
-    AND NOT (verified_at            IS DISTINCT FROM (SELECT p.verified_at            FROM public.profiles p WHERE p.id = profiles.id))
-    AND NOT (verification_plan      IS DISTINCT FROM (SELECT p.verification_plan      FROM public.profiles p WHERE p.id = profiles.id))
+    -- protected counters, moderation state, and verified-badge fields must all stay unchanged
+    is_suspended           IS NOT DISTINCT FROM (SELECT p.is_suspended           FROM public.profiles p WHERE p.id = profiles.id)
+    AND crowns_held        IS NOT DISTINCT FROM (SELECT p.crowns_held            FROM public.profiles p WHERE p.id = profiles.id)
+    -- …the full column list is in the migration…
+    AND verified           IS NOT DISTINCT FROM (SELECT p.verified               FROM public.profiles p WHERE p.id = profiles.id)
+    AND verified_at        IS NOT DISTINCT FROM (SELECT p.verified_at            FROM public.profiles p WHERE p.id = profiles.id)
+    AND verification_plan  IS NOT DISTINCT FROM (SELECT p.verification_plan      FROM public.profiles p WHERE p.id = profiles.id)
   )
 );
 ```
 
 ## Why we accept it
 
-`profiles` has TWO `UPDATE` policies. Postgres RLS requires **all matching permissive policies to pass**, so both must be satisfied:
+Postgres has two RLS policy kinds and they combine very differently:
 
-1. **`Users can update their own profile`** — `USING (auth.uid() = id)` — scopes which **rows** the caller may touch (their own row only).
-2. **`Profiles: deny self-mutation of protected fields`** — `USING (true)` — scopes which **columns** the caller may change (owner-safe columns only).
+- **Permissive policies (default)** are combined with **OR**. Any single permissive policy that passes allows the row. A permissive `USING (true)` on `UPDATE` would therefore *broaden* access — and that would be a real vulnerability.
+- **Restrictive policies (`AS RESTRICTIVE`)** are combined with **AND**. Every restrictive policy that matches the command must pass. They can only ever *narrow* access.
 
-Row scoping is entirely handled by policy #1. Policy #2 exists to enforce column-lockdown via `WITH CHECK` on every UPDATE that reaches this table. Setting `USING` on policy #2 to `auth.uid() = id` would:
+This policy is declared `AS RESTRICTIVE`, so its purpose is column-lockdown, not row-scoping:
 
-- Duplicate the ownership check already in policy #1.
-- Silently exempt admin/moderator writes from the column-lockdown branch, because they don't own the row.
+1. **`Users can update their own profile`** — permissive, `USING (auth.uid() = id) WITH CHECK (auth.uid() = id)`. Scopes which **rows** the caller may touch (their own row only).
+2. **`Profiles: deny self-mutation of protected fields`** — **restrictive**, `USING (true)` + a column-diff `WITH CHECK`. Scopes which **columns** the caller may change (owner-safe columns only, unless admin/moderator).
 
-Defense-in-depth is layered on with a `BEFORE UPDATE` trigger `profiles_prevent_verified_self_escalation` that also blocks verified-badge changes for non-privileged callers, so even if this policy were somehow bypassed, the trigger still raises `42501`.
+`USING (true)` on the restrictive policy is intentional: we want *every* UPDATE that reaches this table (whether or not the row is the caller's own) to pass through the column-lockdown `WITH CHECK`. Restricting `USING` to `auth.uid() = id` would silently exempt admin/moderator updates from the column-lockdown branch because they don't own the row — the opposite of what we want.
+
+Defense-in-depth is layered on with a `BEFORE UPDATE` trigger `profiles_prevent_verified_self_escalation` that also blocks verified-badge changes for non-privileged callers, so even if the policy were somehow bypassed the trigger still raises `42501`.
 
 ## Related migrations
 
 - `supabase/migrations/20260708200737_*.sql` — `verification_requests` + `sensitive_appeals` lockdown
 - `supabase/migrations/20260708201622_*.sql`, `20260708202035_*.sql` — posts/comments column lockdown
-- Latest migration — added `verified`, `verified_at`, `verification_plan` to this policy's WITH CHECK and installed the verified-escalation guard trigger.
+- `supabase/migrations/20260708203409_*.sql` — added `verified`, `verified_at`, `verification_plan` to this policy's WITH CHECK and installed the verified-escalation guard trigger.
+- Latest migration — recreated this policy `AS RESTRICTIVE FOR UPDATE TO authenticated` so its column-lockdown is always enforced, and revoked anon EXECUTE from auth-only RPCs and cron helpers.
 
 ## Related source contract tests
 
-- `src/lib/__tests__/profileVerifiedLockdown.test.ts` — 10 assertions covering the policy extension, the trigger, and the admin RPC.
+- `src/lib/__tests__/profileVerifiedLockdown.test.ts` — asserts the trigger, the admin RPC, and the extended WITH CHECK.
+- `src/lib/__tests__/profileRestrictiveUpdatePolicy.test.ts` — asserts the policy is `AS RESTRICTIVE`, scoped to `authenticated`, and that no payment/subscription code path writes to `verified` directly.
 
 ## Verdict
 
-**Accepted — intentional pairing.** Not a real vulnerability. Do NOT "fix" this by tightening `USING` to `auth.uid() = id` — it would weaken the admin/moderator branch of the WITH CHECK.
+**Accepted — RESTRICTIVE column-lockdown, intentional pairing.** Not a real vulnerability. Do NOT "fix" this by removing `AS RESTRICTIVE` or by tightening `USING` to `auth.uid() = id`: either change silently weakens the guard.
