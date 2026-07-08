@@ -1399,17 +1399,18 @@ function MapView({
   // current token version, so we don't loop forever on a genuinely bad token.
   const refreshAttemptedRef = useRef<number | null>(null);
 
-  const points = useMemo(
-    () =>
-      rows
-        .filter((r) => r.region_type !== "global")
-        .map((r) => {
-          const { coord, approximate } = geoFor(r);
-          return { r, coord, approximate };
-        }),
+  const visibleRows = useMemo(
+    () => rows.filter((r) => r.region_type !== "global"),
     [rows],
   );
-  const approxCount = points.filter((p) => p.approximate).length;
+  const points = useMemo(
+    () =>
+      visibleRows
+        .map((r) => ({ r, coord: geoFor(r).coord }))
+        .filter((p): p is { r: Row; coord: LatLng } => p.coord !== null),
+    [visibleRows],
+  );
+  const unmappedCount = visibleRows.length - points.length;
   const maxScore = Math.max(1, ...points.map((p) => p.r.crown_score));
 
   // Init map once we have a token
