@@ -530,6 +530,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
             score: row.crown_score ?? c.score,
             comments: row.comment_count ?? c.comments,
             shares: row.share_count ?? c.shares,
+            reposts: row.repost_count ?? c.reposts,
             battleWins: row.battle_wins ?? c.battleWins,
           }));
           if (typeof row.caption === "string") setLiveCaption(row.caption);
