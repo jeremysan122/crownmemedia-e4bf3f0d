@@ -64,15 +64,20 @@ const POSTS_SAFE_OWNER = [
 ];
 
 describe("posts UPDATE lockdown", () => {
-  it("revokes broad UPDATE and grants only the enumerated columns", () => {
+  it("revokes broad UPDATE and grants only owner-safe columns", () => {
     expect(allSql).toMatch(/REVOKE\s+UPDATE\s+ON\s+public\.posts\s+FROM\s+authenticated/i);
-    const grantBlock = allSql.match(
-      /GRANT UPDATE\s*\(([\s\S]+?)\)\s*ON\s+public\.posts\s+TO\s+authenticated/i,
-    );
-    expect(grantBlock).toBeTruthy();
-    const cols = grantBlock![1];
+    // Locate the FINAL grant block (last occurrence wins in migration order).
+    const grantBlocks = [...allSql.matchAll(
+      /GRANT UPDATE\s*\(([\s\S]+?)\)\s*ON\s+public\.posts\s+TO\s+authenticated/gi,
+    )];
+    expect(grantBlocks.length).toBeGreaterThan(0);
+    const cols = grantBlocks[grantBlocks.length - 1][1];
     for (const c of POSTS_SAFE_OWNER) {
       expect(cols).toMatch(new RegExp(`\\b${c}\\b`));
+    }
+    // Admin-only columns must NOT appear in the final owner grant.
+    for (const c of POSTS_PROTECTED) {
+      expect(cols).not.toMatch(new RegExp(`\\b${c}\\b`));
     }
   });
 
