@@ -60,6 +60,7 @@ export interface FeedPost {
   vote_count: number;
   comment_count: number;
   share_count: number;
+  repost_count?: number | null;
   battle_wins?: number;
   created_at: string;
   edited_at?: string | null;
