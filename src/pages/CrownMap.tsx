@@ -39,7 +39,10 @@ type Row = {
     post_lat: number | null;
     post_lng: number | null;
     post_location_precision: string | null;
+    image_url?: string | null;
+    caption?: string | null;
   } | null;
+
 };
 
 
