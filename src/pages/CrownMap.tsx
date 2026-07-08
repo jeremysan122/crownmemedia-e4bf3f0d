@@ -1650,6 +1650,87 @@ function MapView({
 
   }, [flashKeys, points]);
 
+  // Lightweight client-side clustering: markers that project within a small
+  // pixel bucket at the current zoom get merged into the top-scoring one
+  // with a "+N" badge, so dense city clusters don't turn into a mess of
+  // overlapping crowns on mobile. Clicking still opens the primary post —
+  // zooming in naturally splits the cluster on the next moveend.
+  //
+  // Deliberately does NOT switch the marker system to a Mapbox GeoJSON
+  // cluster source (which would require rebuilding popups + interactions
+  // from scratch). Unmapped posts never enter `points` and so are never
+  // clustered — their own dedicated section handles them.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const bucketPx = 44;
+    const runCluster = () => {
+      // Reset badges + visibility from any previous pass.
+      markersRef.current.forEach((m) => {
+        const el = m.getElement();
+        el.style.display = "";
+        const inner = el.firstElementChild as HTMLElement | null;
+        if (!inner) return;
+        const existing = inner.querySelector("[data-cluster-badge]");
+        if (existing) existing.remove();
+      });
+      if (points.length < 2) return;
+
+      const buckets = new Map<string, { primary: number; extras: number[] }>();
+      points.forEach((p, i) => {
+        let px;
+        try {
+          px = map.project([p.coord[1], p.coord[0]]);
+        } catch {
+          return;
+        }
+        const key = `${Math.round(px.x / bucketPx)}:${Math.round(px.y / bucketPx)}`;
+        const cur = buckets.get(key);
+        if (!cur) {
+          buckets.set(key, { primary: i, extras: [] });
+        } else {
+          // Keep the higher-scoring marker as the primary — clicking the
+          // cluster should land on the most notable crowned post.
+          if (points[i].r.crown_score > points[cur.primary].r.crown_score) {
+            cur.extras.push(cur.primary);
+            cur.primary = i;
+          } else {
+            cur.extras.push(i);
+          }
+        }
+      });
+
+      buckets.forEach((b) => {
+        if (b.extras.length === 0) return;
+        b.extras.forEach((i) => {
+          const m = markersRef.current[i];
+          if (m) m.getElement().style.display = "none";
+        });
+        const primary = markersRef.current[b.primary];
+        if (!primary) return;
+        const inner = primary.getElement().firstElementChild as HTMLElement | null;
+        if (!inner) return;
+        const badge = document.createElement("span");
+        badge.dataset.clusterBadge = "1";
+        badge.setAttribute("aria-label", `${b.extras.length + 1} crowned posts here`);
+        badge.textContent = `+${b.extras.length}`;
+        badge.style.cssText =
+          "position:absolute;bottom:-4px;right:-8px;background:hsl(45 95% 55%);color:#1a1208;font-size:9px;font-weight:800;padding:1px 5px;border-radius:9999px;border:1.5px solid #000;pointer-events:none;line-height:1.1;";
+        inner.appendChild(badge);
+      });
+    };
+
+    runCluster();
+    map.on("moveend", runCluster);
+    map.on("zoomend", runCluster);
+    return () => {
+      map.off("moveend", runCluster);
+      map.off("zoomend", runCluster);
+    };
+  }, [points]);
+
+
+
   // Heat overlay: register a real Mapbox heatmap layer driven by crown_score.
   // Rebuilds the GeoJSON source whenever points change; toggles opacity on `heat`.
   useEffect(() => {
