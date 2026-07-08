@@ -910,9 +910,12 @@ export default function Upload() {
         image_urls: imageUrls,
         caption: finalCaption,
         category,
-        city: city.trim(),
-        state: state.trim(),
-        country: country.trim(),
+        // city/state/country only when the creator picked manual location.
+        // Never send silently — the Crown Map pins the crowned POST, and we
+        // don't want stale profile-defaults leaking into a "no location" post.
+        city: locationMode === "manual" ? city.trim() : null,
+        state: locationMode === "manual" ? state.trim() : null,
+        country: locationMode === "manual" ? country.trim() : null,
         media_type: mode === "photo" ? "image" : "video",
         video_url: videoUrl,
         video_poster_url: videoPosterUrl,
