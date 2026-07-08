@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, Upload, Bell, UserPlus, ArrowRight, Check } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
+import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 
 type Step = "avatar" | "follows" | "notifications";
 const STEPS: Step[] = ["avatar", "follows", "notifications"];
@@ -97,26 +98,73 @@ export default function Onboarding() {
     setSuggested((data as Suggested[]) || []);
   };
 
+  // Load the user's already-followed set so followed suggestions stay
+  // "followed" across refresh / navigating away and back.
+  const loadExistingFollows = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", user.id);
+    if (error || !data) return;
+    setFollowing(new Set(data.map((r: any) => r.following_id)));
+  };
+
+  // Prevent duplicate in-flight writes for the same target user.
+  const inflight = useRef<Set<string>>(new Set());
+  // Tracks the latest INTENDED state per id — so a stale response can't
+  // overwrite a newer user action.
+  const intent = useRef<Map<string, boolean>>(new Map());
+
   const toggleFollow = async (id: string) => {
     if (!user) return;
+    if (inflight.current.has(id)) return; // debounce rapid taps for same target
     const wasFollowing = following.has(id);
-    // Optimistic update using functional setState so rapid taps don't clobber each other.
+    const willFollow = !wasFollowing;
+    intent.current.set(id, willFollow);
+    // Optimistic update
     setFollowing((prev) => {
       const next = new Set(prev);
-      if (wasFollowing) next.delete(id); else next.add(id);
+      if (willFollow) next.add(id); else next.delete(id);
       return next;
     });
-    const { error } = wasFollowing
-      ? await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", id)
-      : await supabase.from("follows").insert({ follower_id: user.id, following_id: id });
-    if (error) {
-      // Revert on failure
-      setFollowing((prev) => {
-        const next = new Set(prev);
-        if (wasFollowing) next.add(id); else next.delete(id);
-        return next;
-      });
-      toast.error(wasFollowing ? "Couldn't unfollow. Try again." : "Couldn't follow. Try again.");
+    inflight.current.add(id);
+    try {
+      const { error } = willFollow
+        ? await supabase.from("follows").insert({ follower_id: user.id, following_id: id })
+        : await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", id);
+      if (error) {
+        const msg = (error as { message?: string }).message || "";
+        // Idempotent: duplicate insert = already following; missing delete = already unfollowed.
+        const idempotent =
+          (willFollow && /duplicate|already exists|23505/i.test(msg)) ||
+          (!willFollow && /not found|no rows/i.test(msg));
+        if (!idempotent) {
+          logRawError(error, "generic", {
+            feature: "follow_toggle",
+            follower_id: user.id,
+            following_id: id,
+            action: willFollow ? "follow" : "unfollow",
+          });
+          // Only roll back if the intent hasn't changed since this write started
+          if (intent.current.get(id) === willFollow) {
+            setFollowing((prev) => {
+              const next = new Set(prev);
+              if (willFollow) next.delete(id); else next.add(id);
+              return next;
+            });
+          }
+          toast.error(toFriendlyMessage(error, "generic"));
+          return;
+        }
+      }
+      // On success, reconcile with the LATEST intent (not this stale write).
+      const latest = intent.current.get(id);
+      if (latest !== undefined && latest !== willFollow) {
+        // Newer tap already flipped intent; leave UI as the newest optimistic state.
+      }
+    } finally {
+      inflight.current.delete(id);
     }
   };
 
@@ -130,9 +178,9 @@ export default function Onboarding() {
   // Load suggested users only when the "follows" step becomes active —
   // calling this in the render body triggered a DB fetch on every re-render.
   useEffect(() => {
-    if (step === "follows") loadSuggested();
+    if (step === "follows") { loadSuggested(); loadExistingFollows(); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
+  }, [step, user?.id]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/80 flex flex-col items-center px-4 py-10">

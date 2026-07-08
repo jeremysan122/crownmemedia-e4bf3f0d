@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { Button } from "@/components/ui/button";
 import { formatScore } from "@/lib/crown";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 interface ArchivedPost {
   id: string;
@@ -51,13 +52,25 @@ export default function ArchivedPosts() {
     toast.success("Post restored");
   };
 
-  const remove = async (id: string) => {
-    if (!confirm("Delete this post permanently?")) return;
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
+
+  const remove = async () => {
+    if (!pendingDelete || removeBusy) return;
+    const id = pendingDelete;
+    setRemoveBusy(true);
     const { error } = await supabase.from("posts").delete().eq("id", id);
-    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
+    if (error) {
+      setRemoveBusy(false);
+      logRawError(error, "generic", { feature: "post_delete", post_id: id, action: "delete", from: "archived" });
+      toast.error(toFriendlyMessage(error, "generic"));
+      return;
+    }
     setPosts((p) => p.filter((x) => x.id !== id));
     window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id } }));
     toast.success("Post deleted");
+    setRemoveBusy(false);
+    setPendingDelete(null);
   };
 
   return (
@@ -96,7 +109,7 @@ export default function ArchivedPosts() {
                   <button onClick={() => restore(p.id)} className="flex-1 py-2 text-[11px] font-bold flex items-center justify-center gap-1 hover:bg-primary/10 text-primary">
                     <RotateCcw size={12} /> Restore
                   </button>
-                  <button onClick={() => remove(p.id)} className="flex-1 py-2 text-[11px] font-bold flex items-center justify-center gap-1 hover:bg-destructive/10 text-destructive border-l border-border/40">
+                  <button onClick={() => setPendingDelete(p.id)} className="flex-1 py-2 text-[11px] font-bold flex items-center justify-center gap-1 hover:bg-destructive/10 text-destructive border-l border-border/40">
                     <Trash2 size={12} /> Delete
                   </button>
                 </div>
@@ -105,6 +118,16 @@ export default function ArchivedPosts() {
           </ul>
         )}
       </div>
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => { if (!o) setPendingDelete(null); }}
+        title="Delete post?"
+        description="This can't be undone."
+        confirmLabel="Delete post"
+        destructive
+        loading={removeBusy}
+        onConfirm={remove}
+      />
     </AppShell>
   );
 }

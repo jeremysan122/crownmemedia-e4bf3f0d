@@ -31,6 +31,7 @@ import TaggedPeopleLine from "./TaggedPeopleLine";
 import { toast } from "sonner";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { trackEvent } from "@/lib/analytics";
+import ConfirmDialog from "./ConfirmDialog";
 
 import { FilterId, isValidFilter, FILTER_BY_ID } from "@/lib/filters";
 import PostMedia from "./PostMedia";
@@ -220,6 +221,10 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   const articleRef = useRef<HTMLElement | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [commentsDrawerOpen, setCommentsDrawerOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [archiveBusy, setArchiveBusy] = useState(false);
   const isMobile = useIsMobile();
   const isBelowDesktop = useIsBelowDesktop();
   const [hidden, setHidden] = useState(false);
@@ -262,25 +267,40 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     setHidden(true);
   };
   const deletePost = async () => {
-    if (!user || !isOwner) return;
-    if (!window.confirm("Delete this post permanently? This cannot be undone.")) return;
+    if (!user || !isOwner || deleteBusy) return;
+    setDeleteBusy(true);
     const { error } = await supabase.from("posts").delete().eq("id", post.id).eq("user_id", user.id);
-    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
+    if (error) {
+      setDeleteBusy(false);
+      logRawError(error, "generic", { feature: "post_delete", post_id: post.id, user_id: user.id, action: "delete" });
+      toast.error(toFriendlyMessage(error, "generic"));
+      return;
+    }
     trackEvent("post_deleted", { metadata: { post_id: interactionPostId } });
     toast.success("Post deleted");
+    setDeleteConfirmOpen(false);
+    setDeleteBusy(false);
     setHidden(true);
     window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id: post.id } }));
   };
 
   const archivePost = async () => {
-    if (!user || !isOwner) return;
+    if (!user || !isOwner || archiveBusy) return;
+    setArchiveBusy(true);
     const { error } = await supabase
       .from("posts")
       .update({ is_archived: true, archived_at: new Date().toISOString() } as any)
       .eq("id", post.id)
       .eq("user_id", user.id);
-    if (error) { logRawError(error, "generic"); return toast.error(toFriendlyMessage(error, "generic")); }
+    if (error) {
+      setArchiveBusy(false);
+      logRawError(error, "generic", { feature: "post_archive", post_id: post.id, user_id: user.id, action: "archive" });
+      toast.error(toFriendlyMessage(error, "generic"));
+      return;
+    }
     toast.success("Post archived — find it in Settings → Archived");
+    setArchiveConfirmOpen(false);
+    setArchiveBusy(false);
     setHidden(true);
     window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id: post.id } }));
   };
@@ -749,11 +769,11 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
                       ? <><PinOff size={14} className="mr-2" /> Unpin from profile</>
                       : <><Pin size={14} className="mr-2" /> Pin to profile</>}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={archivePost}>
+                  <DropdownMenuItem onClick={() => setArchiveConfirmOpen(true)}>
                     <Archive size={14} className="mr-2" /> Archive
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={deletePost} className="text-destructive focus:text-destructive">
+                  <DropdownMenuItem onClick={() => setDeleteConfirmOpen(true)} className="text-destructive focus:text-destructive">
                     <Trash2 size={14} className="mr-2" /> Delete post
                   </DropdownMenuItem>
                 </>
@@ -1247,6 +1267,26 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         onOpenChange={setReportOpen}
         postId={interactionPostId}
         reportedUserId={displayUserId}
+      />
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete post?"
+        description="This can't be undone."
+        confirmLabel="Delete post"
+        destructive
+        loading={deleteBusy}
+        onConfirm={deletePost}
+      />
+      <ConfirmDialog
+        open={archiveConfirmOpen}
+        onOpenChange={setArchiveConfirmOpen}
+        title="Remove post?"
+        description="This post will no longer appear publicly. You can restore it from Settings → Archived."
+        confirmLabel="Remove post"
+        destructive
+        loading={archiveBusy}
+        onConfirm={archivePost}
       />
     </article>
   );
