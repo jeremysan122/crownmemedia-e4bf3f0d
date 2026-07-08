@@ -259,7 +259,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           challenger_id: string
-          challenger_post_id: string
+          challenger_post_id: string | null
           challenger_votes: number
           created_at: string
           duration_seconds: number | null
@@ -274,7 +274,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           challenger_id: string
-          challenger_post_id: string
+          challenger_post_id?: string | null
           challenger_votes?: number
           created_at?: string
           duration_seconds?: number | null
@@ -289,7 +289,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           challenger_id?: string
-          challenger_post_id?: string
+          challenger_post_id?: string | null
           challenger_votes?: number
           created_at?: string
           duration_seconds?: number | null
