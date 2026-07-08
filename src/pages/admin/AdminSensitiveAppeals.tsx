@@ -43,15 +43,11 @@ export default function AdminSensitiveAppeals() {
     if (!user) return;
     setBusy(id);
     try {
-      const { error } = await supabase
-        .from("sensitive_appeals")
-        .update({
-          status,
-          moderator_notes: notes[id] ?? null,
-          decided_by: user.id,
-          decided_at: new Date().toISOString(),
-        })
-        .eq("id", id);
+      const { error } = await supabase.rpc("admin_decide_sensitive_appeal" as never, {
+        _appeal_id: id,
+        _decision: status,
+        _notes: notes[id] ?? null,
+      } as never);
       if (error) throw error;
       toast.success(`Appeal ${status}`);
       load();
