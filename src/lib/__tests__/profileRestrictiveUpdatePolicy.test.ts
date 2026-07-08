@@ -76,8 +76,9 @@ describe("profiles column-lockdown UPDATE policy", () => {
 
 describe("profiles owner-scope policy still present", () => {
   it("permissive 'Users can update their own profile' policy exists", () => {
+    // Original migration used lowercase `create policy ... for update using (auth.uid() = id)`.
     expect(sql).toMatch(
-      /CREATE POLICY "Users can update their own profile"[\s\S]*?FOR UPDATE[\s\S]*?USING\s*\(\s*auth\.uid\(\)\s*=\s*id\s*\)/,
+      /create policy "Users can update their own profile"[\s\S]*?for update[\s\S]*?using\s*\(\s*auth\.uid\(\)\s*=\s*id\s*\)/i,
     );
   });
 });
