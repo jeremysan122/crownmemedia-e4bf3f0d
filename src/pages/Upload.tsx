@@ -1797,12 +1797,136 @@ export default function Upload() {
           )}
         </div>
 
-        {/* Location */}
-        <div className="grid grid-cols-2 gap-3">
-          <div><Label>City</Label><Input value={city} onChange={(e) => setCity(e.target.value)} className="bg-input" required /></div>
-          <div><Label>State</Label><Input value={state} onChange={(e) => setState(e.target.value)} className="bg-input" /></div>
+        {/* Location — per-POST, OFF by default. Crown Map pins the crowned
+            POST, never the user. Exact GPS only if the creator explicitly
+            picks "Use my current location". */}
+        <div className="rounded-xl border border-border bg-card/40 p-3 space-y-3">
+          <button
+            type="button"
+            onClick={() => setLocationOpen((v) => !v)}
+            className="w-full flex items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-2 text-foreground min-w-0">
+              <MapPin size={14} className="text-primary shrink-0" />
+              <div className="min-w-0 text-left">
+                <div className="text-xs font-bold uppercase tracking-widest">Add location</div>
+                <div className="text-[11px] text-muted-foreground truncate">
+                  {locationMode === "none" && "No location — post won't be pinned on the map"}
+                  {locationMode === "manual" && (
+                    city.trim()
+                      ? `City · ${[city.trim(), state.trim(), country.trim()].filter(Boolean).join(", ")}`
+                      : "Manual — enter city/state/country below"
+                  )}
+                  {locationMode === "current" && (
+                    postLat != null && postLng != null
+                      ? `Current location · ${postLat.toFixed(3)}, ${postLng.toFixed(3)}`
+                      : "Use my current location (waiting for permission)"
+                  )}
+                </div>
+              </div>
+            </div>
+            <ChevronDown
+              size={14}
+              className={`text-muted-foreground transition-transform ${locationOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {locationOpen && (
+            <>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { id: "none", label: "None" },
+                  { id: "manual", label: "City" },
+                  { id: "current", label: "Current" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setLocationMode(opt.id);
+                      setLocationError(null);
+                      if (opt.id !== "current") {
+                        setPostLat(null);
+                        setPostLng(null);
+                        setLocationCapturedAt(null);
+                      }
+                      if (opt.id === "current") {
+                        if (typeof navigator === "undefined" || !navigator.geolocation) {
+                          setLocationError("Your browser doesn't support location.");
+                          return;
+                        }
+                        setLocationBusy(true);
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            setPostLat(pos.coords.latitude);
+                            setPostLng(pos.coords.longitude);
+                            setLocationCapturedAt(new Date().toISOString());
+                            setLocationBusy(false);
+                          },
+                          (err) => {
+                            setLocationBusy(false);
+                            setLocationMode("manual");
+                            setLocationError(
+                              err.code === 1
+                                ? "Location permission was denied. You can choose a city manually."
+                                : "Couldn't get your location. Try again or choose a city manually.",
+                            );
+                          },
+                          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+                        );
+                      }
+                    }}
+                    className={`h-9 rounded-lg text-[11px] font-bold uppercase tracking-widest border transition ${
+                      locationMode === opt.id
+                        ? "bg-gradient-gold text-primary-foreground border-transparent gold-shadow"
+                        : "bg-card/60 border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {locationBusy && (
+                <div className="text-[11px] text-muted-foreground flex items-center gap-2">
+                  <Loader2 size={12} className="animate-spin" /> Getting your location…
+                </div>
+              )}
+              {locationError && (
+                <div className="text-[11px] text-destructive">{locationError}</div>
+              )}
+
+              {locationMode === "manual" && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[11px]">City</Label>
+                      <Input value={city} onChange={(e) => setCity(e.target.value)} className="bg-input h-9 text-xs" />
+                    </div>
+                    <div>
+                      <Label className="text-[11px]">State</Label>
+                      <Input value={state} onChange={(e) => setState(e.target.value)} className="bg-input h-9 text-xs" />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-[11px]">Country</Label>
+                    <Input value={country} onChange={(e) => setCountry(e.target.value)} className="bg-input h-9 text-xs" />
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                Location is attached to this post only. CrownMe does not use this
+                to pin your profile or home location.
+                {locationMode === "current" && (
+                  <> Exact location may place this post close to where it was
+                  created — you can choose <b>City</b> instead.</>
+                )}
+              </p>
+            </>
+          )}
         </div>
-        <div><Label>Country</Label><Input value={country} onChange={(e) => setCountry(e.target.value)} className="bg-input" required /></div>
+
 
         {/* Tag people */}
         <div className="rounded-xl border border-border bg-card/40 p-3">
