@@ -4697,6 +4697,10 @@ export type Database = {
         Args: { _id: string; _stock: number }
         Returns: undefined
       }
+      admin_set_profile_verified: {
+        Args: { _plan?: string; _user_id: string; _verified: boolean }
+        Returns: undefined
+      }
       admin_update_post: {
         Args: { _patch: Json; _post_id: string }
         Returns: undefined
