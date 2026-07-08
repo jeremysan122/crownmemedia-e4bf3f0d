@@ -115,7 +115,6 @@ describe("comments UPDATE lockdown", () => {
       expect(cols).not.toMatch(new RegExp(`\\b${c}\\b`));
     }
   });
-  });
 
   it("BEFORE UPDATE guard trigger blocks owner edits to is_removed/reply_count/mention_user_ids", () => {
     const fn = allSql.match(
