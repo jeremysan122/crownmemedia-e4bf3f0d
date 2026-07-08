@@ -4642,6 +4642,10 @@ export type Database = {
           username: string
         }[]
       }
+      admin_moderate_comment: {
+        Args: { _comment_id: string; _removed: boolean }
+        Returns: undefined
+      }
       admin_set_creator_reward: {
         Args: { _reward_id: string; _status: string }
         Returns: {
@@ -4685,9 +4689,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_set_post_removed: {
+        Args: { _post_id: string; _removed: boolean }
+        Returns: undefined
+      }
       admin_set_prize_stock: {
         Args: { _id: string; _stock: number }
         Returns: undefined
+      }
+      admin_update_post: {
+        Args: { _patch: Json; _post_id: string }
+        Returns: undefined
+      }
+      admin_update_posts_bulk: {
+        Args: { _patch: Json; _post_ids: string[] }
+        Returns: number
       }
       admin_upsert_spin_prize: {
         Args: {
