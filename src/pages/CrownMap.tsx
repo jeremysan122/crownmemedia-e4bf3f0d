@@ -1743,7 +1743,7 @@ function MapView({
           </button>
         </div>
         <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-          <MapPin size={10} /> {points.length} mapped{approxCount > 0 ? ` · ${approxCount} approx.` : ""}
+          <MapPin size={10} /> {points.length} mapped{unmappedCount > 0 ? ` · ${unmappedCount} unmapped` : ""}
         </span>
       </div>
       <div ref={containerRef} className="w-full rounded-md overflow-hidden" style={{ height: "min(70vh, 560px)" }} />
