@@ -99,15 +99,25 @@ export default function Onboarding() {
 
   const toggleFollow = async (id: string) => {
     if (!user) return;
-    const next = new Set(following);
-    if (next.has(id)) {
-      next.delete(id);
-      await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", id);
-    } else {
-      next.add(id);
-      await supabase.from("follows").insert({ follower_id: user.id, following_id: id });
+    const wasFollowing = following.has(id);
+    // Optimistic update using functional setState so rapid taps don't clobber each other.
+    setFollowing((prev) => {
+      const next = new Set(prev);
+      if (wasFollowing) next.delete(id); else next.add(id);
+      return next;
+    });
+    const { error } = wasFollowing
+      ? await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", id)
+      : await supabase.from("follows").insert({ follower_id: user.id, following_id: id });
+    if (error) {
+      // Revert on failure
+      setFollowing((prev) => {
+        const next = new Set(prev);
+        if (wasFollowing) next.add(id); else next.delete(id);
+        return next;
+      });
+      toast.error(wasFollowing ? "Couldn't unfollow. Try again." : "Couldn't follow. Try again.");
     }
-    setFollowing(next);
   };
 
   const enableNotifications = async () => {
