@@ -1085,7 +1085,7 @@ export default function CrownMap() {
           )}
 
           {view === "map" && (
-            <div id="crownmap-panel-map" role="tabpanel" aria-labelledby="crownmap-tab-map" tabIndex={0}>
+            <div id="crownmap-panel-map" role="tabpanel" aria-labelledby="crownmap-tab-map" tabIndex={0} className="space-y-4">
               <MapView
                 rows={filtered}
                 category={category}
@@ -1095,8 +1095,10 @@ export default function CrownMap() {
                 isBookmarked={isBookmarked}
                 onToggleBookmark={toggleBookmark}
               />
+              <UnmappedCrownedPosts rows={filtered} category={category} />
             </div>
           )}
+
 
           {view === "list" && (
             <div id="crownmap-panel-list" role="tabpanel" aria-labelledby="crownmap-tab-list" tabIndex={0} className="space-y-6">
