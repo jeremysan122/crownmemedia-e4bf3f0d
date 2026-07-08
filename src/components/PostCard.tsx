@@ -97,6 +97,7 @@ export interface FeedPost {
     vote_count?: number | null;
     comment_count?: number | null;
     share_count?: number | null;
+    repost_count?: number | null;
     battle_wins?: number | null;
     media_type?: "image" | "video" | null;
     video_url?: string | null;
