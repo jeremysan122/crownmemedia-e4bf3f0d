@@ -226,7 +226,10 @@ export default function CommandCenterContent() {
   const bulk = async (patch: Record<string, any>, label: string) => {
     if (selected.size === 0) { toast.message("Select posts first"); return; }
     const ids = Array.from(selected);
-    const { error } = await (supabase as any).from("posts").update(patch).in("id", ids);
+    const { error } = await supabase.rpc("admin_update_posts_bulk" as never, {
+      _post_ids: ids,
+      _patch: patch,
+    } as never);
     if (error) { toast.error(error.message); return; }
     toast.success(`${label} (${ids.length})`);
     setSelected(new Set());
@@ -246,7 +249,10 @@ export default function CommandCenterContent() {
     let failed = 0;
     for (let i = 0; i < ids.length; i += CHUNK) {
       const slice = ids.slice(i, i + CHUNK);
-      const { error } = await (supabase as any).from("posts").update(def.patch).in("id", slice);
+      const { error } = await supabase.rpc("admin_update_posts_bulk" as never, {
+        _post_ids: slice,
+        _patch: def.patch,
+      } as never);
       if (error) { failed += slice.length; }
       setBulkProgress({ kind, done: Math.min(i + slice.length, ids.length), total: ids.length });
     }
