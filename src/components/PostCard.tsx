@@ -1111,8 +1111,9 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           {/* Hide repost button on repost shells — the server blocks reposts
               of reposts and we surface a "View original" link instead. */}
           {!isOwner && !isRepost && (
-            <button type="button" onClick={() => setRepostOpen(true)} className="p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/50 active:scale-95 transition" aria-label="Repost">
+            <button type="button" onClick={() => setRepostOpen(true)} className="flex items-center gap-1 p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/50 active:scale-95 transition" aria-label={`Repost${counts.reposts ? ` (${counts.reposts} reposts)` : ""}`}>
               <Repeat2 size={18} />
+              {counts.reposts > 0 && <span className="text-[11px] tabular-nums">{counts.reposts}</span>}
             </button>
           )}
           <button
