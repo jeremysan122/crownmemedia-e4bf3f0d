@@ -926,6 +926,25 @@ export default function Upload() {
         main_category_slug: derivedMain?.slug ?? null,
         subcategory_slug: derivedSub?.slug ?? null,
         content_type: contentType,
+        // Per-post location. `location_source='none'` (the default) tells the
+        // publish RPC + trigger to store nothing sensitive on the row.
+        location_enabled: locationMode !== "none",
+        location_source: locationMode === "current" ? "current_location"
+                       : locationMode === "manual"  ? "manual"
+                       : "none",
+        location_label: locationMode === "current" && postLat != null && postLng != null
+          ? `${postLat.toFixed(4)}, ${postLng.toFixed(4)}`
+          : locationMode === "manual"
+          ? [city.trim(), state.trim(), country.trim()].filter(Boolean).join(", ")
+          : null,
+        region_name: locationMode === "manual" ? (city.trim() || null) : null,
+        region_type: locationMode === "manual" && city.trim() ? "city" : null,
+        post_lat: locationMode === "current" ? postLat : null,
+        post_lng: locationMode === "current" ? postLng : null,
+        post_location_precision: locationMode === "current" ? "exact"
+                               : locationMode === "manual"  ? "city"
+                               : "none",
+        location_captured_at: locationMode === "current" ? locationCapturedAt : null,
       };
 
       const { data: published, error } = await supabase.rpc("publish_post_idempotent" as any, {
