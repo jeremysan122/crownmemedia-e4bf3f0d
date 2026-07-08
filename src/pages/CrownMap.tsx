@@ -268,7 +268,7 @@ export default function CrownMap() {
     let q = supabase
       .from("crowns")
       .select(
-        `region_name, region_type, user_id, post_id, crown_score, category, ${joinSpec}, post:posts!crowns_post_id_fkey(city, state, country, location_enabled, location_source, post_lat, post_lng, post_location_precision)`,
+        `region_name, region_type, user_id, post_id, crown_score, category, ${joinSpec}, post:posts!crowns_post_id_fkey(city, state, country, location_enabled, location_source, post_lat, post_lng, post_location_precision, image_url, caption)`,
         { count: "estimated" },
       )
       .eq("active", true)
@@ -352,7 +352,7 @@ export default function CrownMap() {
   const upsertRow = useCallback(async (region_type: Row["region_type"], region_name: string) => {
     const { data } = await supabase
       .from("crowns")
-      .select("region_name, region_type, user_id, post_id, crown_score, category, profile:profiles!crowns_user_id_fkey(username, profile_photo_url), post:posts!crowns_post_id_fkey(city, state, country, location_enabled, location_source, post_lat, post_lng, post_location_precision)")
+      .select("region_name, region_type, user_id, post_id, crown_score, category, profile:profiles!crowns_user_id_fkey(username, profile_photo_url), post:posts!crowns_post_id_fkey(city, state, country, location_enabled, location_source, post_lat, post_lng, post_location_precision, image_url, caption)")
       .eq("active", true)
       .eq("category", category)
       .eq("region_type", region_type)
