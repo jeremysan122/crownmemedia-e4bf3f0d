@@ -1365,11 +1365,13 @@ function project(lat: number, lon: number, w: number, h: number) {
   return [x, y];
 }
 
-function geoFor(r: Row): { coord: LatLng; approximate: boolean } {
-  if (r.region_type === "global") return { coord: [0, 0], approximate: false };
+function geoFor(r: Row): { coord: LatLng | null } {
+  if (r.region_type === "global") return { coord: [0, 0] };
   const exact = lookupGeo(r.region_name, r.region_type as any);
-  if (exact) return { coord: exact, approximate: false };
-  return { coord: fallbackCoord(`${r.region_type}:${r.region_name}`), approximate: true };
+  // Unmapped regions return `null` — callers hide them from the map instead
+  // of dropping a fake pin from a deterministic hash (which lands in the
+  // ocean or on the wrong continent and misleads viewers).
+  return { coord: exact };
 }
 
 function MapView({
