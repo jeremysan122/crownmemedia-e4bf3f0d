@@ -1,8 +1,69 @@
-// Curated lat/lng coords for countries, US states and major world cities.
-// Centroids sourced from public-domain geo data (Natural Earth / Wikipedia).
-// Names are case-insensitive matched after trimming.
+// Curated lat/lng centers for countries, US states, Canadian provinces,
+// and major world cities. Centroids sourced from public-domain geo data
+// (Natural Earth / Wikipedia). Name matching is case-insensitive with
+// punctuation-tolerant normalization and common alias / abbreviation
+// expansion (e.g. "U.S." → United States, "AB" → Alberta, "WI" → Wisconsin).
 
 export type LatLng = [number, number];
+
+/* ------------------------- Normalization ------------------------- */
+
+function norm(s: string): string {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/\./g, "")       // "U.S." → "us"
+    .replace(/[_\-]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+// Country alias table (normalized keys → canonical country key).
+const COUNTRY_ALIASES: Record<string, string> = {
+  "usa": "united states",
+  "us": "united states",
+  "u s a": "united states",
+  "united states of america": "united states",
+  "america": "united states",
+  "uk": "united kingdom",
+  "u k": "united kingdom",
+  "great britain": "united kingdom",
+  "gb": "united kingdom",
+  "uae": "united arab emirates",
+  "u a e": "united arab emirates",
+  "ca": "canada",   // country context only
+  "can": "canada",
+  "mex": "mexico",
+  "prc": "china",
+  "roc": "taiwan",
+  "kor": "south korea",
+  "korea": "south korea",
+  "russia federation": "russia",
+};
+
+// US state 2-letter abbreviations → canonical state key.
+const STATE_ABBR: Record<string, string> = {
+  al: "alabama", ak: "alaska", az: "arizona", ar: "arkansas", ca: "california",
+  co: "colorado", ct: "connecticut", de: "delaware", fl: "florida", ga: "georgia",
+  hi: "hawaii", id: "idaho", il: "illinois", in: "indiana", ia: "iowa",
+  ks: "kansas", ky: "kentucky", la: "louisiana", me: "maine", md: "maryland",
+  ma: "massachusetts", mi: "michigan", mn: "minnesota", ms: "mississippi",
+  mo: "missouri", mt: "montana", ne: "nebraska", nv: "nevada", nh: "new hampshire",
+  nj: "new jersey", nm: "new mexico", ny: "new york", nc: "north carolina",
+  nd: "north dakota", oh: "ohio", ok: "oklahoma", or: "oregon", pa: "pennsylvania",
+  ri: "rhode island", sc: "south carolina", sd: "south dakota", tn: "tennessee",
+  tx: "texas", ut: "utah", vt: "vermont", va: "virginia", wa: "washington",
+  wv: "west virginia", wi: "wisconsin", wy: "wyoming",
+};
+
+// Canadian province 2-letter abbreviations → canonical province key.
+const PROVINCE_ABBR: Record<string, string> = {
+  ab: "alberta", bc: "british columbia", mb: "manitoba", nb: "new brunswick",
+  nl: "newfoundland and labrador", ns: "nova scotia", nt: "northwest territories",
+  nu: "nunavut", on: "ontario", pe: "prince edward island", pei: "prince edward island",
+  qc: "quebec", sk: "saskatchewan", yt: "yukon",
+};
+
+/* ------------------------- Reference data ------------------------- */
 
 const COUNTRIES: Record<string, LatLng> = {
   "afghanistan": [33.93911, 67.709953], "albania": [41.153332, 20.168331],
@@ -88,11 +149,10 @@ const COUNTRIES: Record<string, LatLng> = {
   "tunisia": [33.886917, 9.537499], "turkey": [38.963745, 35.243322],
   "turkmenistan": [38.969719, 59.556278], "uganda": [1.373333, 32.290275],
   "ukraine": [48.379433, 31.16558], "united arab emirates": [23.424076, 53.847818],
-  "uae": [23.424076, 53.847818], "united kingdom": [55.378051, -3.435973],
-  "uk": [55.378051, -3.435973], "great britain": [55.378051, -3.435973],
+  "united kingdom": [55.378051, -3.435973],
   "england": [52.355518, -1.17432], "scotland": [56.490672, -4.202646],
   "wales": [52.130661, -3.783712], "northern ireland": [54.7877, -6.4923],
-  "united states": [37.09024, -95.712891], "usa": [37.09024, -95.712891], "us": [37.09024, -95.712891],
+  "united states": [37.09024, -95.712891],
   "uruguay": [-32.522779, -55.765835], "uzbekistan": [41.377491, 64.585262],
   "venezuela": [6.42375, -66.58973], "vietnam": [14.058324, 108.277199],
   "yemen": [15.552727, 48.516388], "zambia": [-13.133897, 27.849332],
@@ -127,7 +187,24 @@ const US_STATES: Record<string, LatLng> = {
   "wisconsin": [44.268543, -89.616508], "wyoming": [42.755966, -107.30249],
 };
 
+const CA_PROVINCES: Record<string, LatLng> = {
+  "alberta": [53.9333, -116.5765],
+  "british columbia": [53.7267, -127.6476],
+  "manitoba": [53.7609, -98.8139],
+  "new brunswick": [46.5653, -66.4619],
+  "newfoundland and labrador": [53.1355, -57.6604],
+  "northwest territories": [64.8255, -124.8457],
+  "nova scotia": [44.6820, -63.7443],
+  "nunavut": [70.2998, -83.1076],
+  "ontario": [51.2538, -85.3232],
+  "prince edward island": [46.5107, -63.4168],
+  "quebec": [52.9399, -73.5491],
+  "saskatchewan": [52.9399, -106.4509],
+  "yukon": [64.2823, -135.0000],
+};
+
 const CITIES: Record<string, LatLng> = {
+  // US
   "new york": [40.712776, -74.005974], "new york city": [40.712776, -74.005974],
   "los angeles": [34.052235, -118.243683], "chicago": [41.878113, -87.629799],
   "houston": [29.760427, -95.369804], "phoenix": [33.448376, -112.074036],
@@ -138,8 +215,28 @@ const CITIES: Record<string, LatLng> = {
   "boston": [42.360081, -71.058884], "seattle": [47.606209, -122.332069],
   "san francisco": [37.774929, -122.419418], "denver": [39.739235, -104.990250],
   "las vegas": [36.169941, -115.139832], "detroit": [42.331429, -83.045753],
+  "green bay": [44.5133, -88.0133], "appleton": [44.2619, -88.4154],
+  "oshkosh": [44.0247, -88.5426], "milwaukee": [43.0389, -87.9065],
+  "madison": [43.0731, -89.4012], "memphis": [35.1495, -90.0490],
+  "nashville": [36.1627, -86.7816], "st louis": [38.6270, -90.1994],
+  "saint louis": [38.6270, -90.1994], "kansas city": [39.0997, -94.5786],
+  "minneapolis": [44.9778, -93.2650], "charlotte": [35.2271, -80.8431],
+  "orlando": [28.5383, -81.3792], "tampa": [27.9506, -82.4572],
+  "new orleans": [29.9511, -90.0715], "cleveland": [41.4993, -81.6944],
+  "columbus": [39.9612, -82.9988], "indianapolis": [39.7684, -86.1581],
+  // Canada
   "toronto": [43.65107, -79.347015], "vancouver": [49.282730, -123.120735],
-  "montreal": [45.501690, -73.567253], "mexico city": [19.432608, -99.133209],
+  "montreal": [45.501690, -73.567253], "edmonton": [53.5461, -113.4938],
+  "calgary": [51.0447, -114.0719], "ottawa": [45.4215, -75.6972],
+  "winnipeg": [49.8951, -97.1384], "quebec city": [46.8139, -71.2080],
+  "halifax": [44.6488, -63.5752], "regina": [50.4452, -104.6189],
+  "saskatoon": [52.1332, -106.6700],
+  // Mexico / LatAm
+  "mexico city": [19.432608, -99.133209], "rio de janeiro": [-22.906847, -43.172897],
+  "sao paulo": [-23.550520, -46.633308], "buenos aires": [-34.603722, -58.381592],
+  "santiago": [-33.448891, -70.669266], "lima": [-12.046374, -77.042793],
+  "bogota": [4.710989, -74.072090], "caracas": [10.480594, -66.903603],
+  // Europe
   "london": [51.507351, -0.127758], "manchester": [53.480759, -2.242631],
   "paris": [48.856613, 2.352222], "berlin": [52.520008, 13.404954],
   "munich": [48.135124, 11.581981], "madrid": [40.416775, -3.703790],
@@ -152,45 +249,82 @@ const CITIES: Record<string, LatLng> = {
   "dublin": [53.349806, -6.260310], "lisbon": [38.722252, -9.139337],
   "athens": [37.983810, 23.727539], "istanbul": [41.008240, 28.978359],
   "moscow": [55.755825, 37.617298], "saint petersburg": [59.934280, 30.335099],
-  "kyiv": [50.450100, 30.523399], "dubai": [25.204849, 55.270782],
-  "abu dhabi": [24.453884, 54.377342], "riyadh": [24.713552, 46.675297],
-  "doha": [25.285446, 51.531040], "tel aviv": [32.085300, 34.781769],
-  "cairo": [30.044420, 31.235712], "lagos": [6.524379, 3.379206],
-  "nairobi": [-1.292066, 36.821945], "johannesburg": [-26.204103, 28.047305],
-  "cape town": [-33.924870, 18.424055], "mumbai": [19.075983, 72.877655],
-  "delhi": [28.704060, 77.102493], "new delhi": [28.613939, 77.209023],
-  "bengaluru": [12.971599, 77.594566], "bangalore": [12.971599, 77.594566],
-  "kolkata": [22.572645, 88.363892], "chennai": [13.082680, 80.270721],
-  "karachi": [24.860735, 67.001137], "lahore": [31.520369, 74.358749],
-  "dhaka": [23.810331, 90.412521], "bangkok": [13.756331, 100.501762],
-  "kuala lumpur": [3.139003, 101.686852], "singapore": [1.352083, 103.819836],
-  "jakarta": [-6.208763, 106.845599], "manila": [14.599512, 120.984222],
-  "hong kong": [22.396428, 114.109497], "taipei": [25.032969, 121.565418],
-  "shanghai": [31.230391, 121.473701], "beijing": [39.904202, 116.407394],
-  "shenzhen": [22.543096, 114.057861], "guangzhou": [23.129110, 113.264381],
-  "tokyo": [35.689487, 139.691711], "osaka": [34.693737, 135.502167],
-  "kyoto": [35.011665, 135.768326], "seoul": [37.566536, 126.977966],
+  "kyiv": [50.450100, 30.523399],
+  // MENA / Africa
+  "dubai": [25.204849, 55.270782], "abu dhabi": [24.453884, 54.377342],
+  "riyadh": [24.713552, 46.675297], "doha": [25.285446, 51.531040],
+  "tel aviv": [32.085300, 34.781769], "cairo": [30.044420, 31.235712],
+  "lagos": [6.524379, 3.379206], "nairobi": [-1.292066, 36.821945],
+  "johannesburg": [-26.204103, 28.047305], "cape town": [-33.924870, 18.424055],
+  // Asia
+  "mumbai": [19.075983, 72.877655], "delhi": [28.704060, 77.102493],
+  "new delhi": [28.613939, 77.209023], "bengaluru": [12.971599, 77.594566],
+  "bangalore": [12.971599, 77.594566], "kolkata": [22.572645, 88.363892],
+  "chennai": [13.082680, 80.270721], "karachi": [24.860735, 67.001137],
+  "lahore": [31.520369, 74.358749], "dhaka": [23.810331, 90.412521],
+  "bangkok": [13.756331, 100.501762], "kuala lumpur": [3.139003, 101.686852],
+  "singapore": [1.352083, 103.819836], "jakarta": [-6.208763, 106.845599],
+  "manila": [14.599512, 120.984222], "hong kong": [22.396428, 114.109497],
+  "taipei": [25.032969, 121.565418], "shanghai": [31.230391, 121.473701],
+  "beijing": [39.904202, 116.407394], "shenzhen": [22.543096, 114.057861],
+  "guangzhou": [23.129110, 113.264381], "tokyo": [35.689487, 139.691711],
+  "osaka": [34.693737, 135.502167], "kyoto": [35.011665, 135.768326],
+  "seoul": [37.566536, 126.977966],
+  // Oceania
   "sydney": [-33.868820, 151.209290], "melbourne": [-37.813629, 144.963058],
   "brisbane": [-27.469770, 153.025131], "perth": [-31.950527, 115.860458],
   "auckland": [-36.848461, 174.763336], "wellington": [-41.286461, 174.776230],
-  "rio de janeiro": [-22.906847, -43.172897], "sao paulo": [-23.550520, -46.633308],
-  "buenos aires": [-34.603722, -58.381592], "santiago": [-33.448891, -70.669266],
-  "lima": [-12.046374, -77.042793], "bogota": [4.710989, -74.072090],
-  "caracas": [10.480594, -66.903603],
 };
 
-function key(s: string) { return s.trim().toLowerCase(); }
+/* --------------------------- Lookup --------------------------- */
 
-export function lookupGeo(name: string, type: "country" | "state" | "city" | "global"): LatLng | null {
+/**
+ * Resolve a region name to a public center coordinate.
+ * Returns `null` when the name is not in our curated lookup — callers MUST
+ * treat that as "unmapped" and NOT invent a fake pin position.
+ *
+ * Handles:
+ *   - case-insensitive matching
+ *   - punctuation ("U.S." → us) & extra whitespace
+ *   - country aliases (USA, U.S.A., United States of America, UK, UAE, ...)
+ *   - state abbreviations (WI → Wisconsin, TN → Tennessee)
+ *   - province abbreviations (AB → Alberta, BC → British Columbia)
+ *   - "CA" is Canada when `type === "country"`, California when
+ *     `type === "state"` — never conflated across scopes.
+ */
+export function lookupGeo(
+  name: string,
+  type: "country" | "state" | "city" | "global",
+): LatLng | null {
   if (!name) return null;
-  const k = key(name);
-  if (type === "country") return COUNTRIES[k] ?? null;
-  if (type === "state") return US_STATES[k] ?? COUNTRIES[k] ?? null;
-  if (type === "city") return CITIES[k] ?? null;
+  const k = norm(name);
+
+  if (type === "country") {
+    const canon = COUNTRY_ALIASES[k] ?? k;
+    return COUNTRIES[canon] ?? null;
+  }
+  if (type === "state") {
+    // Try US state abbrev first, then province abbrev, then full names.
+    const usKey = STATE_ABBR[k] ?? k;
+    if (US_STATES[usKey]) return US_STATES[usKey];
+    const caKey = PROVINCE_ABBR[k] ?? k;
+    if (CA_PROVINCES[caKey]) return CA_PROVINCES[caKey];
+    return null;
+  }
+  if (type === "city") {
+    return CITIES[k] ?? null;
+  }
   return null;
 }
 
-// Deterministic fallback with much wider plausible spread (avoids polar regions).
+/**
+ * Deterministic decorative fallback — DO NOT use for visible map pins.
+ *
+ * Retained only for tests and any legacy caller that needs a stable pseudo
+ * coordinate for hashing / dev fixtures. Visible Crown Map markers must call
+ * `lookupGeo()` and hide the row when it returns `null`, otherwise pins land
+ * in fake random positions and mislead users.
+ */
 export function fallbackCoord(name: string): LatLng {
   let h = 2166136261;
   for (let i = 0; i < name.length; i++) {
@@ -199,7 +333,7 @@ export function fallbackCoord(name: string): LatLng {
   }
   const u1 = ((h >>> 0) % 10000) / 10000;
   const u2 = (((h >>> 13) >>> 0) % 10000) / 10000;
-  const lat = u1 * 110 - 50;   // -50..60
-  const lon = u2 * 340 - 170;  // -170..170
+  const lat = u1 * 110 - 50;
+  const lon = u2 * 340 - 170;
   return [lat, lon];
 }
