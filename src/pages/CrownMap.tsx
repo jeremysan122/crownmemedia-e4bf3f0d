@@ -27,7 +27,20 @@ type Row = {
   crown_score: number;
   category: CrownCategory;
   profile: { username: string; profile_photo_url: string | null } | null;
+  // Post location metadata used to pin the crowned POST (not the user).
+  // Populated by the embedded `post:posts!crowns_post_id_fkey(...)` select.
+  post?: {
+    city: string | null;
+    state: string | null;
+    country: string | null;
+    location_enabled: boolean | null;
+    location_source: string | null;
+    post_lat: number | null;
+    post_lng: number | null;
+    post_location_precision: string | null;
+  } | null;
 };
+
 
 const PAGE_SIZE = 60;
 const STORAGE_KEY = "crownmap.prefs.v1";
@@ -1365,14 +1378,24 @@ function project(lat: number, lon: number, w: number, h: number) {
   return [x, y];
 }
 
-function geoFor(r: Row): { coord: LatLng | null } {
-  if (r.region_type === "global") return { coord: [0, 0] };
-  const exact = lookupGeo(r.region_name, r.region_type as any);
-  // Unmapped regions return `null` — callers hide them from the map instead
-  // of dropping a fake pin from a deterministic hash (which lands in the
-  // ocean or on the wrong continent and misleads viewers).
-  return { coord: exact };
+function geoFor(r: Row): { coord: LatLng | null; precision: "exact" | "city" | "state" | "country" | "none" } {
+  if (r.region_type === "global") return { coord: [0, 0], precision: "country" };
+  // Pin the crowned POST, not the user. Prefer exact post coords (consented),
+  // then post city, then region, then post state/country. Never uses profile
+  // or device location, never invents a fake pin position.
+  return lookupPostGeo({
+    post_lat: r.post?.post_lat ?? null,
+    post_lng: r.post?.post_lng ?? null,
+    location_enabled: r.post?.location_enabled ?? null,
+    location_source: r.post?.location_source ?? null,
+    city: r.post?.city ?? null,
+    state: r.post?.state ?? null,
+    country: r.post?.country ?? null,
+    region_type: r.region_type,
+    region_name: r.region_name,
+  });
 }
+
 
 function MapView({
   rows, category, userId, flashKeys, heat, isBookmarked, onToggleBookmark,
