@@ -63,7 +63,8 @@ export default function ArchivedPosts() {
     if (error) {
       setRemoveBusy(false);
       logRawError(error, "generic", { feature: "post_delete", post_id: id, action: "delete", from: "archived" });
-      return toast.error(toFriendlyMessage(error, "generic"));
+      toast.error(toFriendlyMessage(error, "generic"));
+      return;
     }
     setPosts((p) => p.filter((x) => x.id !== id));
     window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id } }));
