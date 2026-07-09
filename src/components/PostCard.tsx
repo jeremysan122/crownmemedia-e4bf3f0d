@@ -30,6 +30,7 @@ import RepostDialog from "./RepostDialog";
 import TaggedPeopleLine from "./TaggedPeopleLine";
 import { toast } from "sonner";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+import { subscribePost, subscribeStatus } from "@/lib/postRealtimeBus";
 import { trackEvent } from "@/lib/analytics";
 import ConfirmDialog from "./ConfirmDialog";
 
