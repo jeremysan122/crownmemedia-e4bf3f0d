@@ -1,17 +1,15 @@
 /**
- * Source-contract coverage for the Bottom Nav notifications badge.
+ * Source-contract coverage for the notifications badge.
  *
- * Locks:
- *   - The bottom nav renders a Notifications entry linking to /notifications.
- *   - It reads unread counts from the shared useUnreadByType hook (realtime
- *     with focus/visibility polling fallback — no per-render channel leak).
- *   - Badge shows only when count > 0.
- *   - Display is capped at "99+".
- *   - DMs are excluded (they have their own icon), matching AppShell logic.
- *   - No raw backend error text is rendered.
- *   - Marking notifications read (via the Notifications page) resets the
- *     unread count so the badge disappears — the Notifications page calls
- *     mark_all_notifications_read and the shared hook re-emits from realtime.
+ * The bottom nav intentionally does NOT render a notifications item —
+ * that would duplicate the top header bell. Coverage here locks:
+ *   - BottomNav has no /notifications entry, no Bell icon, no notif badge.
+ *   - AppShell top header renders the Bell + destructive-pill unread badge
+ *     capped at "99+", excluding DMs (they have their own icon).
+ *   - The header count uses the shared useUnreadByType singleton
+ *     (realtime + focus/visibility polling fallback).
+ *   - Notifications page exposes Mark all read wired to the RPC so the
+ *     header badge resets when the user opens Notifications.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -19,52 +17,69 @@ import { join } from "node:path";
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const bottomNav = read("src/components/BottomNav.tsx");
+const appShell = read("src/components/AppShell.tsx");
 const notifsPage = read("src/pages/Notifications.tsx");
 const useUnread = read("src/hooks/useUnreadByType.ts");
 
-describe("BottomNav: notifications badge wiring", () => {
-  it("includes a Notifications ('Alerts') item linking to /notifications", () => {
-    expect(bottomNav).toMatch(/to:\s*["']\/notifications["']/);
-    expect(bottomNav).toMatch(/icon:\s*Bell/);
+describe("BottomNav: no duplicate notifications item", () => {
+  it("does not include a /notifications nav entry", () => {
+    expect(bottomNav).not.toMatch(/to:\s*["']\/notifications["']/);
   });
 
-  it("reads unread counts from useUnreadByType (shared realtime singleton)", () => {
-    expect(bottomNav).toMatch(/from\s+"@\/hooks\/useUnreadByType"/);
-    expect(bottomNav).toMatch(/useUnreadByType\(\)/);
+  it("does not import or render the Bell icon", () => {
+    expect(bottomNav).not.toMatch(/\bBell\b/);
   });
 
-  it("excludes DMs from the notif badge (matches AppShell top-bar logic)", () => {
-    expect(bottomNav).toMatch(/unread\.total\s*-\s*unread\.dm/);
+  it("does not render a bottom-nav-notif-badge element", () => {
+    expect(bottomNav).not.toMatch(/bottom-nav-notif-badge/);
   });
 
-  it("caps the display at 99+", () => {
-    expect(bottomNav).toMatch(/notifCount\s*>\s*99\s*\?\s*["']99\+["']/);
+  it("does not read useUnreadByType (header owns the badge)", () => {
+    expect(bottomNav).not.toMatch(/useUnreadByType/);
+  });
+});
+
+describe("Header notification badge (AppShell)", () => {
+  it("renders a Bell link to /notifications", () => {
+    expect(appShell).toMatch(/to="\/notifications"/);
+    expect(appShell).toMatch(/<Bell\s/);
   });
 
-  it("hides the badge when count is 0", () => {
-    // showBadge === true only when notifCount > 0
-    expect(bottomNav).toMatch(/notifCount\s*>\s*0/);
-    expect(bottomNav).toMatch(/showBadge\s*&&/);
+  it("uses useUnreadByType for the unread count", () => {
+    expect(appShell).toMatch(/from\s+"@\/hooks\/useUnreadByType"/);
+    expect(appShell).toMatch(/useUnreadByType\(\)/);
   });
 
-  it("uses the shared destructive pill styling with tabular-nums + a11y label", () => {
-    expect(bottomNav).toMatch(/bg-destructive/);
-    expect(bottomNav).toMatch(/tabular-nums/);
-    expect(bottomNav).toMatch(/`\$\{label\},\s*\$\{notifCount\}\s+unread`/);
+  it("excludes DMs from the notif badge", () => {
+    expect(appShell).toMatch(/unread\.total\s*-\s*unread\.dm/);
   });
 
-  it("does not render raw backend error text anywhere in the bottom nav", () => {
-    expect(bottomNav).not.toMatch(/err\.message|error\.message/);
+  it("hides the badge at 0 and caps display at 99+", () => {
+    expect(appShell).toMatch(/notifCount\s*>\s*0/);
+    expect(appShell).toMatch(/notifCount\s*>\s*99\s*\?\s*"99\+"/);
+  });
+
+  it("uses destructive pill styling with tabular-nums", () => {
+    expect(appShell).toMatch(/bg-destructive/);
+    expect(appShell).toMatch(/tabular-nums/);
+  });
+
+  it("uses an accessible aria-label mentioning unread count", () => {
+    expect(appShell).toMatch(/aria-label=\{`Notifications\$\{notifCount \? `, \$\{notifCount\} unread` : ""\}`\}/);
+  });
+
+  it("does not render raw backend error text", () => {
+    expect(appShell).not.toMatch(/err\.message|error\.message/);
   });
 });
 
 describe("Unread reset behavior", () => {
-  it("opening Notifications page exposes a Mark all read action wired to the RPC", () => {
+  it("Notifications page exposes Mark all read wired to the RPC", () => {
     expect(notifsPage).toMatch(/mark_all_notifications_read/);
     expect(notifsPage).toMatch(/Mark all read/);
   });
 
-  it("useUnreadByType listens to * events on notifications so read-flag flips propagate", () => {
+  it("useUnreadByType listens to * events on notifications", () => {
     expect(useUnread).toMatch(/event:\s*"\*"/);
     expect(useUnread).toMatch(/table:\s*"notifications"/);
   });
