@@ -1,7 +1,8 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Plus, User, Clapperboard, Trophy, MapPin, Swords } from "lucide-react";
+import { Home, Plus, User, Clapperboard, Trophy, MapPin, Swords, Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useUnreadByType } from "@/hooks/useUnreadByType";
 import CreateSheet from "@/components/create/CreateSheet";
 
 // Items used for *navigation* persistence + rendering. The `+` button is
@@ -13,6 +14,7 @@ const items = [
   { to: "__create__", label: "Create", icon: Plus, primary: true as const },
   { to: "/battles", label: "Battles", icon: Swords },
   { to: "/leaderboard", label: "Ranks", icon: Trophy },
+  { to: "/notifications", label: "Alerts", icon: Bell, badge: "notif" as const },
   { to: "/me", label: "Profile", icon: User },
 ];
 
