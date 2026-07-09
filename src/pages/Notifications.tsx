@@ -9,6 +9,7 @@ import { timeAgo } from "@/lib/crown";
 import { Bell, Crown, Heart, MessageCircle, UserPlus, Swords, AtSign, Reply as ReplyIcon, Check, Trash2, MailOpen, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { logRawError } from "@/lib/settingsSecurityErrors";
 import { useRealtimeFallbackPoll } from "@/hooks/useRealtimeFallbackPoll";
 
 type Group = "reply" | "mention" | "vote" | "follow" | "crown" | "battle" | "other";

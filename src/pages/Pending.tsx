@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { Button } from "@/components/ui/button";
+import { logRawError } from "@/lib/settingsSecurityErrors";
 
 /**
  * Owner-only "Pending" view.

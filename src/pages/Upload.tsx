@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { logRawError } from "@/lib/settingsSecurityErrors";
 import {
   isHeic,
   convertHeicToJpeg,
@@ -737,8 +738,8 @@ export default function Upload() {
               recomputeOverall();
               setPhotos((cur) => cur.map((x) => (x.id === p.id ? { ...x, uploading: false, progress: 100, uploaded: { path: result.path, url: result.publicUrl }, error: undefined } : x)));
             } catch (err) {
-              const msg = err instanceof Error ? err.message : "Upload failed";
-              setPhotos((cur) => cur.map((x) => (x.id === p.id ? { ...x, uploading: false, error: msg } : x)));
+              logRawError(err, "generic", { feature: "upload_photo_upload", photo_id: p.id });
+              setPhotos((cur) => cur.map((x) => (x.id === p.id ? { ...x, uploading: false, error: "Couldn't upload this photo. Tap to retry." } : x)));
               throw err;
             }
           },
