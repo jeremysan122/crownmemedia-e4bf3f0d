@@ -47,7 +47,7 @@ const PARENT_SELECT = `
   city, state, country, created_at, is_removed, is_archived,
   crown_score, vote_count, comment_count, share_count, repost_count, battle_wins,
   media_type, video_url, video_poster_url, filter, alt_texts,
-  aspect_ratio, tagged_user_ids, is_sensitive, sensitive_reason,
+  aspect_ratio, tagged_user_ids, is_sensitive,
   content_type,
   profile:profiles!posts_user_id_fkey(
     username, profile_photo_url, crowns_held, gender,
