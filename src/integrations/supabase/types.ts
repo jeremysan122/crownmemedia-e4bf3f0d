@@ -5111,6 +5111,15 @@ export type Database = {
         Args: { _post_id: string; _user_id: string }
         Returns: boolean
       }
+      log_upload_monitoring_event: {
+        Args: {
+          _context?: Json
+          _event: string
+          _message: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       mark_all_messages_read: { Args: never; Returns: number }
       mark_all_notifications_read: { Args: never; Returns: number }
       mark_dm_gift_seen: { Args: { p_message_id: string }; Returns: undefined }
@@ -5298,6 +5307,10 @@ export type Database = {
       snapshot_category_ranks: { Args: never; Returns: undefined }
       snapshot_post_ranks: { Args: never; Returns: undefined }
       spin_daily_wheel: { Args: never; Returns: Json }
+      storage_path_from_public_url: {
+        Args: { _bucket: string; _url: string }
+        Returns: string
+      }
       submit_verification_request: {
         Args: {
           _brand_name: string
@@ -5317,6 +5330,17 @@ export type Database = {
       undo_repost: { Args: { p_repost_id: string }; Returns: Json }
       update_my_dob: { Args: { _dob: string }; Returns: undefined }
       update_my_preferences: { Args: { _prefs: Json }; Returns: undefined }
+      validate_storage_object: {
+        Args: {
+          _allowed_mimes: string[]
+          _bucket: string
+          _event: string
+          _friendly_msg: string
+          _max_bytes: number
+          _path: string
+        }
+        Returns: undefined
+      }
       verification_eligibility_progress: {
         Args: { _user_id?: string }
         Returns: Json
