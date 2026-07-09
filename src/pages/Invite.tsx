@@ -178,11 +178,15 @@ export default function Invite() {
     const { data, error } = await supabase.rpc("redeem_invite_code", { _code: redeem.trim() });
     setBusy(false);
     if (error) {
-      toast.error(error.message.includes("yourself")
-        ? "You cannot invite yourself"
-        : error.message.includes("not found")
-        ? "Invite code not found"
-        : error.message);
+      const msg = error.message || "";
+      logRawError(error, "generic", { op: "redeem_invite_code" });
+      toast.error(
+        msg.includes("yourself")
+          ? "You cannot invite yourself"
+          : msg.includes("not found")
+          ? "Invite code not found"
+          : "Couldn't redeem this invite code. Try again.",
+      );
       return;
     }
     const result = data as { ok?: boolean; already_redeemed?: boolean; shekels_awarded?: number };
