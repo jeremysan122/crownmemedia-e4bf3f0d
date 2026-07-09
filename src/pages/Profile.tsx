@@ -18,6 +18,7 @@ import { formatScore, locationLabel } from "@/lib/crown";
 import { cssFor, isValidFilter } from "@/lib/filters";
 import { toast } from "sonner";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+import { validateUpload } from "@/lib/uploadValidation";
 
 import { useSeoMeta, buildProfileOgImage } from "@/hooks/useSeoMeta";
 import { trackUsage } from "@/lib/usageTrack";
