@@ -1138,7 +1138,6 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
                 alt_texts: post.parent!.alt_texts ?? null,
                 tagged_user_ids: post.parent!.tagged_user_ids ?? null,
                 is_sensitive: post.parent!.is_sensitive ?? null,
-                sensitive_reason: post.parent!.sensitive_reason ?? null,
                 profile: post.parent!.profile,
                 parent: null,
               } as FeedPost)
