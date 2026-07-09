@@ -927,9 +927,7 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
               <span className="font-display text-xs uppercase tracking-widest">Content warning</span>
             </div>
             <p className="text-[11px] text-muted-foreground max-w-[260px]">
-              {post.sensitive_reason?.trim()
-                ? post.sensitive_reason
-                : "The author marked this post as sensitive."}
+              The author marked this post as sensitive.
             </p>
             <button
               type="button"
