@@ -17,6 +17,7 @@ import {
   ToggleRight,
   HeartPulse,
   DollarSign as Wallet2,
+  Server,
 } from "lucide-react";
 
 const NAV: Array<{ to: string; label: string; icon: ReactNode }> = [
