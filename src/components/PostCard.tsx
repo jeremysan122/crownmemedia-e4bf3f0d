@@ -108,7 +108,6 @@ export interface FeedPost {
     alt_texts?: string[] | null;
     tagged_user_ids?: string[] | null;
     is_sensitive?: boolean | null;
-    sensitive_reason?: string | null;
     created_at?: string | null;
     profile: {
       username: string;
