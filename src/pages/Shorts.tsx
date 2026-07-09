@@ -550,7 +550,8 @@ export default function Shorts() {
             ));
             if (repostId) {
               setMyReposts((m) => ({ ...m, [parentId]: repostId }));
-              toast.success("Reposted", {
+              toast.success("Reposted to your profile", {
+                description: "You can undo this repost for the next 5 minutes.",
                 action: {
                   label: "Undo",
                   onClick: () => { void handleUndoRepost(parentId); },
