@@ -169,6 +169,78 @@ export default function Shorts() {
     videoRefs.current.forEach((v) => { if (v) v.muted = muted; });
   }, [muted]);
 
+  // Hydrate "already reposted" state for the viewer against the currently
+  // loaded scrolls. One batch query keeps this cheap even for long sessions.
+  useEffect(() => {
+    if (!user?.id || items.length === 0) return;
+    const parentIds = items.map((p) => p.id);
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("id, parent_post_id")
+        .eq("user_id", user.id)
+        .in("parent_post_id", parentIds);
+      if (cancelled || error || !data) return;
+      setMyReposts((prev) => {
+        const next = { ...prev };
+        for (const row of data as { id: string; parent_post_id: string | null }[]) {
+          if (row.parent_post_id) next[row.parent_post_id] = row.id;
+        }
+        return next;
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [items, user?.id]);
+
+  // Realtime: keep repost_count in sync when anyone (else) reposts / undoes a
+  // repost of a scroll currently in the feed. RLS on posts limits payloads to
+  // rows the viewer can already read; we ignore anything unrelated.
+  useEffect(() => {
+    if (items.length === 0) return;
+    const visibleIds = new Set(items.map((p) => p.id));
+    const channel = supabase
+      .channel("shorts-posts-counts")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "posts" },
+        (payload) => {
+          const row = payload.new as { id: string; repost_count: number | null };
+          if (!row?.id || !visibleIds.has(row.id)) return;
+          setItems((prev) => prev.map((it) =>
+            it.id === row.id ? { ...it, repost_count: row.repost_count ?? 0 } : it,
+          ));
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [items]);
+
+  const handleUndoRepost = useCallback(async (parentId: string) => {
+    const repostId = myReposts[parentId];
+    if (!repostId || undoingId) return;
+    setUndoingId(repostId);
+    // Optimistic: flip the UI back immediately.
+    const prevMap = myReposts;
+    setMyReposts((m) => { const n = { ...m }; delete n[parentId]; return n; });
+    setItems((prev) => prev.map((it) =>
+      it.id === parentId ? { ...it, repost_count: Math.max(0, (it.repost_count ?? 1) - 1) } : it,
+    ));
+    const res = await undoRepost(repostId);
+    setUndoingId(null);
+    if (!res.ok) {
+      // Roll back.
+      setMyReposts(prevMap);
+      setItems((prev) => prev.map((it) =>
+        it.id === parentId ? { ...it, repost_count: (it.repost_count ?? 0) + 1 } : it,
+      ));
+      toast.error(friendlyUndoRepostMessage(res.code));
+      return;
+    }
+    toast.success("Repost undone");
+  }, [myReposts, undoingId]);
+
+
   // Drive the top progress bar from the active video's timeupdate event.
   // Re-binds whenever the active slide changes so we always read the right video.
   useEffect(() => {
