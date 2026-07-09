@@ -477,13 +477,13 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       if (postRow) {
         if (typeof postRow.caption === "string") setLiveCaption(postRow.caption);
         if (typeof postRow.image_url === "string") setLiveCover(postRow.image_url);
-        if (isValidFilter((postRow as { filter?: unknown }).filter ?? null)) setLiveFilter((postRow as { filter: FilterId }).filter);
-        else if ((postRow as { filter?: unknown }).filter === null) setLiveFilter(null);
+        const f = (postRow as { filter?: unknown }).filter;
+        if (typeof f === "string" && isValidFilter(f)) setLiveFilter(f as FilterId);
+        else if (f === null) setLiveFilter(null);
       }
     };
 
     const refetchRef = { current: refetchAll };
-    refetchAllRef.current = refetchRef.current;
 
     const unsubBus = subscribePost(interactionPostId, async (evt) => {
       if (cancelled) return;
