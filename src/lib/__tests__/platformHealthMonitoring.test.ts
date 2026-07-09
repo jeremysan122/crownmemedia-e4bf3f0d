@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const insertMock = vi.fn(() => Promise.resolve({ data: null, error: null }));
-const rpcMock = vi.fn();
-const fromMock = vi.fn(() => ({
+const insertMock = vi.fn((..._args: unknown[]) => Promise.resolve({ data: null, error: null }));
+const rpcMock = vi.fn((..._args: unknown[]) => Promise.resolve({ data: null as unknown, error: null as unknown }));
+const fromMock = vi.fn((..._args: unknown[]) => ({
   insert: insertMock,
   select: vi.fn().mockReturnThis(),
   gte: vi.fn().mockReturnThis(),
