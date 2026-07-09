@@ -439,7 +439,7 @@ export default function Messages() {
     // else with a friendly message; raw storage errors never render.
     const check = validateUpload(f, "dm_attachment");
     if (!check.ok) {
-      logUploadFailure("upload_validation_failed", check.message, { where: "dm_attachment", reason: check.reason, size: f.size, type: f.type });
+      logUploadFailure("upload_validation_failed", check.message, { where: "dm_attachment", size: f.size, type: f.type });
       toast({ title: "Attachment", description: check.message, variant: "destructive" });
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
