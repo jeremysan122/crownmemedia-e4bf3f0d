@@ -218,6 +218,7 @@ const App = () => (
                 <Route path="audit" element={<CommandCenterAudit />} />
                 <Route path="error-logs" element={<CommandCenterErrorLogs />} />
                 <Route path="feature-flags" element={<CommandCenterFeatureFlags />} />
+                <Route path="platform-health" element={<CommandCenterPlatformHealth />} />
               </Route>
               <Route path="/me" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               {/* Public — anyone (including Google/bots) can view profiles and posts.
