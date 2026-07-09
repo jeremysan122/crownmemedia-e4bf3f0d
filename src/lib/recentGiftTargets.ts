@@ -121,7 +121,7 @@ export async function fetchRecentGiftTargets(userId?: string | null): Promise<Re
         mediaType: row.media_type ?? null,
         videoPosterUrl: row.video_poster_url ?? null,
         isSensitive: !!row.is_sensitive,
-        sensitiveReason: row.sensitive_reason ?? null,
+        sensitiveReason: null,
         source: entry.source,
         at: entry.at,
       } satisfies RecentGiftTarget;
