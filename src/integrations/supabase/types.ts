@@ -4732,6 +4732,7 @@ export type Database = {
         }
         Returns: string
       }
+      admin_user_growth_summary: { Args: never; Returns: Json }
       apply_to_creator_program: {
         Args: { _note?: string }
         Returns: {
