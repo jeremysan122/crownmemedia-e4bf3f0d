@@ -439,21 +439,36 @@ export default function Shorts() {
                     for every viewer. Anonymous viewers get the sign-in prompt
                     inside the dialog; owners see the server's own_post copy;
                     all other eligibility (blocks, duplicates, unavailable) is
-                    enforced by the create_repost RPC. */}
-                <button
-                  type="button"
-                  onClick={() => setRepostScroll(p)}
-                  aria-label={`Repost this scroll${p.repost_count ? ` (${p.repost_count} reposts)` : ""}`}
-                  disabled={!!repostScroll}
-                  className="flex flex-col items-center gap-1 active:scale-95 transition disabled:opacity-60"
-                >
-                  <span className="size-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
-                    <Repeat2 className="size-6" />
-                  </span>
-                  <span className="text-xs font-semibold tabular-nums">
-                    {p.repost_count && p.repost_count > 0 ? p.repost_count : "Repost"}
-                  </span>
-                </button>
+                    enforced by the create_repost RPC. Once the viewer has
+                    reposted, the button flips to a highlighted "Reposted"
+                    state and disables further taps to prevent double-reposts;
+                    Undo lives on the toast (5 min server window). */}
+                {(() => {
+                  const reposted = !!myReposts[p.id];
+                  const disabled = !!repostScroll || reposted || undoingId === myReposts[p.id];
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => !reposted && setRepostScroll(p)}
+                      aria-label={
+                        reposted
+                          ? `You reposted this scroll${p.repost_count ? ` (${p.repost_count} reposts)` : ""}`
+                          : `Repost this scroll${p.repost_count ? ` (${p.repost_count} reposts)` : ""}`
+                      }
+                      aria-pressed={reposted}
+                      disabled={disabled}
+                      className={`flex flex-col items-center gap-1 active:scale-95 transition disabled:opacity-60 ${reposted ? "text-primary" : ""}`}
+                    >
+                      <span className={`size-12 rounded-full backdrop-blur flex items-center justify-center ${reposted ? "bg-primary/20 ring-2 ring-primary" : "bg-white/10"}`}>
+                        <Repeat2 className="size-6" />
+                      </span>
+                      <span className="text-xs font-semibold tabular-nums">
+                        {reposted ? "Reposted" : (p.repost_count && p.repost_count > 0 ? p.repost_count : "Repost")}
+                      </span>
+                    </button>
+                  );
+                })()}
+
 
 
                 <button
