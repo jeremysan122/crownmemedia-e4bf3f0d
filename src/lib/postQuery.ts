@@ -29,7 +29,7 @@ export const POST_SELECT = `
   share_count, repost_count, battle_wins, created_at, edited_at, pinned_at,
   scheduled_for, parent_post_id, repost_caption, tagged_user_ids,
   media_type, video_url, video_poster_url, duration_ms, filter, alt_texts,
-  aspect_ratio, is_sensitive, sensitive_reason, content_type,
+  aspect_ratio, is_sensitive, content_type,
   is_removed, is_archived,
   profile:profiles!posts_user_id_fkey(
     username, profile_photo_url, crowns_held, gender,
