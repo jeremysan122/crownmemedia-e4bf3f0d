@@ -31,6 +31,7 @@ import TaggedPeopleLine from "./TaggedPeopleLine";
 import { toast } from "sonner";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { subscribePost, subscribeStatus } from "@/lib/postRealtimeBus";
+import { registerVisiblePost } from "@/lib/postPollBus";
 import { trackEvent } from "@/lib/analytics";
 import ConfirmDialog from "./ConfirmDialog";
 
@@ -523,10 +524,28 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
       if (s === "live") refetchRef.current(); // resync on (re)connect
     });
 
+    // Batch C polling safety net — register with the shared 15s poll bus so
+    // this card's counters resync even if the realtime channel is down or
+    // votes/comments are not in the `supabase_realtime` publication. The bus
+    // owns ONE interval process-wide and issues ONE batched query per tick
+    // for every visible post id. PostCard never runs its own setInterval.
+    const unsubPoll = registerVisiblePost(interactionPostId, (row) => {
+      if (cancelled) return;
+      setCounts((c) => ({
+        ...c,
+        score: row.crown_score ?? c.score,
+        comments: row.comment_count ?? c.comments,
+        shares: row.share_count ?? c.shares,
+        reposts: row.repost_count ?? c.reposts,
+        battleWins: row.battle_wins ?? c.battleWins,
+      }));
+    });
+
     return () => {
       cancelled = true;
       unsubBus();
       unsubStatus();
+      unsubPoll();
     };
   }, [post.id, user?.id]);
 
