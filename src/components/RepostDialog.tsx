@@ -75,11 +75,13 @@ export default function RepostDialog({ open, onOpenChange, parent, onReposted }:
         metadata: { has_caption: caption.length > 0, code: result.code },
       });
       const isReplay = result.code === "idempotent_replay";
-      if (!isReplay) {
-        toast.success("Reposted");
-        onReposted?.(parent.id, result.repostId);
-      } else {
+      if (isReplay) {
         toast.success("Already reposted");
+      } else if (onReposted) {
+        // Caller owns the success toast (e.g. Scrolls shows an Undo action).
+        onReposted(parent.id, result.repostId);
+      } else {
+        toast.success("Reposted");
       }
       setCaption("");
       onOpenChange(false);
