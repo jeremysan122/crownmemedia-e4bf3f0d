@@ -357,18 +357,23 @@ export default function Shorts() {
                   <span className="text-xs font-semibold">Send</span>
                 </button>
 
-                {!!user?.id && (
+                {/* Show for everyone except the post owner. Anonymous viewers
+                    get the login prompt inside the dialog. Server enforces
+                    all eligibility rules (own_post, blocks, duplicates). */}
+                {user?.id !== p.user_id && (
                   <button
                     type="button"
                     onClick={() => setRepostScroll(p)}
-                    aria-label="Repost this scroll"
+                    aria-label={`Repost this scroll${p.repost_count ? ` (${p.repost_count} reposts)` : ""}`}
                     disabled={!!repostScroll}
                     className="flex flex-col items-center gap-1 active:scale-95 transition disabled:opacity-60"
                   >
                     <span className="size-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
                       <Repeat2 className="size-6" />
                     </span>
-                    <span className="text-xs font-semibold">Repost</span>
+                    <span className="text-xs font-semibold tabular-nums">
+                      {p.repost_count && p.repost_count > 0 ? p.repost_count : "Repost"}
+                    </span>
                   </button>
                 )}
 
