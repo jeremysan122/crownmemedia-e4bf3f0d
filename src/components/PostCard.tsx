@@ -30,6 +30,7 @@ import RepostDialog from "./RepostDialog";
 import TaggedPeopleLine from "./TaggedPeopleLine";
 import { toast } from "sonner";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+import { subscribePost, subscribeStatus } from "@/lib/postRealtimeBus";
 import { trackEvent } from "@/lib/analytics";
 import ConfirmDialog from "./ConfirmDialog";
 
@@ -443,24 +444,21 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   }, [post.id, user?.id]);
 
 
-  // Realtime status — for graceful loading/error UI when the channel drops
+  // Realtime status — surfaced from the shared bus so per-card UI keeps its
+  // connecting/live/reconnecting affordances without opening its own channel.
   const [rtStatus, setRtStatus] = useState<"connecting" | "live" | "reconnecting" | "error">("connecting");
 
-  // realtime votes + comments — unique channel per mount, with single-flight
-  // resubscribe so concurrent error/timeout events can never schedule
-  // overlapping reconnect timers (which would create duplicate channels and
-  // duplicate state updates after recovery).
+  // Batch C: single shared feed/page-level channel + per-card 15s polling
+  // safety net. Replaces the previous per-card `supabase.channel(...)` which
+  // produced N channels for an N-item feed. `subscribePost` is refcounted;
+  // when the last card unmounts the underlying channel is torn down.
   useEffect(() => {
     let cancelled = false;
-    let attempt = 0;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let reconnecting = false;       // single-flight guard
-    let activeChannel: ReturnType<typeof supabase.channel> | null = null;
 
     const refetchAll = async () => {
       const [{ data: stats }, { data: postRow }, { count: cmtCount }] = await Promise.all([
         supabase.rpc("get_post_vote_stats", { _post_id: interactionPostId }),
-        supabase.from("posts").select("crown_score, comment_count, share_count, repost_count, battle_wins").eq("id", interactionPostId).maybeSingle(),
+        supabase.from("posts").select("crown_score, comment_count, share_count, repost_count, battle_wins, caption, image_url, filter").eq("id", interactionPostId).maybeSingle(),
         supabase.from("comments").select("id", { count: "exact", head: true }).eq("post_id", interactionPostId).eq("is_removed", false),
       ]);
       if (cancelled) return;
@@ -476,103 +474,60 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         reposts: postRow?.repost_count ?? c.reposts,
         battleWins: postRow?.battle_wins ?? c.battleWins,
       }));
-    };
-
-
-    const teardown = () => {
-      if (activeChannel) {
-        try { supabase.removeChannel(activeChannel); } catch { /* noop */ }
-        activeChannel = null;
+      if (postRow) {
+        if (typeof postRow.caption === "string") setLiveCaption(postRow.caption);
+        if (typeof postRow.image_url === "string") setLiveCover(postRow.image_url);
+        const f = (postRow as { filter?: unknown }).filter;
+        if (typeof f === "string" && isValidFilter(f)) setLiveFilter(f as FilterId);
+        else if (f === null) setLiveFilter(null);
       }
     };
 
-    const scheduleReconnect = () => {
-      // Single-flight: never queue another reconnect while one is pending or
-      // a fresh subscribe is in flight.
-      if (reconnecting || cancelled) return;
-      reconnecting = true;
-      const delay = Math.min(8000, 500 * Math.pow(2, attempt++));
-      if (attempt > 4) setRtStatus("error");
-      else setRtStatus("reconnecting");
-      reconnectTimer = setTimeout(() => {
-        reconnectTimer = null;
+    const refetchRef = { current: refetchAll };
+
+    const unsubBus = subscribePost(interactionPostId, async (evt) => {
+      if (cancelled) return;
+      if (evt.kind === "vote") {
+        const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: interactionPostId });
         if (cancelled) return;
-        teardown();
-        reconnecting = false;
-        subscribe();
-      }, delay);
-    };
+        const c2 = ((stats ?? {}) as { counts?: Record<string, number> }).counts ?? {};
+        const byType = { crown: c2.crown ?? 0, fire: c2.fire ?? 0, diamond: c2.diamond ?? 0, dislike: c2.dislike ?? 0 };
+        setCounts((c) => ({ ...c, ...byType, total: byType.crown + byType.fire + byType.diamond }));
+      } else if (evt.kind === "post") {
+        const row = evt.row as Record<string, unknown>;
+        setCounts((c) => ({
+          ...c,
+          score: (row.crown_score as number) ?? c.score,
+          comments: (row.comment_count as number) ?? c.comments,
+          shares: (row.share_count as number) ?? c.shares,
+          reposts: (row.repost_count as number) ?? c.reposts,
+          battleWins: (row.battle_wins as number) ?? c.battleWins,
+        }));
+        if (typeof row.caption === "string") setLiveCaption(row.caption);
+        if (typeof row.image_url === "string") setLiveCover(row.image_url as string);
+        if (isValidFilter((row.filter as string) ?? null)) setLiveFilter(row.filter as FilterId);
+        else if (row.filter === null) setLiveFilter(null);
+      } else if (evt.kind === "comment") {
+        const { count } = await supabase
+          .from("comments")
+          .select("id", { count: "exact", head: true })
+          .eq("post_id", interactionPostId)
+          .eq("is_removed", false);
+        if (typeof count === "number" && !cancelled) setCounts((c) => ({ ...c, comments: count }));
+      }
+    });
 
-    const subscribe = () => {
-      if (cancelled || activeChannel) return; // never overlap channels
-      const channelName = `post-${interactionPostId}-${crypto.randomUUID()}`;
-      const ch = supabase.channel(channelName);
-      activeChannel = ch;
-      ch.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "votes", filter: `post_id=eq.${interactionPostId}` },
-        async () => {
-          const { data: stats } = await supabase.rpc("get_post_vote_stats", { _post_id: interactionPostId });
-          if (cancelled) return;
-          const c2 = ((stats ?? {}) as { counts?: Record<string, number> }).counts ?? {};
-          const byType = { crown: c2.crown ?? 0, fire: c2.fire ?? 0, diamond: c2.diamond ?? 0, dislike: c2.dislike ?? 0 };
-          setCounts((c) => ({ ...c, ...byType, total: byType.crown + byType.fire + byType.diamond }));
-        },
-      ).on(
+    const unsubStatus = subscribeStatus((s) => {
+      if (cancelled) return;
+      setRtStatus(s);
+      if (s === "live") refetchRef.current(); // resync on (re)connect
+    });
 
-        "postgres_changes",
-        { event: "*", schema: "public", table: "posts", filter: `id=eq.${interactionPostId}` },
-        (payload) => {
-          const row: any = payload.new;
-          if (!row || cancelled) return;
-          setCounts((c) => ({
-            ...c,
-            score: row.crown_score ?? c.score,
-            comments: row.comment_count ?? c.comments,
-            shares: row.share_count ?? c.shares,
-            reposts: row.repost_count ?? c.reposts,
-            battleWins: row.battle_wins ?? c.battleWins,
-          }));
-          if (typeof row.caption === "string") setLiveCaption(row.caption);
-          if (typeof row.image_url === "string") setLiveCover(row.image_url);
-          if (isValidFilter(row.filter ?? null)) setLiveFilter(row.filter as FilterId);
-          else if (row.filter === null) setLiveFilter(null);
-        },
-      ).on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "comments", filter: `post_id=eq.${interactionPostId}` },
-        async () => {
-          const { count } = await supabase
-            .from("comments")
-            .select("id", { count: "exact", head: true })
-            .eq("post_id", interactionPostId)
-            .eq("is_removed", false);
-          if (typeof count === "number" && !cancelled) setCounts((c) => ({ ...c, comments: count }));
-        },
-      ).subscribe((status) => {
-        // Note: gift_transactions is no longer in the realtime publication for security
-        // (financial data isolation). Sender-side gift animations still fire locally.
-        if (cancelled) return;
-        if (status === "SUBSCRIBED") {
-          setRtStatus("live");
-          attempt = 0;
-          reconnecting = false;
-          // Resync from source of truth — replaces (does not duplicate) state.
-          refetchAll();
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-          scheduleReconnect();
-        }
-      });
-    };
-
-    subscribe();
     return () => {
       cancelled = true;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      teardown();
+      unsubBus();
+      unsubStatus();
     };
-  // user?.id — stable primitive dep avoids spurious channel teardown/rebuild
-  // whenever unrelated User object properties refresh.
   }, [post.id, user?.id]);
 
   const VOTE_WEIGHT: Record<VoteType, number> = { crown: 1, fire: 0.5, diamond: 1.5, dislike: 0 };

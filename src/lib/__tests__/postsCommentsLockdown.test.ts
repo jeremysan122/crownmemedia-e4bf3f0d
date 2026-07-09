@@ -201,7 +201,7 @@ describe("client query contract carries repost_count", () => {
     // counts state carries reposts
     expect(postCard).toMatch(/reposts:\s*seed\.repost_count/);
     // realtime patch updates reposts
-    expect(postCard).toMatch(/reposts:\s*row\.repost_count/);
+    expect(postCard).toMatch(/reposts:\s*\(?row\.repost_count/);
     // Repost button renders the count when > 0
     expect(postCard).toMatch(/counts\.reposts\s*>\s*0/);
   });

@@ -32,6 +32,7 @@ import { useThreadUnread } from "@/hooks/useThreadUnread";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import { useDmMute } from "@/hooks/useDmMute";
 import { dmPairFolder, formatBytes } from "@/lib/dm";
+import { validateUpload } from "@/lib/uploadValidation";
 import { computeReactionTotalsForMessages } from "@/lib/reactionTotals";
 import MessageReactions from "@/components/messages/MessageReactions";
 import DmAttachment from "@/components/messages/DmAttachment";
@@ -432,8 +433,13 @@ export default function Messages() {
   const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (f.size > MAX_FILE_BYTES) {
-      toast({ title: "File too large", description: "Max 10MB.", variant: "destructive" });
+    // Launch scope = image-only DM attachments. Validate against the
+    // dm_attachment preset (25MB, image/jpeg|png|webp) and reject anything
+    // else with a friendly message; raw storage errors never render.
+    const check = validateUpload(f, "dm_attachment");
+    if (!check.ok) {
+      toast({ title: "Attachment", description: check.message, variant: "destructive" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
     setPendingFile(f);
@@ -458,7 +464,8 @@ export default function Messages() {
     }
     const res = await uploadWithProgress(url, token, file, (p) => setUploadProgress(p));
     if (!res.ok) {
-      setUploadError(res.error);
+      logRawError(res.error, "generic", { where: "dm_attachment_upload" });
+      setUploadError("Couldn't upload attachment. Try again.");
       return null;
     }
     setUploadProgress(100);
@@ -518,6 +525,9 @@ export default function Messages() {
       .maybeSingle();
 
     if (error || !data) {
+      logRawError(error, "generic", { where: "dm_send" });
+      const friendly = toFriendlyMessage(error, "generic");
+      toast({ title: "Message", description: friendly, variant: "destructive" });
       setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, _pending: false, _failed: true } : m)));
       return;
     }
@@ -741,7 +751,7 @@ export default function Messages() {
             type="file"
             className="hidden"
             onChange={onPickFile}
-            accept="image/*,application/pdf,.doc,.docx,.txt,.zip"
+            accept="image/jpeg,image/png,image/webp"
           />
           <Button
             type="button"
