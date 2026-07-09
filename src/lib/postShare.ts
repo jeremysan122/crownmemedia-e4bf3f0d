@@ -36,7 +36,7 @@ export interface PostShareLike {
   created_at?: string | null;
   is_removed?: boolean | null;
   is_sensitive?: boolean | null;
-  sensitive_reason?: string | null;
+  
 }
 
 /** True only when the database confirms the post is gone or removed. */
