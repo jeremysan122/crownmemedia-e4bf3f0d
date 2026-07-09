@@ -357,7 +357,7 @@ export default function Shorts() {
                   <span className="text-xs font-semibold">Send</span>
                 </button>
 
-                {!!user?.id && user.id !== p.user_id && (
+                {!!user?.id && (
                   <button
                     type="button"
                     onClick={() => setRepostScroll(p)}
