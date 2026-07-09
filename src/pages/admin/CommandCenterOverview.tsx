@@ -144,6 +144,8 @@ export default function CommandCenterOverview() {
         </div>
       )}
 
+      <UserGrowthCard />
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <StatTile label="Total Users" value={fmt(stats.users)} />
         <StatTile label="Posts (24h)" value={fmt(stats.posts24h)} />
