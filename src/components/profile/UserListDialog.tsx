@@ -94,7 +94,8 @@ export default function UserListDialog({ open, onOpenChange, userId, mode }: Pro
         if (isFollowing) next.add(targetId); else next.delete(targetId);
         return next;
       });
-      toast.error(err.message || "Action failed");
+      logRawError(err, "generic", { feature: "user_list_follow_toggle", target_id: targetId });
+      toast.error("Couldn't follow this user. Try again.");
     } finally {
       setPending((p) => {
         const next = new Set(p);
