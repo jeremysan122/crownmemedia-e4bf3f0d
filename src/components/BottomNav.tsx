@@ -48,16 +48,10 @@ export default function BottomNav() {
   const loc = useLocation();
   const nav = useNavigate();
   const { profile } = useAuth();
-  const unread = useUnreadByType();
-  // Notifications badge = all unread notifications except DMs (DMs have their
-  // own icon in the top header). Realtime updates arrive via the shared
-  // useUnreadByType singleton, with a focus/visibility refresh fallback so
-  // the count stays accurate even if the websocket drops.
-  const notifCount = Math.max(0, unread.total - unread.dm);
-  const notifBadge = notifCount > 99 ? "99+" : String(notifCount);
   const [createOpen, setCreateOpen] = useState(false);
   const hide = ["/", "/auth", "/age-gate", "/verify-age", "/onboarding"].includes(loc.pathname);
   const profilePath = profile?.username ? `/${profile.username}` : "/me";
+
 
   // Persist the active tab whenever the route matches one of the bottom-nav items.
   useEffect(() => {
