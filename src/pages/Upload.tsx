@@ -14,7 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { logRawError } from "@/lib/settingsSecurityErrors";
+import { logRawError, toFriendlyMessage } from "@/lib/settingsSecurityErrors";
+import { validateUpload } from "@/lib/uploadValidation";
+import { isRateLimitError, RATE_LIMIT_FRIENDLY_MESSAGE } from "@/lib/rateLimit";
 import {
   isHeic,
   convertHeicToJpeg,
