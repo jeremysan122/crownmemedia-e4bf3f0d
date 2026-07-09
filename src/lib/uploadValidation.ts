@@ -33,8 +33,10 @@ export const UPLOAD_RULES: Record<UploadPreset, UploadRule> = {
   post_image:  { maxBytes: 50 * MB,  mimeTypes: IMAGE_MIMES, label: "photo" },
   post_video:  { maxBytes: 200 * MB, mimeTypes: VIDEO_MIMES, label: "video" },
   dm_attachment: {
+    // Launch scope: image-only DM attachments. Video support is disabled
+    // until moderation/preview pipeline is fully vetted.
     maxBytes: 25 * MB,
-    mimeTypes: [...IMAGE_MIMES, "video/mp4", "video/webm"] as const,
+    mimeTypes: IMAGE_MIMES,
     label: "attachment",
   },
   verification_doc: {
