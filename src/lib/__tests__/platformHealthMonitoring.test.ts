@@ -31,7 +31,7 @@ describe("Batch D monitoring", () => {
     await logUploadFailure("storage_upload_failed", "boom", { where: "test" });
     expect(fromMock).toHaveBeenCalledWith("error_logs");
     expect(insertMock).toHaveBeenCalledTimes(1);
-    const row = insertMock.mock.calls[0][0] as { source: string; level: string; metadata: { event: string; where: string } };
+    const row = (insertMock.mock.calls[0] as unknown[])[0] as { source: string; level: string; metadata: { event: string; where: string } };
     expect(row.source).toBe("monitoring");
     expect(row.level).toBe("warn");
     expect(row.metadata.event).toBe("storage_upload_failed");
