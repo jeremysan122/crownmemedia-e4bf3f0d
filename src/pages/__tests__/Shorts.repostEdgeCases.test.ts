@@ -78,7 +78,7 @@ describe("Scrolls: double-tap protection", () => {
 
   it("Idempotent replay (repost_attempts_log) returns 'idempotent_replay' without inserting again", () => {
     const matches = migrations.match(
-      /CREATE OR REPLACE FUNCTION public\.create_repost[\s\S]+?\$\$;/g,
+      /CREATE OR REPLACE FUNCTION public\.create_repost\([\s\S]+?\$\$;/g,
     );
     expect(matches).toBeTruthy();
     expect(matches!.join("\n")).toMatch(/'idempotent_replay'/);
