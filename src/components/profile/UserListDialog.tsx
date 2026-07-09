@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Crown } from "lucide-react";
 import { toast } from "sonner";
+import { logRawError } from "@/lib/settingsSecurityErrors";
 
 type Mode = "followers" | "following";
 
