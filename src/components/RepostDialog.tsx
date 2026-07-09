@@ -19,6 +19,8 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   parent: FeedPost;
+  /** Fired after a successful (non-replay) repost so parents can bump counts optimistically. */
+  onReposted?: (parentPostId: string) => void;
 }
 
 /**
@@ -27,7 +29,7 @@ interface Props {
  * Postgres function. The client is intentionally thin and renders only what
  * the server reports.
  */
-export default function RepostDialog({ open, onOpenChange, parent }: Props) {
+export default function RepostDialog({ open, onOpenChange, parent, onReposted }: Props) {
   const { user } = useAuth();
   const [caption, setCaption] = useState("");
   const [busy, setBusy] = useState(false);
@@ -73,6 +75,7 @@ export default function RepostDialog({ open, onOpenChange, parent }: Props) {
         metadata: { has_caption: caption.length > 0, code: result.code },
       });
       toast.success(result.code === "idempotent_replay" ? "Already reposted" : "Reposted");
+      if (result.code !== "idempotent_replay") onReposted?.(parent.id);
       setCaption("");
       onOpenChange(false);
       return;
