@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Crown, Copy, Check, Loader2, Sparkles, Users, TrendingUp, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import { logRawError } from "@/lib/settingsSecurityErrors";
 import AppShell from "@/components/AppShell";
 
 type CreatorProgram = {
