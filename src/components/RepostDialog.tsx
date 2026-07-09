@@ -75,6 +75,7 @@ export default function RepostDialog({ open, onOpenChange, parent, onReposted }:
         metadata: { has_caption: caption.length > 0, code: result.code },
       });
       toast.success(result.code === "idempotent_replay" ? "Already reposted" : "Reposted");
+      if (result.code !== "idempotent_replay") onReposted?.(parent.id);
       setCaption("");
       onOpenChange(false);
       return;
