@@ -19,6 +19,8 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   parent: FeedPost;
+  /** Fired after a successful (non-replay) repost so parents can bump counts optimistically. */
+  onReposted?: (parentPostId: string) => void;
 }
 
 /**
