@@ -58,7 +58,8 @@ export default function Onboarding() {
       nav("/feed", { replace: true });
       refreshProfile().catch(() => { /* noop */ });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't finish setup");
+      logRawError(err, "generic", { feature: "onboarding_finish" });
+      toast.error("Couldn't finish setup. Try again.");
     } finally {
       setBusy(false);
     }
