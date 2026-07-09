@@ -95,7 +95,12 @@ describe("PostCard source contract", () => {
   it("PostCard never calls supabase.channel directly (goes through shared bus)", async () => {
     const fs = await import("node:fs/promises");
     const src = await fs.readFile("src/components/PostCard.tsx", "utf8");
-    expect(src).not.toMatch(/supabase\.channel\s*\(/);
+    // Ignore prose mentions in comments; only flag real call sites.
+    const codeOnly = src
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*"))
+      .join("\n");
+    expect(codeOnly).not.toMatch(/supabase\.channel\s*\(/);
   });
 
   it("PostCard never starts its own setInterval (uses shared poll bus)", async () => {
