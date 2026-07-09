@@ -4780,6 +4780,7 @@ export type Database = {
         Args: { p_older_than_minutes?: number }
         Returns: number
       }
+      cleanup_rate_limits: { Args: never; Returns: undefined }
       comments_allowed_on: { Args: { _post: string }; Returns: boolean }
       compute_daily_usage_rollup: { Args: { _d?: string }; Returns: undefined }
       confirm_my_age: { Args: { _dob: string }; Returns: undefined }
@@ -4812,6 +4813,14 @@ export type Database = {
       dm_pair_folder: { Args: { _a: string; _b: string }; Returns: string }
       dm_typing_topic_allowed: { Args: { _topic: string }; Returns: boolean }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      enforce_rate_limit: {
+        Args: {
+          _action_key: string
+          _max_count: number
+          _window_seconds: number
+        }
+        Returns: undefined
+      }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
