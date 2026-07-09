@@ -58,7 +58,8 @@ export default function Onboarding() {
       nav("/feed", { replace: true });
       refreshProfile().catch(() => { /* noop */ });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't finish setup");
+      logRawError(err, "generic", { feature: "onboarding_finish" });
+      toast.error("Couldn't finish setup. Try again.");
     } finally {
       setBusy(false);
     }
@@ -80,7 +81,8 @@ export default function Onboarding() {
       setAvatarUrl(url);
       toast.success("Avatar saved");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
+      logRawError(err, "generic", { feature: "onboarding_avatar_upload" });
+      toast.error("Couldn't upload your photo. Try again.");
     } finally {
       setUploading(false);
     }

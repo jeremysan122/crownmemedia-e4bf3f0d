@@ -409,7 +409,8 @@ export default function Profile() {
       setProf({ ...prof, banner_url: url });
       toast.success("Banner updated");
     } catch (err: any) {
-      toast.error(err.message || "Upload failed");
+      logRawError(err, "generic", { feature: "profile_banner_upload" });
+      toast.error("Couldn't update your banner. Try again.");
     } finally {
       setBannerUploading(false);
       if (bannerInput.current) bannerInput.current.value = "";
@@ -430,7 +431,8 @@ export default function Profile() {
       setProf({ ...prof, banner_url: null });
       toast.success("Banner reset to default");
     } catch (err: any) {
-      toast.error(err.message || "Reset failed");
+      logRawError(err, "generic", { feature: "profile_banner_reset" });
+      toast.error("Couldn't reset your banner. Try again.");
     } finally {
       setBannerUploading(false);
     }

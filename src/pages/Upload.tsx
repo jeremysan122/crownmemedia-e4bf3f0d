@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { logRawError } from "@/lib/settingsSecurityErrors";
 import {
   isHeic,
   convertHeicToJpeg,
@@ -737,8 +738,8 @@ export default function Upload() {
               recomputeOverall();
               setPhotos((cur) => cur.map((x) => (x.id === p.id ? { ...x, uploading: false, progress: 100, uploaded: { path: result.path, url: result.publicUrl }, error: undefined } : x)));
             } catch (err) {
-              const msg = err instanceof Error ? err.message : "Upload failed";
-              setPhotos((cur) => cur.map((x) => (x.id === p.id ? { ...x, uploading: false, error: msg } : x)));
+              logRawError(err, "generic", { feature: "upload_photo_upload", photo_id: p.id });
+              setPhotos((cur) => cur.map((x) => (x.id === p.id ? { ...x, uploading: false, error: "Couldn't upload this photo. Tap to retry." } : x)));
               throw err;
             }
           },
@@ -1196,7 +1197,8 @@ export default function Upload() {
       });
       toast.success(`Trimmed to ${(meta.durationMs / 1000).toFixed(1)}s`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Trim failed");
+      logRawError(err, "generic", { feature: "upload_video_trim" });
+      toast.error("Couldn't trim this video. Try again.");
     } finally {
       setTrimming(false);
     }
@@ -1729,7 +1731,8 @@ export default function Upload() {
                         setVideo((cur) => cur ? { ...cur, posterUploaded: { path: pPath, url }, posterError: undefined } : cur);
                         toast.success("Preview thumbnail ready");
                       } catch (e: any) {
-                        const msg = e?.message || "Retry failed";
+                        logRawError(e, "generic", { feature: "upload_poster_retry" });
+                        const msg = "Couldn't create the preview thumbnail. Try again.";
                         setVideo((cur) => cur ? { ...cur, posterError: msg } : cur);
                         toast.error(msg);
                       }
