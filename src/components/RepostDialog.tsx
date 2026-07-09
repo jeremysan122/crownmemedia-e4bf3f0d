@@ -29,7 +29,7 @@ interface Props {
  * Postgres function. The client is intentionally thin and renders only what
  * the server reports.
  */
-export default function RepostDialog({ open, onOpenChange, parent }: Props) {
+export default function RepostDialog({ open, onOpenChange, parent, onReposted }: Props) {
   const { user } = useAuth();
   const [caption, setCaption] = useState("");
   const [busy, setBusy] = useState(false);
