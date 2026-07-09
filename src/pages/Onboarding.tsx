@@ -69,7 +69,8 @@ export default function Onboarding() {
   const handleAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5MB"); return; }
+    const check = validateUpload(file, "avatar");
+    if (!check.ok) { toast.error(check.message); return; }
     setUploading(true);
     try {
       const ext = file.name.split(".").pop() || "jpg";
