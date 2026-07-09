@@ -9,6 +9,7 @@ import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { ArrowLeft, MessageCircle, Share2, Volume2, VolumeX, Heart, Send, Repeat2 } from "lucide-react";
 import DmSharePicker from "@/components/messages/DmSharePicker";
 import RepostDialog from "@/components/RepostDialog";
+import { undoRepost, friendlyUndoRepostMessage } from "@/lib/repost";
 import { sendDmShare } from "@/lib/dmShare";
 import { CrownIcon } from "@/components/CrownIcon";
 import { toast } from "sonner";
