@@ -73,7 +73,8 @@ export default function BottomNav() {
         className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-border/50 pb-[env(safe-area-inset-bottom,0)]"
       >
         <div className="mx-auto w-full max-w-xl flex items-end justify-between gap-0 px-1 pt-2 pb-2 overflow-hidden">
-          {items.map(({ to, label, icon: Icon, primary }) => {
+          {items.map((item) => {
+            const { to, label, icon: Icon, primary } = item as typeof item & { primary?: boolean };
             // Special-case the `+` button — opens the create sheet instead of routing.
             if (primary) {
               return (
