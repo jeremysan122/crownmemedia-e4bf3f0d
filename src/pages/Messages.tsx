@@ -464,7 +464,8 @@ export default function Messages() {
     }
     const res = await uploadWithProgress(url, token, file, (p) => setUploadProgress(p));
     if (!res.ok) {
-      setUploadError(res.error);
+      logRawError(res.error, "generic", { where: "dm_attachment_upload" });
+      setUploadError("Couldn't upload attachment. Try again.");
       return null;
     }
     setUploadProgress(100);
