@@ -4646,6 +4646,7 @@ export type Database = {
         Args: { _comment_id: string; _removed: boolean }
         Returns: undefined
       }
+      admin_platform_health_summary: { Args: never; Returns: Json }
       admin_set_creator_reward: {
         Args: { _reward_id: string; _status: string }
         Returns: {
@@ -4700,6 +4701,15 @@ export type Database = {
       admin_set_profile_verified: {
         Args: { _plan?: string; _user_id: string; _verified: boolean }
         Returns: undefined
+      }
+      admin_storage_usage: {
+        Args: never
+        Returns: {
+          bucket_id: string
+          last_upload: string
+          object_count: number
+          total_bytes: number
+        }[]
       }
       admin_update_post: {
         Args: { _patch: Json; _post_id: string }
