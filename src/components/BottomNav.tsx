@@ -1,12 +1,12 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Plus, User, Clapperboard, Trophy, MapPin, Swords, Bell } from "lucide-react";
+import { Home, Plus, User, Clapperboard, Trophy, MapPin, Swords } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useUnreadByType } from "@/hooks/useUnreadByType";
 import CreateSheet from "@/components/create/CreateSheet";
 
 // Items used for *navigation* persistence + rendering. The `+` button is
 // intentionally NOT a nav link — it opens an Instagram-style create sheet.
+// Notifications live in the top header (see AppShell) — do NOT duplicate here.
 const items = [
   { to: "/feed", label: "Feed", icon: Home },
   { to: "/scrolls", label: "Scrolls", icon: Clapperboard },
@@ -14,9 +14,9 @@ const items = [
   { to: "__create__", label: "Create", icon: Plus, primary: true as const },
   { to: "/battles", label: "Battles", icon: Swords },
   { to: "/leaderboard", label: "Ranks", icon: Trophy },
-  { to: "/notifications", label: "Alerts", icon: Bell, badge: "notif" as const },
   { to: "/me", label: "Profile", icon: User },
 ];
+
 
 export const LAST_TAB_KEY = "crownme.lastBottomTab.v1";
 
