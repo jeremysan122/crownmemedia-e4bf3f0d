@@ -1083,7 +1083,9 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           {!isOwner && !isRepost && (
             <button type="button" onClick={() => setRepostOpen(true)} className="flex items-center gap-1 p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/50 active:scale-95 transition" aria-label={`Repost${counts.reposts ? ` (${counts.reposts} reposts)` : ""}`}>
               <Repeat2 size={18} />
-              {counts.reposts > 0 && <span className="text-[11px] tabular-nums">{counts.reposts}</span>}
+              <span className="text-[11px] font-medium tabular-nums">
+                {counts.reposts > 0 ? counts.reposts : "Repost"}
+              </span>
             </button>
           )}
           <button
