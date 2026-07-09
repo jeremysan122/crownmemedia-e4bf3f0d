@@ -5303,6 +5303,7 @@ export type Database = {
         }
         Returns: string
       }
+      undo_repost: { Args: { p_repost_id: string }; Returns: Json }
       update_my_dob: { Args: { _dob: string }; Returns: undefined }
       update_my_preferences: { Args: { _prefs: Json }; Returns: undefined }
       verification_eligibility_progress: {
@@ -5403,6 +5404,7 @@ export type Database = {
         | "system"
         | "dm_gift"
         | "dm_share"
+        | "repost"
       ranking_period: "day" | "week" | "month" | "all"
       ranking_scope: "global" | "country" | "state" | "city"
       region_type: "city" | "state" | "country" | "global"
@@ -5623,6 +5625,7 @@ export const Constants = {
         "system",
         "dm_gift",
         "dm_share",
+        "repost",
       ],
       ranking_period: ["day", "week", "month", "all"],
       ranking_scope: ["global", "country", "state", "city"],

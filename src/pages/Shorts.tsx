@@ -9,6 +9,7 @@ import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { ArrowLeft, MessageCircle, Share2, Volume2, VolumeX, Heart, Send, Repeat2 } from "lucide-react";
 import DmSharePicker from "@/components/messages/DmSharePicker";
 import RepostDialog from "@/components/RepostDialog";
+import { undoRepost, friendlyUndoRepostMessage } from "@/lib/repost";
 import { sendDmShare } from "@/lib/dmShare";
 import { CrownIcon } from "@/components/CrownIcon";
 import { toast } from "sonner";
@@ -50,6 +51,11 @@ export default function Shorts() {
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [dmShareScroll, setDmShareScroll] = useState<Short | null>(null);
   const [repostScroll, setRepostScroll] = useState<Short | null>(null);
+  // Map: parent scroll id -> viewer's own repost id (present = "Reposted" state).
+  // Server is the source of truth (checkRepostEligibility.existing_repost_id);
+  // we keep a local copy so the button flips instantly and Undo can target it.
+  const [myReposts, setMyReposts] = useState<Record<string, string>>({});
+  const [undoingId, setUndoingId] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   // Desktop ≥1024px → right-side comments panel; below → bottom slide-up sheet.
   const [isDesktop, setIsDesktop] = useState(() =>
@@ -162,6 +168,78 @@ export default function Shorts() {
   useEffect(() => {
     videoRefs.current.forEach((v) => { if (v) v.muted = muted; });
   }, [muted]);
+
+  // Hydrate "already reposted" state for the viewer against the currently
+  // loaded scrolls. One batch query keeps this cheap even for long sessions.
+  useEffect(() => {
+    if (!user?.id || items.length === 0) return;
+    const parentIds = items.map((p) => p.id);
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("id, parent_post_id")
+        .eq("user_id", user.id)
+        .in("parent_post_id", parentIds);
+      if (cancelled || error || !data) return;
+      setMyReposts((prev) => {
+        const next = { ...prev };
+        for (const row of data as { id: string; parent_post_id: string | null }[]) {
+          if (row.parent_post_id) next[row.parent_post_id] = row.id;
+        }
+        return next;
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [items, user?.id]);
+
+  // Realtime: keep repost_count in sync when anyone (else) reposts / undoes a
+  // repost of a scroll currently in the feed. RLS on posts limits payloads to
+  // rows the viewer can already read; we ignore anything unrelated.
+  useEffect(() => {
+    if (items.length === 0) return;
+    const visibleIds = new Set(items.map((p) => p.id));
+    const channel = supabase
+      .channel("shorts-posts-counts")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "posts" },
+        (payload) => {
+          const row = payload.new as { id: string; repost_count: number | null };
+          if (!row?.id || !visibleIds.has(row.id)) return;
+          setItems((prev) => prev.map((it) =>
+            it.id === row.id ? { ...it, repost_count: row.repost_count ?? 0 } : it,
+          ));
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [items]);
+
+  const handleUndoRepost = useCallback(async (parentId: string) => {
+    const repostId = myReposts[parentId];
+    if (!repostId || undoingId) return;
+    setUndoingId(repostId);
+    // Optimistic: flip the UI back immediately.
+    const prevMap = myReposts;
+    setMyReposts((m) => { const n = { ...m }; delete n[parentId]; return n; });
+    setItems((prev) => prev.map((it) =>
+      it.id === parentId ? { ...it, repost_count: Math.max(0, (it.repost_count ?? 1) - 1) } : it,
+    ));
+    const res = await undoRepost(repostId);
+    setUndoingId(null);
+    if (!res.ok) {
+      // Roll back.
+      setMyReposts(prevMap);
+      setItems((prev) => prev.map((it) =>
+        it.id === parentId ? { ...it, repost_count: (it.repost_count ?? 0) + 1 } : it,
+      ));
+      toast.error(friendlyUndoRepostMessage(res.code));
+      return;
+    }
+    toast.success("Repost undone");
+  }, [myReposts, undoingId]);
+
 
   // Drive the top progress bar from the active video's timeupdate event.
   // Re-binds whenever the active slide changes so we always read the right video.
@@ -361,21 +439,36 @@ export default function Shorts() {
                     for every viewer. Anonymous viewers get the sign-in prompt
                     inside the dialog; owners see the server's own_post copy;
                     all other eligibility (blocks, duplicates, unavailable) is
-                    enforced by the create_repost RPC. */}
-                <button
-                  type="button"
-                  onClick={() => setRepostScroll(p)}
-                  aria-label={`Repost this scroll${p.repost_count ? ` (${p.repost_count} reposts)` : ""}`}
-                  disabled={!!repostScroll}
-                  className="flex flex-col items-center gap-1 active:scale-95 transition disabled:opacity-60"
-                >
-                  <span className="size-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
-                    <Repeat2 className="size-6" />
-                  </span>
-                  <span className="text-xs font-semibold tabular-nums">
-                    {p.repost_count && p.repost_count > 0 ? p.repost_count : "Repost"}
-                  </span>
-                </button>
+                    enforced by the create_repost RPC. Once the viewer has
+                    reposted, the button flips to a highlighted "Reposted"
+                    state and disables further taps to prevent double-reposts;
+                    Undo lives on the toast (5 min server window). */}
+                {(() => {
+                  const reposted = !!myReposts[p.id];
+                  const disabled = !!repostScroll || reposted || undoingId === myReposts[p.id];
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => !reposted && setRepostScroll(p)}
+                      aria-label={
+                        reposted
+                          ? `You reposted this scroll${p.repost_count ? ` (${p.repost_count} reposts)` : ""}`
+                          : `Repost this scroll${p.repost_count ? ` (${p.repost_count} reposts)` : ""}`
+                      }
+                      aria-pressed={reposted}
+                      disabled={disabled}
+                      className={`flex flex-col items-center gap-1 active:scale-95 transition disabled:opacity-60 ${reposted ? "text-primary" : ""}`}
+                    >
+                      <span className={`size-12 rounded-full backdrop-blur flex items-center justify-center ${reposted ? "bg-primary/20 ring-2 ring-primary" : "bg-white/10"}`}>
+                        <Repeat2 className="size-6" />
+                      </span>
+                      <span className="text-xs font-semibold tabular-nums">
+                        {reposted ? "Reposted" : (p.repost_count && p.repost_count > 0 ? p.repost_count : "Repost")}
+                      </span>
+                    </button>
+                  );
+                })()}
+
 
 
                 <button
@@ -443,10 +536,20 @@ export default function Shorts() {
           open={!!repostScroll}
           onOpenChange={(o) => { if (!o) setRepostScroll(null); }}
           parent={repostScroll as any}
-          onReposted={(parentId) => {
+          onReposted={(parentId, repostId) => {
             setItems((prev) => prev.map((it) =>
               it.id === parentId ? { ...it, repost_count: (it.repost_count ?? 0) + 1 } : it,
             ));
+            if (repostId) {
+              setMyReposts((m) => ({ ...m, [parentId]: repostId }));
+              toast.success("Reposted", {
+                action: {
+                  label: "Undo",
+                  onClick: () => { void handleUndoRepost(parentId); },
+                },
+                duration: 8000,
+              });
+            }
           }}
         />
       )}

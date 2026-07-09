@@ -20,7 +20,7 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   parent: FeedPost;
   /** Fired after a successful (non-replay) repost so parents can bump counts optimistically. */
-  onReposted?: (parentPostId: string) => void;
+  onReposted?: (parentPostId: string, repostId?: string) => void;
 }
 
 /**
@@ -74,8 +74,15 @@ export default function RepostDialog({ open, onOpenChange, parent, onReposted }:
         postId: parent.id,
         metadata: { has_caption: caption.length > 0, code: result.code },
       });
-      toast.success(result.code === "idempotent_replay" ? "Already reposted" : "Reposted");
-      if (result.code !== "idempotent_replay") onReposted?.(parent.id);
+      const isReplay = result.code === "idempotent_replay";
+      if (isReplay) {
+        toast.success("Already reposted");
+      } else if (onReposted) {
+        // Caller owns the success toast (e.g. Scrolls shows an Undo action).
+        onReposted(parent.id, result.repostId);
+      } else {
+        toast.success("Reposted");
+      }
       setCaption("");
       onOpenChange(false);
       return;

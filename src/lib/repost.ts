@@ -122,3 +122,47 @@ export async function createRepost(args: {
     };
   }
 }
+
+/**
+ * Undo a repost the current user just created. Server enforces owner-only and
+ * a 5 minute window; also clears the parent-owner notification.
+ */
+export interface UndoRepostResult {
+  ok: boolean;
+  code: string;
+  parentPostId?: string;
+  message?: string;
+}
+
+const UNDO_FRIENDLY: Record<string, string> = {
+  not_authenticated: "Sign in to undo.",
+  not_found: "That repost is already gone.",
+  not_owner: "You can only undo your own reposts.",
+  not_a_repost: "That post isn't a repost.",
+  window_expired: "The undo window has expired.",
+  network_error: FRIENDLY.network_error,
+  unknown_error: FRIENDLY.unknown_error,
+};
+
+export function friendlyUndoRepostMessage(code: string | undefined): string {
+  return (code && UNDO_FRIENDLY[code]) || UNDO_FRIENDLY.unknown_error;
+}
+
+export async function undoRepost(repostId: string): Promise<UndoRepostResult> {
+  try {
+    const { data, error } = await supabase.rpc("undo_repost", { p_repost_id: repostId });
+    if (error) {
+      return { ok: false, code: "network_error", message: UNDO_FRIENDLY.network_error };
+    }
+    const j = (data ?? {}) as any;
+    return {
+      ok: !!j.ok,
+      code: j.code ?? "unknown_error",
+      parentPostId: j.parent_post_id,
+      message: friendlyUndoRepostMessage(j.code),
+    };
+  } catch {
+    return { ok: false, code: "network_error", message: UNDO_FRIENDLY.network_error };
+  }
+}
+
