@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SectionCard, StatTile, EmptyState, PillBadge } from "@/components/admin/cc/CommandCenterUI";
 import { ConnectionStatus } from "@/components/admin/cc/ConnectionStatus";
 import ExportDiagnosticsButton from "@/components/admin/cc/ExportDiagnosticsButton";
+import UserGrowthCard from "@/components/admin/cc/UserGrowthCard";
 import { useRealtimeStatus } from "@/hooks/useRealtimeStatus";
 import { startAdminSession, pingAdminSession, endAdminSession } from "@/lib/admin";
 
