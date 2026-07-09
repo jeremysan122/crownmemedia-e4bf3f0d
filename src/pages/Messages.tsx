@@ -751,7 +751,7 @@ export default function Messages() {
             type="file"
             className="hidden"
             onChange={onPickFile}
-            accept="image/*,application/pdf,.doc,.docx,.txt,.zip"
+            accept="image/jpeg,image/png,image/webp"
           />
           <Button
             type="button"
