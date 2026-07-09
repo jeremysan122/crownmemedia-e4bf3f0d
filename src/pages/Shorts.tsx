@@ -442,6 +442,11 @@ export default function Shorts() {
           open={!!repostScroll}
           onOpenChange={(o) => { if (!o) setRepostScroll(null); }}
           parent={repostScroll as any}
+          onReposted={(parentId) => {
+            setItems((prev) => prev.map((it) =>
+              it.id === parentId ? { ...it, repost_count: (it.repost_count ?? 0) + 1 } : it,
+            ));
+          }}
         />
       )}
 
