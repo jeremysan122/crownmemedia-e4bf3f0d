@@ -50,7 +50,7 @@ export default function Pending() {
       .neq("publish_status", "approved")
       .order("created_at", { ascending: false })
       .limit(100);
-    if (error) { setError(error.message); return; }
+    if (error) { logRawError(error, "generic", { feature: "pending_load" }); setError("Couldn't load your pending posts. Try again."); return; }
     setRows((data ?? []) as StatusRow[]);
   };
 

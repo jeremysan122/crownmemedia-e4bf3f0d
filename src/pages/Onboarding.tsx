@@ -81,7 +81,8 @@ export default function Onboarding() {
       setAvatarUrl(url);
       toast.success("Avatar saved");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
+      logRawError(err, "generic", { feature: "onboarding_avatar_upload" });
+      toast.error("Couldn't upload your photo. Try again.");
     } finally {
       setUploading(false);
     }

@@ -1196,7 +1196,8 @@ export default function Upload() {
       });
       toast.success(`Trimmed to ${(meta.durationMs / 1000).toFixed(1)}s`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Trim failed");
+      logRawError(err, "generic", { feature: "upload_video_trim" });
+      toast.error("Couldn't trim this video. Try again.");
     } finally {
       setTrimming(false);
     }
@@ -1729,7 +1730,8 @@ export default function Upload() {
                         setVideo((cur) => cur ? { ...cur, posterUploaded: { path: pPath, url }, posterError: undefined } : cur);
                         toast.success("Preview thumbnail ready");
                       } catch (e: any) {
-                        const msg = e?.message || "Retry failed";
+                        logRawError(e, "generic", { feature: "upload_poster_retry" });
+                        const msg = "Couldn't create the preview thumbnail. Try again.";
                         setVideo((cur) => cur ? { ...cur, posterError: msg } : cur);
                         toast.error(msg);
                       }

@@ -78,7 +78,8 @@ export default function Notifications() {
       .order("created_at", { ascending: false })
       .limit(120);
     if (err) {
-      setError(err.message || "Could not load notifications");
+      logRawError(err, "notifications", { feature: "notifications_load" });
+      setError("Couldn't load notifications. Try again.");
     } else {
       setList(dedupe(data || []));
     }
