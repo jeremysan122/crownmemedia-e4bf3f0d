@@ -40,7 +40,10 @@ export default function Drafts() {
   const remove = async (id: string) => {
     if (!confirm("Delete this draft?")) return;
     const { error } = await supabase.from("post_drafts" as any).delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      logRawError(error, "generic", { op: "draft_delete", id });
+      return toast.error("Couldn't delete draft. Try again.");
+    }
     setDrafts((d) => d.filter((x) => x.id !== id));
     toast.success("Draft deleted");
   };
