@@ -304,9 +304,7 @@ export default function Shorts() {
                     <span className="font-display text-sm uppercase tracking-widest">Content warning</span>
                   </div>
                   <p className="text-xs text-white/70 max-w-[260px]">
-                    {p.sensitive_reason?.trim()
-                      ? p.sensitive_reason
-                      : "The author marked this scroll as sensitive."}
+                    The author marked this scroll as sensitive.
                   </p>
                   <button
                     type="button"
