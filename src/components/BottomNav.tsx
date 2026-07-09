@@ -1,12 +1,12 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Plus, User, Clapperboard, Trophy, MapPin, Swords, Bell } from "lucide-react";
+import { Home, Plus, User, Clapperboard, Trophy, MapPin, Swords } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useUnreadByType } from "@/hooks/useUnreadByType";
 import CreateSheet from "@/components/create/CreateSheet";
 
 // Items used for *navigation* persistence + rendering. The `+` button is
 // intentionally NOT a nav link — it opens an Instagram-style create sheet.
+// Notifications live in the top header (see AppShell) — do NOT duplicate here.
 const items = [
   { to: "/feed", label: "Feed", icon: Home },
   { to: "/scrolls", label: "Scrolls", icon: Clapperboard },
@@ -14,9 +14,9 @@ const items = [
   { to: "__create__", label: "Create", icon: Plus, primary: true as const },
   { to: "/battles", label: "Battles", icon: Swords },
   { to: "/leaderboard", label: "Ranks", icon: Trophy },
-  { to: "/notifications", label: "Alerts", icon: Bell, badge: "notif" as const },
   { to: "/me", label: "Profile", icon: User },
 ];
+
 
 export const LAST_TAB_KEY = "crownme.lastBottomTab.v1";
 
@@ -48,16 +48,10 @@ export default function BottomNav() {
   const loc = useLocation();
   const nav = useNavigate();
   const { profile } = useAuth();
-  const unread = useUnreadByType();
-  // Notifications badge = all unread notifications except DMs (DMs have their
-  // own icon in the top header). Realtime updates arrive via the shared
-  // useUnreadByType singleton, with a focus/visibility refresh fallback so
-  // the count stays accurate even if the websocket drops.
-  const notifCount = Math.max(0, unread.total - unread.dm);
-  const notifBadge = notifCount > 99 ? "99+" : String(notifCount);
   const [createOpen, setCreateOpen] = useState(false);
   const hide = ["/", "/auth", "/age-gate", "/verify-age", "/onboarding"].includes(loc.pathname);
   const profilePath = profile?.username ? `/${profile.username}` : "/me";
+
 
   // Persist the active tab whenever the route matches one of the bottom-nav items.
   useEffect(() => {
@@ -91,7 +85,6 @@ export default function BottomNav() {
               );
             }
             const href = to === "/me" ? profilePath : to;
-            const showBadge = (item as any).badge === "notif" && notifCount > 0;
             return (
               <NavLink
                 key={to}
@@ -105,23 +98,16 @@ export default function BottomNav() {
                       : "text-muted-foreground hover:text-foreground"
                   }`
                 }
-                aria-label={showBadge ? `${label}, ${notifCount} unread` : label}
+                aria-label={label}
               >
                 <div className="relative">
                   <Icon size={19} strokeWidth={2} />
-                  {showBadge && (
-                    <span
-                      data-testid="bottom-nav-notif-badge"
-                      className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold leading-4 text-center tabular-nums"
-                    >
-                      {notifBadge}
-                    </span>
-                  )}
                 </div>
                 <span className="text-[9px] leading-tight font-medium tracking-wide whitespace-nowrap truncate max-w-full">
                   {label}
                 </span>
               </NavLink>
+
             );
           })}
         </div>

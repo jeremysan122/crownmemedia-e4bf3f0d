@@ -4662,6 +4662,17 @@ export type Database = {
         Args: { _comment_id: string; _removed: boolean }
         Returns: undefined
       }
+      admin_moderate_post: {
+        Args: {
+          _content_rating?: string
+          _is_removed?: boolean
+          _moderation_notes?: string
+          _moderation_status: string
+          _post_id: string
+          _sensitive_reason?: string
+        }
+        Returns: undefined
+      }
       admin_platform_health_summary: { Args: never; Returns: Json }
       admin_set_creator_reward: {
         Args: { _reward_id: string; _status: string }
