@@ -50,6 +50,11 @@ export default function Shorts() {
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [dmShareScroll, setDmShareScroll] = useState<Short | null>(null);
   const [repostScroll, setRepostScroll] = useState<Short | null>(null);
+  // Map: parent scroll id -> viewer's own repost id (present = "Reposted" state).
+  // Server is the source of truth (checkRepostEligibility.existing_repost_id);
+  // we keep a local copy so the button flips instantly and Undo can target it.
+  const [myReposts, setMyReposts] = useState<Record<string, string>>({});
+  const [undoingId, setUndoingId] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   // Desktop ≥1024px → right-side comments panel; below → bottom slide-up sheet.
   const [isDesktop, setIsDesktop] = useState(() =>
