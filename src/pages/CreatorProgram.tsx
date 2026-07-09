@@ -87,7 +87,11 @@ export default function CreatorProgram() {
     setSubmitting(true);
     const { error } = await supabase.rpc("apply_to_creator_program", { _note: note || null });
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      logRawError(error, "generic", { op: "apply_to_creator_program" });
+      toast.error("Couldn't submit your application. Try again.");
+      return;
+    }
     toast.success("Application submitted — we'll review shortly 👑");
     load();
   };
