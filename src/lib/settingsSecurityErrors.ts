@@ -6,6 +6,7 @@
  * (optionally) `logRawError(err, ctx)` for diagnostics.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { isRateLimitError, RATE_LIMIT_FRIENDLY_MESSAGE } from "@/lib/rateLimit";
 
 export type ErrorContext =
   | "settings"
