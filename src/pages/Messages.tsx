@@ -33,6 +33,7 @@ import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import { useDmMute } from "@/hooks/useDmMute";
 import { dmPairFolder, formatBytes } from "@/lib/dm";
 import { validateUpload } from "@/lib/uploadValidation";
+import { logUploadFailure } from "@/lib/uploadFailureLogger";
 import { computeReactionTotalsForMessages } from "@/lib/reactionTotals";
 import MessageReactions from "@/components/messages/MessageReactions";
 import DmAttachment from "@/components/messages/DmAttachment";
@@ -438,6 +439,7 @@ export default function Messages() {
     // else with a friendly message; raw storage errors never render.
     const check = validateUpload(f, "dm_attachment");
     if (!check.ok) {
+      logUploadFailure("upload_validation_failed", check.message, { where: "dm_attachment", size: f.size, type: f.type });
       toast({ title: "Attachment", description: check.message, variant: "destructive" });
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
@@ -465,6 +467,7 @@ export default function Messages() {
     const res = await uploadWithProgress(url, token, file, (p) => setUploadProgress(p));
     if (!res.ok) {
       logRawError(res.error, "generic", { where: "dm_attachment_upload" });
+      logUploadFailure("dm_attachment_upload_failed", "DM attachment upload failed", { size: file.size, type: file.type });
       setUploadError("Couldn't upload attachment. Try again.");
       return null;
     }

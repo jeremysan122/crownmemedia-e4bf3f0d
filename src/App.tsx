@@ -91,6 +91,7 @@ const CommandCenterAudit = lazy(() => import("./pages/admin/CommandCenterAudit")
 const CommandCenterReports = lazy(() => import("./pages/admin/CommandCenterReports"));
 const CommandCenterErrorLogs = lazy(() => import("./pages/admin/CommandCenterErrorLogs"));
 const CommandCenterFeatureFlags = lazy(() => import("./pages/admin/CommandCenterFeatureFlags"));
+const CommandCenterPlatformHealth = lazy(() => import("./pages/admin/CommandCenterPlatformHealth"));
 
 // Lazy: legal (long-form static pages)
 const LegalCenter = lazy(() => import("./pages/legal/LegalCenter"));
@@ -217,6 +218,7 @@ const App = () => (
                 <Route path="audit" element={<CommandCenterAudit />} />
                 <Route path="error-logs" element={<CommandCenterErrorLogs />} />
                 <Route path="feature-flags" element={<CommandCenterFeatureFlags />} />
+                <Route path="platform-health" element={<CommandCenterPlatformHealth />} />
               </Route>
               <Route path="/me" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               {/* Public — anyone (including Google/bots) can view profiles and posts.
