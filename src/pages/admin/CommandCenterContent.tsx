@@ -87,20 +87,8 @@ export default function CommandCenterContent() {
         .select("*")
         .order("created_at", { ascending: false })
         .limit(30),
-      sb
-        .from("posts")
-        .select("id,user_id,caption,is_sensitive,sensitive_reason,content_rating,moderation_status,created_at")
-        .or("is_sensitive.eq.true,moderation_status.neq.approved,content_rating.neq.safe")
-        .eq("is_removed", false)
-        .order("created_at", { ascending: false })
-        .limit(60),
-      sb
-        .from("posts")
-        .select("id,user_id,caption,is_sensitive,sensitive_reason,content_rating,moderation_status,created_at")
-        .or("moderation_status.eq.flagged,moderation_status.eq.pending,content_rating.eq.explicit")
-        .eq("is_removed", false)
-        .order("created_at", { ascending: false })
-        .limit(40),
+      sb.rpc("admin_list_moderation_posts" as any, { _kind: "sensitive", _limit: 60 }),
+      sb.rpc("admin_list_moderation_posts" as any, { _kind: "review", _limit: 40 }),
     ]);
     setQueue(q.data ?? []);
     setTakedowns(t.data ?? []);
