@@ -393,8 +393,9 @@ export default function Profile() {
   const onBannerPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user || !prof) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5MB");
+    const check = validateUpload(file, "banner");
+    if (!check.ok) {
+      toast.error(check.message);
       return;
     }
     setBannerUploading(true);
