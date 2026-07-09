@@ -48,7 +48,11 @@ const CATEGORY_LABEL: Record<Category, string> = {
   journalist: "Journalist / Media",
 };
 
+import { validateUpload } from "@/lib/uploadValidation";
+
 async function uploadDoc(userId: string, file: File, kind: string): Promise<string> {
+  const check = validateUpload(file, "verification_doc");
+  if (!check.ok) throw new Error(check.message);
   const ext = file.name.split(".").pop() || "bin";
   const path = `${userId}/${kind}-${Date.now()}.${ext}`;
   const { error } = await supabase.storage

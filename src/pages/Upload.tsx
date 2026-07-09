@@ -386,7 +386,8 @@ export default function Upload() {
         toast.success(urls.length ? `Draft saved with ${urls.length} photo${urls.length === 1 ? "" : "s"}` : "Draft saved to cloud");
       }
     } catch (e: any) {
-      toast.error(e?.message ?? "Failed to save draft");
+      logRawError(e, "generic", { feature: "upload_save_draft" });
+      toast.error(toFriendlyMessage(e, "generic"));
     } finally {
       setSavingDraft(false);
     }
@@ -479,6 +480,8 @@ export default function Upload() {
   const onPickVideo = async (file: File | null, origin: MediaOrigin = "gallery") => {
     if (!file) return;
     if (!file.type.startsWith("video/")) { toast.error("Not a video file"); return; }
+    const vcheck = validateUpload(file, "post_video");
+    if (!vcheck.ok) { toast.error(vcheck.message); return; }
     if (file.size > MAX_VIDEO_BYTES) { toast.error("Video must be under 80MB"); return; }
     try {
       const meta = await probeVideo(file);
@@ -1045,11 +1048,13 @@ export default function Upload() {
         toast("Upload cancelled");
       } else {
         // Translate the two server-side guards that are otherwise opaque.
-        const friendly = /row-level security/i.test(raw)
-          ? "Upload blocked: please retake the photo with the in-app camera or pick a JPG/PNG/WEBP file (HEIC and other formats are rejected)."
-          : /1080x1080|1080×1080|Media must be exactly/i.test(raw)
-            ? "Photo must be exactly 1080×1080. Try the in-app camera or pick a different file — it will be auto-cropped."
-            : raw;
+        const friendly = isRateLimitError(e)
+          ? RATE_LIMIT_FRIENDLY_MESSAGE
+          : /row-level security/i.test(raw)
+            ? "Upload blocked: please retake the photo with the in-app camera or pick a JPG/PNG/WEBP file (HEIC and other formats are rejected)."
+            : /1080x1080|1080×1080|Media must be exactly/i.test(raw)
+              ? "Photo must be exactly 1080×1080. Try the in-app camera or pick a different file — it will be auto-cropped."
+              : toFriendlyMessage(e, "generic");
         setUploadError(friendly);
         setUploadStage("Upload failed");
         toast.error(friendly);
