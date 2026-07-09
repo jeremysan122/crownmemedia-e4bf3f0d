@@ -1240,7 +1240,10 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
         open={repostOpen}
         onOpenChange={setRepostOpen}
         parent={post}
-        onReposted={() => setCounts((c) => ({ ...c, reposts: c.reposts + 1 }))}
+        onReposted={() => {
+          setCounts((c) => ({ ...c, reposts: c.reposts + 1 }));
+          toast.success("Reposted");
+        }}
       />
       {/* Reports always target the ORIGINAL post and original author for
           reposts — reporting a repost shell would route to the wrong author
