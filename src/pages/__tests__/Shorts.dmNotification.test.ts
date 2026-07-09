@@ -75,11 +75,12 @@ describe("Blocked users can't trigger DM notifications", () => {
 });
 
 describe("Post-thread DM payload wiring", () => {
-  it("dmShare helper carries the post_id + thread_id in the outbound message payload", () => {
-    // Confirms that when someone shares a Scroll via DM, downstream consumers
-    // can attribute the notification to the source post/thread.
-    expect(dmShare).toMatch(/post_id/);
-    expect(dmShare).toMatch(/thread_id|receiver_id|sender_id/);
+  it("dmShare helper carries the post_id (and recipient) so notifications can attribute the source post", () => {
+    // send_dm_share RPC is called with p_post_id + p_recipient_id, meaning the
+    // resulting message row is tied to the shared Scroll/post and downstream
+    // notification consumers can route via getNotificationTarget.
+    expect(dmShare).toMatch(/p_post_id:\s*postId/);
+    expect(dmShare).toMatch(/p_recipient_id:\s*recipientId/);
   });
 });
 
