@@ -525,6 +525,9 @@ export default function Messages() {
       .maybeSingle();
 
     if (error || !data) {
+      logRawError(error, "generic", { where: "dm_send" });
+      const friendly = toFriendlyMessage(error, "generic");
+      toast({ title: "Message", description: friendly, variant: "destructive" });
       setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, _pending: false, _failed: true } : m)));
       return;
     }
