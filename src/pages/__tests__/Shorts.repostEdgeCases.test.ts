@@ -45,9 +45,7 @@ describe("Scrolls: reposting a repost is blocked server-side", () => {
 
   it("create_repost also rejects reposts of reposts (defense in depth)", () => {
     const matches = migrations.match(
-      /CREATE OR REPLACE FUNCTION public\.create_repost[\s\S]+?\$function\$;/g,
-    ) ?? migrations.match(
-      /CREATE OR REPLACE FUNCTION public\.create_repost[\s\S]+?\$\$;/g,
+      /CREATE OR REPLACE FUNCTION public\.create_repost\([\s\S]+?\$\$;/g,
     );
     expect(matches, "create_repost not found").toBeTruthy();
     const latest = matches![matches!.length - 1];
