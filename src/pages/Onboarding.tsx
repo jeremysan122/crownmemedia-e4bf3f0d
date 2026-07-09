@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Loader2, Upload, Bell, UserPlus, ArrowRight, Check } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+import { validateUpload } from "@/lib/uploadValidation";
 
 type Step = "avatar" | "follows" | "notifications";
 const STEPS: Step[] = ["avatar", "follows", "notifications"];
