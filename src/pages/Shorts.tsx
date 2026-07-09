@@ -536,10 +536,20 @@ export default function Shorts() {
           open={!!repostScroll}
           onOpenChange={(o) => { if (!o) setRepostScroll(null); }}
           parent={repostScroll as any}
-          onReposted={(parentId) => {
+          onReposted={(parentId, repostId) => {
             setItems((prev) => prev.map((it) =>
               it.id === parentId ? { ...it, repost_count: (it.repost_count ?? 0) + 1 } : it,
             ));
+            if (repostId) {
+              setMyReposts((m) => ({ ...m, [parentId]: repostId }));
+              toast.success("Reposted", {
+                action: {
+                  label: "Undo",
+                  onClick: () => { void handleUndoRepost(parentId); },
+                },
+                duration: 8000,
+              });
+            }
           }}
         />
       )}
