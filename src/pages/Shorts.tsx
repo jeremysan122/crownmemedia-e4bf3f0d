@@ -220,6 +220,8 @@ export default function Shorts() {
     const repostId = myReposts[parentId];
     if (!repostId || undoingId) return;
     setUndoingId(repostId);
+    // Show an in-flight toast so the user knows the undo is running.
+    const inflightId = toast.loading("Undoing repost…");
     // Optimistic: flip the UI back immediately.
     const prevMap = myReposts;
     setMyReposts((m) => { const n = { ...m }; delete n[parentId]; return n; });
@@ -228,16 +230,22 @@ export default function Shorts() {
     ));
     const res = await undoRepost(repostId);
     setUndoingId(null);
+    toast.dismiss(inflightId);
     if (!res.ok) {
-      // Roll back.
+      // Roll back optimistic UI and tell the user exactly why.
       setMyReposts(prevMap);
       setItems((prev) => prev.map((it) =>
         it.id === parentId ? { ...it, repost_count: (it.repost_count ?? 0) + 1 } : it,
       ));
-      toast.error(friendlyUndoRepostMessage(res.code));
+      const reason = friendlyUndoRepostMessage(res.code);
+      toast.error("Couldn't undo repost", {
+        description: `${reason} Your repost is still live.`,
+      });
       return;
     }
-    toast.success("Repost undone");
+    toast.success("Repost undone", {
+      description: "The original poster's notification was also removed.",
+    });
   }, [myReposts, undoingId]);
 
 
@@ -542,7 +550,8 @@ export default function Shorts() {
             ));
             if (repostId) {
               setMyReposts((m) => ({ ...m, [parentId]: repostId }));
-              toast.success("Reposted", {
+              toast.success("Reposted to your profile", {
+                description: "You can undo this repost for the next 5 minutes.",
                 action: {
                   label: "Undo",
                   onClick: () => { void handleUndoRepost(parentId); },
