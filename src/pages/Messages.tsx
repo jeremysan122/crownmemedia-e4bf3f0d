@@ -433,8 +433,13 @@ export default function Messages() {
   const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (f.size > MAX_FILE_BYTES) {
-      toast({ title: "File too large", description: "Max 10MB.", variant: "destructive" });
+    // Launch scope = image-only DM attachments. Validate against the
+    // dm_attachment preset (25MB, image/jpeg|png|webp) and reject anything
+    // else with a friendly message; raw storage errors never render.
+    const check = validateUpload(f, "dm_attachment");
+    if (!check.ok) {
+      toast({ title: "Attachment", description: check.message, variant: "destructive" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
     setPendingFile(f);
