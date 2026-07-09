@@ -11,6 +11,7 @@ import {
   type StorageBucketUsage,
 } from "@/lib/platformHealthQueries";
 import { supabase } from "@/integrations/supabase/client";
+import UserGrowthCard from "@/components/admin/cc/UserGrowthCard";
 
 interface RowLog {
   id: string;
@@ -65,6 +66,8 @@ export default function CommandCenterPlatformHealth() {
           Health summary unavailable — sign in as an admin to view.
         </div>
       )}
+
+      <UserGrowthCard />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <StatTile label="Upload failures (24h)" value={s?.upload_failures_24h ?? "—"} tone={uploadTone} />

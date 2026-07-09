@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SectionCard, StatTile, EmptyState, PillBadge } from "@/components/admin/cc/CommandCenterUI";
 import { ConnectionStatus } from "@/components/admin/cc/ConnectionStatus";
 import ExportDiagnosticsButton from "@/components/admin/cc/ExportDiagnosticsButton";
+import UserGrowthCard from "@/components/admin/cc/UserGrowthCard";
 import { useRealtimeStatus } from "@/hooks/useRealtimeStatus";
 import { startAdminSession, pingAdminSession, endAdminSession } from "@/lib/admin";
 
@@ -142,6 +143,8 @@ export default function CommandCenterOverview() {
           <div className="mt-1 opacity-70">Usually means your role can't read that table — ask a super_admin to grant access.</div>
         </div>
       )}
+
+      <UserGrowthCard />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <StatTile label="Total Users" value={fmt(stats.users)} />
