@@ -1236,7 +1236,12 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
           }}
         />
       )}
-      <RepostDialog open={repostOpen} onOpenChange={setRepostOpen} parent={post} />
+      <RepostDialog
+        open={repostOpen}
+        onOpenChange={setRepostOpen}
+        parent={post}
+        onReposted={() => setCounts((c) => ({ ...c, reposts: c.reposts + 1 }))}
+      />
       {/* Reports always target the ORIGINAL post and original author for
           reposts — reporting a repost shell would route to the wrong author
           and skip moderation on the content the user actually saw. */}
