@@ -101,7 +101,7 @@ export async function fetchRecentGiftTargets(userId?: string | null): Promise<Re
 
   const { data } = await supabase
     .from("posts")
-    .select("id, user_id, image_url, caption, media_type, video_poster_url, is_sensitive, sensitive_reason, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
+    .select("id, user_id, image_url, caption, media_type, video_poster_url, is_sensitive, profile:profiles!posts_user_id_fkey(username, profile_photo_url)")
     .in("id", ids)
     .eq("is_removed", false)
     .limit(60);
@@ -121,7 +121,7 @@ export async function fetchRecentGiftTargets(userId?: string | null): Promise<Re
         mediaType: row.media_type ?? null,
         videoPosterUrl: row.video_poster_url ?? null,
         isSensitive: !!row.is_sensitive,
-        sensitiveReason: row.sensitive_reason ?? null,
+        sensitiveReason: null,
         source: entry.source,
         at: entry.at,
       } satisfies RecentGiftTarget;

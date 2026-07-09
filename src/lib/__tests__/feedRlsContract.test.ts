@@ -36,6 +36,7 @@ const RESTRICTED_COLUMNS = [
   "moderation_notes",
   "moderated_by",
   "moderated_at",
+  "sensitive_reason",
 ];
 
 describe("Feed RLS / column-grant contract", () => {

@@ -20,7 +20,7 @@ import {
 
 /** Columns to select on the `posts` table for share rendering. */
 export const POST_SHARE_COLUMNS =
-  "id, user_id, image_url, image_urls, caption, category, vote_count, comment_count, share_count, video_url, video_poster_url, media_type, filter, city, state, country, created_at, edited_at, is_removed, is_sensitive, sensitive_reason";
+  "id, user_id, image_url, image_urls, caption, category, vote_count, comment_count, share_count, video_url, video_poster_url, media_type, filter, city, state, country, created_at, edited_at, is_removed, is_sensitive";
 
 export interface PostShareLike {
   id: string;
@@ -36,7 +36,7 @@ export interface PostShareLike {
   created_at?: string | null;
   is_removed?: boolean | null;
   is_sensitive?: boolean | null;
-  sensitive_reason?: string | null;
+  
 }
 
 /** True only when the database confirms the post is gone or removed. */

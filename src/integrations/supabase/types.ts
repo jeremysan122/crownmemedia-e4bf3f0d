@@ -4584,6 +4584,22 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      admin_list_moderation_posts: {
+        Args: { _kind: string; _limit?: number }
+        Returns: {
+          caption: string
+          content_rating: string
+          created_at: string
+          id: string
+          is_sensitive: boolean
+          moderated_at: string
+          moderated_by: string
+          moderation_notes: string
+          moderation_status: string
+          sensitive_reason: string
+          user_id: string
+        }[]
+      }
       admin_list_royal_pass_plans: {
         Args: never
         Returns: {
