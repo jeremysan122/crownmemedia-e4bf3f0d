@@ -43,16 +43,13 @@ describe("Scrolls: reposting a repost is blocked server-side", () => {
     expect(latest).toMatch(/'is_repost'/);
   });
 
-  it("create_repost blocks reposts-of-reposts server-side (defense in depth)", () => {
-    // Either an explicit 'is_repost' return, or a guard on parent_post_id
-    // being non-null, must be present in the latest create_repost body.
+  it("create_repost delegates to check_repost_eligibility (so is_repost is enforced)", () => {
     const matches = migrations.match(
       /CREATE OR REPLACE FUNCTION public\.create_repost\([\s\S]+?\$\$;/g,
     );
     expect(matches, "create_repost not found").toBeTruthy();
     const latest = matches![matches!.length - 1];
-    // Guard: parent must not itself be a repost.
-    expect(latest).toMatch(/parent_post_id\s+IS\s+NOT\s+NULL|'is_repost'/i);
+    expect(latest).toMatch(/check_repost_eligibility\s*\(/);
   });
 
   it("friendlyRepostMessage maps 'is_repost' to a clear user-facing string", () => {
