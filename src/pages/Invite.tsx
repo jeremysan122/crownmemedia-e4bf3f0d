@@ -11,6 +11,7 @@ import {
   MessageCircle, Mail, Twitter, Facebook, Send, Trophy, MapPin, Globe,
 } from "lucide-react";
 import { toast } from "sonner";
+import { logRawError } from "@/lib/settingsSecurityErrors";
 import { PER_SIGNUP_SHEKELS, PASS_BONUS_DAYS } from "@/lib/inviteRedeem";
 
 /**
