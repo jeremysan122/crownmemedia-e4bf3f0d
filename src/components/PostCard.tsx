@@ -122,7 +122,6 @@ export interface FeedPost {
   } | null;
   rank?: number | null;
   is_sensitive?: boolean | null;
-  sensitive_reason?: string | null;
 }
 
 // ── Module-level VoteBtn ────────────────────────────────────────────────────
