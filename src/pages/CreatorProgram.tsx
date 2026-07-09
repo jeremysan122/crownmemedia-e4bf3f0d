@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Crown, Copy, Check, Loader2, Sparkles, Users, TrendingUp, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import { logRawError } from "@/lib/settingsSecurityErrors";
 import AppShell from "@/components/AppShell";
 
 type CreatorProgram = {
@@ -86,7 +87,11 @@ export default function CreatorProgram() {
     setSubmitting(true);
     const { error } = await supabase.rpc("apply_to_creator_program", { _note: note || null });
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      logRawError(error, "generic", { op: "apply_to_creator_program" });
+      toast.error("Couldn't submit your application. Try again.");
+      return;
+    }
     toast.success("Application submitted — we'll review shortly 👑");
     load();
   };

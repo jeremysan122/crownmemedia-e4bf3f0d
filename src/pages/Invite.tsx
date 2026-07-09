@@ -11,6 +11,7 @@ import {
   MessageCircle, Mail, Twitter, Facebook, Send, Trophy, MapPin, Globe,
 } from "lucide-react";
 import { toast } from "sonner";
+import { logRawError } from "@/lib/settingsSecurityErrors";
 import { PER_SIGNUP_SHEKELS, PASS_BONUS_DAYS } from "@/lib/inviteRedeem";
 
 /**
@@ -101,8 +102,10 @@ export default function Invite() {
     if (!user) return;
     setLoading(true);
     supabase.rpc("get_or_create_my_invite_code").then(({ data, error }) => {
-      if (error) toast.error(error.message);
-      else setCode((data as string) || null);
+      if (error) {
+        logRawError(error, "generic", { op: "get_or_create_my_invite_code" });
+        toast.error("Couldn't load your invite code. Try again.");
+      } else setCode((data as string) || null);
       setLoading(false);
     });
     loadStatus();
@@ -175,11 +178,15 @@ export default function Invite() {
     const { data, error } = await supabase.rpc("redeem_invite_code", { _code: redeem.trim() });
     setBusy(false);
     if (error) {
-      toast.error(error.message.includes("yourself")
-        ? "You cannot invite yourself"
-        : error.message.includes("not found")
-        ? "Invite code not found"
-        : error.message);
+      const msg = error.message || "";
+      logRawError(error, "generic", { op: "redeem_invite_code" });
+      toast.error(
+        msg.includes("yourself")
+          ? "You cannot invite yourself"
+          : msg.includes("not found")
+          ? "Invite code not found"
+          : "Couldn't redeem this invite code. Try again.",
+      );
       return;
     }
     const result = data as { ok?: boolean; already_redeemed?: boolean; shekels_awarded?: number };
