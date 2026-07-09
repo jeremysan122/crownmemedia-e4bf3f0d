@@ -29,11 +29,16 @@ const migrations = readdirSync(join(process.cwd(), "supabase", "migrations"))
   .join("\n\n");
 
 describe("Repost button visibility contract", () => {
-  it("Shorts hides Repost only for the post owner (anon users still see it)", () => {
-    // Not `!!user?.id && ...` — that would hide the button from anon viewers.
-    expect(shorts).toMatch(/user\?\.id\s*!==\s*p\.user_id/);
-    expect(shorts).not.toMatch(/!!user\?\.id\s*&&\s*user\.id\s*!==\s*p\.user_id/);
+  it("Shorts renders the Repost control for every viewer (server enforces self-repost block)", () => {
+    // Product rule: Repost is always shown on Scrolls so the count is readable;
+    // self-repost/owner-repost is blocked server-side by check_repost_eligibility
+    // and surfaces a friendly "You can't repost your own post" message.
+    expect(shorts).toMatch(/Repeat2/);
+    expect(shorts).toMatch(/setRepostScroll\(p\)/);
+    // Must NOT gate the button on ownership — anon + owner both see it.
+    expect(shorts).not.toMatch(/!!user\?\.id\s*&&\s*user\.id\s*!==\s*p\.user_id[\s\S]*?Repeat2/);
   });
+
 
   it("Shorts renders the repost count next to the Repost control", () => {
     expect(shorts).toMatch(/p\.repost_count/);
