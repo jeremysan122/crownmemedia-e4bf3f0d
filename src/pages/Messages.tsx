@@ -32,6 +32,7 @@ import { useThreadUnread } from "@/hooks/useThreadUnread";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import { useDmMute } from "@/hooks/useDmMute";
 import { dmPairFolder, formatBytes } from "@/lib/dm";
+import { validateUpload } from "@/lib/uploadValidation";
 import { computeReactionTotalsForMessages } from "@/lib/reactionTotals";
 import MessageReactions from "@/components/messages/MessageReactions";
 import DmAttachment from "@/components/messages/DmAttachment";
