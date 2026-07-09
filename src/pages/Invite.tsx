@@ -102,8 +102,10 @@ export default function Invite() {
     if (!user) return;
     setLoading(true);
     supabase.rpc("get_or_create_my_invite_code").then(({ data, error }) => {
-      if (error) toast.error(error.message);
-      else setCode((data as string) || null);
+      if (error) {
+        logRawError(error, "generic", { op: "get_or_create_my_invite_code" });
+        toast.error("Couldn't load your invite code. Try again.");
+      } else setCode((data as string) || null);
       setLoading(false);
     });
     loadStatus();
