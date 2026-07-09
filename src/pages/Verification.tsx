@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+import { validateUpload } from "@/lib/uploadValidation";
 import { ShieldCheck, Crown, Upload, Loader2, ArrowLeft, CheckCircle2, Lock, Clock, FileText, Eye, MessageCircle, Sparkles, Circle } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { Link, useNavigate } from "react-router-dom";
@@ -48,7 +49,10 @@ const CATEGORY_LABEL: Record<Category, string> = {
   journalist: "Journalist / Media",
 };
 
+
 async function uploadDoc(userId: string, file: File, kind: string): Promise<string> {
+  const check = validateUpload(file, "verification_doc");
+  if (!check.ok) throw new Error(check.message);
   const ext = file.name.split(".").pop() || "bin";
   const path = `${userId}/${kind}-${Date.now()}.${ext}`;
   const { error } = await supabase.storage

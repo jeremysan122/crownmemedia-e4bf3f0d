@@ -18,6 +18,7 @@ import { formatScore, locationLabel } from "@/lib/crown";
 import { cssFor, isValidFilter } from "@/lib/filters";
 import { toast } from "sonner";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+import { validateUpload } from "@/lib/uploadValidation";
 
 import { useSeoMeta, buildProfileOgImage } from "@/hooks/useSeoMeta";
 import { trackUsage } from "@/lib/usageTrack";
@@ -392,8 +393,9 @@ export default function Profile() {
   const onBannerPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user || !prof) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5MB");
+    const check = validateUpload(file, "banner");
+    if (!check.ok) {
+      toast.error(check.message);
       return;
     }
     setBannerUploading(true);

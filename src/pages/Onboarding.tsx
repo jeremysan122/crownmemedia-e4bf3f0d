@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Loader2, Upload, Bell, UserPlus, ArrowRight, Check } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+import { validateUpload } from "@/lib/uploadValidation";
 
 type Step = "avatar" | "follows" | "notifications";
 const STEPS: Step[] = ["avatar", "follows", "notifications"];
@@ -68,7 +69,8 @@ export default function Onboarding() {
   const handleAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5MB"); return; }
+    const check = validateUpload(file, "avatar");
+    if (!check.ok) { toast.error(check.message); return; }
     setUploading(true);
     try {
       const ext = file.name.split(".").pop() || "jpg";

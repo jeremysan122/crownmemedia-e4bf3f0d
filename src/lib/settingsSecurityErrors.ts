@@ -6,6 +6,7 @@
  * (optionally) `logRawError(err, ctx)` for diagnostics.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { isRateLimitError, RATE_LIMIT_FRIENDLY_MESSAGE } from "@/lib/rateLimit";
 
 export type ErrorContext =
   | "settings"
@@ -94,6 +95,8 @@ function isLeaky(msg: string): boolean {
  * everything else collapses to the context-generic message.
  */
 export function toFriendlyMessage(err: unknown, ctx: ErrorContext = "generic"): string {
+  // Rate-limit errors have consistent friendly copy regardless of context.
+  if (isRateLimitError(err)) return RATE_LIMIT_FRIENDLY_MESSAGE;
   const raw = messageOf(err);
   const lower = raw.toLowerCase();
 
