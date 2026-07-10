@@ -295,6 +295,18 @@ export default function LiveBattlePage() {
     return <ResultsScreen battle={battle} onBack={() => nav("/battles/live")} />;
   }
 
+  // Pending / declined / cancelled — no LiveKit room; show invite state.
+  if (battle.status !== "live") {
+    return (
+      <PendingScreen
+        battle={battle}
+        isHost={isHost}
+        isOpponent={isOpponent}
+        onBack={() => nav("/battles/live")}
+      />
+    );
+  }
+
   return (
     <div className="min-h-[100dvh] bg-background text-foreground flex flex-col">
       {/* Header */}
@@ -302,6 +314,11 @@ export default function LiveBattlePage() {
         <div className="text-sm font-semibold flex items-center gap-2">
           <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
           {battle.status === "live" ? "LIVE" : battle.status.toUpperCase()}
+          {viewerCount !== null && (
+            <span className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+              <Eye size={12} /> {viewerCount}
+            </span>
+          )}
         </div>
         <div className="text-sm tabular-nums font-mono">
           {battle.status === "live" && remainingSec !== null ? formatSec(remainingSec) : "—"}
