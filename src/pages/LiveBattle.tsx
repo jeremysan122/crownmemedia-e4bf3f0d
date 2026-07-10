@@ -313,7 +313,7 @@ export default function LiveBattlePage() {
       <div className="p-3 flex items-center justify-between border-b border-border">
         <div className="text-sm font-semibold flex items-center gap-2">
           <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          {battle.status === "live" ? "LIVE" : battle.status.toUpperCase()}
+          LIVE
           {viewerCount !== null && (
             <span className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
               <Eye size={12} /> {viewerCount}
