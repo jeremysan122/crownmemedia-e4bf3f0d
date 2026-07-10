@@ -5751,6 +5751,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      live_battle_send_emote: {
+        Args: { _battle_id: string; _kind: string }
+        Returns: undefined
+      }
       live_battle_start: {
         Args: { _battle_id: string }
         Returns: {
