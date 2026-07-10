@@ -22,9 +22,34 @@ export interface LiveBattleRow {
   region?: string | null;
 }
 
+/** Extract cooldown seconds from `duplicate_report:NN` / `rate_limited:NN`. */
+export function reportCooldownSeconds(err: unknown): { kind: "duplicate" | "rate_limited"; seconds: number } | null {
+  const raw = String((err as { message?: string })?.message ?? "");
+  const dup = raw.match(/duplicate_report:(\d+)/i);
+  if (dup) return { kind: "duplicate", seconds: parseInt(dup[1], 10) };
+  const rl = raw.match(/rate_limited:(\d+)/i);
+  if (rl) return { kind: "rate_limited", seconds: parseInt(rl[1], 10) };
+  return null;
+}
+
+export function formatCooldown(seconds: number): string {
+  const s = Math.max(1, Math.ceil(seconds));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return r === 0 ? `${m}m` : `${m}m ${r}s`;
+}
+
 export function liveBattleErrorMessage(err: unknown, fallback: string): string {
-  const raw = (err as any)?.message ?? (err as any)?.error ?? "";
+  const raw = (err as { message?: string; error?: string })?.message ?? (err as { error?: string })?.error ?? "";
   const msg = String(raw).toLowerCase();
+  const cd = reportCooldownSeconds(err);
+  if (cd?.kind === "duplicate") {
+    return `You already reported this battle. Try again in ${formatCooldown(cd.seconds)}.`;
+  }
+  if (cd?.kind === "rate_limited") {
+    return `You've hit the report limit. Try again in ${formatCooldown(cd.seconds)}.`;
+  }
   if (msg.includes("battle_not_found")) return "This battle is no longer available.";
   if (msg.includes("battle_not_live")) return "This battle isn't live.";
   if (msg.includes("battle_not_pending")) return "This battle already started or ended.";
