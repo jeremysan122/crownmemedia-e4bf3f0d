@@ -458,6 +458,8 @@ export default function LiveBattlePage() {
           hostId={battle.host_id}
           opponentId={battle.opponent_id}
         />
+        {/* Spectator emote bursts — floating hearts/crowns triggered by viewers. */}
+        <LiveBattleEmoteBurst battleId={battle.id} enabled={battle.status === "live" && !isParticipant && !!user} />
         {/* Instagram-style live chat overlay — sits on top of the video stage. */}
         <LiveBattleComments battleId={battle.id} isLive={battle.status === "live"} overlay />
       </div>
