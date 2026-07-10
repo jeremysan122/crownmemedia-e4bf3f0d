@@ -479,6 +479,27 @@ export default function LiveBattlePage() {
       {/* Moderation activity log — visible to host + admins/mods and to the currently viewing user (self events). */}
       <LiveBattleActivityLog battleId={battle.id} selfId={user?.id ?? null} />
 
+      {/* Wave 4 — Host / battler tool panels (collapsible). */}
+      {(showBattleMod || showBeauty) && (
+        <div className="p-3 border-t border-border grid gap-3 md:grid-cols-2">
+          {showBattleMod && (isHost || canModerate) && (
+            <BattleModerationPanel
+              battle={battle}
+              onUpdated={(row) => setBattle(row)}
+              onClose={() => setShowBattleMod(false)}
+            />
+          )}
+          {showBeauty && isParticipant && (
+            <BeautyFilterPanel
+              scopeId={`stage-${battle.id}`}
+              onClose={() => setShowBeauty(false)}
+            />
+          )}
+        </div>
+      )}
+
+
+
 
 
 
