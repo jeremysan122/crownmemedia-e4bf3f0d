@@ -22,12 +22,15 @@ import {
 import { isEndedTransition, mergeLiveBattleUpdate } from "@/lib/liveBattleRealtime";
 import { useServerTimeOffset } from "@/lib/serverTime";
 import { useLiveBattleViewerCount, useLiveBattleViewerHeartbeat } from "@/hooks/useLiveBattleViewers";
+import { useLiveBattlePresence } from "@/hooks/useLiveBattlePresence";
 import LiveBattleActivityLog from "@/components/battles/LiveBattleActivityLog";
 import LiveBattleComments from "@/components/battles/LiveBattleComments";
 import LiveBattleShareCard from "@/components/battles/LiveBattleShareCard";
 import LiveBattleGiftsOverlay from "@/components/battles/LiveBattleGiftsOverlay";
 import LiveBattleGiftPicker from "@/components/battles/LiveBattleGiftPicker";
 import LiveBattleVoteChip from "@/components/battles/LiveBattleVoteChip";
+import LiveBattleEmoteBurst from "@/components/battles/LiveBattleEmoteBurst";
+import LiveBattlePiPButton from "@/components/battles/LiveBattlePiPButton";
 import FollowBattlerButton from "@/components/battles/FollowBattlerButton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -234,8 +237,11 @@ export default function LiveBattlePage() {
   const isViewer = !!user && battle?.status === "live" &&
     user.id !== battle?.host_id && user.id !== battle?.opponent_id;
   useLiveBattleViewerHeartbeat(battle?.id ?? null, isViewer);
-  const viewerCount = useLiveBattleViewerCount(battle?.id ?? null, battle?.status === "live");
-
+  const pollCount = useLiveBattleViewerCount(battle?.id ?? null, battle?.status === "live");
+  // Prefer low-latency presence count; fall back to the 15s poll (also
+  // authoritative for historical DB truth on flaky realtime links).
+  const presenceCount = useLiveBattlePresence(battle?.id ?? null, user?.id ?? null, battle?.status === "live");
+  const viewerCount = presenceCount ?? pollCount;
   const isHost = user?.id === battle?.host_id;
   const isOpponent = user?.id === battle?.opponent_id;
   const isParticipant = isHost || isOpponent;
@@ -390,7 +396,13 @@ export default function LiveBattlePage() {
         <div className="text-sm tabular-nums font-mono" data-testid="live-battle-timer" data-remaining-sec={remainingSec ?? ""}>
           {battle.status === "live" && remainingSec !== null ? formatSec(remainingSec) : "—"}
         </div>
-        <button onClick={() => nav(-1)} className="text-sm text-muted-foreground hover:text-foreground">Leave</button>
+        <div className="flex items-center gap-1">
+          <LiveBattlePiPButton
+            fallbackLabel={viewerCount !== null ? `LIVE · ${viewerCount} watching` : "LIVE"}
+            onReturn={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          />
+          <button onClick={() => nav(-1)} className="text-sm text-muted-foreground hover:text-foreground px-2">Leave</button>
+        </div>
       </div>
 
       {/* Video area */}
@@ -446,6 +458,8 @@ export default function LiveBattlePage() {
           hostId={battle.host_id}
           opponentId={battle.opponent_id}
         />
+        {/* Spectator emote bursts — floating hearts/crowns triggered by viewers. */}
+        <LiveBattleEmoteBurst battleId={battle.id} enabled={battle.status === "live" && !isParticipant && !!user} />
         {/* Instagram-style live chat overlay — sits on top of the video stage. */}
         <LiveBattleComments battleId={battle.id} isLive={battle.status === "live"} overlay />
       </div>

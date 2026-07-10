@@ -314,3 +314,28 @@ export async function mintLobbyToken(battleId: string): Promise<{ token: string;
   return data;
 }
 
+// ---- Wave 3: Spectator emote bursts ----
+
+export type BattleEmoteKind = "heart" | "crown" | "fire" | "clap" | "laugh";
+
+/**
+ * Server-side gate for sending an emote. Enforces feature-live status,
+ * blocks, and a 30-per-10s per-user rate limit. Actual broadcast to
+ * other viewers happens on the shared realtime channel client-side.
+ */
+export async function sendLiveBattleEmote(battleId: string, kind: BattleEmoteKind): Promise<void> {
+  const { error } = await supabase.rpc("live_battle_send_emote" as never, {
+    _battle_id: battleId, _kind: kind,
+  } as never);
+  if (error) throw error;
+}
+
+export function emoteErrorMessage(err: unknown): string | null {
+  const msg = String((err as { message?: string })?.message ?? "").toLowerCase();
+  if (msg.includes("not_authenticated")) return "Sign in to react.";
+  if (msg.includes("battle_not_live") || msg.includes("battle_not_found")) return null;
+  if (msg.includes("blocked")) return "You can't react in this battle.";
+  if (msg.includes("rate") || msg.includes("limit")) return "Slow down a little!";
+  return null;
+}
+
