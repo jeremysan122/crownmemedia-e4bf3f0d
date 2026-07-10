@@ -58,11 +58,11 @@ export default function BeautyFilterPanel({ scopeId, onClose }: Props) {
       <div
         className="rounded-xl border border-border/60 bg-card p-3 space-y-3"
         data-testid="beauty-filter-panel"
-        aria-label="Beauty filter"
+        aria-label="Self-view filter"
       >
         <div className="flex items-center justify-between">
           <div className="text-sm font-semibold flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-primary" /> Beauty filter
+            <Sparkles className="w-4 h-4 text-primary" /> Self-view filter
           </div>
           <div className="flex items-center gap-2">
             <Label htmlFor="beauty-enabled" className="text-xs text-muted-foreground">
@@ -73,7 +73,7 @@ export default function BeautyFilterPanel({ scopeId, onClose }: Props) {
               checked={settings.enabled}
               onCheckedChange={(v) => update("enabled", v)}
               data-testid="beauty-filter-toggle"
-              aria-label="Toggle beauty filter"
+              aria-label="Toggle self-view filter"
             />
           </div>
         </div>
