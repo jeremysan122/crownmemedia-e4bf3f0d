@@ -255,6 +255,27 @@ export type Database = {
           },
         ]
       }
+      battler_follows: {
+        Row: {
+          battler_id: string
+          created_at: string
+          follower_id: string
+          id: string
+        }
+        Insert: {
+          battler_id: string
+          created_at?: string
+          follower_id: string
+          id?: string
+        }
+        Update: {
+          battler_id?: string
+          created_at?: string
+          follower_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
       battles: {
         Row: {
           accepted_at: string | null
@@ -2265,10 +2286,13 @@ export type Database = {
           host_votes: number
           id: string
           is_hidden: boolean
+          keyword_filters: Json
           opponent_id: string
           opponent_votes: number
           region: string | null
           room_name: string
+          scheduled_start_at: string | null
+          slow_mode_seconds: number
           started_at: string | null
           status: string
           updated_at: string
@@ -2285,10 +2309,13 @@ export type Database = {
           host_votes?: number
           id?: string
           is_hidden?: boolean
+          keyword_filters?: Json
           opponent_id: string
           opponent_votes?: number
           region?: string | null
           room_name: string
+          scheduled_start_at?: string | null
+          slow_mode_seconds?: number
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -2305,10 +2332,13 @@ export type Database = {
           host_votes?: number
           id?: string
           is_hidden?: boolean
+          keyword_filters?: Json
           opponent_id?: string
           opponent_votes?: number
           region?: string | null
           room_name?: string
+          scheduled_start_at?: string | null
+          slow_mode_seconds?: number
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -5242,10 +5272,13 @@ export type Database = {
           host_votes: number
           id: string
           is_hidden: boolean
+          keyword_filters: Json
           opponent_id: string
           opponent_votes: number
           region: string | null
           room_name: string
+          scheduled_start_at: string | null
+          slow_mode_seconds: number
           started_at: string | null
           status: string
           updated_at: string
@@ -5548,10 +5581,13 @@ export type Database = {
           host_votes: number
           id: string
           is_hidden: boolean
+          keyword_filters: Json
           opponent_id: string
           opponent_votes: number
           region: string | null
           room_name: string
+          scheduled_start_at: string | null
+          slow_mode_seconds: number
           started_at: string | null
           status: string
           updated_at: string
@@ -5577,10 +5613,13 @@ export type Database = {
           host_votes: number
           id: string
           is_hidden: boolean
+          keyword_filters: Json
           opponent_id: string
           opponent_votes: number
           region: string | null
           room_name: string
+          scheduled_start_at: string | null
+          slow_mode_seconds: number
           started_at: string | null
           status: string
           updated_at: string
@@ -5606,10 +5645,13 @@ export type Database = {
           host_votes: number
           id: string
           is_hidden: boolean
+          keyword_filters: Json
           opponent_id: string
           opponent_votes: number
           region: string | null
           room_name: string
+          scheduled_start_at: string | null
+          slow_mode_seconds: number
           started_at: string | null
           status: string
           updated_at: string
@@ -5635,10 +5677,13 @@ export type Database = {
           host_votes: number
           id: string
           is_hidden: boolean
+          keyword_filters: Json
           opponent_id: string
           opponent_votes: number
           region: string | null
           room_name: string
+          scheduled_start_at: string | null
+          slow_mode_seconds: number
           started_at: string | null
           status: string
           updated_at: string
@@ -5687,10 +5732,13 @@ export type Database = {
           host_votes: number
           id: string
           is_hidden: boolean
+          keyword_filters: Json
           opponent_id: string
           opponent_votes: number
           region: string | null
           room_name: string
+          scheduled_start_at: string | null
+          slow_mode_seconds: number
           started_at: string | null
           status: string
           updated_at: string

@@ -21,6 +21,7 @@ import BattleHistoryList from "@/components/battles/BattleHistoryList";
 import TopBattlersWidget from "@/components/battles/TopBattlersWidget";
 import CreateLiveBattleDialog from "@/components/battles/CreateLiveBattleDialog";
 import ChallengeDialog from "@/components/battles/ChallengeDialog";
+import BattleFilterBar from "@/components/battles/BattleFilterBar";
 import { Button } from "@/components/ui/button";
 
 interface Stats { wins: number; total: number; liveNow: number; invites: number }
@@ -215,6 +216,9 @@ export default function BattlesHub() {
             />
           )}
         </div>
+
+        {/* ─── FILTERS ─── */}
+        <BattleFilterBar />
 
         {/* ─── LIVE NOW ─── */}
         {liveEnabled && (
