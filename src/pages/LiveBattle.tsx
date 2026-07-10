@@ -435,6 +435,17 @@ export default function LiveBattlePage() {
             <span>{reportError && <span className="text-destructive" role="alert">{reportError}</span>}</span>
             <span>{reportReason.length}/500</span>
           </div>
+          {reportCooldown && cooldownRemaining > 0 && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs" role="status" aria-live="polite">
+              <div className="font-semibold text-amber-400 mb-0.5">
+                {reportCooldown.kind === "duplicate" ? "Cooldown active" : "Report limit reached"}
+              </div>
+              <div className="text-muted-foreground">
+                You can send another report in{" "}
+                <span className="tabular-nums font-mono text-foreground">{formatCooldown(cooldownRemaining)}</span>.
+              </div>
+            </div>
+          )}
           {myReport && (
             <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs">
               <div className="font-semibold mb-0.5">Your last report</div>
@@ -448,9 +459,14 @@ export default function LiveBattlePage() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setReportOpen(false)} disabled={reportBusy}>Cancel</Button>
-            <Button onClick={handleReportSubmit} disabled={reportBusy}>
+            <Button
+              onClick={handleReportSubmit}
+              disabled={reportBusy || (reportCooldown !== null && cooldownRemaining > 0)}
+            >
               {reportBusy && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-              {reportError ? "Try again" : "Submit report"}
+              {reportCooldown && cooldownRemaining > 0
+                ? `Try again in ${formatCooldown(cooldownRemaining)}`
+                : reportError ? "Try again" : "Submit report"}
             </Button>
           </DialogFooter>
         </DialogContent>
