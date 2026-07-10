@@ -386,6 +386,45 @@ export default function CommandCenterReports() {
                   );
                 })()}
 
+                {(() => {
+                  const resolves = history.filter((h) => h.action === "report_resolved");
+                  if (resolves.length === 0 && selected.status !== "resolved") return null;
+                  return (
+                    <section className="space-y-1" data-testid="cc-report-resolution-trail">
+                      <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                        Resolution trail
+                        <PillBadge tone="good">{resolves.length || 1}</PillBadge>
+                      </h3>
+                      {resolves.length === 0 ? (
+                        <p className="text-muted-foreground text-[11px]">
+                          Marked resolved but no audit entry recorded yet.
+                        </p>
+                      ) : (
+                        <ul className="divide-y divide-border/40 rounded border border-border/60 bg-muted/20">
+                          {resolves.map((h) => {
+                            const details = (h.details ?? {}) as { reason?: string; resolution?: string };
+                            return (
+                              <li key={h.id} className="p-2 space-y-1" data-testid="cc-resolution-entry">
+                                <div className="flex items-center gap-2 text-[11px]">
+                                  <span className="font-medium">Resolved by</span>
+                                  <span className="font-mono">{h.actor_email ?? "system"}</span>
+                                  <span className="text-[10px] text-muted-foreground ml-auto">
+                                    {new Date(h.created_at).toLocaleString()}
+                                  </span>
+                                </div>
+                                <div className="text-[11px]">
+                                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">Reason:</span>
+                                  <span className="italic">{details.reason ?? details.resolution ?? "—"}</span>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </section>
+                  );
+                })()}
+
                 <section className="space-y-1">
                   <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">Action history ({history.length})</h3>
                   {history.length === 0 ? <p className="text-muted-foreground">No prior actions on this report.</p> : (
