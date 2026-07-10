@@ -4,7 +4,7 @@ import { SectionCard, EmptyState, PillBadge, StatTile } from "@/components/admin
 import { ConnectionStatus } from "@/components/admin/cc/ConnectionStatus";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { resolveReport, dismissReport, removePost, removeComment, suspendUser, banUser } from "@/lib/admin";
+import { resolveReport, dismissReport, escalateReport, removePost, removeComment, suspendUser, banUser } from "@/lib/admin";
 import { useAdminRoles } from "@/hooks/useAdminRoles";
 import { useRealtimeStatus } from "@/hooks/useRealtimeStatus";
 import { ModerationReasonDialog } from "@/components/admin/ModerationReasonDialog";
@@ -18,7 +18,7 @@ type ReportRow = {
   comment_id: string | null;
   reason: string;
   reason_code: string | null;
-  status: "open" | "resolved" | "dismissed" | string;
+  status: "open" | "resolved" | "dismissed" | "escalated" | string;
   created_at: string;
   resolution: string | null;
   resolved_by?: string | null;
@@ -31,9 +31,9 @@ type CommentLite = { id: string; body: string; is_removed: boolean | null; creat
 type AuditLite = { id: string; action: string; actor_email: string | null; created_at: string; details: any };
 
 export default function CommandCenterReports() {
-  const [filter, setFilter] = useState<"open" | "resolved" | "dismissed" | "all">("open");
+  const [filter, setFilter] = useState<"open" | "resolved" | "dismissed" | "escalated" | "all">("open");
   const [rows, setRows] = useState<ReportRow[]>([]);
-  const [counts, setCounts] = useState({ open: 0, resolved: 0, dismissed: 0 });
+  const [counts, setCounts] = useState({ open: 0, resolved: 0, dismissed: 0, escalated: 0 });
   const [selected, setSelected] = useState<ReportRow | null>(null);
   const [reporter, setReporter] = useState<ProfileLite | null>(null);
   const [reported, setReported] = useState<ProfileLite | null>(null);
@@ -45,6 +45,7 @@ export default function CommandCenterReports() {
   type PendingAction =
     | { kind: "resolve"; report: ReportRow }
     | { kind: "dismiss"; report: ReportRow }
+    | { kind: "escalate"; report: ReportRow }
     | { kind: "remove"; report: ReportRow }
     | { kind: "suspend"; report: ReportRow }
     | { kind: "ban"; report: ReportRow };
@@ -55,14 +56,20 @@ export default function CommandCenterReports() {
   const load = async () => {
     let q = supabase.from("reports").select("*").order("created_at", { ascending: false }).limit(80);
     if (filter !== "all") q = q.eq("status", filter);
-    const [{ data }, openC, resC, disC] = await Promise.all([
+    const [{ data }, openC, resC, disC, escC] = await Promise.all([
       q,
       supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "open"),
       supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "resolved"),
       supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "dismissed"),
+      supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "escalated"),
     ]);
     setRows((data ?? []) as ReportRow[]);
-    setCounts({ open: openC.count ?? 0, resolved: resC.count ?? 0, dismissed: disC.count ?? 0 });
+    setCounts({
+      open: openC.count ?? 0,
+      resolved: resC.count ?? 0,
+      dismissed: disC.count ?? 0,
+      escalated: escC.count ?? 0,
+    });
   };
 
   useEffect(() => { load();   }, [filter]);
@@ -152,6 +159,9 @@ export default function CommandCenterReports() {
         await banUser(r.reported_user_id!, reason);
         await resolveReport(r.id, `User banned: ${reason}`);
         toast.success("User banned & report resolved");
+      } else if (pending.kind === "escalate") {
+        await escalateReport(r.id, reason);
+        toast.success("Report escalated for senior review");
       }
     } catch (e: any) {
       toast.error(e.message ?? "Failed");
@@ -159,9 +169,15 @@ export default function CommandCenterReports() {
     }
   };
 
+  const onEscalate = (r: ReportRow) => {
+    if (!roles.canResolveReports) { toast.error("Not authorized"); return; }
+    setPending({ kind: "escalate", report: r });
+  };
+
   const pendingCopy: Record<PendingAction["kind"], { title: string; desc: string; confirm: string; destructive: boolean; defaultReason: string }> = {
     resolve: { title: "Resolve report", desc: "Mark this report as resolved with a note visible in the audit log.", confirm: "Resolve", destructive: false, defaultReason: "Reviewed; no action needed." },
     dismiss: { title: "Dismiss report", desc: "Dismiss without further action. Reason recorded in the audit log.", confirm: "Dismiss", destructive: false, defaultReason: "Not a violation." },
+    escalate: { title: "Escalate report", desc: "Promote this report for senior review. Its status becomes “escalated” and the audit log records who escalated it.", confirm: "Escalate", destructive: false, defaultReason: pending?.report.reason || "Needs senior review." },
     remove: { title: "Remove content", desc: "Remove the reported content and resolve the report.", confirm: "Remove content", destructive: true, defaultReason: pending?.report.reason || "" },
     suspend: { title: "Suspend user", desc: "Temporarily suspend the reported user and resolve the report.", confirm: "Suspend user", destructive: true, defaultReason: pending?.report.reason || "" },
     ban: { title: "Ban user (permanent)", desc: "Permanently ban the reported user. This writes to the admin audit log.", confirm: "Ban user", destructive: true, defaultReason: pending?.report.reason || "" },
@@ -172,8 +188,9 @@ export default function CommandCenterReports() {
       <div className="flex items-center justify-end">
         <ConnectionStatus status={rt.status} retryIn={rt.retryIn} label="reports" />
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <StatTile label="Open" value={counts.open} tone={counts.open > 0 ? "warn" : "good"} />
+        <StatTile label="Escalated" value={counts.escalated} tone={counts.escalated > 0 ? "warn" : "default"} />
         <StatTile label="Resolved" value={counts.resolved} tone="good" />
         <StatTile label="Dismissed" value={counts.dismissed} />
       </div>
@@ -181,9 +198,15 @@ export default function CommandCenterReports() {
       <SectionCard
         title={`Reports (${rows.length})`}
         action={
-          <select value={filter} onChange={(e) => setFilter(e.target.value as any)}
-            className="h-7 rounded border border-border/60 bg-background px-2 text-[11px]">
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as any)}
+            aria-label="Filter reports by status"
+            data-testid="cc-reports-filter"
+            className="h-7 rounded border border-border/60 bg-background px-2 text-[11px]"
+          >
             <option value="open">Open</option>
+            <option value="escalated">Escalated</option>
             <option value="resolved">Resolved</option>
             <option value="dismissed">Dismissed</option>
             <option value="all">All</option>
@@ -194,9 +217,9 @@ export default function CommandCenterReports() {
           <ul className="divide-y divide-border/40">
             {rows.map((r) => (
               <li key={r.id} className="py-2 space-y-1.5">
-                <button onClick={() => openDrawer(r)} className="w-full text-left">
+                <button onClick={() => openDrawer(r)} className="w-full text-left" data-testid="cc-report-row" data-report-status={r.status}>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <PillBadge tone={r.status === "open" ? "warn" : r.status === "resolved" ? "good" : "default"}>{r.status}</PillBadge>
+                    <PillBadge tone={r.status === "open" ? "warn" : r.status === "resolved" ? "good" : r.status === "escalated" ? "bad" : "default"}>{r.status}</PillBadge>
                     {r.reason_code ? <PillBadge>{r.reason_code}</PillBadge> : null}
                     {r.post_id ? <PillBadge>post</PillBadge> : null}
                     {r.comment_id ? <PillBadge>comment</PillBadge> : null}
@@ -205,8 +228,8 @@ export default function CommandCenterReports() {
                   </div>
                   <p className="text-xs mt-1 line-clamp-2">{r.reason}</p>
                 </button>
-                {r.status === "open" ? (
-                  <div className="flex flex-wrap gap-2">
+                {(r.status === "open" || r.status === "escalated") ? (
+                  <div className="flex flex-wrap gap-2" data-testid="cc-report-actions">
                     {(r.post_id || r.comment_id) && roles.canResolveReports && (
                       <Button size="sm" variant="destructive" className="h-7 text-[10px]" onClick={() => onRemoveContent(r)}>Remove content</Button>
                     )}
@@ -216,7 +239,10 @@ export default function CommandCenterReports() {
                     {r.reported_user_id && roles.canBan && (
                       <Button size="sm" variant="destructive" className="h-7 text-[10px]" onClick={() => onBanUser(r)}>Ban user</Button>
                     )}
-                    {roles.canResolveReports && <Button size="sm" className="h-7 text-[10px]" onClick={() => onResolve(r)}>Resolve</Button>}
+                    {roles.canResolveReports && <Button size="sm" className="h-7 text-[10px]" data-testid="cc-report-resolve" onClick={() => onResolve(r)}>Resolve</Button>}
+                    {r.status === "open" && roles.canResolveReports && (
+                      <Button size="sm" variant="secondary" className="h-7 text-[10px]" data-testid="cc-report-escalate" onClick={() => onEscalate(r)}>Escalate</Button>
+                    )}
                     {roles.canDismissReports && <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => onDismiss(r)}>Dismiss</Button>}
                     <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => openDrawer(r)}>Details</Button>
                   </div>

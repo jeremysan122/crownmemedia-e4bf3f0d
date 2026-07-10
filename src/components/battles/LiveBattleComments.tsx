@@ -108,6 +108,9 @@ export default function LiveBattleComments({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastTypingSentRef = useRef(0);
   const selfUsernameRef = useRef<string | null>(null);
+  const restoredRef = useRef(false);
+  const restoredAnchorIdRef = useRef<string | null>(null);
+  const persistKey = `lbc:unread:${battleId}`;
 
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -196,6 +199,37 @@ export default function LiveBattleComments({
       if (!cancelled) {
         setRows(base);
         setHasMore((data?.length ?? 0) === PAGE);
+        // Restore persisted unread state (survives a full page refresh).
+        // We stash the ANCHOR ID (not index) so re-ordering, dedupes, or
+        // extra realtime tail rows since the last visit don't corrupt it.
+        try {
+          const raw = typeof window !== "undefined" ? window.localStorage.getItem(persistKey) : null;
+          if (raw) {
+            const saved = JSON.parse(raw) as { unread?: number; anchorId?: string; scrollTop?: number };
+            if (saved.anchorId) {
+              const idx = base.findIndex((r) => r.id === saved.anchorId);
+              if (idx >= 0) {
+                firstUnreadIndexRef.current = idx;
+                setFirstUnreadIndex(idx);
+                restoredAnchorIdRef.current = saved.anchorId;
+              }
+            }
+            if (typeof saved.unread === "number" && saved.unread > 0) {
+              setUnread(saved.unread);
+              stickToBottomRef.current = false;
+              setIsStuck(false);
+            }
+            if (typeof saved.scrollTop === "number") {
+              // Defer to after first paint so the virtualizer has laid rows out.
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  if (listRef.current) listRef.current.scrollTop = saved.scrollTop!;
+                });
+              });
+            }
+          }
+        } catch { /* corrupted persistence — ignore */ }
+        restoredRef.current = true;
       }
     })();
 
@@ -291,6 +325,26 @@ export default function LiveBattleComments({
     });
   }, [rows.length, virtualizer, reducedMotion]);
 
+  // Persist unread + first-unread anchor id + scroll position to
+  // localStorage so a full page refresh restores the "N new" pill and
+  // the reader's exact place in history.
+  useEffect(() => {
+    if (!restoredRef.current || typeof window === "undefined") return;
+    try {
+      const anchorId =
+        firstUnreadIndex !== null && rows[firstUnreadIndex] ? rows[firstUnreadIndex].id : null;
+      const scrollTop = listRef.current?.scrollTop ?? 0;
+      if (unread === 0 && !anchorId) {
+        window.localStorage.removeItem(persistKey);
+      } else {
+        window.localStorage.setItem(
+          persistKey,
+          JSON.stringify({ unread, anchorId, scrollTop }),
+        );
+      }
+    } catch { /* quota / private mode — ignore */ }
+  }, [unread, firstUnreadIndex, rows, persistKey]);
+
   // Cooldown countdown for accessible feedback.
   useEffect(() => {
     if (cooldownUntil === 0) return;
@@ -373,11 +427,11 @@ export default function LiveBattleComments({
 
 
 
-  function broadcastTyping() {
+  async function broadcastTyping() {
     if (!channelRef.current || !user) return;
     const now = Date.now();
-    // Client-side throttle: at most one "typing" broadcast per interval
-    // per composer, regardless of keystroke frequency.
+    // Client-side pre-throttle avoids hammering the RPC. Server enforces
+    // the authoritative rate limit regardless of what any client does.
     if (now - lastTypingSentRef.current < TYPING_THROTTLE_MS) {
       if (typeof window !== "undefined") {
         (window as any).__lbcTypingThrottled = ((window as any).__lbcTypingThrottled ?? 0) + 1;
@@ -388,12 +442,15 @@ export default function LiveBattleComments({
     if (typeof window !== "undefined") {
       (window as any).__lbcTypingSent = ((window as any).__lbcTypingSent ?? 0) + 1;
     }
-    channelRef.current.send({
-      type: "broadcast",
-      event: "typing",
-      payload: { user_id: user.id, username: selfUsernameRef.current },
-    });
+    // Server-side rate-limited broadcast. Silently returns false if the
+    // server throttles us — we don't surface that to the user.
+    try {
+      await supabase.rpc("broadcast_live_battle_typing", { _battle_id: battleId });
+    } catch {
+      /* ignore — typing indicator is best-effort */
+    }
   }
+
 
 
   async function submit() {
