@@ -222,52 +222,104 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
               )}
             </div>
 
-            <div>
-              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Pick your post</p>
-              {loadingPosts ? (
-                <div className="grid grid-cols-3 gap-2 max-h-72 overflow-hidden pr-1">
-                  {Array.from({ length: 9 }).map((_, i) => (
-                    <RoyalThumbSkeleton key={i} className="rounded-lg" />
-                  ))}
-                </div>
-              ) : myPosts.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No eligible posts — upload one first.</p>
-              ) : (
-                <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
-                  {myPosts.map((p) => (
-                    <button type="button" key={p.id} onClick={() => { setPostId(p.id); setCategory(p.category); }}
-                      className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                        postId === p.id ? "border-primary gold-shadow" : "border-transparent opacity-70 hover:opacity-100"
-                      }`}>
-                      <img
-                        loading="lazy"
-                        src={p.image_url}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        style={{ filter: cssFor(isValidFilter(p.filter ?? null) ? (p.filter as FilterId) : null) }}
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Battle-mode toggle. Hidden when live_battles flag is off. */}
+            {liveEnabled && (
+              <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/30 p-1">
+                <button
+                  type="button"
+                  onClick={() => setMode("post")}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black uppercase tracking-wider transition ${
+                    mode === "post"
+                      ? "bg-primary text-primary-foreground gold-shadow"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Swords size={13} /> Post battle
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("live")}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black uppercase tracking-wider transition ${
+                    mode === "live"
+                      ? "bg-red-500 text-white shadow-lg shadow-red-500/40"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                  <Radio size={13} /> Live battle
+                </button>
+              </div>
+            )}
+
+            {mode === "post" ? (
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Pick your post</p>
+                {loadingPosts ? (
+                  <div className="grid grid-cols-3 gap-2 max-h-72 overflow-hidden pr-1">
+                    {Array.from({ length: 9 }).map((_, i) => (
+                      <RoyalThumbSkeleton key={i} className="rounded-lg" />
+                    ))}
+                  </div>
+                ) : myPosts.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">No eligible posts — upload one first.</p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
+                    {myPosts.map((p) => (
+                      <button type="button" key={p.id} onClick={() => { setPostId(p.id); setCategory(p.category); }}
+                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                          postId === p.id ? "border-primary gold-shadow" : "border-transparent opacity-70 hover:opacity-100"
+                        }`}>
+                        <img
+                          loading="lazy"
+                          src={p.image_url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          style={{ filter: cssFor(isValidFilter(p.filter ?? null) ? (p.filter as FilterId) : null) }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3">
+                <p className="text-xs font-black uppercase tracking-wider text-red-400 flex items-center gap-1.5">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> Live face-off
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Go head-to-head on camera. Viewers vote and send gifts in real time.
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Duration</p>
-                <Select value={duration} onValueChange={setDuration}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0.5">30 minutes</SelectItem>
-                    <SelectItem value="1">1 hour</SelectItem>
-                    <SelectItem value="1.5">1 hour 30 minutes</SelectItem>
-                    <SelectItem value="6">6 hours</SelectItem>
-                    <SelectItem value="12">12 hours</SelectItem>
-                    <SelectItem value="24">24 hours</SelectItem>
-                    <SelectItem value="48">48 hours</SelectItem>
-                    <SelectItem value="72">72 hours</SelectItem>
-                  </SelectContent>
-                </Select>
+                {mode === "post" ? (
+                  <Select value={duration} onValueChange={setDuration}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0.5">30 minutes</SelectItem>
+                      <SelectItem value="1">1 hour</SelectItem>
+                      <SelectItem value="1.5">1 hour 30 minutes</SelectItem>
+                      <SelectItem value="6">6 hours</SelectItem>
+                      <SelectItem value="12">12 hours</SelectItem>
+                      <SelectItem value="24">24 hours</SelectItem>
+                      <SelectItem value="48">48 hours</SelectItem>
+                      <SelectItem value="72">72 hours</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select value={liveDuration} onValueChange={setLiveDuration}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="180">3 min</SelectItem>
+                      <SelectItem value="300">5 min</SelectItem>
+                      <SelectItem value="600">10 min</SelectItem>
+                      <SelectItem value="900">15 min</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Category</p>
@@ -282,9 +334,22 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
               </div>
             </div>
 
-            <Button onClick={submit} disabled={!postId || submitting}
-              className="w-full bg-gradient-gold text-primary-foreground font-bold gold-shadow">
-              {submitting ? <Loader2 className="animate-spin" /> : <><Swords size={16} /> Send Challenge</>}
+            <Button
+              onClick={submit}
+              disabled={submitting || (mode === "post" && !postId)}
+              className={`w-full font-bold ${
+                mode === "live"
+                  ? "bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/30"
+                  : "bg-gradient-gold text-primary-foreground gold-shadow"
+              }`}
+            >
+              {submitting ? (
+                <Loader2 className="animate-spin" />
+              ) : mode === "live" ? (
+                <><Radio size={16} /> Go Live vs @{opponent.username}</>
+              ) : (
+                <><Swords size={16} /> Send Challenge</>
+              )}
             </Button>
           </div>
         )}
