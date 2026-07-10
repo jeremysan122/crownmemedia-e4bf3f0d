@@ -207,17 +207,29 @@ export default function LiveBattleComments({
         async (payload) => {
           const row = payload.new as Row;
           await hydrate([row]);
+          let becameFirstUnread = false;
+          let didAppend = false;
           setRows((prev) => {
             if (prev.some((r) => r.id === row.id)) return prev;
-            return [...prev, row];
+            didAppend = true;
+            const next = [...prev, row];
+            if (!stickToBottomRef.current && (!user || row.user_id !== user.id)) {
+              if (firstUnreadIndexRef.current === null) {
+                firstUnreadIndexRef.current = next.length - 1;
+                becameFirstUnread = true;
+              }
+            }
+            return next;
           });
-          if (!stickToBottomRef.current && (!user || row.user_id !== user.id)) {
+          if (didAppend && !stickToBottomRef.current && (!user || row.user_id !== user.id)) {
             setUnread((n) => n + 1);
+            if (becameFirstUnread) setFirstUnreadIndex(firstUnreadIndexRef.current);
           }
           // Clear the sender from typing state once their message lands.
           setTypingUsers((prev) => prev.filter((t) => t.user_id !== row.user_id));
         },
       )
+
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "live_battle_comments", filter: `battle_id=eq.${battleId}` },
