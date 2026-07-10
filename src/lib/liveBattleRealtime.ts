@@ -3,10 +3,9 @@
 // the whole page.
 
 export interface RealtimeLiveBattleLike {
-  status: "pending" | "live" | "ended" | string;
+  status: string;
   host_votes: number;
   opponent_votes: number;
-  [k: string]: unknown;
 }
 
 /**
