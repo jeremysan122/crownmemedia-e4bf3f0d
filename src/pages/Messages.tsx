@@ -9,7 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, Check, CheckCheck, Clock, Paperclip, X, Search, BellOff, Bell, RotateCw, Loader2, Trash2, MailOpen, Mail, CheckSquare, Pin, PinOff, MoreVertical, Flag, Ban, RefreshCw } from "lucide-react";
+import { Send, Check, CheckCheck, Clock, Paperclip, X, Search, BellOff, Bell, RotateCw, Loader2, Trash2, MailOpen, Mail, CheckSquare, Pin, PinOff, MoreVertical, Flag, Ban, RefreshCw, Swords } from "lucide-react";
+import ChallengeDialog from "@/components/battles/ChallengeDialog";
+
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
