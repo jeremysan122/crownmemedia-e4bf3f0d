@@ -19,6 +19,7 @@ import {
   reportLiveBattle, roomControl, voteInLiveBattle,
   acceptLiveBattle, declineLiveBattle, cancelLiveBattle,
 } from "@/lib/liveBattles";
+import { useServerTimeOffset } from "@/lib/serverTime";
 import { useLiveBattleViewerCount, useLiveBattleViewerHeartbeat } from "@/hooks/useLiveBattleViewers";
 import LiveBattleActivityLog from "@/components/battles/LiveBattleActivityLog";
 import LiveBattleShareCard from "@/components/battles/LiveBattleShareCard";
@@ -218,6 +219,7 @@ export default function LiveBattlePage() {
   const canForceEnd = canModerate && battle?.status !== "ended";
 
   const remainingSec = useCountdown(battle?.ends_at);
+  const windowClosed = remainingSec !== null && remainingSec <= 0;
 
   const handleVote = async (choice: "host" | "opponent") => {
     if (!battle) return;
@@ -357,7 +359,7 @@ export default function LiveBattlePage() {
             </span>
           )}
         </div>
-        <div className="text-sm tabular-nums font-mono">
+        <div className="text-sm tabular-nums font-mono" data-testid="live-battle-timer" data-remaining-sec={remainingSec ?? ""}>
           {battle.status === "live" && remainingSec !== null ? formatSec(remainingSec) : "—"}
         </div>
         <button onClick={() => nav(-1)} className="text-sm text-muted-foreground hover:text-foreground">Leave</button>
@@ -450,10 +452,20 @@ export default function LiveBattlePage() {
               />
             </div>
 
+            {windowClosed && (
+              <div
+                className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-center"
+                role="status"
+                aria-live="polite"
+                data-testid="live-battle-window-closed"
+              >
+                Voting has closed. Finalizing results…
+              </div>
+            )}
 
             <div className="mt-1 grid grid-cols-2 gap-2">
               <Button
-                disabled={voting}
+                disabled={voting || windowClosed}
                 aria-busy={pendingChoice === "host"}
                 onClick={() => handleVote("host")}
                 variant={voted === "host" ? "default" : "outline"}
@@ -462,7 +474,7 @@ export default function LiveBattlePage() {
                 {pendingChoice === "host" ? "Counting…" : "Vote Host"}
               </Button>
               <Button
-                disabled={voting}
+                disabled={voting || windowClosed}
                 aria-busy={pendingChoice === "opponent"}
                 onClick={() => handleVote("opponent")}
                 variant={voted === "opponent" ? "default" : "outline"}
@@ -672,7 +684,7 @@ function ResultsScreen({ battle, onBack }: { battle: LiveBattleRow; onBack: () =
     !battle.winner_id ? "tie" : battle.winner_id === battle.host_id ? "host" : "opponent";
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center p-6">
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center p-6" data-testid="live-battle-ended">
       <div className="w-full max-w-sm rounded-2xl border border-border/60 bg-card p-6 text-center">
         <div className="mx-auto w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center">
           <Trophy className="text-primary" size={28} />
@@ -735,13 +747,19 @@ function StageGrid() {
 }
 
 function useCountdown(endsAt: string | null | undefined): number | null {
+  // Anchor to server time (via getServerTimeOffsetMs) so device clock
+  // skew doesn't drift the displayed MM:SS. Fires every 500ms so the
+  // second-boundary update lands near the top of the second regardless
+  // of when navigation happened.
   const [tick, setTick] = useState(0);
-  useEffect(() => { const t = setInterval(() => setTick((n) => n + 1), 1000); return () => clearInterval(t); }, []);
+  const offset = useServerTimeOffset();
+  useEffect(() => { const t = setInterval(() => setTick((n) => n + 1), 500); return () => clearInterval(t); }, []);
   return useMemo(() => {
     if (!endsAt) return null;
-    return Math.max(0, Math.floor((Date.parse(endsAt) - Date.now()) / 1000));
+    const nowMs = Date.now() + (offset ?? 0);
+    return Math.max(0, Math.floor((Date.parse(endsAt) - nowMs) / 1000));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endsAt, tick]);
+  }, [endsAt, tick, offset]);
 }
 
 function useCooldownRemaining(untilTs: number | null): number {

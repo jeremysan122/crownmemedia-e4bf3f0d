@@ -40,30 +40,35 @@ export default function CreateLiveBattleDialog({
 
   const [search, setSearch] = useState("");
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [results, setResults] = useState<UserResult[]>([]);
   const [opponent, setOpponent] = useState<UserResult | null>(null);
   const [category, setCategory] = useState<string>("");
   const [region, setRegion] = useState("");
   const [duration, setDuration] = useState(300);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
-      setSearch(""); setResults([]); setOpponent(null);
-      setCategory(""); setRegion(""); setDuration(300); setSubmitting(false);
+      setSearch(""); setResults([]); setOpponent(null); setSearchError(null);
+      setCategory(""); setRegion(""); setDuration(300);
+      setSubmitting(false); setSubmitError(null);
     }
   }, [open]);
 
   useEffect(() => {
-    if (opponent || !search.trim()) { setResults([]); return; }
+    if (opponent || !search.trim()) { setResults([]); setSearchError(null); return; }
     setSearching(true);
+    setSearchError(null);
     const t = setTimeout(async () => {
       try {
-        const { data } = await supabase.from("profiles")
+        const { data, error } = await supabase.from("profiles")
           .select("id, username, profile_photo_url, is_banned, is_suspended")
           .ilike("username", `%${search.trim()}%`)
           .neq("id", user?.id || "")
           .limit(10);
+        if (error) throw error;
         const filtered = ((data as any[]) || [])
           .filter((p) => !p.is_banned && !p.is_suspended)
           .slice(0, 8)
@@ -73,6 +78,7 @@ export default function CreateLiveBattleDialog({
         setResults(filtered);
       } catch {
         setResults([]);
+        setSearchError("Couldn't search right now. Check your connection and try again.");
       } finally { setSearching(false); }
     }, 250);
     return () => clearTimeout(t);
@@ -84,8 +90,12 @@ export default function CreateLiveBattleDialog({
   );
 
   const handleCreate = async () => {
-    if (!opponent) return;
+    if (!opponent) {
+      setSubmitError("Pick an opponent first.");
+      return;
+    }
     setSubmitting(true);
+    setSubmitError(null);
     try {
       const row = await createLiveBattle(
         opponent.id, duration,
@@ -96,13 +106,15 @@ export default function CreateLiveBattleDialog({
       onOpenChange(false);
       nav(`/live/${row.id}`);
     } catch (e) {
-      toast.error(liveBattleErrorMessage(e, "Couldn't create battle. Try again."));
+      const msg = liveBattleErrorMessage(e, "Couldn't create battle. Try again.");
+      setSubmitError(msg);
+      toast.error(msg);
     } finally { setSubmitting(false); }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" data-testid="create-live-battle-dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Radio className="text-destructive" size={18} /> New Live Battle
@@ -119,7 +131,7 @@ export default function CreateLiveBattleDialog({
               Opponent
             </label>
             {opponent ? (
-              <div className="mt-1 flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 p-2">
+              <div className="mt-1 flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 p-2" data-testid="selected-opponent">
                 <div className="flex items-center gap-2">
                   {opponent.profile_photo_url ? (
                     <img src={opponent.profile_photo_url} alt="" className="w-8 h-8 rounded-full object-cover" />
@@ -141,20 +153,28 @@ export default function CreateLiveBattleDialog({
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search by username"
                     className="pl-8"
+                    data-testid="opponent-search-input"
                   />
                 </div>
                 {searching && (
-                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground" data-testid="opponent-search-loading" role="status" aria-live="polite">
                     <Loader2 className="animate-spin" size={12} /> Searching…
                   </div>
                 )}
-                {!searching && results.length > 0 && (
-                  <ul className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border/60 divide-y divide-border/40">
+                {!searching && searchError && (
+                  <p className="mt-2 text-xs text-destructive" role="alert" data-testid="opponent-search-error">
+                    {searchError}
+                  </p>
+                )}
+                {!searching && !searchError && results.length > 0 && (
+                  <ul className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border/60 divide-y divide-border/40" data-testid="opponent-search-results">
                     {results.map((r) => (
                       <li key={r.id}>
                         <button
                           onClick={() => { setOpponent(r); setSearch(""); }}
                           className="w-full flex items-center gap-2 p-2 hover:bg-muted/50 text-left"
+                          data-testid="opponent-search-result"
+                          data-username={r.username}
                         >
                           {r.profile_photo_url ? (
                             <img src={r.profile_photo_url} alt="" className="w-7 h-7 rounded-full object-cover" />
@@ -167,8 +187,10 @@ export default function CreateLiveBattleDialog({
                     ))}
                   </ul>
                 )}
-                {!searching && search.trim() && results.length === 0 && (
-                  <p className="mt-2 text-xs text-muted-foreground">No royals found.</p>
+                {!searching && !searchError && search.trim() && results.length === 0 && (
+                  <p className="mt-2 text-xs text-muted-foreground" data-testid="opponent-search-empty">
+                    No royals found with that username.
+                  </p>
                 )}
               </>
             )}
@@ -228,11 +250,18 @@ export default function CreateLiveBattleDialog({
             </div>
           </div>
 
+          {submitError && (
+            <p className="text-xs text-destructive text-center" role="alert" data-testid="create-battle-error">
+              {submitError}
+            </p>
+          )}
           <Button
             onClick={handleCreate}
             disabled={!canSubmit}
             className="w-full"
             size="lg"
+            aria-busy={submitting}
+            data-testid="create-battle-submit"
           >
             {submitting ? (
               <><Loader2 className="animate-spin mr-2" size={16} /> Creating…</>
