@@ -40,30 +40,35 @@ export default function CreateLiveBattleDialog({
 
   const [search, setSearch] = useState("");
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [results, setResults] = useState<UserResult[]>([]);
   const [opponent, setOpponent] = useState<UserResult | null>(null);
   const [category, setCategory] = useState<string>("");
   const [region, setRegion] = useState("");
   const [duration, setDuration] = useState(300);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
-      setSearch(""); setResults([]); setOpponent(null);
-      setCategory(""); setRegion(""); setDuration(300); setSubmitting(false);
+      setSearch(""); setResults([]); setOpponent(null); setSearchError(null);
+      setCategory(""); setRegion(""); setDuration(300);
+      setSubmitting(false); setSubmitError(null);
     }
   }, [open]);
 
   useEffect(() => {
-    if (opponent || !search.trim()) { setResults([]); return; }
+    if (opponent || !search.trim()) { setResults([]); setSearchError(null); return; }
     setSearching(true);
+    setSearchError(null);
     const t = setTimeout(async () => {
       try {
-        const { data } = await supabase.from("profiles")
+        const { data, error } = await supabase.from("profiles")
           .select("id, username, profile_photo_url, is_banned, is_suspended")
           .ilike("username", `%${search.trim()}%`)
           .neq("id", user?.id || "")
           .limit(10);
+        if (error) throw error;
         const filtered = ((data as any[]) || [])
           .filter((p) => !p.is_banned && !p.is_suspended)
           .slice(0, 8)
@@ -73,6 +78,7 @@ export default function CreateLiveBattleDialog({
         setResults(filtered);
       } catch {
         setResults([]);
+        setSearchError("Couldn't search right now. Check your connection and try again.");
       } finally { setSearching(false); }
     }, 250);
     return () => clearTimeout(t);
@@ -84,8 +90,12 @@ export default function CreateLiveBattleDialog({
   );
 
   const handleCreate = async () => {
-    if (!opponent) return;
+    if (!opponent) {
+      setSubmitError("Pick an opponent first.");
+      return;
+    }
     setSubmitting(true);
+    setSubmitError(null);
     try {
       const row = await createLiveBattle(
         opponent.id, duration,
@@ -96,7 +106,9 @@ export default function CreateLiveBattleDialog({
       onOpenChange(false);
       nav(`/live/${row.id}`);
     } catch (e) {
-      toast.error(liveBattleErrorMessage(e, "Couldn't create battle. Try again."));
+      const msg = liveBattleErrorMessage(e, "Couldn't create battle. Try again.");
+      setSubmitError(msg);
+      toast.error(msg);
     } finally { setSubmitting(false); }
   };
 
