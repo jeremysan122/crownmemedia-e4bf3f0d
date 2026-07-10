@@ -226,20 +226,37 @@ export default function LiveBattlePage() {
   const handleReportSubmit = async () => {
     if (!battle) return;
     const reason = reportReason.trim();
+    setReportError(null);
     if (reason.length < 5) {
-      toast({ title: "Please add a short reason (at least a few words).", variant: "destructive" });
+      setReportError("Please add a short reason (at least a few words).");
       return;
     }
     setReportBusy(true);
     try {
-      await reportLiveBattle(battle.id, reason);
-      toast({ title: "Report submitted", description: "Thanks — our team will review it." });
+      const row = await reportLiveBattle(battle.id, reason);
+      setMyReport(row);
+      toast({
+        title: "Report submitted",
+        description: "Queued for review. You'll see status updates here.",
+      });
       setReportOpen(false);
       setReportReason("");
     } catch (e) {
-      toast({ title: liveBattleErrorMessage(e, "Couldn't submit report."), variant: "destructive" });
+      const msg = liveBattleErrorMessage(e, "Couldn't submit report. Please try again in a moment.");
+      setReportError(msg);
+      // If duplicate, close after a beat so they see the friendly badge below.
+      const raw = String((e as { message?: string })?.message ?? "").toLowerCase();
+      if (raw.includes("duplicate_report")) {
+        toast({ title: "Already reported", description: msg });
+      }
     } finally { setReportBusy(false); }
   };
+
+  const reportStatusLabel = (s: LiveBattleReportRow["status"]): string =>
+    s === "queued" ? "Queued for review"
+    : s === "processing" ? "Being reviewed"
+    : s === "handled" ? "Handled by our team"
+    : "Closed — no action taken";
 
   if (allowed === false && !err) return <Gate msg="Live battles aren't available yet." onBack={() => nav("/battles")} />;
   if (err) return <Gate msg={err} onBack={() => nav("/battles")} />;
