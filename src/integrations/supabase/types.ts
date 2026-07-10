@@ -2140,18 +2140,21 @@ export type Database = {
           battle_id: string
           choice: string
           created_at: string
+          id: string
           viewer_id: string
         }
         Insert: {
           battle_id: string
           choice: string
           created_at?: string
+          id?: string
           viewer_id: string
         }
         Update: {
           battle_id?: string
           choice?: string
           created_at?: string
+          id?: string
           viewer_id?: string
         }
         Relationships: [

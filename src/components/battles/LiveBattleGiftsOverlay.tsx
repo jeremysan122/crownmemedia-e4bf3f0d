@@ -70,6 +70,10 @@ export default function LiveBattleGiftsOverlay({ battleId, hostId, opponentId }:
           <div
             key={p.id}
             data-testid="live-gift-popup"
+            data-side={p.side}
+            data-recipient={p.side === "left" ? "host" : "opponent"}
+            data-gift-id={p.giftId}
+            data-gift-category={meta?.category ?? "unknown"}
             className={`absolute bottom-16 ${p.side === "left" ? "left-4" : "right-4"}
                         flex items-center gap-2 rounded-2xl px-3 py-2
                         bg-gradient-to-br from-amber-400/95 via-orange-500/95 to-rose-500/95
@@ -81,6 +85,7 @@ export default function LiveBattleGiftsOverlay({ battleId, hostId, opponentId }:
               transform: `translateY(-${p.offset * 120}px)`,
             }}
           >
+
             <div className="w-10 h-10 rounded-full bg-white/25 flex items-center justify-center">
               {meta ? (
                 <GiftIcon animationType={meta.animationType} tier={meta.category} size="sm" />

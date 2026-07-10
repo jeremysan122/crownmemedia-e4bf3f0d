@@ -209,15 +209,32 @@ export default function LiveBattlePage() {
 
   const handleVote = async (choice: "host" | "opponent") => {
     if (!battle) return;
+    // Optimistic bump so the vote bar reacts instantly. Realtime UPDATE
+    // reconciles with the server truth shortly after.
     setVoting(true);
+    setVoted(choice);
+    setBattle((prev) => prev ? ({
+      ...prev,
+      host_votes: prev.host_votes + (choice === "host" ? 1 : 0),
+      opponent_votes: prev.opponent_votes + (choice === "opponent" ? 1 : 0),
+    }) : prev);
     try {
       await voteInLiveBattle(battle.id, choice);
-      setVoted(choice);
       toast({ title: "Vote counted" });
     } catch (e) {
+      // Roll back optimistic bump on failure.
+      setBattle((prev) => prev ? ({
+        ...prev,
+        host_votes: Math.max(0, prev.host_votes - (choice === "host" ? 1 : 0)),
+        opponent_votes: Math.max(0, prev.opponent_votes - (choice === "opponent" ? 1 : 0)),
+      }) : prev);
       toast({ title: liveBattleErrorMessage(e, "Couldn't record your vote."), variant: "destructive" });
-    } finally { setVoting(false); }
+    } finally {
+      // Short debounce so users can tap repeatedly without spamming the RPC.
+      window.setTimeout(() => setVoting(false), 350);
+    }
   };
+
 
   const handleEnd = async () => {
     if (!battle) return;
@@ -407,10 +424,25 @@ export default function LiveBattlePage() {
 
         {battle.status === "live" && !isParticipant && (
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <Button disabled={voting || voted !== null} onClick={() => handleVote("host")} variant={voted === "host" ? "default" : "outline"}>Vote Host</Button>
-            <Button disabled={voting || voted !== null} onClick={() => handleVote("opponent")} variant={voted === "opponent" ? "default" : "outline"}>Vote Opponent</Button>
+            <Button
+              disabled={voting}
+              onClick={() => handleVote("host")}
+              variant={voted === "host" ? "default" : "outline"}
+              data-testid="live-vote-host"
+            >
+              {voting && voted === "host" ? "Voting…" : "Vote Host"}
+            </Button>
+            <Button
+              disabled={voting}
+              onClick={() => handleVote("opponent")}
+              variant={voted === "opponent" ? "default" : "outline"}
+              data-testid="live-vote-opponent"
+            >
+              {voting && voted === "opponent" ? "Voting…" : "Vote Opponent"}
+            </Button>
           </div>
         )}
+
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap gap-2">
