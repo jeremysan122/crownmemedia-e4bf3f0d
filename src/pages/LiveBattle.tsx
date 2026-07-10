@@ -32,6 +32,9 @@ import LiveBattleVoteChip from "@/components/battles/LiveBattleVoteChip";
 import LiveBattleEmoteBurst from "@/components/battles/LiveBattleEmoteBurst";
 import LiveBattlePiPButton from "@/components/battles/LiveBattlePiPButton";
 import FollowBattlerButton from "@/components/battles/FollowBattlerButton";
+import BattleModerationPanel from "@/components/battles/BattleModerationPanel";
+import BeautyFilterPanel from "@/components/battles/BeautyFilterPanel";
+import { readKeywordFilters } from "@/lib/battleModeration";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -40,7 +43,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Loader2, ShieldAlert, Flag, Crown, Trophy, Share2,
-  MicOff, Mic, UserX, Users, Gavel, Check, X, Eye, Gift,
+  MicOff, Mic, UserX, Users, Gavel, Check, X, Eye, Gift, Sparkles, Shield,
 } from "lucide-react";
 
 type JoinStep = "idle" | "verifying" | "minting" | "connecting" | "connected" | "error";
@@ -70,6 +73,8 @@ export default function LiveBattlePage() {
   const [myReport, setMyReport] = useState<LiveBattleReportRow | null>(null);
   const [modBusy, setModBusy] = useState(false);
   const [showModPanel, setShowModPanel] = useState(false);
+  const [showBattleMod, setShowBattleMod] = useState(false);
+  const [showBeauty, setShowBeauty] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
 
   // Feature-flag gate.
@@ -406,7 +411,7 @@ export default function LiveBattlePage() {
       </div>
 
       {/* Video area */}
-      <div className="flex-1 relative bg-black">
+      <div id={`stage-${battle.id}`} className="flex-1 relative bg-black">
         {token && lkUrl ? (
           <LiveKitRoom
             token={token}
@@ -461,11 +466,39 @@ export default function LiveBattlePage() {
         {/* Spectator emote bursts — floating hearts/crowns triggered by viewers. */}
         <LiveBattleEmoteBurst battleId={battle.id} enabled={battle.status === "live" && !isParticipant && !!user} />
         {/* Instagram-style live chat overlay — sits on top of the video stage. */}
-        <LiveBattleComments battleId={battle.id} isLive={battle.status === "live"} overlay />
+        <LiveBattleComments
+          battleId={battle.id}
+          isLive={battle.status === "live"}
+          overlay
+          keywordFilters={readKeywordFilters((battle as unknown as { keyword_filters?: unknown }).keyword_filters)}
+          commentsLocked={!!(battle as unknown as { comments_locked?: boolean }).comments_locked}
+          slowModeSeconds={(battle as unknown as { slow_mode_seconds?: number }).slow_mode_seconds ?? 0}
+        />
       </div>
 
       {/* Moderation activity log — visible to host + admins/mods and to the currently viewing user (self events). */}
       <LiveBattleActivityLog battleId={battle.id} selfId={user?.id ?? null} />
+
+      {/* Wave 4 — Host / battler tool panels (collapsible). */}
+      {(showBattleMod || showBeauty) && (
+        <div className="p-3 border-t border-border grid gap-3 md:grid-cols-2">
+          {showBattleMod && (isHost || canModerate) && (
+            <BattleModerationPanel
+              battle={battle}
+              onUpdated={(row) => setBattle(row)}
+              onClose={() => setShowBattleMod(false)}
+            />
+          )}
+          {showBeauty && isParticipant && (
+            <BeautyFilterPanel
+              scopeId={`stage-${battle.id}`}
+              onClose={() => setShowBeauty(false)}
+            />
+          )}
+        </div>
+      )}
+
+
 
 
 
@@ -548,6 +581,28 @@ export default function LiveBattlePage() {
             {(isHost || canModerate) && (
               <Button size="sm" variant="outline" onClick={() => setShowModPanel((v) => !v)}>
                 <Users className="w-4 h-4 mr-1" />{showModPanel ? "Hide" : "Manage"} viewers
+              </Button>
+            )}
+            {(isHost || canModerate) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowBattleMod((v) => !v)}
+                aria-pressed={showBattleMod}
+                data-testid="battle-mod-toggle"
+              >
+                <Shield className="w-4 h-4 mr-1" />{showBattleMod ? "Hide" : "Chat"} controls
+              </Button>
+            )}
+            {isParticipant && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowBeauty((v) => !v)}
+                aria-pressed={showBeauty}
+                data-testid="beauty-filter-toggle-button"
+              >
+                <Sparkles className="w-4 h-4 mr-1" />{showBeauty ? "Hide" : "Beauty"} filter
               </Button>
             )}
             {canForceEnd && (

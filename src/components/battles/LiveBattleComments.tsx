@@ -35,6 +35,7 @@ import {
   ArrowDown,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { bodyMatchesKeyword } from "@/lib/battleModeration";
 
 interface Row {
   id: string;
@@ -79,10 +80,16 @@ export default function LiveBattleComments({
   battleId,
   isLive,
   overlay = false,
+  keywordFilters = [],
+  commentsLocked = false,
+  slowModeSeconds = 0,
 }: {
   battleId: string;
   isLive: boolean;
   overlay?: boolean;
+  keywordFilters?: string[];
+  commentsLocked?: boolean;
+  slowModeSeconds?: number;
 }) {
   const { user, isModerator } = useAuth();
   const reducedMotion = usePrefersReducedMotion();
@@ -501,6 +508,15 @@ export default function LiveBattleComments({
     const body = text.trim();
     if (!body || sending || !isLive) return;
     if (Date.now() < cooldownUntil) return;
+    // Wave 4: block sends the host has disabled or filtered.
+    if (commentsLocked && !isModerator) {
+      toast({ title: "Chat is locked", description: "The host has paused chat for this battle.", variant: "destructive" });
+      return;
+    }
+    if (bodyMatchesKeyword(body, keywordFilters)) {
+      toast({ title: "That word is blocked here", description: "The host filtered this word out of chat.", variant: "destructive" });
+      return;
+    }
     setSending(true);
     const optimistic: Row = {
       id: `opt-${crypto.randomUUID()}`,
@@ -522,12 +538,23 @@ export default function LiveBattleComments({
       if (error) throw error;
       setJustSent(true);
       window.setTimeout(() => setJustSent(false), 900);
-      setCooldownUntil(Date.now() + COOLDOWN_MS);
+      // Slow mode uses the max of the base composer cooldown and the
+      // host-configured wait, keeping the UI in sync with the RLS policy.
+      const cooldownMs = Math.max(COOLDOWN_MS, (slowModeSeconds || 0) * 1000);
+      setCooldownUntil(Date.now() + cooldownMs);
     } catch (e: any) {
       setRows((prev) => prev.filter((r) => r.id !== optimistic.id));
+      const msg = String(e?.message ?? "");
+      const looksBlocked = /policy|denied|violat/i.test(msg);
+      const desc = looksBlocked
+        ? (commentsLocked ? "The host paused chat."
+          : slowModeSeconds > 0 ? `Slow mode is on — wait ${slowModeSeconds}s between messages.`
+          : keywordFilters.length > 0 ? "That message contains a blocked word."
+          : "This battle isn't live anymore.")
+        : "Please try again.";
       toast({
         title: "Couldn't send your comment.",
-        description: /policy|denied/i.test(e?.message || "") ? "This battle isn't live anymore." : "Please try again.",
+        description: desc,
         variant: "destructive",
       });
     } finally {
@@ -552,7 +579,7 @@ export default function LiveBattleComments({
   }
 
   const cooldownSeconds = Math.ceil(cooldownLeft / 1000);
-  const canSend = !!user && isLive && !sending && text.trim().length > 0 && cooldownLeft === 0;
+  const canSend = !!user && isLive && !sending && text.trim().length > 0 && cooldownLeft === 0 && !(commentsLocked && !isModerator);
   const remaining = MAX - text.length;
 
   const typingLabel = useMemo(() => {
@@ -632,7 +659,8 @@ export default function LiveBattleComments({
               {virtualItems.map((vi) => {
                 const r = rows[vi.index];
                 if (!r) return null;
-                const isHidden = !!r.hidden_at;
+                const isKeywordHidden = !r.hidden_at && bodyMatchesKeyword(r.body, keywordFilters);
+                const isHidden = !!r.hidden_at || isKeywordHidden;
                 const canReport = !!user && user.id !== r.user_id && !r.id.startsWith("opt-");
                 const canModerate = isModerator && !r.id.startsWith("opt-");
                 return (
@@ -674,7 +702,7 @@ export default function LiveBattleComments({
                         </span>
                         {isHidden ? (
                           <span className={`italic text-xs ${overlay ? "text-white/60" : "text-muted-foreground"}`}>
-                            [hidden by moderator]
+                            {isKeywordHidden ? "[filtered by host]" : "[hidden by moderator]"}
                           </span>
                         ) : (
                           <span className={`break-words ${overlay ? "text-white/95" : "text-foreground/80"}`}>{r.body}</span>
@@ -786,8 +814,13 @@ export default function LiveBattleComments({
               setText(e.target.value.slice(0, MAX));
               if (e.target.value.trim().length > 0) broadcastTyping();
             }}
-            placeholder={isLive ? "Say something…" : "Chat is closed"}
-            disabled={!isLive || sending || !user}
+            placeholder={
+              !isLive ? "Chat is closed"
+              : commentsLocked && !isModerator ? "Chat locked by host"
+              : slowModeSeconds > 0 ? `Slow mode: ${slowModeSeconds}s`
+              : "Say something…"
+            }
+            disabled={!isLive || sending || !user || (commentsLocked && !isModerator)}
             maxLength={MAX}
             data-testid="live-battle-comment-input"
             aria-label="Live battle chat message"
@@ -829,6 +862,7 @@ export default function LiveBattleComments({
             {sending && "Sending…"}
             {!sending && justSent && "Sent"}
             {!sending && !justSent && cooldownLeft > 0 && `Slow down — you can chat again in ${cooldownSeconds}s`}
+            {!sending && !justSent && cooldownLeft === 0 && commentsLocked && !isModerator && "Chat is locked by the host."}
           </span>
           <span
             id={`lbc-count-${battleId}`}
