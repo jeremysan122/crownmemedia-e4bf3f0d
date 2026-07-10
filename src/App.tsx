@@ -226,6 +226,7 @@ const App = () => (
                 <Route path="error-logs" element={<CommandCenterErrorLogs />} />
                 <Route path="feature-flags" element={<CommandCenterFeatureFlags />} />
                 <Route path="platform-health" element={<CommandCenterPlatformHealth />} />
+                <Route path="live-battle-reports" element={<CommandCenterLiveBattleReports />} />
               </Route>
               <Route path="/me" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               {/* Public — anyone (including Google/bots) can view profiles and posts.
