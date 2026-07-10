@@ -222,3 +222,41 @@ export async function fetchLiveBattleModActions(battleId: string): Promise<LiveB
   if (error) throw error;
   return (data ?? []) as unknown as LiveBattleModAction[];
 }
+
+// ---- Scheduling ----
+
+/**
+ * Create a scheduled live battle. Server RPC enforces start time window,
+ * blocks, feature flag, category validity, and rate limit. Battle is
+ * inserted with status='scheduled'; LiveKit tokens will NOT be minted
+ * until the battle transitions out of that state.
+ */
+export async function scheduleLiveBattle(
+  opponentId: string,
+  scheduledStartAt: Date,
+  durationSeconds = 300,
+  categorySlug?: string | null,
+  region?: string | null,
+): Promise<LiveBattleRow> {
+  const { data, error } = await supabase.rpc("schedule_live_battle" as never, {
+    _opponent_id: opponentId,
+    _scheduled_start_at: scheduledStartAt.toISOString(),
+    _duration_seconds: durationSeconds,
+    _category_slug: categorySlug ?? null,
+    _region: region ?? null,
+  } as never);
+  if (error) throw error;
+  return data as unknown as LiveBattleRow;
+}
+
+export function scheduleErrorMessage(err: unknown): string {
+  const msg = String((err as { message?: string })?.message ?? "").toLowerCase();
+  if (msg.includes("invalid_scheduled_time")) return "Pick a time at least 5 minutes from now, within the next 30 days.";
+  if (msg.includes("invalid_category")) return "That category isn't available.";
+  if (msg.includes("invalid_opponent")) return "That opponent can't be challenged.";
+  if (msg.includes("blocked")) return "You can't start a battle with that user.";
+  if (msg.includes("feature_disabled")) return "Live battles aren't available right now.";
+  if (msg.includes("not_authenticated")) return "Please sign in to schedule a battle.";
+  if (msg.includes("rate")) return "You're scheduling too fast. Try again in a moment.";
+  return "Couldn't schedule the battle. Try again.";
+}
