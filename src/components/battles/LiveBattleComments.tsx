@@ -862,6 +862,7 @@ export default function LiveBattleComments({
             {sending && "Sending…"}
             {!sending && justSent && "Sent"}
             {!sending && !justSent && cooldownLeft > 0 && `Slow down — you can chat again in ${cooldownSeconds}s`}
+            {!sending && !justSent && cooldownLeft === 0 && commentsLocked && !isModerator && "Chat is locked by the host."}
           </span>
           <span
             id={`lbc-count-${battleId}`}
