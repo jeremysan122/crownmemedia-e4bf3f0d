@@ -4752,6 +4752,28 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      admin_list_live_battle_reports: {
+        Args: { _limit?: number; _offset?: number; _status?: string }
+        Returns: {
+          battle_category: string
+          battle_host_id: string
+          battle_id: string
+          battle_opponent_id: string
+          battle_region: string
+          battle_room: string
+          battle_status: string
+          created_at: string
+          handled_at: string
+          handled_by: string
+          id: string
+          reason: string
+          reporter_id: string
+          reporter_photo: string
+          reporter_username: string
+          status: string
+          total_open: number
+        }[]
+      }
       admin_list_moderation_posts: {
         Args: { _kind: string; _limit?: number }
         Returns: {
@@ -4905,6 +4927,25 @@ export type Database = {
           object_count: number
           total_bytes: number
         }[]
+      }
+      admin_update_live_battle_report_status: {
+        Args: { _report_id: string; _status: string }
+        Returns: {
+          battle_id: string
+          created_at: string
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          reason: string
+          reporter_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "live_battle_reports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_update_post: {
         Args: { _patch: Json; _post_id: string }
