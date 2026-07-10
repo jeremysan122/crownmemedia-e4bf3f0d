@@ -221,9 +221,12 @@ export default function LiveBattlePage() {
   const handleVote = async (choice: "host" | "opponent") => {
     if (!battle) return;
     // Optimistic bump so the vote bar reacts instantly. Realtime UPDATE
-    // reconciles with the server truth shortly after.
+    // reconciles with the server truth shortly after and clears
+    // pendingChoice, which flips the UI from "Counting…" to "Confirmed".
     setVoting(true);
     setVoted(choice);
+    setPendingChoice(choice);
+    setVoteFailedAt(null);
     setBattle((prev) => prev ? ({
       ...prev,
       host_votes: prev.host_votes + (choice === "host" ? 1 : 0),
@@ -231,7 +234,8 @@ export default function LiveBattlePage() {
     }) : prev);
     try {
       await voteInLiveBattle(battle.id, choice);
-      toast({ title: "Vote counted" });
+      // Don't toast here — the "Confirmed" chip appears on the realtime
+      // UPDATE, which is the true signal the server persisted the vote.
     } catch (e) {
       // Roll back optimistic bump on failure.
       setBattle((prev) => prev ? ({
@@ -239,9 +243,10 @@ export default function LiveBattlePage() {
         host_votes: Math.max(0, prev.host_votes - (choice === "host" ? 1 : 0)),
         opponent_votes: Math.max(0, prev.opponent_votes - (choice === "opponent" ? 1 : 0)),
       }) : prev);
+      setPendingChoice(null);
+      setVoteFailedAt(Date.now());
       toast({ title: liveBattleErrorMessage(e, "Couldn't record your vote."), variant: "destructive" });
     } finally {
-      // Short debounce so users can tap repeatedly without spamming the RPC.
       window.setTimeout(() => setVoting(false), 350);
     }
   };
