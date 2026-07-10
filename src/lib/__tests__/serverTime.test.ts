@@ -17,11 +17,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 const ORIGINAL_ENV = { ...import.meta.env };
 
-function mockFetchOnce(response: Partial<Response> & { headers?: Record<string, string> } | Error) {
+function mockFetchOnce(response: { headers?: Record<string, string> } | Error) {
   const fetchMock = vi.fn().mockImplementation(() => {
     if (response instanceof Error) return Promise.reject(response);
     const h = new Headers(response.headers ?? {});
-    return Promise.resolve({ ok: true, headers: h } as Response);
+    return Promise.resolve({ ok: true, headers: h } as unknown as Response);
   });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
