@@ -431,22 +431,34 @@ export default function LiveBattlePage() {
             )}
           </div>
           {!isParticipant && (
-            <div className="flex flex-col items-end gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => { setReportError(null); setReportOpen(true); }}
-                disabled={!!myReport && myReport.status !== "rejected"}
-                title={myReport ? "You already reported this battle" : "Report this battle"}
-              >
-                <Flag className="w-4 h-4 mr-1" />
-                {myReport && myReport.status !== "rejected" ? "Reported" : "Report"}
-              </Button>
-              {myReport && (
-                <span className="text-[10px] text-muted-foreground">
-                  {reportStatusLabel(myReport.status)}
-                </span>
+            <div className="flex items-center gap-2">
+              {battle.status === "live" && user && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="bg-primary/15 text-primary hover:bg-primary/25"
+                  onClick={() => setGiftOpen(true)}
+                >
+                  <Gift className="w-4 h-4 mr-1" />Send gift
+                </Button>
               )}
+              <div className="flex flex-col items-end gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => { setReportError(null); setReportOpen(true); }}
+                  disabled={!!myReport && myReport.status !== "rejected"}
+                  title={myReport ? "You already reported this battle" : "Report this battle"}
+                >
+                  <Flag className="w-4 h-4 mr-1" />
+                  {myReport && myReport.status !== "rejected" ? "Reported" : "Report"}
+                </Button>
+                {myReport && (
+                  <span className="text-[10px] text-muted-foreground">
+                    {reportStatusLabel(myReport.status)}
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
