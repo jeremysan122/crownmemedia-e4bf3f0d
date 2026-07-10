@@ -98,6 +98,10 @@ export default function LiveBattleComments({
   const [unread, setUnread] = useState(0);
   const [isStuck, setIsStuck] = useState(true);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
+  const [firstUnreadIndex, setFirstUnreadIndex] = useState<number | null>(null);
+  const firstUnreadIndexRef = useRef<number | null>(null);
+  const focusPendingRef = useRef(false);
+
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const stickToBottomRef = useRef(true);
