@@ -1,110 +1,82 @@
-# CrownMe Launch Plan
+## Goal
 
-## v1.0 — Public PWA Launch (this week)
+Make "Go Live Battle" impossible to miss, guarantee the create→enter flow works end-to-end, give voters clear feedback while an optimistic vote is pending vs confirmed by realtime, and make Live Battle E2E runs deterministic.
 
-**Status: READY TO PUBLISH ✅**
+## 1. Surface the Go Live Battle CTA everywhere
 
-### Verified
-- ✅ Security scan: 0 findings (Supabase, agent, connector scanners all clean)
-- ✅ Dependency scan: 0 high/critical npm vulnerabilities
-- ✅ Stripe go-live: all 5 steps completed, live checkout ready
-- ✅ PWA: `site.webmanifest` with id, icons, shortcuts, screenshots, standalone display
-- ✅ Web push service worker (`public/sw.js`) — handles `push` and `notificationclick`
-- ✅ Head metadata: title, description, canonical, OG, Twitter card, JSON-LD WebApplication
-- ✅ Sitemap + robots.txt
-- ✅ Edge functions migrated to Lovable-managed Stripe gateway:
-  `create-checkout`, `create-royal-pass-checkout`, `create-verification-checkout`,
-  `payments-webhook` (with Connect events merged), `verify-purchase`,
-  `royal-pass-portal`, `royal-pass-cancel`, `create-connect-account`,
-  `connect-account-status`, `request-payout`
-- ✅ Cron jobs scheduled: `snapshot-ranks`, `process-email-queue`, `streak-reminder`
-- ✅ Cookie consent banner
-- ✅ Error reporter installed (filters benign auth-session messages)
-- ✅ Embedded checkout uses `redirect_on_completion: never` (preserves session)
-- ✅ Streak reminder + analytics deeplink to `/rewards`
-- ✅ Admin portal: all routes reachable + protected by `AdminRoute`
+Add the CTA to these surfaces, all gated on `live_battles_enabled`:
 
-### Launch action
-Click **Publish** in Lovable → site goes live at `crownmemedia.com`.
-DNS already configured (custom domain active).
+- **Battle Arena `/battles`** — already has it. No change.
+- **Live lobby `/battles/live`** — add a persistent "Go Live" button in the header (currently only lists ongoing rooms).
+- **Battle history `/battles/history`** — add a "Start Live Battle" secondary CTA next to "New challenge".
+- **Profile → Challenge sheet (`ChallengeDialog`)** — mode toggle already exists behind the flag. Show it unconditionally; when the flag is off, render a disabled toggle with a tooltip "Live battles unlock soon" instead of hiding it entirely.
+- **Bottom sheet from the compose FAB** — add a "Go Live" row next to "New post" (only when flag is on).
 
----
+### Empty state when hidden
 
-## v1.1 — Native App Stores (queued for after PWA proves stable)
+Wherever we hide the Live CTA because the flag is off (or the user is signed out), render a compact explainer card:
 
-> **Update:** Capacitor + RevenueCat scaffolding is now in the repo.
-> See `docs/NATIVE_APP_PLAN.md` for the full readiness matrix, local
-> `npx cap add` instructions, RevenueCat dashboard setup, and the
-> App Store / Play Store submission checklist.
-
-### Capacitor shell
-1. `bun add @capacitor/core @capacitor/ios @capacitor/android`
-2. `bun add -D @capacitor/cli`
-3. `npx cap init crownmemedia app.lovable.fcbd98f7a4524e42a0f9b92cfce5c620`
-4. Add `server.url` pointing to preview for hot-reload during dev
-5. User exports to GitHub → `npx cap add ios && npx cap add android`
-
-### Native push
-- Add `@capacitor/push-notifications`
-- Bridge native APNs/FCM tokens into existing `push_subscriptions` table
-- Reuse `send-web-push` for web; add `send-native-push` for FCM/APNs
-
-### Assets
-- App icon (1024×1024 master) → run `npx @capacitor/assets generate`
-- Splash screens (2732×2732 master) — dark royal background `#0b0612`
-- Adaptive icon foreground/background for Android
-
-### Play Store prep (lower-risk, start here)
-- Privacy policy URL (already at `/legal/privacy-policy`)
-- Data Safety form: media, location (city), payments, messaging
-- Content rating: Mature 17+ (sensitive content, social, IAP)
-- Age gate already enforced at `/verify-age`
-- Screenshot set: phone (4–8), 7" tablet, 10" tablet
-- AAB signed upload
-
-### iOS purchase-rule review
-**Critical decision before iOS submission:** Apple requires IAP (15–30% cut) for
-digital goods consumed inside the app. Affected surfaces:
-- Shekel bundles → MUST use IAP on iOS
-- Royal Pass subscription → MUST use IAP on iOS
-- Verification subscription → MUST use IAP on iOS
-- Boosts (consumed inside app) → MUST use IAP on iOS
-- Creator payouts (Stripe Connect) → exempt (real-world money out, not in)
-
-### IAP strategy (iOS only)
-- `@revenuecat/purchases-capacitor` (handles both App Store + Play Billing,
-  unified webhooks → existing `payments-webhook` via RevenueCat → Lovable bridge)
-- Mirror Shekel SKUs in App Store Connect (consumable) and Play Console
-- Royal Pass → App Store auto-renewing subscription group
-
-### iOS-vs-web purchase gating
-```ts
-// src/lib/purchaseGate.ts
-export function shouldUseIAP() {
-  return Capacitor.getPlatform() === "ios";
-}
+```text
+Live Battles
+Real-time 1v1 face-offs with viewer voting and gifts. Unlocking soon — you'll see the button here when it opens.
 ```
-- Hide Stripe checkout buttons when `shouldUseIAP()`; show IAP buttons instead
-- Same gating for Royal Pass + Verification CTAs
 
-### Native QA checklist
-- [ ] Cold start < 3s
-- [ ] Deep links: `/post/:id`, `/u/:username`, `/battles/:id`, `/rewards`
-- [ ] Push permission prompt (iOS + Android 13+)
-- [ ] Camera permission + photo library
-- [ ] Sign-in with Apple (required by App Store when other social logins exist)
-- [ ] Offline error state (no app-shell SW — show inline retry)
-- [ ] Safe area insets on notched devices
-- [ ] Back-button behavior (Android)
-- [ ] IAP sandbox purchase + restore
-- [ ] Webhook reaches `payments-webhook` from RevenueCat sandbox
-- [ ] Account deletion in-app (App Store requirement)
-- [ ] Report/block flows reachable in 2 taps (App Store UGC requirement)
+This replaces the current silent hide, so testers understand why they don't see the button.
 
----
+## 2. Complete Create → Start → Enter flow
 
-## Out of scope for v1.0
-- Capacitor wrapper
-- Native push (web push works in PWA on Android + desktop; iOS web push works on iOS 16.4+ for installed PWAs)
-- App Store / Play Store submissions
-- IAP integration
+`CreateLiveBattleDialog` already handles opponent search, category, region, duration, and calls `createLiveBattle` → `/live/:id`. Gaps to close:
+
+- **Pre-flight guard**: block submit when opponent is banned, blocked, or self.
+- **Countdown-to-start**: after RPC returns, show a 5-second "Get ready…" splash in the dialog with a cancel button (calls `live_battle_cancel`), then navigate.
+- **LiveBattle join step**: already exists but currently shows raw `joinStep`. Add a visible "Waiting for @opponent…" state with a live countdown until `ends_at`; if opponent doesn't accept within 60s, show a "Battle expired — try again" CTA.
+- **Toast → route**: on successful create, navigate immediately with `state: { justCreated: true }` so `/live/:id` can show a "Room opened" toast without a re-fetch race.
+
+## 3. Optimistic vs confirmed vote UI
+
+In `LiveBattle.tsx` `handleVote`:
+
+- Track `pendingChoice: "host" | "opponent" | null` and `lastConfirmedAt` timestamps.
+- While pending:
+  - Show a small pulsing "Counting your vote…" chip next to the tally.
+  - Disable both vote buttons (already done via `voting`) and add `aria-busy="true"`.
+- On realtime UPDATE for the battle row (already subscribed), stamp `lastConfirmedAt = Date.now()` and briefly flash a "✓ Vote confirmed" chip that fades after 1.2s.
+- On RPC failure: rollback (already done) + red "Vote didn't stick — try again" chip.
+- Add `data-testid` hooks: `vote-pending`, `vote-confirmed`, `vote-failed` for E2E.
+
+## 4. Deterministic E2E seed
+
+Add a Node script `e2e/seed-live-battles.ts` (run in Playwright `globalSetup`) using the service-role key:
+
+- Idempotently upsert 3 test users A/B/C (already exist via env — reuse IDs).
+- Insert one **fresh live battle** per test file with a stable `room_name` prefix (`e2e-live-<test-slug>-<runId>`), `started_at = now`, `ends_at = now + 15min`.
+- Reset `live_battle_votes` and `live_battle_gifts` for that room before each test.
+- Wipe rooms with prefix `e2e-live-` older than 1 hour to keep the DB clean.
+- Export helpers: `seedLiveBattle({ slug, durationSeconds })`, `resetLiveBattle(id)`, `endLiveBattle(id, at)`.
+
+Existing specs (`live-battle-multi-vote`, `live-battle-gift-recipient-mapping`, `live-battle-gift-popup`) switch to these helpers.
+
+## 5. E2E — voting at start and end of window
+
+New spec `e2e/live-battle-vote-window.spec.ts`:
+
+- **Start of window**: seed battle with `started_at = now`, `ends_at = now + 15min`. Cast a vote as viewer C, assert 200 and DB row inserted.
+- **Just before end**: fast-forward the battle by patching `ends_at = now + 2s` via admin, wait 3s, cast a vote, assert RPC rejects with `battle_ended` and no row inserted.
+- **After end**: patch `status = 'ended'`, cast, assert rejection matches `battle_not_live` and UI shows the "Battle has already ended" toast.
+
+Assertions match the backend rules already enforced in `live_battle_vote`.
+
+## Technical notes
+
+- No schema changes required. All work is client-side + E2E infra.
+- No new secrets; uses existing `SUPABASE_SERVICE_ROLE_KEY` in CI.
+- New file count: ~4 (empty-state component, seed helper, vote-window spec, small chip component). Edits to `BattlesHub`, `LiveBattlesLobby`, `BattlesHistory`, `ChallengeDialog`, `CreateLiveBattleDialog`, `LiveBattle`.
+- Feature flag remains authoritative; hidden state now explains itself instead of vanishing.
+
+## Out of scope
+
+- Server-side changes to `live_battle_vote` (rules already correct).
+- Redesign of the arena — CTAs slot into existing layout.
+- LiveKit token flow changes.
+
+Approve and I'll implement in that order.

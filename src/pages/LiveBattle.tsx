@@ -48,6 +48,11 @@ export default function LiveBattlePage() {
   const [err, setErr] = useState<string | null>(null);
   const [voting, setVoting] = useState(false);
   const [voted, setVoted] = useState<"host" | "opponent" | null>(null);
+  // Pending → set when the optimistic bump is applied; cleared when the
+  // next realtime UPDATE for this battle row lands (server truth).
+  const [pendingChoice, setPendingChoice] = useState<"host" | "opponent" | null>(null);
+  const [voteConfirmedAt, setVoteConfirmedAt] = useState<number | null>(null);
+  const [voteFailedAt, setVoteFailedAt] = useState<number | null>(null);
   const [joinStep, setJoinStep] = useState<JoinStep>("idle");
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
@@ -88,6 +93,12 @@ export default function LiveBattlePage() {
         (payload) => {
           const next = payload.new as LiveBattleRow;
           setBattle((prev) => {
+            // Vote totals came back from the server — clear the pending
+            // marker and flash the "confirmed" chip briefly.
+            if (prev && (prev.host_votes !== next.host_votes || prev.opponent_votes !== next.opponent_votes)) {
+              setPendingChoice(null);
+              setVoteConfirmedAt(Date.now());
+            }
             // Announce transition to ended so viewers see immediate confirmation
             // before the results screen replaces the room.
             if (prev && prev.status !== "ended" && next.status === "ended") {
@@ -210,9 +221,12 @@ export default function LiveBattlePage() {
   const handleVote = async (choice: "host" | "opponent") => {
     if (!battle) return;
     // Optimistic bump so the vote bar reacts instantly. Realtime UPDATE
-    // reconciles with the server truth shortly after.
+    // reconciles with the server truth shortly after and clears
+    // pendingChoice, which flips the UI from "Counting…" to "Confirmed".
     setVoting(true);
     setVoted(choice);
+    setPendingChoice(choice);
+    setVoteFailedAt(null);
     setBattle((prev) => prev ? ({
       ...prev,
       host_votes: prev.host_votes + (choice === "host" ? 1 : 0),
@@ -220,7 +234,8 @@ export default function LiveBattlePage() {
     }) : prev);
     try {
       await voteInLiveBattle(battle.id, choice);
-      toast({ title: "Vote counted" });
+      // Don't toast here — the "Confirmed" chip appears on the realtime
+      // UPDATE, which is the true signal the server persisted the vote.
     } catch (e) {
       // Roll back optimistic bump on failure.
       setBattle((prev) => prev ? ({
@@ -228,9 +243,10 @@ export default function LiveBattlePage() {
         host_votes: Math.max(0, prev.host_votes - (choice === "host" ? 1 : 0)),
         opponent_votes: Math.max(0, prev.opponent_votes - (choice === "opponent" ? 1 : 0)),
       }) : prev);
+      setPendingChoice(null);
+      setVoteFailedAt(Date.now());
       toast({ title: liveBattleErrorMessage(e, "Couldn't record your vote."), variant: "destructive" });
     } finally {
-      // Short debounce so users can tap repeatedly without spamming the RPC.
       window.setTimeout(() => setVoting(false), 350);
     }
   };
@@ -423,24 +439,58 @@ export default function LiveBattlePage() {
         </div>
 
         {battle.status === "live" && !isParticipant && (
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <Button
-              disabled={voting}
-              onClick={() => handleVote("host")}
-              variant={voted === "host" ? "default" : "outline"}
-              data-testid="live-vote-host"
-            >
-              {voting && voted === "host" ? "Voting…" : "Vote Host"}
-            </Button>
-            <Button
-              disabled={voting}
-              onClick={() => handleVote("opponent")}
-              variant={voted === "opponent" ? "default" : "outline"}
-              data-testid="live-vote-opponent"
-            >
-              {voting && voted === "opponent" ? "Voting…" : "Vote Opponent"}
-            </Button>
-          </div>
+          <>
+            {/* Optimistic-vote feedback strip: pending → confirmed → failed */}
+            <div className="mt-2 h-5 flex items-center justify-center text-[11px] font-bold tracking-wider">
+              {pendingChoice ? (
+                <span
+                  data-testid="vote-pending"
+                  aria-live="polite"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 text-amber-500 px-2 py-0.5 animate-pulse"
+                >
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Counting your vote…
+                </span>
+              ) : voteConfirmedAt && Date.now() - voteConfirmedAt < 1400 ? (
+                <span
+                  data-testid="vote-confirmed"
+                  aria-live="polite"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-500 px-2 py-0.5"
+                >
+                  ✓ Vote confirmed
+                </span>
+              ) : voteFailedAt && Date.now() - voteFailedAt < 4000 ? (
+                <span
+                  data-testid="vote-failed"
+                  aria-live="assertive"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 text-red-500 px-2 py-0.5"
+                >
+                  Vote didn't stick — try again
+                </span>
+              ) : null}
+            </div>
+
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              <Button
+                disabled={voting}
+                aria-busy={pendingChoice === "host"}
+                onClick={() => handleVote("host")}
+                variant={voted === "host" ? "default" : "outline"}
+                data-testid="live-vote-host"
+              >
+                {pendingChoice === "host" ? "Counting…" : "Vote Host"}
+              </Button>
+              <Button
+                disabled={voting}
+                aria-busy={pendingChoice === "opponent"}
+                onClick={() => handleVote("opponent")}
+                variant={voted === "opponent" ? "default" : "outline"}
+                data-testid="live-vote-opponent"
+              >
+                {pendingChoice === "opponent" ? "Counting…" : "Vote Opponent"}
+              </Button>
+            </div>
+          </>
         )}
 
 
