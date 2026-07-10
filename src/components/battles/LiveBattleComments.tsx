@@ -107,6 +107,14 @@ export default function LiveBattleComments({
   const stickToBottomRef = useRef(true);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastTypingSentRef = useRef(0);
+  // Reconnect-safe pagination: remember the `oldest` cursor for the last
+  // successful older-page fetch AND the one currently in flight. If a fetch
+  // fails (e.g. offline mid-pagination), we DO NOT bump the successful
+  // cursor and DO NOT set hasMore=false — the loader stays retry-ready and
+  // the next click / reconnect re-issues the same query. Duplicate rows
+  // are also blocked at the reducer level by id-set diffing.
+  const loadOlderCursorRef = useRef<string | null>(null);
+  const loadOlderInflightRef = useRef<string | null>(null);
   const selfUsernameRef = useRef<string | null>(null);
   const restoredRef = useRef(false);
   const restoredAnchorIdRef = useRef<string | null>(null);
@@ -360,6 +368,18 @@ export default function LiveBattleComments({
 
   async function loadOlder() {
     if (loadingOlder || !hasMore || rows.length === 0) return;
+    const anchor = rows[0]!;
+    const anchorId = anchor.id;
+    const oldest = anchor.created_at;
+    // Reconnect-safety guards:
+    //  - Skip if a fetch for the same cursor is already in flight (double-
+    //    click, retry-storm after reconnect, etc).
+    //  - Skip if we've already successfully loaded this cursor once — a
+    //    subsequent same-cursor click would only re-fetch identical rows
+    //    and race with realtime prepends. Duplicate prevention #2.
+    if (loadOlderInflightRef.current === oldest) return;
+    if (loadOlderCursorRef.current === oldest) return;
+    loadOlderInflightRef.current = oldest;
     setLoadingOlder(true);
     // Anchor = the top-most currently-mounted row. Its id is stable across
     // prepends AND across concurrent tail arrivals; after we insert older
@@ -367,23 +387,39 @@ export default function LiveBattleComments({
     // Comparing the anchor's pixel offset before/after gives us an EXACT
     // scroll delta — independent of virtualizer size estimates or realtime
     // tail additions that mutate `getTotalSize()` mid-flight.
-    const anchor = rows[0]!;
-    const anchorId = anchor.id;
-    const oldest = anchor.created_at;
     const el = listRef.current;
     const prevScroll = el?.scrollTop ?? 0;
     const anchorOffsetBefore =
       virtualizer.getOffsetForIndex?.(0, "start")?.[0] ?? 0;
     const delta0 = prevScroll - anchorOffsetBefore;
 
-    const { data } = await supabase
-      .from("live_battle_comments")
-      .select("id, battle_id, user_id, body, created_at, hidden_at")
-      .eq("battle_id", battleId)
-      .lt("created_at", oldest)
-      .order("created_at", { ascending: false })
-      .limit(PAGE);
-    const olderRaw = ((data as Row[]) || []).reverse();
+    let data: Row[] | null = null;
+    let fetchError: unknown = null;
+    try {
+      const res = await supabase
+        .from("live_battle_comments")
+        .select("id, battle_id, user_id, body, created_at, hidden_at")
+        .eq("battle_id", battleId)
+        .lt("created_at", oldest)
+        .order("created_at", { ascending: false })
+        .limit(PAGE);
+      if (res.error) throw res.error;
+      data = (res.data as Row[]) ?? [];
+    } catch (err) {
+      fetchError = err;
+    }
+
+    // Offline / network-drop path: release the inflight lock but preserve
+    // the successful cursor and hasMore. The next click retries the SAME
+    // query — the id-set dedupe below still guarantees no duplicates even
+    // if realtime backfilled rows we now re-fetch.
+    if (fetchError || data === null) {
+      loadOlderInflightRef.current = null;
+      setLoadingOlder(false);
+      return;
+    }
+
+    const olderRaw = data.slice().reverse();
     await hydrate(olderRaw);
 
     let prependedCount = 0;
@@ -393,7 +429,11 @@ export default function LiveBattleComments({
       prependedCount = olderUnique.length;
       return [...olderUnique, ...prev];
     });
-    setHasMore((data?.length ?? 0) === PAGE);
+    setHasMore(data.length === PAGE);
+    // Mark this cursor as successfully consumed so a same-cursor retry
+    // (e.g. from a stale button press after reconnect) is a no-op.
+    loadOlderCursorRef.current = oldest;
+    loadOlderInflightRef.current = null;
     setLoadingOlder(false);
 
     // A first-unread index tracked from realtime arrivals must shift by the

@@ -139,29 +139,38 @@ export default function CommandCenterReports() {
   const runPending = async (reason: string) => {
     if (!pending) return;
     const r = pending.report;
+    // Best-effort resolver identity so toasts can echo *who* acted.
+    const resolverLabel = (async () => {
+      const { data } = await supabase.auth.getUser();
+      return data.user?.email ?? data.user?.id?.slice(0, 8) ?? "you";
+    });
     try {
       if (pending.kind === "resolve") {
         await resolveReport(r.id, reason);
-        toast.success("Report resolved");
+        toast.success("Report resolved", {
+          description: `${reason} · by ${await resolverLabel()}`,
+        });
       } else if (pending.kind === "dismiss") {
         await dismissReport(r.id, reason);
-        toast.success("Report dismissed");
+        toast.success("Report dismissed", { description: reason });
       } else if (pending.kind === "remove") {
         if (r.post_id) await removePost(r.post_id, reason);
         else if (r.comment_id) await removeComment(r.comment_id, reason);
         await resolveReport(r.id, `Content removed: ${reason}`);
-        toast.success("Content removed & report resolved");
+        toast.success("Content removed & report resolved", { description: reason });
       } else if (pending.kind === "suspend") {
         await suspendUser(r.reported_user_id!, reason);
         await resolveReport(r.id, `User suspended: ${reason}`);
-        toast.success("User suspended & report resolved");
+        toast.success("User suspended & report resolved", { description: reason });
       } else if (pending.kind === "ban") {
         await banUser(r.reported_user_id!, reason);
         await resolveReport(r.id, `User banned: ${reason}`);
-        toast.success("User banned & report resolved");
+        toast.success("User banned & report resolved", { description: reason });
       } else if (pending.kind === "escalate") {
         await escalateReport(r.id, reason);
-        toast.success("Report escalated for senior review");
+        toast.success("Report escalated for senior review", {
+          description: `${reason} · by ${await resolverLabel()}`,
+        });
       }
     } catch (e: any) {
       toast.error(e.message ?? "Failed");
@@ -337,6 +346,45 @@ export default function CommandCenterReports() {
                     {selected.resolved_at ? <p className="text-[10px] text-muted-foreground">Resolved {new Date(selected.resolved_at).toLocaleString()}</p> : null}
                   </section>
                 ) : null}
+
+                {(() => {
+                  const escalations = history.filter((h) => h.action === "report_escalated");
+                  if (escalations.length === 0 && selected.status !== "escalated") return null;
+                  return (
+                    <section className="space-y-1" data-testid="cc-report-escalation-trail">
+                      <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                        Escalation trail
+                        <PillBadge tone="bad">{escalations.length || 1}</PillBadge>
+                      </h3>
+                      {escalations.length === 0 ? (
+                        <p className="text-muted-foreground text-[11px]">
+                          Marked escalated but no audit entry recorded yet.
+                        </p>
+                      ) : (
+                        <ul className="divide-y divide-border/40 rounded border border-border/60 bg-muted/20">
+                          {escalations.map((h) => {
+                            const details = (h.details ?? {}) as { reason?: string };
+                            return (
+                              <li key={h.id} className="p-2 space-y-1" data-testid="cc-escalation-entry">
+                                <div className="flex items-center gap-2 text-[11px]">
+                                  <span className="font-medium">Escalated by</span>
+                                  <span className="font-mono">{h.actor_email ?? "system"}</span>
+                                  <span className="text-[10px] text-muted-foreground ml-auto">
+                                    {new Date(h.created_at).toLocaleString()}
+                                  </span>
+                                </div>
+                                <div className="text-[11px]">
+                                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">Reason:</span>
+                                  <span className="italic">{details.reason ?? "—"}</span>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </section>
+                  );
+                })()}
 
                 <section className="space-y-1">
                   <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">Action history ({history.length})</h3>
