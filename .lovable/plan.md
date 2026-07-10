@@ -41,13 +41,13 @@ Before public launch of scheduling:
 3. **LiveKit token** accepts `mode: "lobby"` — participants-only, `${room_name}__lobby`, no auto-start.
 4. **Realtime:** existing `live_battles` UPDATE stream drives the lobby; status flip to `live` auto-navigates to `/live/:id`.
 
-## Wave 3 — Spectator UX
+## Wave 3 — Spectator UX ✅ shipped
 
 **Goal:** watching feels alive.
 
-1. **Live viewer count** via presence channel; broadcast to `LiveBattle.tsx` header.
-2. **Emote bursts** (tap-to-send hearts/crowns); rate-limited server-side (reuse typing throttle pattern).
-3. **Picture-in-Picture** using the browser PiP API on the video element with a fallback floating card for unsupported browsers.
+1. **Live viewer count** via Supabase Realtime Presence on `battle_presence:{id}` (`useLiveBattlePresence`), with the 15s heartbeat poll retained as fallback. `LiveBattle.tsx` header prefers presence and falls back to poll.
+2. **Emote bursts** (`LiveBattleEmoteBurst.tsx`): 5 emote kinds (heart, crown, fire, clap, laugh) broadcast on `battle_emotes:{id}`. Server RPC `live_battle_send_emote` enforces feature gate, blocks check, and a 30/10s per-user rate limit. Respects `prefers-reduced-motion`.
+3. **Picture-in-Picture** (`LiveBattlePiPButton.tsx`): native `requestPictureInPicture()` when supported, else a floating info card with a "Return to battle" CTA.
 
 ## Wave 4 — Battler Tools
 
