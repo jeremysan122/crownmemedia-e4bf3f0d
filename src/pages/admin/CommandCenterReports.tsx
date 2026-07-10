@@ -347,7 +347,6 @@ export default function CommandCenterReports() {
                   </section>
                 ) : null}
 
-                <section className="space-y-1">
                 {(() => {
                   const escalations = history.filter((h) => h.action === "report_escalated");
                   if (escalations.length === 0 && selected.status !== "escalated") return null;
