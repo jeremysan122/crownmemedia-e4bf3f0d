@@ -121,6 +121,36 @@ export async function reportLiveBattle(battleId: string, reason: string): Promis
   return data as unknown as LiveBattleReportRow;
 }
 
+// ---- Invitation lifecycle (opponent accept/decline, host cancel) ----
+
+export async function acceptLiveBattle(battleId: string): Promise<LiveBattleRow> {
+  const { data, error } = await supabase.rpc("live_battle_accept" as never, { _battle_id: battleId } as never);
+  if (error) throw error;
+  return data as unknown as LiveBattleRow;
+}
+export async function declineLiveBattle(battleId: string): Promise<LiveBattleRow> {
+  const { data, error } = await supabase.rpc("live_battle_decline" as never, { _battle_id: battleId } as never);
+  if (error) throw error;
+  return data as unknown as LiveBattleRow;
+}
+export async function cancelLiveBattle(battleId: string): Promise<LiveBattleRow> {
+  const { data, error } = await supabase.rpc("live_battle_cancel" as never, { _battle_id: battleId } as never);
+  if (error) throw error;
+  return data as unknown as LiveBattleRow;
+}
+
+// ---- Viewer presence ----
+
+export async function heartbeatLiveBattleViewer(battleId: string): Promise<void> {
+  const { error } = await supabase.rpc("live_battle_viewer_heartbeat" as never, { _battle_id: battleId } as never);
+  if (error) throw error;
+}
+export async function fetchLiveBattleViewerCount(battleId: string): Promise<number> {
+  const { data, error } = await supabase.rpc("live_battle_viewer_count" as never, { _battle_id: battleId } as never);
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
 export async function roomControl(
   battleId: string,
   action: "mute" | "unmute" | "kick" | "end" | "force_end",
