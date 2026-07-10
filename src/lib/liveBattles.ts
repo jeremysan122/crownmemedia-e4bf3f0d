@@ -334,6 +334,7 @@ export function emoteErrorMessage(err: unknown): string | null {
   const msg = String((err as { message?: string })?.message ?? "").toLowerCase();
   if (msg.includes("not_authenticated")) return "Sign in to react.";
   if (msg.includes("battle_not_live") || msg.includes("battle_not_found")) return null;
+  if (msg.includes("feature_disabled")) return null;
   if (msg.includes("blocked")) return "You can't react in this battle.";
   if (msg.includes("rate") || msg.includes("limit")) return "Slow down a little!";
   return null;
