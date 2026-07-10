@@ -1,21 +1,17 @@
 // Unit test: livekit-token responds with the lobby-scoped room name when
 // mode="lobby". We spin up the handler with mocked dependencies rather than
 // hitting a real edge runtime.
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 
-// Mock livekit-server-sdk before importing anything that touches it.
-vi.mock("livekit-server-sdk", () => {
-  class AccessToken {
-    identity: string;
-    grants: any = {};
-    constructor(_k: string, _s: string, opts: { identity: string }) { this.identity = opts.identity; }
-    addGrant(g: any) { this.grants = g; }
-    async toJwt() { return `tkn:${this.grants?.room ?? "?"}`; }
-  }
-  return { AccessToken };
-});
-
-import { AccessToken } from "livekit-server-sdk";
+// Minimal in-file stand-in for livekit-server-sdk (loaded via npm: specifier
+// in the edge runtime; not available in the vitest bundler).
+class AccessToken {
+  identity: string;
+  grants: any = {};
+  constructor(_k: string, _s: string, opts: { identity: string }) { this.identity = opts.identity; }
+  addGrant(g: any) { this.grants = g; }
+  async toJwt() { return `tkn:${this.grants?.room ?? "?"}`; }
+}
 
 /**
  * Mirrors the room-name derivation in supabase/functions/livekit-token/index.ts.
