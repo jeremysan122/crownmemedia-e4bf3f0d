@@ -26,6 +26,7 @@ export default function LiveBattlesLobby() {
   const nav = useNavigate();
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     isFeatureEnabled("live_battles_enabled").then(setEnabled).catch(() => setEnabled(false));
