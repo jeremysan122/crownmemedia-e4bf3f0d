@@ -1,82 +1,86 @@
-## Goal
+# Battle Arena v2 — Close the Gaps
 
-Make "Go Live Battle" impossible to miss, guarantee the create→enter flow works end-to-end, give voters clear feedback while an optimistic vote is pending vs confirmed by realtime, and make Live Battle E2E runs deterministic.
+Building on Live Battles v1 (1v1, voting, gifts, comments, moderation), this plan ships the eight missing areas in staged waves so we can launch value early and de-risk the heavier work.
 
-## 1. Surface the Go Live Battle CTA everywhere
+## Wave 1 — Discovery & Scheduling (foundation)
 
-Add the CTA to these surfaces, all gated on `live_battles_enabled`:
+**Goal:** people can find, follow, and plan around battles.
 
-- **Battle Arena `/battles`** — already has it. No change.
-- **Live lobby `/battles/live`** — add a persistent "Go Live" button in the header (currently only lists ongoing rooms).
-- **Battle history `/battles/history`** — add a "Start Live Battle" secondary CTA next to "New challenge".
-- **Profile → Challenge sheet (`ChallengeDialog`)** — mode toggle already exists behind the flag. Show it unconditionally; when the flag is off, render a disabled toggle with a tooltip "Live battles unlock soon" instead of hiding it entirely.
-- **Bottom sheet from the compose FAB** — add a "Go Live" row next to "New post" (only when flag is on).
+1. **Filters on `/battles`**
+   - Add category, region, stakes (gift tier), and status (live / upcoming / ended) filter chips in `BattlesHub.tsx`.
+   - Persist selection in URL search params so filters are shareable.
+2. **Follow-a-battler + notify-on-live**
+   - New table `battler_follows (follower_id, battler_id)`.
+   - Trigger on `live_battles` insert → fan-out `notifications` + push to followers with type `battle_going_live`.
+3. **Schedule for later**
+   - Add `scheduled_start_at`, `state='scheduled'` to `live_battles`.
+   - `ScheduleBattleSheet.tsx` for hosts; scheduled battles appear in Upcoming tab.
+   - Add-to-calendar (ICS) button, reminder push at T-15m via `pg_cron`.
 
-### Empty state when hidden
+## Wave 2 — Pre-battle Lobby
 
-Wherever we hide the Live CTA because the flag is off (or the user is signed out), render a compact explainer card:
+**Goal:** battles start clean, not chaotic.
 
-```text
-Live Battles
-Real-time 1v1 face-offs with viewer voting and gifts. Unlocking soon — you'll see the button here when it opens.
-```
+1. **Warmup lobby room** (`/battles/:id/lobby`) with:
+   - AV pre-check (mic level meter, camera preview, network test).
+   - Battler ready state + host "Start" gated on both ready.
+   - Countdown to go-live with `aria-live` announcements.
+2. **Reuse existing realtime channel** for lobby presence + ready toggles.
 
-This replaces the current silent hide, so testers understand why they don't see the button.
+## Wave 3 — Spectator UX
 
-## 2. Complete Create → Start → Enter flow
+**Goal:** watching feels alive.
 
-`CreateLiveBattleDialog` already handles opponent search, category, region, duration, and calls `createLiveBattle` → `/live/:id`. Gaps to close:
+1. **Live viewer count** via presence channel; broadcast to `LiveBattle.tsx` header.
+2. **Emote bursts** (tap-to-send hearts/crowns); rate-limited server-side (reuse typing throttle pattern).
+3. **Picture-in-Picture** using the browser PiP API on the video element with a fallback floating card for unsupported browsers.
 
-- **Pre-flight guard**: block submit when opponent is banned, blocked, or self.
-- **Countdown-to-start**: after RPC returns, show a 5-second "Get ready…" splash in the dialog with a cancel button (calls `live_battle_cancel`), then navigate.
-- **LiveBattle join step**: already exists but currently shows raw `joinStep`. Add a visible "Waiting for @opponent…" state with a live countdown until `ends_at`; if opponent doesn't accept within 60s, show a "Battle expired — try again" CTA.
-- **Toast → route**: on successful create, navigate immediately with `state: { justCreated: true }` so `/live/:id` can show a "Room opened" toast without a re-fetch race.
+## Wave 4 — Battler Tools
 
-## 3. Optimistic vs confirmed vote UI
+**Goal:** hosts feel in control on-camera.
 
-In `LiveBattle.tsx` `handleVote`:
+1. **Beauty / basic filters** (brightness, smoothing) via WebGL shader layer on the local track.
+2. **Host moderation panel in-battle**: mute viewer, kick, lock comments, slow-mode toggle — reuses existing `live_battle_comment_reports` + `admin_audit_log` plumbing.
+3. **Keyword filter** per battle; auto-hides matching comments before render.
 
-- Track `pendingChoice: "host" | "opponent" | null` and `lastConfirmedAt` timestamps.
-- While pending:
-  - Show a small pulsing "Counting your vote…" chip next to the tally.
-  - Disable both vote buttons (already done via `voting`) and add `aria-busy="true"`.
-- On realtime UPDATE for the battle row (already subscribed), stamp `lastConfirmedAt = Date.now()` and briefly flash a "✓ Vote confirmed" chip that fades after 1.2s.
-- On RPC failure: rollback (already done) + red "Vote didn't stick — try again" chip.
-- Add `data-testid` hooks: `vote-pending`, `vote-confirmed`, `vote-failed` for E2E.
+## Wave 5 — Structure (Tournaments & Rematches)
 
-## 4. Deterministic E2E seed
+**Goal:** more than one-off matches.
 
-Add a Node script `e2e/seed-live-battles.ts` (run in Playwright `globalSetup`) using the service-role key:
+1. **Rematch CTA** on the results screen → creates a new `live_battles` row prefilled with same participants.
+2. **Tournaments**
+   - Tables: `tournaments`, `tournament_rounds`, `tournament_matches` (winner_id, next_match_id).
+   - Bracket UI (`TournamentBracket.tsx`) with auto-advance on battle end.
+   - Support 4/8/16-player single-elim in v1.
 
-- Idempotently upsert 3 test users A/B/C (already exist via env — reuse IDs).
-- Insert one **fresh live battle** per test file with a stable `room_name` prefix (`e2e-live-<test-slug>-<runId>`), `started_at = now`, `ends_at = now + 15min`.
-- Reset `live_battle_votes` and `live_battle_gifts` for that room before each test.
-- Wipe rooms with prefix `e2e-live-` older than 1 hour to keep the DB clean.
-- Export helpers: `seedLiveBattle({ slug, durationSeconds })`, `resetLiveBattle(id)`, `endLiveBattle(id, at)`.
+## Wave 6 — Post-battle
 
-Existing specs (`live-battle-multi-vote`, `live-battle-gift-recipient-mapping`, `live-battle-gift-popup`) switch to these helpers.
+**Goal:** the moment doesn't die when the timer hits zero.
 
-## 5. E2E — voting at start and end of window
+1. **Shareable highlight card** (existing `share_cards` infra) with winner, score, top gifters.
+2. **Performance analytics** for each battler: peak viewers, votes over time, gift revenue, top supporters — visible on their dashboard only.
+3. **Rematch + "Notify me next time" CTAs** on results screen.
 
-New spec `e2e/live-battle-vote-window.spec.ts`:
+## Wave 7 — Safety hardening
 
-- **Start of window**: seed battle with `started_at = now`, `ends_at = now + 15min`. Cast a vote as viewer C, assert 200 and DB row inserted.
-- **Just before end**: fast-forward the battle by patching `ends_at = now + 2s` via admin, wait 3s, cast a vote, assert RPC rejects with `battle_ended` and no row inserted.
-- **After end**: patch `status = 'ended'`, cast, assert rejection matches `battle_not_live` and UI shows the "Battle has already ended" toast.
+**Goal:** viewer-level control matches host-level control.
 
-Assertions match the backend rules already enforced in `live_battle_vote`.
+1. **In-battle block/mute** for viewers (client + server-side hide of that user's comments/gifts).
+2. **Global keyword filter list** per viewer (`muted_words` — reuse existing table).
+3. **Report-viewer flow** parallel to existing comment reports.
 
-## Technical notes
+## Technical Details
 
-- No schema changes required. All work is client-side + E2E infra.
-- No new secrets; uses existing `SUPABASE_SERVICE_ROLE_KEY` in CI.
-- New file count: ~4 (empty-state component, seed helper, vote-window spec, small chip component). Edits to `BattlesHub`, `LiveBattlesLobby`, `BattlesHistory`, `ChallengeDialog`, `CreateLiveBattleDialog`, `LiveBattle`.
-- Feature flag remains authoritative; hidden state now explains itself instead of vanishing.
+- **Realtime**: reuse the shared realtime bus; add channels `battle_lobby:{id}` and `battle_presence:{id}`.
+- **Schema additions**: `battler_follows`, `tournaments`, `tournament_rounds`, `tournament_matches`, plus columns on `live_battles` (`scheduled_start_at`, `keyword_filters jsonb`, `slow_mode_seconds`).
+- **RLS**: every new table gets GRANTs + policies in the same migration; follows/keyword filters scoped by `auth.uid()`.
+- **Notifications**: extend the `notifications.type` enum with `battle_going_live`, `battle_reminder`, `tournament_match_ready`, `rematch_invite`.
+- **Edge functions**: `schedule-battle-reminder` (cron), `tournament-advance` (trigger on battle end), `share-highlight-card`.
+- **Accessibility**: every new interactive surface gets `aria-live` where state changes are announced (already the standard in this codebase).
+- **E2E**: add specs per wave covering filter persistence, lobby ready-state, PiP fallback, tournament advancement, viewer mute, and reminder toasts.
 
-## Out of scope
+## Rollout order
 
-- Server-side changes to `live_battle_vote` (rules already correct).
-- Redesign of the arena — CTAs slot into existing layout.
-- LiveKit token flow changes.
+Wave 1 → 2 → 3 → 4 → 5 → 6 → 7. Each wave is independently shippable behind a feature flag (`feature_flags` table already exists).
 
-Approve and I'll implement in that order.
+Approve and I'll start with Wave 1.
