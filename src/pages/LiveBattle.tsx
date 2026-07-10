@@ -234,6 +234,10 @@ export default function LiveBattlePage() {
 
   const handleVote = async (choice: "host" | "opponent") => {
     if (!battle) return;
+    // Hard guard: after the battle ends or the voting window closes, no new
+    // optimistic bumps and no RPC calls. Controls stay locked until refresh.
+    if (battle.status !== "live" || windowClosed) return;
+
     // Optimistic bump so the vote bar reacts instantly. Realtime UPDATE
     // reconciles with the server truth shortly after and clears
     // pendingChoice, which flips the UI from "Counting…" to "Confirmed".
