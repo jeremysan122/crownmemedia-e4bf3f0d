@@ -376,14 +376,25 @@ export default function LiveBattleComments({
   function broadcastTyping() {
     if (!channelRef.current || !user) return;
     const now = Date.now();
-    if (now - lastTypingSentRef.current < TYPING_THROTTLE_MS) return;
+    // Client-side throttle: at most one "typing" broadcast per interval
+    // per composer, regardless of keystroke frequency.
+    if (now - lastTypingSentRef.current < TYPING_THROTTLE_MS) {
+      if (typeof window !== "undefined") {
+        (window as any).__lbcTypingThrottled = ((window as any).__lbcTypingThrottled ?? 0) + 1;
+      }
+      return;
+    }
     lastTypingSentRef.current = now;
+    if (typeof window !== "undefined") {
+      (window as any).__lbcTypingSent = ((window as any).__lbcTypingSent ?? 0) + 1;
+    }
     channelRef.current.send({
       type: "broadcast",
       event: "typing",
       payload: { user_id: user.id, username: selfUsernameRef.current },
     });
   }
+
 
   async function submit() {
     if (!user) {
