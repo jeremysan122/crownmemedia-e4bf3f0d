@@ -1,10 +1,13 @@
-// Horizontal strip of currently-live battles for the Battles Hub.
-// Silent-fails and hides itself when the feature is off or nothing is live.
+// Horizontal strip of currently-live battles for the Battle Arena hub.
+// Respects category/region filters from BattleFilterBar and silently hides
+// itself when nothing matches.
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Radio } from "lucide-react";
+import { useBattleFilters } from "@/components/battles/BattleFilterBar";
+import FollowBattlerButton from "@/components/battles/FollowBattlerButton";
 
 interface Row {
   id: string;
@@ -19,6 +22,7 @@ interface Row {
 interface Profile { id: string; username: string; profile_photo_url: string | null }
 
 export default function LiveNowStrip() {
+  const { filters } = useBattleFilters();
   const [rows, setRows] = useState<Row[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loaded, setLoaded] = useState(false);
@@ -26,12 +30,15 @@ export default function LiveNowStrip() {
   useEffect(() => {
     let mounted = true;
     const load = async () => {
-      const { data } = await supabase
+      let q = supabase
         .from("live_battles")
         .select("id,host_id,opponent_id,host_votes,opponent_votes,category_slug,region,started_at")
         .eq("status", "live")
         .order("started_at", { ascending: false })
         .limit(10);
+      if (filters.category) q = q.eq("category_slug", filters.category);
+      if (filters.region) q = q.eq("region", filters.region);
+      const { data } = await q;
       if (!mounted) return;
       const list = (data ?? []) as Row[];
       setRows(list);
@@ -46,17 +53,18 @@ export default function LiveNowStrip() {
       if (mounted) setLoaded(true);
     };
     load();
+    // Single realtime channel; unique key prevents duplicate subs across mounts.
     const ch = supabase
       .channel("live_now_strip")
       .on("postgres_changes", { event: "*", schema: "public", table: "live_battles" }, load)
       .subscribe();
     return () => { mounted = false; supabase.removeChannel(ch); };
-  }, []);
+  }, [filters.category, filters.region]);
 
   if (!loaded || rows.length === 0) return null;
 
   return (
-    <section className="mb-6">
+    <section className="mb-6" aria-label="Live battles">
       <div className="mb-2 flex items-center gap-2">
         <Radio size={14} className="text-red-500 animate-pulse" />
         <h2 className="text-xs font-bold uppercase tracking-wider">Live now</h2>
@@ -66,28 +74,33 @@ export default function LiveNowStrip() {
         {rows.map((r) => {
           const host = profiles[r.host_id]; const opp = profiles[r.opponent_id];
           return (
-            <Link
+            <div
               key={r.id}
-              to={`/live/${r.id}`}
-              className="snap-start shrink-0 w-52 rounded-2xl border border-border/60 bg-card p-3 hover:border-destructive/50 transition"
+              className="snap-start shrink-0 w-56 rounded-2xl border border-border/60 bg-card p-3 hover:border-destructive/50 transition"
             >
-              <div className="flex items-center gap-2 mb-2">
-                <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-red-500">Live</span>
-                {r.category_slug && (
-                  <span className="ml-auto text-[10px] text-muted-foreground uppercase">{r.category_slug}</span>
-                )}
+              <Link to={`/live/${r.id}`} className="block">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-red-500">Live</span>
+                  {r.category_slug && (
+                    <span className="ml-auto text-[10px] text-muted-foreground uppercase">{r.category_slug}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Avatar p={host} /> <span className="text-xs text-muted-foreground">vs</span> <Avatar p={opp} />
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground truncate">
+                  @{host?.username ?? "royal"} vs @{opp?.username ?? "royal"}
+                </div>
+                <div className="mt-1 text-[11px] text-muted-foreground">
+                  {r.host_votes + r.opponent_votes} votes
+                </div>
+              </Link>
+              <div className="mt-2 flex gap-1">
+                <FollowBattlerButton battlerId={r.host_id} compact size="sm" />
+                <FollowBattlerButton battlerId={r.opponent_id} compact size="sm" />
               </div>
-              <div className="flex items-center gap-2">
-                <Avatar p={host} /> <span className="text-xs text-muted-foreground">vs</span> <Avatar p={opp} />
-              </div>
-              <div className="mt-2 text-xs text-muted-foreground truncate">
-                @{host?.username ?? "royal"} vs @{opp?.username ?? "royal"}
-              </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">
-                {r.host_votes + r.opponent_votes} votes
-              </div>
-            </Link>
+            </div>
           );
         })}
       </div>
