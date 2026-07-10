@@ -222,8 +222,9 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
               )}
             </div>
 
-            {/* Battle-mode toggle. Hidden when live_battles flag is off. */}
-            {liveEnabled && (
+            {/* Battle-mode toggle. Always visible so the Live option is discoverable;
+                disabled with an explainer when the live_battles flag is off. */}
+            <div>
               <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/30 p-1">
                 <button
                   type="button"
@@ -233,23 +234,35 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
                       ? "bg-primary text-primary-foreground gold-shadow"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
+                  data-testid="challenge-mode-post"
                 >
                   <Swords size={13} /> Post battle
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMode("live")}
+                  onClick={() => liveEnabled && setMode("live")}
+                  disabled={!liveEnabled}
+                  aria-disabled={!liveEnabled}
+                  title={liveEnabled ? "" : "Live battles unlock soon"}
                   className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black uppercase tracking-wider transition ${
-                    mode === "live"
-                      ? "bg-red-500 text-white shadow-lg shadow-red-500/40"
-                      : "text-muted-foreground hover:text-foreground"
+                    !liveEnabled
+                      ? "text-muted-foreground/60 cursor-not-allowed"
+                      : mode === "live"
+                        ? "bg-red-500 text-white shadow-lg shadow-red-500/40"
+                        : "text-muted-foreground hover:text-foreground"
                   }`}
+                  data-testid="challenge-mode-live"
                 >
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                  <span className={`inline-block w-1.5 h-1.5 rounded-full bg-current ${liveEnabled ? "animate-pulse" : ""}`} />
                   <Radio size={13} /> Live battle
                 </button>
               </div>
-            )}
+              {!liveEnabled && (
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  Live Battles unlock soon — you'll see this option activate here.
+                </p>
+              )}
+            </div>
 
             {mode === "post" ? (
               <div>
