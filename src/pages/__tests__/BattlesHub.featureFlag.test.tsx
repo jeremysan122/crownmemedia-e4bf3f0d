@@ -56,8 +56,7 @@ describe("BattlesHub feature flag gating", () => {
   it("renders hub and always shows Post Battle CTA", async () => {
     flagVal.v = true;
     await renderHub();
-    await waitFor(() => expect(screen.getByText(/Battle/i)).toBeInTheDocument());
-    expect(screen.getByText(/Start Post Battle/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Start Post Battle/i)).toBeInTheDocument());
   });
 
   it("shows Go Live CTA when live_battles_enabled is true", async () => {
