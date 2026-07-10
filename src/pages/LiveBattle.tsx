@@ -604,6 +604,20 @@ function useCountdown(endsAt: string | null | undefined): number | null {
   }, [endsAt, tick]);
 }
 
+function useCooldownRemaining(untilTs: number | null): number {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (untilTs === null) return;
+    const t = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [untilTs]);
+  return useMemo(() => {
+    if (untilTs === null) return 0;
+    return Math.max(0, Math.ceil((untilTs - Date.now()) / 1000));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [untilTs, tick]);
+}
+
 function formatSec(s: number) {
   const m = Math.floor(s / 60);
   const r = s % 60;
