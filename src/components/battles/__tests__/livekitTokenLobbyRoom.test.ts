@@ -31,7 +31,7 @@ async function mint(battle: { room_name: string }, mode: "lobby" | "battle", ide
 }
 
 describe("livekit-token lobby mode", () => {
-  beforeEach(() => vi.clearAllMocks());
+  
 
   it("returns the lobby-scoped room name, not the live room", async () => {
     const battle = { room_name: "battle-42" };
