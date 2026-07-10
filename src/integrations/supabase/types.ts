@@ -4598,6 +4598,118 @@ export type Database = {
         }
         Relationships: []
       }
+      tournament_matches: {
+        Row: {
+          battle_id: string | null
+          created_at: string
+          host_id: string | null
+          id: string
+          next_match_id: string | null
+          next_slot: number | null
+          opponent_id: string | null
+          round: number
+          slot: number
+          status: string
+          tournament_id: string
+          winner_id: string | null
+        }
+        Insert: {
+          battle_id?: string | null
+          created_at?: string
+          host_id?: string | null
+          id?: string
+          next_match_id?: string | null
+          next_slot?: number | null
+          opponent_id?: string | null
+          round: number
+          slot: number
+          status?: string
+          tournament_id: string
+          winner_id?: string | null
+        }
+        Update: {
+          battle_id?: string | null
+          created_at?: string
+          host_id?: string | null
+          id?: string
+          next_match_id?: string | null
+          next_slot?: number | null
+          opponent_id?: string | null
+          round?: number
+          slot?: number
+          status?: string
+          tournament_id?: string
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_matches_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "live_battles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_matches_next_match_id_fkey"
+            columns: ["next_match_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_matches_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournaments: {
+        Row: {
+          category_slug: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          current_round: number
+          duration_seconds: number
+          id: string
+          region: string | null
+          size: number
+          status: string
+          title: string
+          winner_id: string | null
+        }
+        Insert: {
+          category_slug?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          current_round?: number
+          duration_seconds?: number
+          id?: string
+          region?: string | null
+          size: number
+          status?: string
+          title: string
+          winner_id?: string | null
+        }
+        Update: {
+          category_slug?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          current_round?: number
+          duration_seconds?: number
+          id?: string
+          region?: string | null
+          size?: number
+          status?: string
+          title?: string
+          winner_id?: string | null
+        }
+        Relationships: []
+      }
       user_legal_acceptances: {
         Row: {
           accepted_at: string
@@ -5311,6 +5423,43 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_rematch: {
+        Args: { _battle_id: string }
+        Returns: {
+          category_slug: string | null
+          comments_locked: boolean
+          created_at: string
+          duration_seconds: number
+          ended_reason: string | null
+          ends_at: string | null
+          force_ended_by: string | null
+          go_live_at: string | null
+          host_id: string
+          host_ready: boolean
+          host_votes: number
+          id: string
+          is_hidden: boolean
+          keyword_filters: Json
+          lobby_opened_at: string | null
+          opponent_id: string
+          opponent_ready: boolean
+          opponent_votes: number
+          region: string | null
+          room_name: string
+          scheduled_start_at: string | null
+          slow_mode_seconds: number
+          started_at: string | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "live_battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_repost: {
         Args: {
           p_caption?: string
@@ -5318,6 +5467,36 @@ export type Database = {
           p_request_id?: string
         }
         Returns: Json
+      }
+      create_tournament: {
+        Args: {
+          _category_slug?: string
+          _duration_seconds?: number
+          _participants: string[]
+          _region?: string
+          _size: number
+          _title: string
+        }
+        Returns: {
+          category_slug: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          current_round: number
+          duration_seconds: number
+          id: string
+          region: string | null
+          size: number
+          status: string
+          title: string
+          winner_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournaments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       deactivate_my_account: { Args: never; Returns: undefined }
       decline_battle: { Args: { _battle_id: string }; Returns: undefined }
@@ -6146,6 +6325,43 @@ export type Database = {
       spin_daily_wheel: { Args: never; Returns: Json }
       start_battle_from_lobby: {
         Args: { _battle_id: string }
+        Returns: {
+          category_slug: string | null
+          comments_locked: boolean
+          created_at: string
+          duration_seconds: number
+          ended_reason: string | null
+          ends_at: string | null
+          force_ended_by: string | null
+          go_live_at: string | null
+          host_id: string
+          host_ready: boolean
+          host_votes: number
+          id: string
+          is_hidden: boolean
+          keyword_filters: Json
+          lobby_opened_at: string | null
+          opponent_id: string
+          opponent_ready: boolean
+          opponent_votes: number
+          region: string | null
+          room_name: string
+          scheduled_start_at: string | null
+          slow_mode_seconds: number
+          started_at: string | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "live_battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      start_tournament_match: {
+        Args: { _match_id: string }
         Returns: {
           category_slug: string | null
           comments_locked: boolean
