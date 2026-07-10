@@ -274,8 +274,13 @@ export default function LiveBattleComments({
     const stuck = el.scrollHeight - el.scrollTop - el.clientHeight < STICK_THRESHOLD_PX;
     stickToBottomRef.current = stuck;
     setIsStuck((prev) => (prev !== stuck ? stuck : prev));
-    if (stuck && unread !== 0) setUnread(0);
+    if (stuck && unread !== 0) {
+      setUnread(0);
+      firstUnreadIndexRef.current = null;
+      setFirstUnreadIndex(null);
+    }
   };
+
 
   // Auto-scroll to newest when we're already pinned to the bottom.
   useEffect(() => {
