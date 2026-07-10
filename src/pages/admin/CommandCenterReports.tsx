@@ -217,9 +217,9 @@ export default function CommandCenterReports() {
           <ul className="divide-y divide-border/40">
             {rows.map((r) => (
               <li key={r.id} className="py-2 space-y-1.5">
-                <button onClick={() => openDrawer(r)} className="w-full text-left">
+                <button onClick={() => openDrawer(r)} className="w-full text-left" data-testid="cc-report-row" data-report-status={r.status}>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <PillBadge tone={r.status === "open" ? "warn" : r.status === "resolved" ? "good" : "default"}>{r.status}</PillBadge>
+                    <PillBadge tone={r.status === "open" ? "warn" : r.status === "resolved" ? "good" : r.status === "escalated" ? "bad" : "default"}>{r.status}</PillBadge>
                     {r.reason_code ? <PillBadge>{r.reason_code}</PillBadge> : null}
                     {r.post_id ? <PillBadge>post</PillBadge> : null}
                     {r.comment_id ? <PillBadge>comment</PillBadge> : null}
@@ -228,8 +228,8 @@ export default function CommandCenterReports() {
                   </div>
                   <p className="text-xs mt-1 line-clamp-2">{r.reason}</p>
                 </button>
-                {r.status === "open" ? (
-                  <div className="flex flex-wrap gap-2">
+                {(r.status === "open" || r.status === "escalated") ? (
+                  <div className="flex flex-wrap gap-2" data-testid="cc-report-actions">
                     {(r.post_id || r.comment_id) && roles.canResolveReports && (
                       <Button size="sm" variant="destructive" className="h-7 text-[10px]" onClick={() => onRemoveContent(r)}>Remove content</Button>
                     )}
@@ -239,7 +239,10 @@ export default function CommandCenterReports() {
                     {r.reported_user_id && roles.canBan && (
                       <Button size="sm" variant="destructive" className="h-7 text-[10px]" onClick={() => onBanUser(r)}>Ban user</Button>
                     )}
-                    {roles.canResolveReports && <Button size="sm" className="h-7 text-[10px]" onClick={() => onResolve(r)}>Resolve</Button>}
+                    {roles.canResolveReports && <Button size="sm" className="h-7 text-[10px]" data-testid="cc-report-resolve" onClick={() => onResolve(r)}>Resolve</Button>}
+                    {r.status === "open" && roles.canResolveReports && (
+                      <Button size="sm" variant="secondary" className="h-7 text-[10px]" data-testid="cc-report-escalate" onClick={() => onEscalate(r)}>Escalate</Button>
+                    )}
                     {roles.canDismissReports && <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => onDismiss(r)}>Dismiss</Button>}
                     <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => openDrawer(r)}>Details</Button>
                   </div>
