@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { isFeatureEnabled } from "@/lib/featureFlags";
 import {
   Swords, Radio, ChevronRight, History, Plus, Trophy, Users, Sparkles, Flame,
-  Crown, Vote, Info, Zap, Timer, ArrowRight,
+  Crown, Vote, Info, Zap, Timer, ArrowRight, CalendarClock,
 } from "lucide-react";
 import LiveNowStrip from "@/components/battles/LiveNowStrip";
 import PendingInvitesList from "@/components/battles/PendingInvitesList";
@@ -22,6 +22,8 @@ import TopBattlersWidget from "@/components/battles/TopBattlersWidget";
 import CreateLiveBattleDialog from "@/components/battles/CreateLiveBattleDialog";
 import ChallengeDialog from "@/components/battles/ChallengeDialog";
 import BattleFilterBar from "@/components/battles/BattleFilterBar";
+import ScheduleBattleSheet from "@/components/battles/ScheduleBattleSheet";
+import UpcomingBattlesStrip from "@/components/battles/UpcomingBattlesStrip";
 import { Button } from "@/components/ui/button";
 
 interface Stats { wins: number; total: number; liveNow: number; invites: number }
@@ -34,6 +36,7 @@ export default function BattlesHub() {
   const { user } = useAuth();
   const [openLive, setOpenLive] = useState(false);
   const [openPost, setOpenPost] = useState(false);
+  const [openSchedule, setOpenSchedule] = useState(false);
   const [liveEnabled, setLiveEnabled] = useState<boolean | null>(null);
   const [stats, setStats] = useState<Stats>({ wins: 0, total: 0, liveNow: 0, invites: 0 });
 
