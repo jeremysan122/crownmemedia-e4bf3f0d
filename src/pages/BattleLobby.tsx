@@ -50,7 +50,7 @@ export default function BattleLobbyPage() {
 
         const { data: pRows } = await supabase
           .from("profiles")
-          .select("id, username, display_name")
+          .select("id, username")
           .in("id", [(data as any).host_id, (data as any).opponent_id]);
         if (!cancelled && pRows) {
           const map: Record<string, ProfileLite> = {};
