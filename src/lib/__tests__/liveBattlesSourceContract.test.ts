@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const rpcMock = vi.fn();
 const insertMock = vi.fn();
-const fromMock = vi.fn(() => ({ insert: insertMock }));
+const fromMock = vi.fn((_t: string) => ({ insert: insertMock }));
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
