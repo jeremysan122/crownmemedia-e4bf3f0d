@@ -15,7 +15,7 @@ const fromMock = vi.fn(() => ({ insert: insertMock }));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     auth: { getUser: () => Promise.resolve({ data: { user: { id: "u1" } } }) },
-    from: (t: string) => fromMock(t),
+    from: (_t: string) => fromMock(),
     rpc: (name: string, args?: unknown) => rpcMock(name, args),
     functions: { invoke: vi.fn() },
   },
