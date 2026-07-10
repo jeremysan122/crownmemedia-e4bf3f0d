@@ -803,7 +803,13 @@ export default function Messages() {
           </Button>
         </div>
       </div>
+      <ChallengeDialog
+        open={showChallenge}
+        onOpenChange={setShowChallenge}
+        presetOpponentId={otherId ?? null}
+      />
     </AppShell>
+
   );
 }
 
