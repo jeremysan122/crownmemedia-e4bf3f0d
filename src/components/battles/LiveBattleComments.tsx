@@ -325,6 +325,26 @@ export default function LiveBattleComments({
     });
   }, [rows.length, virtualizer, reducedMotion]);
 
+  // Persist unread + first-unread anchor id + scroll position to
+  // localStorage so a full page refresh restores the "N new" pill and
+  // the reader's exact place in history.
+  useEffect(() => {
+    if (!restoredRef.current || typeof window === "undefined") return;
+    try {
+      const anchorId =
+        firstUnreadIndex !== null && rows[firstUnreadIndex] ? rows[firstUnreadIndex].id : null;
+      const scrollTop = listRef.current?.scrollTop ?? 0;
+      if (unread === 0 && !anchorId) {
+        window.localStorage.removeItem(persistKey);
+      } else {
+        window.localStorage.setItem(
+          persistKey,
+          JSON.stringify({ unread, anchorId, scrollTop }),
+        );
+      }
+    } catch { /* quota / private mode — ignore */ }
+  }, [unread, firstUnreadIndex, rows, persistKey]);
+
   // Cooldown countdown for accessible feedback.
   useEffect(() => {
     if (cooldownUntil === 0) return;
