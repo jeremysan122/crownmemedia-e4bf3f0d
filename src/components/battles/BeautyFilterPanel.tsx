@@ -1,11 +1,15 @@
-// Wave 4 — Beauty filter for battlers.
+// Wave 4 — Self-view Filter (a.k.a. "Beauty Preview").
 //
-// v1 scope: brightness / contrast / smoothing (blur) applied as a CSS `filter`
-// to the local participant's video tile via a scoped <style> tag. This gives
-// the host on-camera confidence during a live battle without touching the
-// LiveKit publish pipeline. A future Wave 4.5 will pipe the same filter into
-// a `canvas.captureStream()` LocalVideoTrack so viewers see the treatment
-// too. Documented in .lovable/plan.md.
+// Scope in v1: brightness / contrast / smoothing (blur) applied as a CSS
+// `filter` to the host's OWN video tile via a scoped <style> tag. It never
+// touches the LiveKit publish pipeline, so viewers keep seeing the raw
+// camera feed. This is the honest v1 — it helps the host frame themselves
+// on-camera but is NOT a broadcast beauty filter.
+//
+// Wave 4.5 (tracked as a launch blocker before we advertise beauty filters
+// publicly) will pipe the treated frames through `canvas.captureStream()`
+// and republish the resulting `MediaStreamTrack` through
+// `LocalVideoTrack.replaceTrack(...)` so viewers see the same look.
 //
 // Settings persist in localStorage across battles so the host doesn't have
 // to re-dial after every match.
