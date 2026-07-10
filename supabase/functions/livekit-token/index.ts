@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}));
   const battleId = String(body?.battle_id ?? "");
+  const mode = body?.mode === "lobby" ? "lobby" : "battle";
   if (!battleId) return json({ error: "Missing battle." }, 400);
 
   // Rate limit per user: 30 mints / minute (covers reconnects).
@@ -63,39 +64,52 @@ Deno.serve(async (req) => {
   if (battle.status === "ended" || battle.status === "cancelled" || battle.status === "declined") {
     return json({ error: "This battle has ended." }, 410);
   }
-  if (battle.status === "scheduled") {
-    return json({ error: "This battle hasn't started yet." }, 409);
-  }
 
   const isHost = uid === battle.host_id;
   const isOpponent = uid === battle.opponent_id;
 
-  // Blocked-user gate for viewers.
-  if (!isHost && !isOpponent) {
-    const { data: blk } = await admin
-      .from("blocks")
-      .select("id")
-      .or(`and(blocker_id.eq.${battle.host_id},blocked_id.eq.${uid}),and(blocker_id.eq.${battle.opponent_id},blocked_id.eq.${uid})`)
-      .limit(1)
-      .maybeSingle();
-    if (blk) return json({ error: "You can't join this battle." }, 403);
-  }
+  if (mode === "lobby") {
+    // Lobby is participants-only, pre-live only. Used for AV pre-check
+    // without triggering the auto-start behavior below.
+    if (!isHost && !isOpponent) {
+      return json({ error: "Only battlers can enter the lobby." }, 403);
+    }
+    if (battle.status !== "pending" && battle.status !== "scheduled") {
+      return json({ error: "The lobby is closed — battle is already live or ended." }, 409);
+    }
+  } else {
+    if (battle.status === "scheduled") {
+      return json({ error: "This battle hasn't started yet." }, 409);
+    }
+    // Blocked-user gate for viewers on the main room only.
+    if (!isHost && !isOpponent) {
+      const { data: blk } = await admin
+        .from("blocks")
+        .select("id")
+        .or(`and(blocker_id.eq.${battle.host_id},blocked_id.eq.${uid}),and(blocker_id.eq.${battle.opponent_id},blocked_id.eq.${uid})`)
+        .limit(1)
+        .maybeSingle();
+      if (blk) return json({ error: "You can't join this battle." }, 403);
+    }
 
-  // Start the battle when the opponent joins a pending challenge.
-  if (isOpponent && battle.status === "pending") {
-    // Use the user's client so `auth.uid()` is set correctly inside the RPC.
-    await userClient.rpc("live_battle_start", { _battle_id: battle.id });
+    // Start the battle when the opponent joins a pending challenge.
+    if (isOpponent && battle.status === "pending") {
+      // Use the user's client so `auth.uid()` is set correctly inside the RPC.
+      await userClient.rpc("live_battle_start", { _battle_id: battle.id });
+    }
   }
 
   const identity = uid;
+  const roomName = mode === "lobby" ? `${battle.room_name}__lobby` : battle.room_name;
   const at = new AccessToken(lkKey, lkSecret, { identity, ttl: TOKEN_TTL_SECONDS });
   at.addGrant({
-    room: battle.room_name,
+    room: roomName,
     roomJoin: true,
     canPublish: isHost || isOpponent,
     canSubscribe: true,
     canPublishData: isHost || isOpponent,
   });
+
 
   const token = await at.toJwt();
 
