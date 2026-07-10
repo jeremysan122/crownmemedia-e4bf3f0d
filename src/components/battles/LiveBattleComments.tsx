@@ -140,10 +140,14 @@ export default function LiveBattleComments({
   }, [user]);
 
   // Scroll to the newest message. Reduced-motion honors the user's OS setting.
+  // When there are unread messages, we also move keyboard focus to the FIRST
+  // unread row so keyboard/screen-reader users land at the right place instead
+  // of the very bottom.
   const scrollToBottom = useCallback((smooth = true) => {
     const el = listRef.current;
     if (!el) return;
     const behavior: ScrollBehavior = smooth && !reducedMotion ? "smooth" : "auto";
+    const focusIdx = firstUnreadIndexRef.current;
     if (rows.length > 0) {
       virtualizer.scrollToIndex(rows.length - 1, { align: "end", behavior });
     } else {
@@ -152,7 +156,26 @@ export default function LiveBattleComments({
     stickToBottomRef.current = true;
     setIsStuck(true);
     setUnread(0);
+    // Focus the first-new row after the scroll settles + virtualizer measures.
+    if (focusIdx !== null && focusIdx >= 0 && focusIdx < rows.length) {
+      focusPendingRef.current = true;
+      const attempt = (retriesLeft: number) => {
+        const target = listRef.current?.querySelector<HTMLElement>(
+          `[data-index="${focusIdx}"] [data-testid="live-battle-comment"]`,
+        );
+        if (target) {
+          target.focus({ preventScroll: true });
+          focusPendingRef.current = false;
+          return;
+        }
+        if (retriesLeft > 0) requestAnimationFrame(() => attempt(retriesLeft - 1));
+      };
+      requestAnimationFrame(() => attempt(6));
+    }
+    firstUnreadIndexRef.current = null;
+    setFirstUnreadIndex(null);
   }, [rows.length, virtualizer, reducedMotion]);
+
 
 
   // Initial load + realtime subscription (comments + typing broadcast).
