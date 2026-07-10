@@ -18,7 +18,7 @@ type ReportRow = {
   comment_id: string | null;
   reason: string;
   reason_code: string | null;
-  status: "open" | "resolved" | "dismissed" | string;
+  status: "open" | "resolved" | "dismissed" | "escalated" | string;
   created_at: string;
   resolution: string | null;
   resolved_by?: string | null;
