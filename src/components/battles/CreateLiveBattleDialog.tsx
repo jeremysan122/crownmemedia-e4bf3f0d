@@ -1,7 +1,7 @@
 // Create Live Battle dialog — pick opponent, category, region, duration.
 // Server RPC clamps duration, validates category, checks blocks & feature flag.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -48,6 +48,17 @@ export default function CreateLiveBattleDialog({
   const [duration, setDuration] = useState(300);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const retryRef = useRef<HTMLButtonElement | null>(null);
+
+  // Move focus to the retry button after a failed acceptance RPC so
+  // screen-reader users are placed on the actionable recovery control.
+  useEffect(() => {
+    if (submitError && !submitting) {
+      // Wait a tick for the button to render before focusing.
+      const t = setTimeout(() => retryRef.current?.focus(), 0);
+      return () => clearTimeout(t);
+    }
+  }, [submitError, submitting]);
 
   useEffect(() => {
     if (!open) {
