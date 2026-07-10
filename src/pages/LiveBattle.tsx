@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { isFeatureEnabled } from "@/lib/featureFlags";
 import {
-  LiveBattleRow, liveBattleErrorMessage, mintLiveBattleToken,
+  LiveBattleRow, LiveBattleReportRow, liveBattleErrorMessage, mintLiveBattleToken,
   reportLiveBattle, roomControl, voteInLiveBattle,
 } from "@/lib/liveBattles";
 import { Button } from "@/components/ui/button";
