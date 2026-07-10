@@ -31,9 +31,9 @@ type CommentLite = { id: string; body: string; is_removed: boolean | null; creat
 type AuditLite = { id: string; action: string; actor_email: string | null; created_at: string; details: any };
 
 export default function CommandCenterReports() {
-  const [filter, setFilter] = useState<"open" | "resolved" | "dismissed" | "all">("open");
+  const [filter, setFilter] = useState<"open" | "resolved" | "dismissed" | "escalated" | "all">("open");
   const [rows, setRows] = useState<ReportRow[]>([]);
-  const [counts, setCounts] = useState({ open: 0, resolved: 0, dismissed: 0 });
+  const [counts, setCounts] = useState({ open: 0, resolved: 0, dismissed: 0, escalated: 0 });
   const [selected, setSelected] = useState<ReportRow | null>(null);
   const [reporter, setReporter] = useState<ProfileLite | null>(null);
   const [reported, setReported] = useState<ProfileLite | null>(null);
@@ -45,6 +45,7 @@ export default function CommandCenterReports() {
   type PendingAction =
     | { kind: "resolve"; report: ReportRow }
     | { kind: "dismiss"; report: ReportRow }
+    | { kind: "escalate"; report: ReportRow }
     | { kind: "remove"; report: ReportRow }
     | { kind: "suspend"; report: ReportRow }
     | { kind: "ban"; report: ReportRow };
