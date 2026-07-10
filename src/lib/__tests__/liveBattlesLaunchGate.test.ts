@@ -85,8 +85,9 @@ describe("Client bundle secrecy", () => {
     return out;
   };
   it("LIVEKIT_API_SECRET / LIVEKIT_SECRET never appear in client sources", () => {
-    const files = walk("src");
+    const files = walk("src").filter((f) => !f.includes("__tests__") && !f.includes(".test."));
     const hits = files.filter((f) => /LIVEKIT_API_SECRET|LIVEKIT_SECRET/.test(readFileSync(f, "utf8")));
     expect(hits).toEqual([]);
+
   });
 });
