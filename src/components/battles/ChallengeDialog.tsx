@@ -27,6 +27,9 @@ interface PostThumb { id: string; image_url: string; category: CrownCategory; fi
 
 export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, onCreated }: Props) {
   const { user } = useAuth();
+  const nav = useNavigate();
+  const [mode, setMode] = useState<"post" | "live">("post");
+  const [liveEnabled, setLiveEnabled] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
@@ -34,15 +37,22 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
   const [myPosts, setMyPosts] = useState<PostThumb[]>([]);
   const [postId, setPostId] = useState<string>("");
   const [duration, setDuration] = useState<string>("24");
+  const [liveDuration, setLiveDuration] = useState<string>("300"); // seconds
   const [category, setCategory] = useState<CrownCategory>("overall");
   const [submitting, setSubmitting] = useState(false);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [searching, setSearching] = useState(false);
 
+  // Load live-battles feature flag once.
+  useEffect(() => {
+    isFeatureEnabled("live_battles_enabled").then(setLiveEnabled).catch(() => setLiveEnabled(false));
+  }, []);
+
   useEffect(() => {
     if (!open) {
       setStep(1); setSearch(""); setResults([]); setOpponent(null);
-      setPostId(""); setDuration("24"); setCategory("overall");
+      setPostId(""); setDuration("24"); setLiveDuration("300");
+      setCategory("overall"); setMode("post");
       return;
     }
     if (user) {
