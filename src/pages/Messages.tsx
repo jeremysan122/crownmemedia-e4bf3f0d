@@ -9,7 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, Check, CheckCheck, Clock, Paperclip, X, Search, BellOff, Bell, RotateCw, Loader2, Trash2, MailOpen, Mail, CheckSquare, Pin, PinOff, MoreVertical, Flag, Ban, RefreshCw } from "lucide-react";
+import { Send, Check, CheckCheck, Clock, Paperclip, X, Search, BellOff, Bell, RotateCw, Loader2, Trash2, MailOpen, Mail, CheckSquare, Pin, PinOff, MoreVertical, Flag, Ban, RefreshCw, Swords } from "lucide-react";
+import ChallengeDialog from "@/components/battles/ChallengeDialog";
+
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -154,6 +156,8 @@ export default function Messages() {
   const [search, setSearch] = useState("");
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [showChallenge, setShowChallenge] = useState(false);
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -767,6 +771,21 @@ export default function Messages() {
           >
             <Paperclip size={16} />
           </Button>
+          {otherId && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-9 px-2 text-primary hover:text-primary hover:bg-primary/10"
+              onClick={() => setShowChallenge(true)}
+              aria-label="Challenge to a battle"
+              data-testid="dm-battle-button"
+              title="Battle this royal"
+            >
+              <Swords size={16} />
+            </Button>
+          )}
+
           <Input
             value={text}
             onChange={(e) => { setText(e.target.value); pingTyping(); }}
@@ -784,7 +803,13 @@ export default function Messages() {
           </Button>
         </div>
       </div>
+      <ChallengeDialog
+        open={showChallenge}
+        onOpenChange={setShowChallenge}
+        presetOpponentId={otherId ?? null}
+      />
     </AppShell>
+
   );
 }
 
