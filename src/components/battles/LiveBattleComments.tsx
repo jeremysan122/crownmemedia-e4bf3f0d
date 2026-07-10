@@ -814,8 +814,13 @@ export default function LiveBattleComments({
               setText(e.target.value.slice(0, MAX));
               if (e.target.value.trim().length > 0) broadcastTyping();
             }}
-            placeholder={isLive ? "Say something…" : "Chat is closed"}
-            disabled={!isLive || sending || !user}
+            placeholder={
+              !isLive ? "Chat is closed"
+              : commentsLocked && !isModerator ? "Chat locked by host"
+              : slowModeSeconds > 0 ? `Slow mode: ${slowModeSeconds}s`
+              : "Say something…"
+            }
+            disabled={!isLive || sending || !user || (commentsLocked && !isModerator)}
             maxLength={MAX}
             data-testid="live-battle-comment-input"
             aria-label="Live battle chat message"
