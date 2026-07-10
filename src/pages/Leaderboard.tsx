@@ -192,13 +192,32 @@ export default function Leaderboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope, region, category]);
 
-  // Realtime refresh trigger for MyRankCard — bumps on vote/post/battle changes
+  // Realtime refresh trigger for MyRankCard — bumps on vote/post/battle changes.
+  // Also patches visible `rows` in place when a post's crown_score / votes change
+  // so the leaderboard reflects new weighted scores without a page reload.
   const [refreshKey, setRefreshKey] = useState(0);
   useEffect(() => {
+    const patchPost = (payload: { new: Record<string, unknown> }) => {
+      const next = payload.new as { id?: string; crown_score?: number; battle_votes?: number };
+      if (!next?.id) return;
+      setRows((prev) => {
+        const idx = prev.findIndex((r) => r.id === next.id);
+        if (idx === -1) return prev;
+        const merged = { ...prev[idx], ...next } as (typeof prev)[number];
+        const arr = [...prev];
+        arr[idx] = merged;
+        arr.sort((a, b) => (b.crown_score ?? 0) - (a.crown_score ?? 0));
+        return arr;
+      });
+    };
     const ch = supabase
       .channel(`leaderboard-myrank-${crypto.randomUUID()}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "votes" }, () => setRefreshKey((k) => k + 1))
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "posts" }, () => setRefreshKey((k) => k + 1))
+      .on("postgres_changes", { event: "*", schema: "public", table: "battle_votes" }, () => setRefreshKey((k) => k + 1))
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "posts" }, (payload) => {
+        patchPost(payload as { new: Record<string, unknown> });
+        setRefreshKey((k) => k + 1);
+      })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "battles" }, () => setRefreshKey((k) => k + 1))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
