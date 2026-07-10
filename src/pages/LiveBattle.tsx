@@ -439,24 +439,58 @@ export default function LiveBattlePage() {
         </div>
 
         {battle.status === "live" && !isParticipant && (
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <Button
-              disabled={voting}
-              onClick={() => handleVote("host")}
-              variant={voted === "host" ? "default" : "outline"}
-              data-testid="live-vote-host"
-            >
-              {voting && voted === "host" ? "Voting…" : "Vote Host"}
-            </Button>
-            <Button
-              disabled={voting}
-              onClick={() => handleVote("opponent")}
-              variant={voted === "opponent" ? "default" : "outline"}
-              data-testid="live-vote-opponent"
-            >
-              {voting && voted === "opponent" ? "Voting…" : "Vote Opponent"}
-            </Button>
-          </div>
+          <>
+            {/* Optimistic-vote feedback strip: pending → confirmed → failed */}
+            <div className="mt-2 h-5 flex items-center justify-center text-[11px] font-bold tracking-wider">
+              {pendingChoice ? (
+                <span
+                  data-testid="vote-pending"
+                  aria-live="polite"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 text-amber-500 px-2 py-0.5 animate-pulse"
+                >
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Counting your vote…
+                </span>
+              ) : voteConfirmedAt && Date.now() - voteConfirmedAt < 1400 ? (
+                <span
+                  data-testid="vote-confirmed"
+                  aria-live="polite"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-500 px-2 py-0.5"
+                >
+                  ✓ Vote confirmed
+                </span>
+              ) : voteFailedAt && Date.now() - voteFailedAt < 4000 ? (
+                <span
+                  data-testid="vote-failed"
+                  aria-live="assertive"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 text-red-500 px-2 py-0.5"
+                >
+                  Vote didn't stick — try again
+                </span>
+              ) : null}
+            </div>
+
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              <Button
+                disabled={voting}
+                aria-busy={pendingChoice === "host"}
+                onClick={() => handleVote("host")}
+                variant={voted === "host" ? "default" : "outline"}
+                data-testid="live-vote-host"
+              >
+                {pendingChoice === "host" ? "Counting…" : "Vote Host"}
+              </Button>
+              <Button
+                disabled={voting}
+                aria-busy={pendingChoice === "opponent"}
+                onClick={() => handleVote("opponent")}
+                variant={voted === "opponent" ? "default" : "outline"}
+                data-testid="live-vote-opponent"
+              >
+                {pendingChoice === "opponent" ? "Counting…" : "Vote Opponent"}
+              </Button>
+            </div>
+          </>
         )}
 
 
