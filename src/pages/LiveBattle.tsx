@@ -49,6 +49,7 @@ export default function LiveBattlePage() {
   const [reportReason, setReportReason] = useState("");
   const [reportBusy, setReportBusy] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
+  const [reportCooldown, setReportCooldown] = useState<{ kind: "duplicate" | "rate_limited"; until: number } | null>(null);
   const [myReport, setMyReport] = useState<LiveBattleReportRow | null>(null);
   const [modBusy, setModBusy] = useState(false);
   const [showModPanel, setShowModPanel] = useState(false);
