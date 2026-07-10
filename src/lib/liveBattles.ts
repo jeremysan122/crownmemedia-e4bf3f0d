@@ -21,6 +21,11 @@ export interface LiveBattleRow {
   category_slug?: string | null;
   region?: string | null;
   scheduled_start_at?: string | null;
+  host_ready?: boolean;
+  opponent_ready?: boolean;
+  lobby_opened_at?: string | null;
+  go_live_at?: string | null;
+
 }
 
 /** Extract cooldown seconds from `duplicate_report:NN` / `rate_limited:NN`. */
