@@ -80,10 +80,16 @@ export default function LiveBattleComments({
   battleId,
   isLive,
   overlay = false,
+  keywordFilters = [],
+  commentsLocked = false,
+  slowModeSeconds = 0,
 }: {
   battleId: string;
   isLive: boolean;
   overlay?: boolean;
+  keywordFilters?: string[];
+  commentsLocked?: boolean;
+  slowModeSeconds?: number;
 }) {
   const { user, isModerator } = useAuth();
   const reducedMotion = usePrefersReducedMotion();
