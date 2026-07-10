@@ -348,6 +348,46 @@ export default function CommandCenterReports() {
                 ) : null}
 
                 <section className="space-y-1">
+                {(() => {
+                  const escalations = history.filter((h) => h.action === "report_escalated");
+                  if (escalations.length === 0 && selected.status !== "escalated") return null;
+                  return (
+                    <section className="space-y-1" data-testid="cc-report-escalation-trail">
+                      <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                        Escalation trail
+                        <PillBadge tone="bad">{escalations.length || 1}</PillBadge>
+                      </h3>
+                      {escalations.length === 0 ? (
+                        <p className="text-muted-foreground text-[11px]">
+                          Marked escalated but no audit entry recorded yet.
+                        </p>
+                      ) : (
+                        <ul className="divide-y divide-border/40 rounded border border-border/60 bg-muted/20">
+                          {escalations.map((h) => {
+                            const details = (h.details ?? {}) as { reason?: string };
+                            return (
+                              <li key={h.id} className="p-2 space-y-1" data-testid="cc-escalation-entry">
+                                <div className="flex items-center gap-2 text-[11px]">
+                                  <span className="font-medium">Escalated by</span>
+                                  <span className="font-mono">{h.actor_email ?? "system"}</span>
+                                  <span className="text-[10px] text-muted-foreground ml-auto">
+                                    {new Date(h.created_at).toLocaleString()}
+                                  </span>
+                                </div>
+                                <div className="text-[11px]">
+                                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">Reason:</span>
+                                  <span className="italic">{details.reason ?? "—"}</span>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </section>
+                  );
+                })()}
+
+                <section className="space-y-1">
                   <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">Action history ({history.length})</h3>
                   {history.length === 0 ? <p className="text-muted-foreground">No prior actions on this report.</p> : (
                     <ul className="divide-y divide-border/40">
