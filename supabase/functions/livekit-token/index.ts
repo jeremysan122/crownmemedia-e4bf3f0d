@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     },
   });
 
-  return json({ token, url: lkUrl, room: battle.room_name, ttl: TOKEN_TTL_SECONDS });
+  return json({ token, url: lkUrl, room: roomName, ttl: TOKEN_TTL_SECONDS });
 });
 
 function json(obj: unknown, status = 200) {

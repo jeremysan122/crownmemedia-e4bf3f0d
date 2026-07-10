@@ -1,18 +1,18 @@
 // Wave 2 — Pre-battle Lobby page.
 // Route: /battles/:battleId/lobby
-// - AV pre-check (camera / mic / network).
+// - Participants join a real LiveKit `${room_name}__lobby` for AV pre-check.
 // - Ready-state panel (host + opponent).
-// - Synchronized 3-2-1 countdown once the host starts.
-// - Auto-navigates to /live/:battleId when status flips to 'live'.
+// - Synchronized 5-4-3-2-1 countdown once the host presses "Go live".
+// - Auto-navigates to /live/:battleId ONLY when the countdown reaches zero.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useServerTimeOffset } from "@/lib/serverTime";
 import { LiveBattleRow, lobbyErrorMessage } from "@/lib/liveBattles";
 import { mergeLiveBattleUpdate } from "@/lib/liveBattleRealtime";
-import AVPreCheck from "@/components/battles/AVPreCheck";
+import LobbyRoom from "@/components/battles/LobbyRoom";
 import LobbyReadyPanel from "@/components/battles/LobbyReadyPanel";
 import LobbyCountdown from "@/components/battles/LobbyCountdown";
 import { Button } from "@/components/ui/button";
@@ -30,8 +30,8 @@ export default function BattleLobbyPage() {
   const [profiles, setProfiles] = useState<Record<string, ProfileLite>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigatedRef = useRef(false);
 
-  // Initial fetch + realtime subscription.
   useEffect(() => {
     if (!battleId) return;
     let cancelled = false;
@@ -81,17 +81,27 @@ export default function BattleLobbyPage() {
     };
   }, [battleId]);
 
-  // Auto-navigate once the battle goes live.
+  const goLive = useCallback(() => {
+    if (navigatedRef.current || !battle) return;
+    navigatedRef.current = true;
+    nav(`/live/${battle.id}`, { replace: true });
+  }, [battle, nav]);
+
+  // Terminal states — bounce to summary.
   useEffect(() => {
-    if (battle?.status === "live") {
-      // Small delay so the "Live now!" announcement is spoken first.
-      const t = setTimeout(() => nav(`/live/${battle.id}`, { replace: true }), 400);
-      return () => clearTimeout(t);
-    }
     if (battle?.status && ["ended", "cancelled", "declined"].includes(battle.status)) {
       nav(`/battles/${battle.id}`, { replace: true });
     }
   }, [battle?.status, battle?.id, nav]);
+
+  // Fallback: if the battle is already live AND go_live_at has already passed
+  // (host started before we mounted, or go_live_at is null), navigate now.
+  useEffect(() => {
+    if (!battle || battle.status !== "live") return;
+    const target = battle.go_live_at ? new Date(battle.go_live_at).getTime() : 0;
+    const now = Date.now() + serverOffsetMs;
+    if (!battle.go_live_at || target <= now) goLive();
+  }, [battle, serverOffsetMs, goLive]);
 
   if (loading) {
     return (
@@ -113,8 +123,11 @@ export default function BattleLobbyPage() {
 
   const hostName = profiles[battle.host_id]?.username || "Host";
   const opponentName = profiles[battle.opponent_id]?.username || "Opponent";
-
   const isParticipant = user?.id === battle.host_id || user?.id === battle.opponent_id;
+  const countingDown =
+    battle.status === "live" &&
+    !!battle.go_live_at &&
+    new Date(battle.go_live_at).getTime() > Date.now() + serverOffsetMs;
 
   return (
     <main className="min-h-dvh px-4 py-6 max-w-3xl mx-auto space-y-6">
@@ -131,25 +144,31 @@ export default function BattleLobbyPage() {
       </p>
 
       {isParticipant ? (
-        <AVPreCheck />
+        <LobbyRoom battleId={battle.id} />
       ) : (
         <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground text-center">
-          You're watching the lobby. AV pre-check is only for the battlers.
+          The lobby is participants-only. You'll join when the battle goes live.
         </div>
       )}
 
-      <LobbyReadyPanel
-        battle={battle}
-        currentUserId={user?.id ?? ""}
-        hostName={hostName}
-        opponentName={opponentName}
-      />
-
-      <LobbyCountdown
-        goLiveAt={battle.go_live_at ?? null}
-        serverOffsetMs={serverOffsetMs}
-        onLive={() => nav(`/live/${battle.id}`, { replace: true })}
-      />
+      {countingDown ? (
+        <div className="rounded-2xl border border-primary/40 bg-primary/5 p-4 space-y-2 text-center">
+          <p className="font-display text-base">Battle is starting…</p>
+          <LobbyCountdown
+            goLiveAt={battle.go_live_at ?? null}
+            serverOffsetMs={serverOffsetMs}
+            onLive={goLive}
+          />
+          <p className="text-xs text-muted-foreground">Voting opens when the countdown ends.</p>
+        </div>
+      ) : (
+        <LobbyReadyPanel
+          battle={battle}
+          currentUserId={user?.id ?? ""}
+          hostName={hostName}
+          opponentName={opponentName}
+        />
+      )}
     </main>
   );
 }
