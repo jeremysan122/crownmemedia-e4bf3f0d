@@ -18,7 +18,7 @@ import LobbyCountdown from "@/components/battles/LobbyCountdown";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
-interface ProfileLite { id: string; username: string | null; display_name: string | null; }
+interface ProfileLite { id: string; username: string | null; }
 
 export default function BattleLobbyPage() {
   const { battleId = "" } = useParams<{ battleId: string }>();
