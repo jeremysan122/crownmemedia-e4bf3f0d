@@ -466,12 +466,15 @@ export default function LiveBattleComments({
                     }}
                   >
                     <div
-                      className={`flex items-start gap-2 group animate-in fade-in slide-in-from-bottom-1 duration-200 ${
-                        isHidden ? "opacity-50" : ""
-                      } ${overlay ? "rounded-full bg-black/40 backdrop-blur-sm pl-1 pr-3 py-1 w-fit max-w-[85%] [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]" : ""}`}
+                      className={`flex items-start gap-2 group ${
+                        reducedMotion ? "" : "animate-in fade-in slide-in-from-bottom-1 duration-200"
+                      } ${isHidden ? "opacity-50" : ""} ${
+                        overlay ? "rounded-full bg-black/40 backdrop-blur-sm pl-1 pr-3 py-1 w-fit max-w-[85%] [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]" : ""
+                      }`}
                       data-testid="live-battle-comment"
                       data-hidden={isHidden ? "true" : "false"}
                     >
+
                       {r.profile_photo_url ? (
                         <img src={r.profile_photo_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
                       ) : (
