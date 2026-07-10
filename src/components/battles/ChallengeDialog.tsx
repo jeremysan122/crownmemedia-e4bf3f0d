@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,11 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { Search, Swords, Loader2 } from "lucide-react";
+import { Search, Swords, Loader2, Radio } from "lucide-react";
 import { CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
 import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
 import { RoyalThumbSkeleton } from "@/components/royal/RoyalSkeleton";
 import { battleErrorMessage } from "@/lib/battlesErrors";
+import { isFeatureEnabled } from "@/lib/featureFlags";
+import { createLiveBattle, liveBattleErrorMessage } from "@/lib/liveBattles";
 
 interface Props {
   open: boolean;
