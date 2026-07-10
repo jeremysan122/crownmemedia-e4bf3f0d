@@ -1986,6 +1986,38 @@ export type Database = {
         }
         Relationships: []
       }
+      live_battle_comments: {
+        Row: {
+          battle_id: string
+          body: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          battle_id: string
+          body: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          battle_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_battle_comments_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "live_battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_battle_gifts: {
         Row: {
           battle_id: string
