@@ -34,17 +34,13 @@ export function liveBattleErrorMessage(err: unknown, fallback: string): string {
 }
 
 export async function createLiveBattle(opponentId: string, durationSeconds = 300): Promise<LiveBattleRow> {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
-  if (!uid) throw new Error("Please sign in.");
-  const room = `lb_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
-  const { data, error } = await supabase
-    .from("live_battles")
-    .insert({ host_id: uid, opponent_id: opponentId, room_name: room, duration_seconds: durationSeconds })
-    .select("*")
-    .single();
+  // Server-side RPC: mints room_name, clamps duration, checks feature flag,
+  // rate limit, blocks, self. Direct INSERT on live_battles is revoked.
+  const { data, error } = await supabase.rpc("create_live_battle", {
+    _opponent_id: opponentId, _duration_seconds: durationSeconds,
+  });
   if (error) throw error;
-  return data as LiveBattleRow;
+  return data as unknown as LiveBattleRow;
 }
 
 export async function mintLiveBattleToken(battleId: string): Promise<{ token: string; url: string; room: string }> {
@@ -59,11 +55,9 @@ export async function voteInLiveBattle(battleId: string, choice: "host" | "oppon
 }
 
 export async function reportLiveBattle(battleId: string, reason: string) {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
-  if (!uid) throw new Error("Please sign in.");
-  const { error } = await supabase.from("live_battle_reports").insert({
-    battle_id: battleId, reporter_id: uid, reason: reason.slice(0, 500),
+  // Server-side RPC enforces rate limit + validation. Direct INSERT revoked.
+  const { error } = await supabase.rpc("live_battle_report", {
+    _battle_id: battleId, _reason: reason.slice(0, 500),
   });
   if (error) throw error;
 }
