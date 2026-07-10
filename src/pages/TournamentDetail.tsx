@@ -77,6 +77,12 @@ export default function TournamentDetail() {
       || user.id === m.opponent_id;
   }, [user, tournament]);
 
+  const canResolveMatch = useCallback((_m: TournamentMatchRow) => {
+    if (!user || !tournament) return false;
+    // Creator can resolve. Admin/mod checks happen server-side; the RPC will reject others.
+    return user.id === tournament.created_by;
+  }, [user, tournament]);
+
   const profilesMap = useMemo(() => {
     const out: Record<string, { username: string | null; display_name: string | null }> = {};
     Object.values(profiles).forEach((p) => {
@@ -118,6 +124,8 @@ export default function TournamentDetail() {
               matches={matches}
               profilesByUserId={profilesMap}
               canStartMatch={canStartMatch}
+              canResolveMatch={canResolveMatch}
+              onMatchChanged={load}
             />
           </>
         )}

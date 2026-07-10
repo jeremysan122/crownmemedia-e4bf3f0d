@@ -7,7 +7,8 @@ import type { LiveBattleRow } from "@/lib/liveBattles";
 
 export type TournamentSize = 4 | 8 | 16;
 export type TournamentStatus = "active" | "completed" | "cancelled";
-export type TournamentMatchStatus = "pending" | "ready" | "live" | "completed";
+export type TournamentMatchStatus =
+  | "pending" | "ready" | "live" | "completed" | "needs_resolution";
 
 export interface TournamentRow {
   id: string;
@@ -77,6 +78,8 @@ export function tournamentErrorMessage(err: unknown): string {
   if (raw.includes("match_not_ready")) return "That match isn't ready yet — waiting on the previous round.";
   if (raw.includes("match_already_started")) return "That match already started.";
   if (raw.includes("match_missing_participants")) return "Both participants must be set before the match can start.";
+  if (raw.includes("match_not_resolvable")) return "That match doesn't need resolution.";
+  if (raw.includes("invalid_winner")) return "Winner must be one of the two participants.";
   if (raw.includes("not_authorized")) return "You can't do that.";
   if (raw.includes("not_authenticated")) return "Please sign in to continue.";
   if (raw.includes("feature_disabled")) return "Tournaments aren't available right now.";
@@ -110,6 +113,18 @@ export async function startTournamentMatch(matchId: string): Promise<LiveBattleR
   } as never);
   if (error) throw error;
   return data as unknown as LiveBattleRow;
+}
+
+export async function resolveTournamentMatch(
+  matchId: string,
+  winnerId: string,
+): Promise<TournamentMatchRow> {
+  const { data, error } = await supabase.rpc("resolve_tournament_match" as never, {
+    _match_id: matchId,
+    _winner_id: winnerId,
+  } as never);
+  if (error) throw error;
+  return data as unknown as TournamentMatchRow;
 }
 
 export async function fetchTournament(id: string): Promise<{

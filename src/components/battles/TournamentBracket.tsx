@@ -8,7 +8,7 @@ import { Play, Crown, Loader2 } from "lucide-react";
 import {
   type TournamentMatchRow, type TournamentRow,
   groupMatchesByRound, roundLabel, totalRoundsForSize,
-  startTournamentMatch, tournamentErrorMessage,
+  startTournamentMatch, resolveTournamentMatch, tournamentErrorMessage,
 } from "@/lib/tournaments";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -20,6 +20,8 @@ interface Props {
   matches: TournamentMatchRow[];
   profilesByUserId: Record<string, { username: string | null; display_name: string | null }>;
   canStartMatch: (m: TournamentMatchRow) => boolean;
+  canResolveMatch?: (m: TournamentMatchRow) => boolean;
+  onMatchChanged?: () => void;
 }
 
 function displayFor(
@@ -31,11 +33,12 @@ function displayFor(
   return p?.display_name || p?.username || "Battler";
 }
 
-export default function TournamentBracket({ tournament, matches, profilesByUserId, canStartMatch }: Props) {
+export default function TournamentBracket({ tournament, matches, profilesByUserId, canStartMatch, canResolveMatch, onMatchChanged }: Props) {
   const rounds = groupMatchesByRound(matches);
   const total = totalRoundsForSize(tournament.size);
   const nav = useNavigate();
   const [starting, setStarting] = useState<string | null>(null);
+  const [resolving, setResolving] = useState<string | null>(null);
 
   const onStart = async (matchId: string) => {
     setStarting(matchId);
@@ -47,6 +50,19 @@ export default function TournamentBracket({ tournament, matches, profilesByUserI
       toast({ title: tournamentErrorMessage(e), variant: "destructive" });
     } finally {
       setStarting(null);
+    }
+  };
+
+  const onResolve = async (matchId: string, winnerId: string) => {
+    setResolving(matchId);
+    try {
+      await resolveTournamentMatch(matchId, winnerId);
+      toast({ title: "Match resolved" });
+      onMatchChanged?.();
+    } catch (e) {
+      toast({ title: tournamentErrorMessage(e), variant: "destructive" });
+    } finally {
+      setResolving(null);
     }
   };
 
@@ -110,6 +126,42 @@ export default function TournamentBracket({ tournament, matches, profilesByUserI
                       </Button>
                     )}
                   </div>
+                  {m.status === "needs_resolution" && canResolveMatch?.(m) && m.host_id && m.opponent_id && (
+                    <div className="pt-1.5 border-t border-border/60 space-y-1">
+                      <div className="text-[10px] text-muted-foreground">Pick winner:</div>
+                      <div className="flex gap-1">
+                        <Button
+                          type="button" size="sm" variant="outline"
+                          className="h-6 px-2 text-[11px] flex-1"
+                          disabled={resolving === m.id}
+                          onClick={() => onResolve(m.id, m.host_id!)}
+                        >
+                          {displayFor(m.host_id, profilesByUserId)}
+                        </Button>
+                        <Button
+                          type="button" size="sm" variant="outline"
+                          className="h-6 px-2 text-[11px] flex-1"
+                          disabled={resolving === m.id}
+                          onClick={() => onResolve(m.id, m.opponent_id!)}
+                        >
+                          {displayFor(m.opponent_id, profilesByUserId)}
+                        </Button>
+                      </div>
+                      {canStart && (
+                        <Button
+                          type="button" size="sm" variant="ghost"
+                          className="h-6 px-2 text-[11px] w-full"
+                          disabled={starting === m.id}
+                          onClick={() => onStart(m.id)}
+                        >
+                          {starting === m.id
+                            ? <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            : <Play className="w-3 h-3 mr-1" />}
+                          Rerun match
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -137,6 +189,7 @@ function StatusPill({ status }: { status: TournamentMatchRow["status"] }) {
     ready: { label: "Ready", cls: "bg-primary/15 text-primary" },
     live: { label: "Live", cls: "bg-red-500/15 text-red-500" },
     completed: { label: "Done", cls: "bg-emerald-500/15 text-emerald-500" },
+    needs_resolution: { label: "Needs resolution", cls: "bg-amber-500/15 text-amber-600" },
   };
   const { label, cls } = map[status];
   return (
