@@ -156,6 +156,8 @@ export default function Messages() {
   const [search, setSearch] = useState("");
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [showChallenge, setShowChallenge] = useState(false);
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
