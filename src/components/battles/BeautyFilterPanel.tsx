@@ -113,8 +113,9 @@ export default function BeautyFilterPanel({ scopeId, onClose }: Props) {
             <Button size="sm" variant="outline" onClick={onClose}>Done</Button>
           )}
         </div>
-        <p className="text-[10px] text-muted-foreground italic">
-          Preview-only in v1. Viewers currently see the raw camera feed.
+        <p className="text-[10px] text-muted-foreground italic" data-testid="beauty-filter-scope-note">
+          Self-view only — viewers still see your raw camera feed. A broadcast
+          beauty filter is coming in a follow-up update.
         </p>
       </div>
     </>
