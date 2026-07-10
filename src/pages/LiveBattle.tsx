@@ -34,6 +34,7 @@ import LiveBattlePiPButton from "@/components/battles/LiveBattlePiPButton";
 import FollowBattlerButton from "@/components/battles/FollowBattlerButton";
 import BattleModerationPanel from "@/components/battles/BattleModerationPanel";
 import BeautyFilterPanel from "@/components/battles/BeautyFilterPanel";
+import RematchButton from "@/components/battles/RematchButton";
 import { readKeywordFilters } from "@/lib/battleModeration";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -833,6 +834,7 @@ function ResultsScreen({ battle, onBack }: { battle: LiveBattleRow; onBack: () =
             category={battle.category_slug ?? null}
             region={battle.region ?? null}
           />
+          <RematchButton battleId={battle.id} className="w-full" />
           <Button variant="outline" onClick={onBack} className="w-full">Back to live battles</Button>
         </div>
       </div>
