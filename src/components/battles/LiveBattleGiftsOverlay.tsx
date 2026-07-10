@@ -69,6 +69,7 @@ export default function LiveBattleGiftsOverlay({ battleId, hostId, opponentId }:
         return (
           <div
             key={p.id}
+            data-testid="live-gift-popup"
             className={`absolute bottom-16 ${p.side === "left" ? "left-4" : "right-4"}
                         flex items-center gap-2 rounded-2xl px-3 py-2
                         bg-gradient-to-br from-amber-400/95 via-orange-500/95 to-rose-500/95

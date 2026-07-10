@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,11 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { Search, Swords, Loader2 } from "lucide-react";
+import { Search, Swords, Loader2, Radio } from "lucide-react";
 import { CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
 import { cssFor, isValidFilter, type FilterId } from "@/lib/filters";
 import { RoyalThumbSkeleton } from "@/components/royal/RoyalSkeleton";
 import { battleErrorMessage } from "@/lib/battlesErrors";
+import { isFeatureEnabled } from "@/lib/featureFlags";
+import { createLiveBattle, liveBattleErrorMessage } from "@/lib/liveBattles";
 
 interface Props {
   open: boolean;
@@ -24,6 +27,9 @@ interface PostThumb { id: string; image_url: string; category: CrownCategory; fi
 
 export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, onCreated }: Props) {
   const { user } = useAuth();
+  const nav = useNavigate();
+  const [mode, setMode] = useState<"post" | "live">("post");
+  const [liveEnabled, setLiveEnabled] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
@@ -31,15 +37,22 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
   const [myPosts, setMyPosts] = useState<PostThumb[]>([]);
   const [postId, setPostId] = useState<string>("");
   const [duration, setDuration] = useState<string>("24");
+  const [liveDuration, setLiveDuration] = useState<string>("300"); // seconds
   const [category, setCategory] = useState<CrownCategory>("overall");
   const [submitting, setSubmitting] = useState(false);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [searching, setSearching] = useState(false);
 
+  // Load live-battles feature flag once.
+  useEffect(() => {
+    isFeatureEnabled("live_battles_enabled").then(setLiveEnabled).catch(() => setLiveEnabled(false));
+  }, []);
+
   useEffect(() => {
     if (!open) {
       setStep(1); setSearch(""); setResults([]); setOpponent(null);
-      setPostId(""); setDuration("24"); setCategory("overall");
+      setPostId(""); setDuration("24"); setLiveDuration("300");
+      setCategory("overall"); setMode("post");
       return;
     }
     if (user) {
@@ -113,7 +126,29 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
   }, [search, step, user]);
 
   const submit = async () => {
-    if (!user || !opponent || !postId) return;
+    if (!user || !opponent) return;
+
+    // Live-battle branch: no post required, just duration + category → RPC → navigate.
+    if (mode === "live") {
+      setSubmitting(true);
+      try {
+        const secs = Math.max(60, Math.min(1800, parseInt(liveDuration, 10) || 300));
+        const battle = await createLiveBattle(opponent.id, secs, category === "overall" ? null : category);
+        toast.success(`Live battle invite sent to @${opponent.username}`);
+        onOpenChange(false);
+        onCreated?.();
+        nav(`/live/${battle.id}`);
+      } catch (e) {
+        console.error("[challenge] live rpc failed", e);
+        toast.error(liveBattleErrorMessage(e, "Couldn't start that live battle."));
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // Classic post-battle branch.
+    if (!postId) return;
     setSubmitting(true);
     const durationSeconds = Math.round(parseFloat(duration) * 3600);
     const { data, error } = await supabase.rpc("create_battle_challenge", {
@@ -187,52 +222,104 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
               )}
             </div>
 
-            <div>
-              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Pick your post</p>
-              {loadingPosts ? (
-                <div className="grid grid-cols-3 gap-2 max-h-72 overflow-hidden pr-1">
-                  {Array.from({ length: 9 }).map((_, i) => (
-                    <RoyalThumbSkeleton key={i} className="rounded-lg" />
-                  ))}
-                </div>
-              ) : myPosts.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No eligible posts — upload one first.</p>
-              ) : (
-                <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
-                  {myPosts.map((p) => (
-                    <button type="button" key={p.id} onClick={() => { setPostId(p.id); setCategory(p.category); }}
-                      className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                        postId === p.id ? "border-primary gold-shadow" : "border-transparent opacity-70 hover:opacity-100"
-                      }`}>
-                      <img
-                        loading="lazy"
-                        src={p.image_url}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        style={{ filter: cssFor(isValidFilter(p.filter ?? null) ? (p.filter as FilterId) : null) }}
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Battle-mode toggle. Hidden when live_battles flag is off. */}
+            {liveEnabled && (
+              <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/30 p-1">
+                <button
+                  type="button"
+                  onClick={() => setMode("post")}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black uppercase tracking-wider transition ${
+                    mode === "post"
+                      ? "bg-primary text-primary-foreground gold-shadow"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Swords size={13} /> Post battle
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("live")}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black uppercase tracking-wider transition ${
+                    mode === "live"
+                      ? "bg-red-500 text-white shadow-lg shadow-red-500/40"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                  <Radio size={13} /> Live battle
+                </button>
+              </div>
+            )}
+
+            {mode === "post" ? (
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Pick your post</p>
+                {loadingPosts ? (
+                  <div className="grid grid-cols-3 gap-2 max-h-72 overflow-hidden pr-1">
+                    {Array.from({ length: 9 }).map((_, i) => (
+                      <RoyalThumbSkeleton key={i} className="rounded-lg" />
+                    ))}
+                  </div>
+                ) : myPosts.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">No eligible posts — upload one first.</p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
+                    {myPosts.map((p) => (
+                      <button type="button" key={p.id} onClick={() => { setPostId(p.id); setCategory(p.category); }}
+                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                          postId === p.id ? "border-primary gold-shadow" : "border-transparent opacity-70 hover:opacity-100"
+                        }`}>
+                        <img
+                          loading="lazy"
+                          src={p.image_url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          style={{ filter: cssFor(isValidFilter(p.filter ?? null) ? (p.filter as FilterId) : null) }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3">
+                <p className="text-xs font-black uppercase tracking-wider text-red-400 flex items-center gap-1.5">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> Live face-off
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Go head-to-head on camera. Viewers vote and send gifts in real time.
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Duration</p>
-                <Select value={duration} onValueChange={setDuration}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0.5">30 minutes</SelectItem>
-                    <SelectItem value="1">1 hour</SelectItem>
-                    <SelectItem value="1.5">1 hour 30 minutes</SelectItem>
-                    <SelectItem value="6">6 hours</SelectItem>
-                    <SelectItem value="12">12 hours</SelectItem>
-                    <SelectItem value="24">24 hours</SelectItem>
-                    <SelectItem value="48">48 hours</SelectItem>
-                    <SelectItem value="72">72 hours</SelectItem>
-                  </SelectContent>
-                </Select>
+                {mode === "post" ? (
+                  <Select value={duration} onValueChange={setDuration}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0.5">30 minutes</SelectItem>
+                      <SelectItem value="1">1 hour</SelectItem>
+                      <SelectItem value="1.5">1 hour 30 minutes</SelectItem>
+                      <SelectItem value="6">6 hours</SelectItem>
+                      <SelectItem value="12">12 hours</SelectItem>
+                      <SelectItem value="24">24 hours</SelectItem>
+                      <SelectItem value="48">48 hours</SelectItem>
+                      <SelectItem value="72">72 hours</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select value={liveDuration} onValueChange={setLiveDuration}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="180">3 min</SelectItem>
+                      <SelectItem value="300">5 min</SelectItem>
+                      <SelectItem value="600">10 min</SelectItem>
+                      <SelectItem value="900">15 min</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Category</p>
@@ -247,9 +334,22 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
               </div>
             </div>
 
-            <Button onClick={submit} disabled={!postId || submitting}
-              className="w-full bg-gradient-gold text-primary-foreground font-bold gold-shadow">
-              {submitting ? <Loader2 className="animate-spin" /> : <><Swords size={16} /> Send Challenge</>}
+            <Button
+              onClick={submit}
+              disabled={submitting || (mode === "post" && !postId)}
+              className={`w-full font-bold ${
+                mode === "live"
+                  ? "bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/30"
+                  : "bg-gradient-gold text-primary-foreground gold-shadow"
+              }`}
+            >
+              {submitting ? (
+                <Loader2 className="animate-spin" />
+              ) : mode === "live" ? (
+                <><Radio size={16} /> Go Live vs @{opponent.username}</>
+              ) : (
+                <><Swords size={16} /> Send Challenge</>
+              )}
             </Button>
           </div>
         )}
