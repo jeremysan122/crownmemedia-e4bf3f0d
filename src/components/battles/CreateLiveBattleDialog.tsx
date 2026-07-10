@@ -251,9 +251,28 @@ export default function CreateLiveBattleDialog({
           </div>
 
           {submitError && (
-            <p className="text-xs text-destructive text-center" role="alert" data-testid="create-battle-error">
-              {submitError}
-            </p>
+            <div
+              className="rounded-md border border-destructive/40 bg-destructive/10 p-3 space-y-2"
+              role="alert"
+              data-testid="create-battle-error"
+            >
+              <p className="text-xs text-destructive font-medium">{submitError}</p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full h-8"
+                onClick={handleCreate}
+                disabled={!canSubmit}
+                data-testid="create-battle-retry"
+              >
+                {submitting ? (
+                  <><Loader2 className="animate-spin mr-2" size={12} /> Retrying…</>
+                ) : (
+                  <>Try again</>
+                )}
+              </Button>
+            </div>
           )}
           <Button
             onClick={handleCreate}
@@ -269,6 +288,7 @@ export default function CreateLiveBattleDialog({
               <>Start Battle</>
             )}
           </Button>
+
           <p className="text-[11px] text-muted-foreground text-center">
             Your opponent will be notified when the room opens.
           </p>
