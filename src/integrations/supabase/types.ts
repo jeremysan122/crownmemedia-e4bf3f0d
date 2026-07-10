@@ -1986,6 +1986,159 @@ export type Database = {
         }
         Relationships: []
       }
+      live_battle_participants: {
+        Row: {
+          action: string
+          actor_id: string
+          battle_id: string
+          created_at: string
+          id: string
+          target_user_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          battle_id: string
+          created_at?: string
+          id?: string
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          battle_id?: string
+          created_at?: string
+          id?: string
+          target_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_battle_participants_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "live_battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_battle_reports: {
+        Row: {
+          battle_id: string
+          created_at: string
+          id: string
+          reason: string
+          reporter_id: string
+        }
+        Insert: {
+          battle_id: string
+          created_at?: string
+          id?: string
+          reason: string
+          reporter_id: string
+        }
+        Update: {
+          battle_id?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          reporter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_battle_reports_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "live_battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_battle_votes: {
+        Row: {
+          battle_id: string
+          choice: string
+          created_at: string
+          viewer_id: string
+        }
+        Insert: {
+          battle_id: string
+          choice: string
+          created_at?: string
+          viewer_id: string
+        }
+        Update: {
+          battle_id?: string
+          choice?: string
+          created_at?: string
+          viewer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_battle_votes_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "live_battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_battles: {
+        Row: {
+          created_at: string
+          duration_seconds: number
+          ended_reason: string | null
+          ends_at: string | null
+          force_ended_by: string | null
+          host_id: string
+          host_votes: number
+          id: string
+          is_hidden: boolean
+          opponent_id: string
+          opponent_votes: number
+          room_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number
+          ended_reason?: string | null
+          ends_at?: string | null
+          force_ended_by?: string | null
+          host_id: string
+          host_votes?: number
+          id?: string
+          is_hidden?: boolean
+          opponent_id: string
+          opponent_votes?: number
+          room_name: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number
+          ended_reason?: string | null
+          ends_at?: string | null
+          force_ended_by?: string | null
+          host_id?: string
+          host_votes?: number
+          id?: string
+          is_hidden?: boolean
+          opponent_id?: string
+          opponent_votes?: number
+          room_name?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Relationships: []
+      }
       main_categories: {
         Row: {
           created_at: string
@@ -5110,6 +5263,68 @@ export type Database = {
       is_thread_muted: {
         Args: { _post_id: string; _user_id: string }
         Returns: boolean
+      }
+      live_battle_end: {
+        Args: { _battle_id: string; _force?: boolean; _reason?: string }
+        Returns: {
+          created_at: string
+          duration_seconds: number
+          ended_reason: string | null
+          ends_at: string | null
+          force_ended_by: string | null
+          host_id: string
+          host_votes: number
+          id: string
+          is_hidden: boolean
+          opponent_id: string
+          opponent_votes: number
+          room_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "live_battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      live_battle_log_action: {
+        Args: { _action: string; _battle_id: string; _target: string }
+        Returns: undefined
+      }
+      live_battle_start: {
+        Args: { _battle_id: string }
+        Returns: {
+          created_at: string
+          duration_seconds: number
+          ended_reason: string | null
+          ends_at: string | null
+          force_ended_by: string | null
+          host_id: string
+          host_votes: number
+          id: string
+          is_hidden: boolean
+          opponent_id: string
+          opponent_votes: number
+          room_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "live_battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      live_battle_vote: {
+        Args: { _battle_id: string; _choice: string }
+        Returns: undefined
       }
       log_upload_monitoring_event: {
         Args: {
