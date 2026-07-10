@@ -22,12 +22,15 @@ import {
 import { isEndedTransition, mergeLiveBattleUpdate } from "@/lib/liveBattleRealtime";
 import { useServerTimeOffset } from "@/lib/serverTime";
 import { useLiveBattleViewerCount, useLiveBattleViewerHeartbeat } from "@/hooks/useLiveBattleViewers";
+import { useLiveBattlePresence } from "@/hooks/useLiveBattlePresence";
 import LiveBattleActivityLog from "@/components/battles/LiveBattleActivityLog";
 import LiveBattleComments from "@/components/battles/LiveBattleComments";
 import LiveBattleShareCard from "@/components/battles/LiveBattleShareCard";
 import LiveBattleGiftsOverlay from "@/components/battles/LiveBattleGiftsOverlay";
 import LiveBattleGiftPicker from "@/components/battles/LiveBattleGiftPicker";
 import LiveBattleVoteChip from "@/components/battles/LiveBattleVoteChip";
+import LiveBattleEmoteBurst from "@/components/battles/LiveBattleEmoteBurst";
+import LiveBattlePiPButton from "@/components/battles/LiveBattlePiPButton";
 import FollowBattlerButton from "@/components/battles/FollowBattlerButton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
