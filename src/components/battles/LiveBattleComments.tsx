@@ -52,9 +52,11 @@ const COOLDOWN_MS = 3000;
 export default function LiveBattleComments({
   battleId,
   isLive,
+  overlay = false,
 }: {
   battleId: string;
   isLive: boolean;
+  overlay?: boolean;
 }) {
   const { user, isModerator } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
