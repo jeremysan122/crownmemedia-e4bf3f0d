@@ -88,6 +88,12 @@ export default {
         "sparkle-twinkle": { "0%,100%": { opacity: "0.4", transform: "scale(1)" }, "50%": { opacity: "0.95", transform: "scale(1.05)" } },
         "filter-pop": { "0%": { transform: "scale(1)" }, "30%": { transform: "scale(1.025)" }, "100%": { transform: "scale(1)" } },
         "vote-flash": { "0%": { opacity: "0" }, "25%": { opacity: "1" }, "100%": { opacity: "0" } },
+        "emote-rise": {
+          "0%": { opacity: "0", transform: "translateY(20px) scale(0.7)" },
+          "20%": { opacity: "1", transform: "translateY(0) scale(1.05)" },
+          "70%": { opacity: "1", transform: "translateY(-140px) scale(1)" },
+          "100%": { opacity: "0", transform: "translateY(-200px) scale(0.85)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -98,6 +104,7 @@ export default {
         "vote-burst": "vote-burst 0.5s ease-out",
         "crown-pulse": "crown-pulse 2.5s ease-in-out infinite",
         "shimmer": "shimmer 3s linear infinite",
+        "emote-rise": "emote-rise 2.2s ease-out forwards",
       },
     },
   },
