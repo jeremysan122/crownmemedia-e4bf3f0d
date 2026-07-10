@@ -18,6 +18,8 @@ export interface LiveBattleRow {
   ended_reason: string | null;
   is_hidden: boolean;
   created_at: string;
+  category_slug?: string | null;
+  region?: string | null;
 }
 
 export function liveBattleErrorMessage(err: unknown, fallback: string): string {
