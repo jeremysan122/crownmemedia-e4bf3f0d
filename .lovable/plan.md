@@ -15,7 +15,19 @@ Building on Live Battles v1 (1v1, voting, gifts, comments, moderation), this pla
 3. **Schedule for later**
    - Add `scheduled_start_at`, `state='scheduled'` to `live_battles`.
    - `ScheduleBattleSheet.tsx` for hosts; scheduled battles appear in Upcoming tab.
-   - Add-to-calendar (ICS) button, reminder push at T-15m via `pg_cron`.
+   - Add-to-calendar (ICS) button — shipped in Wave 1.
+
+## Wave 1.5 — Scheduled battle reminder job (BLOCKS public scheduling launch)
+
+**Goal:** users get a push/notification before their scheduled battle starts.
+
+Deferred out of Wave 1 because `pg_cron` + `pg_net` need enable + a project-specific schedule row containing the function URL and anon key (not migration-safe).
+
+Before public launch of scheduling:
+1. Add `battle-reminders` edge function that scans `live_battles WHERE status='scheduled' AND scheduled_start_at BETWEEN now()+14m AND now()+16m`, inserts a `notifications` row (`payload.kind='battle_reminder'`, `payload.link=/live/:id`) for host + opponent, and (best-effort) fans out web push.
+2. Schedule it every minute via `cron.schedule('battle-reminders-1m', '* * * * *', ...)` using `supabase--insert` (NOT a migration — carries project-specific secrets).
+3. Add an idempotency guard column (e.g. `reminder_sent_at`) so the reminder fires exactly once.
+4. Add a test that the RPC/function marks reminders sent, or document a clear skip reason if `pg_cron` is unavailable in the target env.
 
 ## Wave 2 — Pre-battle Lobby
 

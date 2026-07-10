@@ -68,7 +68,7 @@ export default function BattleFilterBar() {
         .select("slug,label")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
-      if (alive && data) setCats(data as any);
+      if (alive && Array.isArray(data)) setCats(data as any);
     })();
     return () => { alive = false; };
   }, []);
@@ -111,7 +111,7 @@ export default function BattleFilterBar() {
           value={filters.category}
           onChange={(v) => set({ category: v })}
           placeholder="All categories"
-          options={[{ value: "", label: "All categories" }, ...cats.map((c) => ({ value: c.slug, label: c.label }))]}
+          options={[{ value: "", label: "All categories" }, ...(Array.isArray(cats) ? cats : []).map((c) => ({ value: c.slug, label: c.label }))]}
           ariaLabel="Filter by category"
         />
         <FilterSelect

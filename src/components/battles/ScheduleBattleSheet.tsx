@@ -208,7 +208,7 @@ export default function ScheduleBattleSheet({
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Choose category" /></SelectTrigger>
                 <SelectContent>
-                  {mains.map((m) => (<SelectItem key={m.slug} value={m.slug}>{m.label}</SelectItem>))}
+                  {(Array.isArray(mains) ? mains : []).map((m) => (<SelectItem key={m.slug} value={m.slug}>{m.label}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
