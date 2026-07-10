@@ -27,28 +27,32 @@ export default function UpcomingBattlesStrip() {
   useEffect(() => {
     let alive = true;
     const load = async () => {
-      let q = supabase
-        .from("live_battles")
-        .select("id,host_id,opponent_id,category_slug,region,scheduled_start_at")
-        .eq("status", "scheduled")
-        .gte("scheduled_start_at", new Date().toISOString())
-        .order("scheduled_start_at", { ascending: true })
-        .limit(10);
-      if (filters.category) q = q.eq("category_slug", filters.category);
-      if (filters.region) q = q.eq("region", filters.region);
-      const { data } = await q;
-      if (!alive) return;
-      const list = (data ?? []) as Row[];
-      setRows(list);
-      const ids = Array.from(new Set(list.flatMap((r) => [r.host_id, r.opponent_id]).filter(Boolean)));
-      if (ids.length) {
-        const { data: prof } = await supabase.from("profiles")
-          .select("id,username,profile_photo_url").in("id", ids);
-        const map: Record<string, Profile> = {};
-        (prof ?? []).forEach((p: any) => { map[p.id] = p as Profile; });
-        if (alive) setProfiles(map);
+      try {
+        let q = supabase
+          .from("live_battles")
+          .select("id,host_id,opponent_id,category_slug,region,scheduled_start_at")
+          .eq("status", "scheduled")
+          .gte("scheduled_start_at", new Date().toISOString())
+          .order("scheduled_start_at", { ascending: true })
+          .limit(10);
+        if (filters.category) q = q.eq("category_slug", filters.category);
+        if (filters.region) q = q.eq("region", filters.region);
+        const { data } = await q;
+        if (!alive) return;
+        const list = (data ?? []) as Row[];
+        setRows(list);
+        const ids = Array.from(new Set(list.flatMap((r) => [r.host_id, r.opponent_id]).filter(Boolean)));
+        if (ids.length) {
+          const { data: prof } = await supabase.from("profiles")
+            .select("id,username,profile_photo_url").in("id", ids);
+          const map: Record<string, Profile> = {};
+          (prof ?? []).forEach((p: any) => { map[p.id] = p as Profile; });
+          if (alive) setProfiles(map);
+        }
+        if (alive) setLoaded(true);
+      } catch {
+        if (alive) setLoaded(true);
       }
-      if (alive) setLoaded(true);
     };
     load();
     return () => { alive = false; };
