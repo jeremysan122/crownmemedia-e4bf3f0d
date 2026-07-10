@@ -382,7 +382,11 @@ export default function LiveBattleComments({
       </div>
 
       <form
-        className="flex flex-col gap-1 border-t border-border/60 px-3 py-2"
+        className={
+          overlay
+            ? "pointer-events-auto flex flex-col gap-1 px-3 py-2"
+            : "flex flex-col gap-1 border-t border-border/60 px-3 py-2"
+        }
         onSubmit={(e) => { e.preventDefault(); submit(); }}
       >
         <div className="flex items-center gap-2">
@@ -402,7 +406,9 @@ export default function LiveBattleComments({
             aria-describedby={`lbc-status-${battleId} lbc-count-${battleId}`}
             aria-invalid={remaining < 0 ? "true" : undefined}
             autoComplete="off"
+            className={overlay ? "rounded-full bg-black/40 backdrop-blur-sm border-white/20 text-white placeholder:text-white/60" : undefined}
           />
+
           <Button
             type="submit"
             size="icon"
