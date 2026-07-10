@@ -70,7 +70,7 @@ describe("LiveBattleEmoteBurst channel lifecycle", () => {
     expect(channelFactory).toHaveBeenCalledTimes(1);
 
     const btn = screen.getByRole("button", { name: /send heart/i });
-    await act(async () => { await userEvent.click(btn); });
+    act(() => { fireEvent.click(btn); });
 
     // Still only the one subscribed channel — no per-tap channel.
     expect(channelFactory).toHaveBeenCalledTimes(1);
@@ -100,7 +100,7 @@ describe("LiveBattleEmoteBurst channel lifecycle", () => {
     rpcMock.mockResolvedValueOnce({ error: new Error("rate_limited:5") });
     render(<LiveBattleEmoteBurst battleId="battle-5" enabled />);
     const btn = screen.getByRole("button", { name: /send fire/i });
-    await act(async () => { await userEvent.click(btn); });
+    act(() => { fireEvent.click(btn); });
     expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({
       title: expect.stringMatching(/slow down/i),
     }));
@@ -110,7 +110,7 @@ describe("LiveBattleEmoteBurst channel lifecycle", () => {
     rpcMock.mockResolvedValueOnce({ error: new Error("battle_not_live") });
     render(<LiveBattleEmoteBurst battleId="battle-6" enabled />);
     const btn = screen.getByRole("button", { name: /send clap/i });
-    await act(async () => { await userEvent.click(btn); });
+    act(() => { fireEvent.click(btn); });
     expect(toastMock).not.toHaveBeenCalled();
   });
 });
