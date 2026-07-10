@@ -149,3 +149,30 @@ export async function countReports(commentId: string): Promise<number> {
     .eq("comment_id", commentId);
   return count ?? 0;
 }
+
+/**
+ * Read the most recent `report_escalated` audit-log entry for a given
+ * report id. Used by moderation E2E to verify that clicking Escalate
+ * writes the correct resolver + reason into admin_audit_log.
+ */
+export async function readLatestReportEscalatedAudit(reportId: string) {
+  const admin = adminClient();
+  const { data } = await admin
+    .from("admin_audit_log")
+    .select("id, actor_id, action, target_type, target_id, details, created_at")
+    .eq("action", "report_escalated")
+    .eq("target_type", "report")
+    .eq("target_id", reportId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as {
+    id: string;
+    actor_id: string | null;
+    action: string;
+    target_type: string;
+    target_id: string;
+    details: Record<string, unknown> | null;
+    created_at: string;
+  } | null;
+}
