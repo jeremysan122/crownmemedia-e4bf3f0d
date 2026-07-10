@@ -159,6 +159,9 @@ export default function CommandCenterReports() {
         await banUser(r.reported_user_id!, reason);
         await resolveReport(r.id, `User banned: ${reason}`);
         toast.success("User banned & report resolved");
+      } else if (pending.kind === "escalate") {
+        await escalateReport(r.id, reason);
+        toast.success("Report escalated for senior review");
       }
     } catch (e: any) {
       toast.error(e.message ?? "Failed");
@@ -166,9 +169,15 @@ export default function CommandCenterReports() {
     }
   };
 
+  const onEscalate = (r: ReportRow) => {
+    if (!roles.canResolveReports) { toast.error("Not authorized"); return; }
+    setPending({ kind: "escalate", report: r });
+  };
+
   const pendingCopy: Record<PendingAction["kind"], { title: string; desc: string; confirm: string; destructive: boolean; defaultReason: string }> = {
     resolve: { title: "Resolve report", desc: "Mark this report as resolved with a note visible in the audit log.", confirm: "Resolve", destructive: false, defaultReason: "Reviewed; no action needed." },
     dismiss: { title: "Dismiss report", desc: "Dismiss without further action. Reason recorded in the audit log.", confirm: "Dismiss", destructive: false, defaultReason: "Not a violation." },
+    escalate: { title: "Escalate report", desc: "Promote this report for senior review. Its status becomes “escalated” and the audit log records who escalated it.", confirm: "Escalate", destructive: false, defaultReason: pending?.report.reason || "Needs senior review." },
     remove: { title: "Remove content", desc: "Remove the reported content and resolve the report.", confirm: "Remove content", destructive: true, defaultReason: pending?.report.reason || "" },
     suspend: { title: "Suspend user", desc: "Temporarily suspend the reported user and resolve the report.", confirm: "Suspend user", destructive: true, defaultReason: pending?.report.reason || "" },
     ban: { title: "Ban user (permanent)", desc: "Permanently ban the reported user. This writes to the admin audit log.", confirm: "Ban user", destructive: true, defaultReason: pending?.report.reason || "" },
