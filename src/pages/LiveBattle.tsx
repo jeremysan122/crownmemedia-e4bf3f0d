@@ -396,7 +396,13 @@ export default function LiveBattlePage() {
         <div className="text-sm tabular-nums font-mono" data-testid="live-battle-timer" data-remaining-sec={remainingSec ?? ""}>
           {battle.status === "live" && remainingSec !== null ? formatSec(remainingSec) : "—"}
         </div>
-        <button onClick={() => nav(-1)} className="text-sm text-muted-foreground hover:text-foreground">Leave</button>
+        <div className="flex items-center gap-1">
+          <LiveBattlePiPButton
+            fallbackLabel={viewerCount !== null ? `LIVE · ${viewerCount} watching` : "LIVE"}
+            onReturn={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          />
+          <button onClick={() => nav(-1)} className="text-sm text-muted-foreground hover:text-foreground px-2">Leave</button>
+        </div>
       </div>
 
       {/* Video area */}
