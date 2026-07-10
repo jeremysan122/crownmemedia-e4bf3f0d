@@ -544,7 +544,10 @@ export default function LiveBattleComments({
                   : "Jump to latest messages"
               }
               data-testid="live-battle-comments-jump-latest"
-              className="pointer-events-auto h-7 rounded-full bg-primary text-primary-foreground shadow-lg text-[11px] px-3 animate-in fade-in slide-in-from-bottom-2"
+              data-reduced-motion={reducedMotion ? "true" : "false"}
+              className={`pointer-events-auto h-7 rounded-full bg-primary text-primary-foreground shadow-lg text-[11px] px-3 ${
+                reducedMotion ? "" : "animate-in fade-in slide-in-from-bottom-2"
+              }`}
             >
               <ArrowDown className="w-3 h-3 mr-1" aria-hidden />
               {unread > 0 ? `${unread} new` : "Jump to latest"}
@@ -552,6 +555,7 @@ export default function LiveBattleComments({
           </div>
         )}
       </div>
+
 
       {/* Typing indicator — announced politely for assistive tech. */}
       <div
