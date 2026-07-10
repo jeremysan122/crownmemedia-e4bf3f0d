@@ -111,10 +111,8 @@ export default function BattleLobbyPage() {
     );
   }
 
-  const hostName = profiles[battle.host_id]?.display_name
-    || profiles[battle.host_id]?.username || "Host";
-  const opponentName = profiles[battle.opponent_id]?.display_name
-    || profiles[battle.opponent_id]?.username || "Opponent";
+  const hostName = profiles[battle.host_id]?.username || "Host";
+  const opponentName = profiles[battle.opponent_id]?.username || "Opponent";
 
   const isParticipant = user?.id === battle.host_id || user?.id === battle.opponent_id;
 
