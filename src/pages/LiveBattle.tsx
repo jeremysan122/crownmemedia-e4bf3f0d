@@ -76,10 +76,94 @@ export default function LiveBattlePage() {
     const ch = supabase
       .channel(`live_battle:${battleId}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "live_battles", filter: `id=eq.${battleId}` },
-        (payload) => setBattle(payload.new as LiveBattleRow))
+        (payload) => {
+          const next = payload.new as LiveBattleRow;
+          setBattle((prev) => {
+            // Announce transition to ended so viewers see immediate confirmation
+            // before the results screen replaces the room.
+            if (prev && prev.status !== "ended" && next.status === "ended") {
+              const reason = next.ended_reason ?? "host_end";
+              const description =
+                reason === "admin_force_end" ? "A moderator ended this battle. Results are final."
+                : reason === "host_end" ? "The host ended the battle. Showing results now."
+                : "The battle ended. Showing results now.";
+              toast({ title: "Battle ended", description });
+              // Force teardown of the LiveKit room by clearing the token.
+              setToken(null);
+            }
+            return next;
+          });
+        })
       .subscribe();
     return () => { mounted = false; supabase.removeChannel(ch); };
   }, [battleId]);
+
+  // Real-time confirmations for mute/kick actions (target + host see it).
+  useEffect(() => {
+    if (!battleId || !user?.id) return;
+    const ch = supabase
+      .channel(`live_battle_mod:${battleId}`)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "live_battle_participants",
+        filter: `battle_id=eq.${battleId}`,
+      }, (payload) => {
+        const row = payload.new as { action: string; target_user_id: string; actor_id: string };
+        const isMe = row.target_user_id === user.id;
+        const isActor = row.actor_id === user.id;
+        if (isMe) {
+          if (row.action === "kick") {
+            toast({ title: "You were removed from the battle", description: "A host or moderator removed you. You can still watch from the results screen when it ends.", variant: "destructive" });
+            nav("/battles/live");
+          } else if (row.action === "mute") {
+            toast({ title: "You've been muted", description: "A host or moderator muted your microphone." });
+          } else if (row.action === "unmute") {
+            toast({ title: "You've been unmuted", description: "You can speak again." });
+          }
+        } else if (isActor) {
+          // Host/mod already sees a toast from the button handler; skip duplicate.
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [battleId, user?.id, nav]);
+
+  // Track this viewer's own report + live status updates.
+  useEffect(() => {
+    if (!battleId || !user?.id) return;
+    let mounted = true;
+    (async () => {
+      const { data } = await supabase
+        .from("live_battle_reports")
+        .select("*")
+        .eq("battle_id", battleId)
+        .eq("reporter_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (mounted && data) setMyReport(data as LiveBattleReportRow);
+    })();
+    const ch = supabase
+      .channel(`live_battle_report_self:${battleId}:${user.id}`)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "live_battle_reports",
+        filter: `battle_id=eq.${battleId}`,
+      }, (payload) => {
+        const row = (payload.new ?? payload.old) as LiveBattleReportRow | undefined;
+        if (!row || row.reporter_id !== user.id) return;
+        if (payload.eventType === "DELETE") { setMyReport(null); return; }
+        setMyReport((prev) => {
+          const next = payload.new as LiveBattleReportRow;
+          if (prev && prev.status !== next.status && next.status === "handled") {
+            toast({ title: "Your report was handled", description: "Thanks — our team reviewed it." });
+          } else if (prev && prev.status !== next.status && next.status === "rejected") {
+            toast({ title: "Report reviewed", description: "Our team looked at your report and closed it without action." });
+          }
+          return next;
+        });
+      })
+      .subscribe();
+    return () => { mounted = false; supabase.removeChannel(ch); };
+  }, [battleId, user?.id]);
 
   // Mint token once the battle is loaded.
   useEffect(() => {
