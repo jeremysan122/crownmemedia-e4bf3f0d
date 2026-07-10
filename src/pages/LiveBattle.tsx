@@ -17,7 +17,9 @@ import {
   LiveBattleRow, LiveBattleReportRow, liveBattleErrorMessage, mintLiveBattleToken,
   reportCooldownSeconds, formatCooldown,
   reportLiveBattle, roomControl, voteInLiveBattle,
+  acceptLiveBattle, declineLiveBattle, cancelLiveBattle,
 } from "@/lib/liveBattles";
+import { useLiveBattleViewerCount, useLiveBattleViewerHeartbeat } from "@/hooks/useLiveBattleViewers";
 import LiveBattleActivityLog from "@/components/battles/LiveBattleActivityLog";
 import LiveBattleShareCard from "@/components/battles/LiveBattleShareCard";
 import { Button } from "@/components/ui/button";
@@ -28,7 +30,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Loader2, ShieldAlert, Flag, Crown, Trophy, Share2,
-  MicOff, Mic, UserX, Users, Gavel,
+  MicOff, Mic, UserX, Users, Gavel, Check, X, Eye,
 } from "lucide-react";
 
 type JoinStep = "idle" | "verifying" | "minting" | "connecting" | "connected" | "error";
@@ -169,10 +171,11 @@ export default function LiveBattlePage() {
     return () => { mounted = false; supabase.removeChannel(ch); };
   }, [battleId, user?.id]);
 
-  // Mint token once the battle is loaded.
+  // Mint token only once the battle is actually LIVE. Pending/declined/
+  // cancelled/ended states have their own screens and must not spawn a room.
   useEffect(() => {
     if (!battle || !user) return;
-    if (battle.status === "ended") return;
+    if (battle.status !== "live") return;
     setJoinStep("minting");
     (async () => {
       try {
@@ -186,6 +189,12 @@ export default function LiveBattlePage() {
       }
     })();
   }, [battle?.id, battle?.status, user?.id]);
+
+  // Viewer presence — only when live and not one of the two on-stage participants.
+  const isViewer = !!user && battle?.status === "live" &&
+    user.id !== battle?.host_id && user.id !== battle?.opponent_id;
+  useLiveBattleViewerHeartbeat(battle?.id ?? null, isViewer);
+  const viewerCount = useLiveBattleViewerCount(battle?.id ?? null, battle?.status === "live");
 
   const isHost = user?.id === battle?.host_id;
   const isOpponent = user?.id === battle?.opponent_id;
