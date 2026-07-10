@@ -581,7 +581,17 @@ function ResultsScreen({ battle, onBack }: { battle: LiveBattleRow; onBack: () =
         )}
         <div className="mt-6 grid gap-2">
           {/* Branded share card handles both native-share and download-as-PNG. */}
-          <LiveBattleShareCard battle={battle} winner={winner} />
+          <LiveBattleShareCard
+            battleId={battle.id}
+            winnerSide={winner}
+            winnerLabel={winner === "tie" ? "It's a tie!" : `${winner === "host" ? "Host" : "Opponent"} wins`}
+            hostName="Host"
+            opponentName="Opponent"
+            hostVotes={battle.host_votes}
+            opponentVotes={battle.opponent_votes}
+            category={battle.category_slug ?? null}
+            region={battle.region ?? null}
+          />
           <Button variant="outline" onClick={onBack} className="w-full">Back to live battles</Button>
         </div>
       </div>
