@@ -199,6 +199,37 @@ export default function LiveBattleComments({
       if (!cancelled) {
         setRows(base);
         setHasMore((data?.length ?? 0) === PAGE);
+        // Restore persisted unread state (survives a full page refresh).
+        // We stash the ANCHOR ID (not index) so re-ordering, dedupes, or
+        // extra realtime tail rows since the last visit don't corrupt it.
+        try {
+          const raw = typeof window !== "undefined" ? window.localStorage.getItem(persistKey) : null;
+          if (raw) {
+            const saved = JSON.parse(raw) as { unread?: number; anchorId?: string; scrollTop?: number };
+            if (saved.anchorId) {
+              const idx = base.findIndex((r) => r.id === saved.anchorId);
+              if (idx >= 0) {
+                firstUnreadIndexRef.current = idx;
+                setFirstUnreadIndex(idx);
+                restoredAnchorIdRef.current = saved.anchorId;
+              }
+            }
+            if (typeof saved.unread === "number" && saved.unread > 0) {
+              setUnread(saved.unread);
+              stickToBottomRef.current = false;
+              setIsStuck(false);
+            }
+            if (typeof saved.scrollTop === "number") {
+              // Defer to after first paint so the virtualizer has laid rows out.
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  if (listRef.current) listRef.current.scrollTop = saved.scrollTop!;
+                });
+              });
+            }
+          }
+        } catch { /* corrupted persistence — ignore */ }
+        restoredRef.current = true;
       }
     })();
 
