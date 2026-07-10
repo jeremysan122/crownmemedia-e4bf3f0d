@@ -35,6 +35,7 @@ import {
   ArrowDown,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { bodyMatchesKeyword } from "@/lib/battleModeration";
 
 interface Row {
   id: string;
