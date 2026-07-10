@@ -74,6 +74,8 @@ export default function LiveBattleVoteChip({
     chip = (
       <span
         data-testid="vote-pending"
+        role="status"
+        aria-live="polite"
         aria-busy="true"
         className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 text-amber-500 px-2 py-0.5 animate-pulse"
       >
@@ -85,6 +87,8 @@ export default function LiveBattleVoteChip({
     chip = (
       <span
         data-testid="vote-confirmed"
+        role="status"
+        aria-live="polite"
         aria-busy="false"
         className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-500 px-2 py-0.5"
       >
@@ -95,6 +99,8 @@ export default function LiveBattleVoteChip({
     chip = (
       <span
         data-testid="vote-failed"
+        role="alert"
+        aria-live="assertive"
         aria-busy="false"
         className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 text-red-500 px-2 py-0.5"
       >
