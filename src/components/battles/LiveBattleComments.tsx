@@ -135,20 +135,21 @@ export default function LiveBattleComments({
     }
   }, [user]);
 
-  // Scroll to the newest message.
+  // Scroll to the newest message. Reduced-motion honors the user's OS setting.
   const scrollToBottom = useCallback((smooth = true) => {
     const el = listRef.current;
     if (!el) return;
-    // Use virtualizer when we have rows so the last item is realized before scroll.
+    const behavior: ScrollBehavior = smooth && !reducedMotion ? "smooth" : "auto";
     if (rows.length > 0) {
-      virtualizer.scrollToIndex(rows.length - 1, { align: "end", behavior: smooth ? "smooth" : "auto" });
+      virtualizer.scrollToIndex(rows.length - 1, { align: "end", behavior });
     } else {
-      el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+      el.scrollTo({ top: el.scrollHeight, behavior });
     }
     stickToBottomRef.current = true;
     setIsStuck(true);
     setUnread(0);
-  }, [rows.length, virtualizer]);
+  }, [rows.length, virtualizer, reducedMotion]);
+
 
   // Initial load + realtime subscription (comments + typing broadcast).
   useEffect(() => {
