@@ -116,6 +116,7 @@ export default function LiveBattlesLobby() {
           </ul>
         )}
       </div>
+      <CreateLiveBattleDialog open={createOpen} onOpenChange={setCreateOpen} />
     </AppShell>
   );
 }
