@@ -532,6 +532,7 @@ export default function LiveBattleComments({
                     key={vi.key}
                     ref={virtualizer.measureElement}
                     data-index={vi.index}
+                    data-anchor-id={r.id}
                     style={{
                       position: "absolute",
                       top: 0,
@@ -542,14 +543,17 @@ export default function LiveBattleComments({
                     }}
                   >
                     <div
-                      className={`flex items-start gap-2 group ${
+                      className={`flex items-start gap-2 group outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded-md ${
                         reducedMotion ? "" : "animate-in fade-in slide-in-from-bottom-1 duration-200"
                       } ${isHidden ? "opacity-50" : ""} ${
                         overlay ? "rounded-full bg-black/40 backdrop-blur-sm pl-1 pr-3 py-1 w-fit max-w-[85%] [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]" : ""
                       }`}
                       data-testid="live-battle-comment"
                       data-hidden={isHidden ? "true" : "false"}
+                      data-first-unread={firstUnreadIndex === vi.index ? "true" : "false"}
+                      tabIndex={-1}
                     >
+
 
                       {r.profile_photo_url ? (
                         <img src={r.profile_photo_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
