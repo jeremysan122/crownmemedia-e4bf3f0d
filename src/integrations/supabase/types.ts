@@ -5169,6 +5169,10 @@ export type Database = {
       }
       assert_security_invariants: { Args: never; Returns: undefined }
       assumption: { Args: { _default?: number; _key: string }; Returns: number }
+      broadcast_live_battle_typing: {
+        Args: { _battle_id: string }
+        Returns: boolean
+      }
       bump_filter_streak: {
         Args: { _filter: string }
         Returns: {
@@ -6059,6 +6063,7 @@ export type Database = {
         | "dismissed"
         | "action_taken"
         | "denied"
+        | "escalated"
       sensitive_appeal_status:
         | "pending"
         | "under_review"
@@ -6281,6 +6286,7 @@ export const Constants = {
         "dismissed",
         "action_taken",
         "denied",
+        "escalated",
       ],
       sensitive_appeal_status: [
         "pending",
