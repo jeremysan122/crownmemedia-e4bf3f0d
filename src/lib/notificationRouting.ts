@@ -71,8 +71,11 @@ export function getNotificationTarget(n: NotificationLike): string | null {
     case "system": {
       // Common system subtypes encoded in payload.kind or payload.event
       const kind = (p.kind ?? p.event ?? "").toString();
+      // Live Battle deep links (fallback when payload.link isn't set).
+      if (kind.startsWith("live_battle_") && p.battle_id) return `/live/${p.battle_id}`;
       if (kind === "reward" || kind === "daily_reward" || kind === "streak_reminder") return "/rewards";
       if (kind === "verification") return "/verification";
+
       if (kind === "payout") return "/wallet";
       if (kind === "moderation" && p.post_id) return `/post/${p.post_id}`;
       if (kind === "security") return "/settings";

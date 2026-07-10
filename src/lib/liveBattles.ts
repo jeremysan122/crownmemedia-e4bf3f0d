@@ -57,7 +57,7 @@ export function liveBattleErrorMessage(err: unknown, fallback: string): string {
   if (msg.includes("already_voted")) return "You've already voted in this battle.";
   if (msg.includes("participants_cannot_vote")) return "Participants can't vote in their own battle.";
   if (msg.includes("not_participant")) return "Only participants can do that.";
-  if (msg.includes("not_authorized") || msg.includes("only the host") || msg.includes("can't do that")) return "You don't have permission to do that.";
+  if (msg.includes("not_authorized") || msg.includes("only the host") || msg.includes("can't do that")) return "You can't do that.";
   if (msg.includes("not_authenticated") || msg.includes("please sign in")) return "Please sign in to continue.";
   if (msg.includes("feature_disabled") || msg.includes("aren't available right now")) return "Live battles aren't available right now.";
   if (msg.includes("invalid_opponent")) return "That opponent can't be challenged.";

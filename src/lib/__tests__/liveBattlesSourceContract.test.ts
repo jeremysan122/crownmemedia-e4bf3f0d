@@ -26,7 +26,9 @@ describe("Live Battles source contract", () => {
     const row = await createLiveBattle("opp1", 300);
     expect(rpcMock).toHaveBeenCalledWith("create_live_battle", {
       _opponent_id: "opp1", _duration_seconds: 300,
+      _category_slug: null, _region: null,
     });
+
     expect(fromMock).not.toHaveBeenCalledWith("live_battles");
     expect(row.id).toBe("b1");
   });
