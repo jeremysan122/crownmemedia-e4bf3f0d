@@ -373,11 +373,11 @@ export default function LiveBattleComments({
 
 
 
-  function broadcastTyping() {
+  async function broadcastTyping() {
     if (!channelRef.current || !user) return;
     const now = Date.now();
-    // Client-side throttle: at most one "typing" broadcast per interval
-    // per composer, regardless of keystroke frequency.
+    // Client-side pre-throttle avoids hammering the RPC. Server enforces
+    // the authoritative rate limit regardless of what any client does.
     if (now - lastTypingSentRef.current < TYPING_THROTTLE_MS) {
       if (typeof window !== "undefined") {
         (window as any).__lbcTypingThrottled = ((window as any).__lbcTypingThrottled ?? 0) + 1;
@@ -388,12 +388,15 @@ export default function LiveBattleComments({
     if (typeof window !== "undefined") {
       (window as any).__lbcTypingSent = ((window as any).__lbcTypingSent ?? 0) + 1;
     }
-    channelRef.current.send({
-      type: "broadcast",
-      event: "typing",
-      payload: { user_id: user.id, username: selfUsernameRef.current },
-    });
+    // Server-side rate-limited broadcast. Silently returns false if the
+    // server throttles us — we don't surface that to the user.
+    try {
+      await supabase.rpc("broadcast_live_battle_typing", { _battle_id: battleId });
+    } catch {
+      /* ignore — typing indicator is best-effort */
+    }
   }
+
 
 
   async function submit() {
