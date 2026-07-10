@@ -29,22 +29,24 @@ export function liveBattleErrorMessage(err: unknown, fallback: string): string {
   if (msg.includes("participants_cannot_vote")) return "Participants can't vote in their own battle.";
   if (msg.includes("not_participant")) return "Only participants can do that.";
   if (msg.includes("not_authorized")) return "You can't do that.";
-  if (msg.includes("rate")) return "You're doing that too fast. Try again in a moment.";
+  if (msg.includes("not_authenticated")) return "Please sign in.";
+  if (msg.includes("feature_disabled")) return "Live battles aren't available right now.";
+  if (msg.includes("invalid_opponent")) return "That opponent can't be challenged.";
+  if (msg.includes("invalid_choice")) return "Pick host or opponent to vote.";
+  if (msg.includes("invalid_reason")) return "Please add a short reason.";
+  if (msg.includes("blocked")) return "You can't start a battle with that user.";
+  if (msg.includes("rate")) return "You're doing that too fast. Try again soon.";
   return fallback;
 }
 
 export async function createLiveBattle(opponentId: string, durationSeconds = 300): Promise<LiveBattleRow> {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
-  if (!uid) throw new Error("Please sign in.");
-  const room = `lb_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
-  const { data, error } = await supabase
-    .from("live_battles")
-    .insert({ host_id: uid, opponent_id: opponentId, room_name: room, duration_seconds: durationSeconds })
-    .select("*")
-    .single();
+  // Server-side RPC: mints room_name, clamps duration, checks feature flag,
+  // rate limit, blocks, self. Direct INSERT on live_battles is revoked.
+  const { data, error } = await supabase.rpc("create_live_battle", {
+    _opponent_id: opponentId, _duration_seconds: durationSeconds,
+  });
   if (error) throw error;
-  return data as LiveBattleRow;
+  return data as unknown as LiveBattleRow;
 }
 
 export async function mintLiveBattleToken(battleId: string): Promise<{ token: string; url: string; room: string }> {
@@ -59,11 +61,9 @@ export async function voteInLiveBattle(battleId: string, choice: "host" | "oppon
 }
 
 export async function reportLiveBattle(battleId: string, reason: string) {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id;
-  if (!uid) throw new Error("Please sign in.");
-  const { error } = await supabase.from("live_battle_reports").insert({
-    battle_id: battleId, reporter_id: uid, reason: reason.slice(0, 500),
+  // Server-side RPC enforces rate limit + validation. Direct INSERT revoked.
+  const { error } = await supabase.rpc("live_battle_report", {
+    _battle_id: battleId, _reason: reason.slice(0, 500),
   });
   if (error) throw error;
 }

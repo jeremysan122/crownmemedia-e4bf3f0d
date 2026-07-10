@@ -4987,6 +4987,33 @@ export type Database = {
         }
         Returns: string
       }
+      create_live_battle: {
+        Args: { _duration_seconds?: number; _opponent_id: string }
+        Returns: {
+          created_at: string
+          duration_seconds: number
+          ended_reason: string | null
+          ends_at: string | null
+          force_ended_by: string | null
+          host_id: string
+          host_votes: number
+          id: string
+          is_hidden: boolean
+          opponent_id: string
+          opponent_votes: number
+          room_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "live_battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_repost: {
         Args: {
           p_caption?: string
@@ -5293,6 +5320,10 @@ export type Database = {
       }
       live_battle_log_action: {
         Args: { _action: string; _battle_id: string; _target: string }
+        Returns: undefined
+      }
+      live_battle_report: {
+        Args: { _battle_id: string; _reason: string }
         Returns: undefined
       }
       live_battle_start: {
