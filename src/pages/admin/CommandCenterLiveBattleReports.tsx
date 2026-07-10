@@ -55,7 +55,7 @@ export default function CommandCenterLiveBattleReports() {
     })
   , [load]);
 
-  const act = async (r: AdminLiveBattleReportRow, next: "processing" | "handled" | "rejected") => {
+  const act = async (r: AdminLiveBattleReportRow, next: "queued" | "processing" | "handled" | "rejected") => {
     setBusyId(r.id);
     try {
       await adminUpdateLiveBattleReportStatus(r.id, next);
