@@ -60,6 +60,21 @@ const TYPING_TTL_MS = 3500;
 const TYPING_THROTTLE_MS = 1500;
 const STICK_THRESHOLD_PX = 60;
 
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => setReduced(mql.matches);
+    mql.addEventListener?.("change", onChange);
+    return () => mql.removeEventListener?.("change", onChange);
+  }, []);
+  return reduced;
+}
+
 export default function LiveBattleComments({
   battleId,
   isLive,
@@ -70,6 +85,7 @@ export default function LiveBattleComments({
   overlay?: boolean;
 }) {
   const { user, isModerator } = useAuth();
+  const reducedMotion = usePrefersReducedMotion();
   const [rows, setRows] = useState<Row[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -96,6 +112,7 @@ export default function LiveBattleComments({
     getItemKey: (index) => rows[index]?.id ?? index,
     overscan: 8,
   });
+
 
   const hydrate = useCallback(async (list: Row[]) => {
     const ids = Array.from(new Set(list.map((r) => r.user_id)));
