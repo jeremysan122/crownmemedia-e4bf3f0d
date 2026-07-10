@@ -265,3 +265,52 @@ export function scheduleErrorMessage(err: unknown): string {
   if (msg.includes("rate")) return "You're scheduling too fast. Try again in a moment.";
   return "Couldn't schedule the battle. Try again.";
 }
+
+// ---- Wave 2: Pre-battle Lobby ----
+
+/**
+ * Toggle the caller's ready flag inside the lobby. Server RPC enforces
+ * host/opponent membership and pre-live status.
+ */
+export async function setLobbyReady(battleId: string, ready: boolean): Promise<LiveBattleRow> {
+  const { data, error } = await supabase.rpc("set_lobby_ready" as never, {
+    _battle_id: battleId, _ready: ready,
+  } as never);
+  if (error) throw error;
+  return data as unknown as LiveBattleRow;
+}
+
+/**
+ * Host-only: flip a fully-ready battle from pending/scheduled → live.
+ */
+export async function startBattleFromLobby(battleId: string): Promise<LiveBattleRow> {
+  const { data, error } = await supabase.rpc("start_battle_from_lobby" as never, {
+    _battle_id: battleId,
+  } as never);
+  if (error) throw error;
+  return data as unknown as LiveBattleRow;
+}
+
+export function lobbyErrorMessage(err: unknown): string {
+  const msg = String((err as { message?: string })?.message ?? "").toLowerCase();
+  if (msg.includes("not_authenticated")) return "Please sign in to enter the lobby.";
+  if (msg.includes("battle_not_found")) return "This battle is no longer available.";
+  if (msg.includes("battle_not_in_lobby")) return "This battle isn't in a pre-live state anymore.";
+  if (msg.includes("not_participant")) return "Only the host or opponent can use the lobby.";
+  if (msg.includes("only_host")) return "Only the host can start the battle.";
+  if (msg.includes("both_must_be_ready")) return "Both battlers need to be ready first.";
+  return "Something went wrong in the lobby. Try again.";
+}
+
+/**
+ * Mint a LiveKit token scoped to the *lobby* room for AV pre-check.
+ * Only host and opponent may pull this token.
+ */
+export async function mintLobbyToken(battleId: string): Promise<{ token: string; url: string; room: string }> {
+  const { data, error } = await supabase.functions.invoke("livekit-token", {
+    body: { battle_id: battleId, mode: "lobby" },
+  });
+  if (error || !data?.token) throw error ?? new Error(data?.error ?? "token_mint_failed");
+  return data;
+}
+
