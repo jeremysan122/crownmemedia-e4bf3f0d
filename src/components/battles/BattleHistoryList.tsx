@@ -31,7 +31,7 @@ export default function BattleHistoryList({ limit }: { limit?: number }) {
         supabase.from("battles")
           .select("id,challenger_id,opponent_id,winner_id,status,ended_at,created_at")
           .or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`)
-          .eq("status", "ended")
+          .eq("status", "completed")
           .order("ended_at", { ascending: false })
           .limit(limit ?? 40),
       ]);
