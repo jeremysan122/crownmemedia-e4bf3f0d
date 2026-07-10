@@ -98,6 +98,10 @@ export default function LiveBattleComments({
   const [unread, setUnread] = useState(0);
   const [isStuck, setIsStuck] = useState(true);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
+  const [firstUnreadIndex, setFirstUnreadIndex] = useState<number | null>(null);
+  const firstUnreadIndexRef = useRef<number | null>(null);
+  const focusPendingRef = useRef(false);
+
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const stickToBottomRef = useRef(true);
@@ -136,10 +140,14 @@ export default function LiveBattleComments({
   }, [user]);
 
   // Scroll to the newest message. Reduced-motion honors the user's OS setting.
+  // When there are unread messages, we also move keyboard focus to the FIRST
+  // unread row so keyboard/screen-reader users land at the right place instead
+  // of the very bottom.
   const scrollToBottom = useCallback((smooth = true) => {
     const el = listRef.current;
     if (!el) return;
     const behavior: ScrollBehavior = smooth && !reducedMotion ? "smooth" : "auto";
+    const focusIdx = firstUnreadIndexRef.current;
     if (rows.length > 0) {
       virtualizer.scrollToIndex(rows.length - 1, { align: "end", behavior });
     } else {
@@ -148,7 +156,26 @@ export default function LiveBattleComments({
     stickToBottomRef.current = true;
     setIsStuck(true);
     setUnread(0);
+    // Focus the first-new row after the scroll settles + virtualizer measures.
+    if (focusIdx !== null && focusIdx >= 0 && focusIdx < rows.length) {
+      focusPendingRef.current = true;
+      const attempt = (retriesLeft: number) => {
+        const target = listRef.current?.querySelector<HTMLElement>(
+          `[data-index="${focusIdx}"] [data-testid="live-battle-comment"]`,
+        );
+        if (target) {
+          target.focus({ preventScroll: true });
+          focusPendingRef.current = false;
+          return;
+        }
+        if (retriesLeft > 0) requestAnimationFrame(() => attempt(retriesLeft - 1));
+      };
+      requestAnimationFrame(() => attempt(6));
+    }
+    firstUnreadIndexRef.current = null;
+    setFirstUnreadIndex(null);
   }, [rows.length, virtualizer, reducedMotion]);
+
 
 
   // Initial load + realtime subscription (comments + typing broadcast).
@@ -180,17 +207,29 @@ export default function LiveBattleComments({
         async (payload) => {
           const row = payload.new as Row;
           await hydrate([row]);
+          let becameFirstUnread = false;
+          let didAppend = false;
           setRows((prev) => {
             if (prev.some((r) => r.id === row.id)) return prev;
-            return [...prev, row];
+            didAppend = true;
+            const next = [...prev, row];
+            if (!stickToBottomRef.current && (!user || row.user_id !== user.id)) {
+              if (firstUnreadIndexRef.current === null) {
+                firstUnreadIndexRef.current = next.length - 1;
+                becameFirstUnread = true;
+              }
+            }
+            return next;
           });
-          if (!stickToBottomRef.current && (!user || row.user_id !== user.id)) {
+          if (didAppend && !stickToBottomRef.current && (!user || row.user_id !== user.id)) {
             setUnread((n) => n + 1);
+            if (becameFirstUnread) setFirstUnreadIndex(firstUnreadIndexRef.current);
           }
           // Clear the sender from typing state once their message lands.
           setTypingUsers((prev) => prev.filter((t) => t.user_id !== row.user_id));
         },
       )
+
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "live_battle_comments", filter: `battle_id=eq.${battleId}` },
@@ -235,8 +274,13 @@ export default function LiveBattleComments({
     const stuck = el.scrollHeight - el.scrollTop - el.clientHeight < STICK_THRESHOLD_PX;
     stickToBottomRef.current = stuck;
     setIsStuck((prev) => (prev !== stuck ? stuck : prev));
-    if (stuck && unread !== 0) setUnread(0);
+    if (stuck && unread !== 0) {
+      setUnread(0);
+      firstUnreadIndexRef.current = null;
+      setFirstUnreadIndex(null);
+    }
   };
+
 
   // Auto-scroll to newest when we're already pinned to the bottom.
   useEffect(() => {
@@ -263,10 +307,21 @@ export default function LiveBattleComments({
   async function loadOlder() {
     if (loadingOlder || !hasMore || rows.length === 0) return;
     setLoadingOlder(true);
-    const oldest = rows[0]!.created_at;
+    // Anchor = the top-most currently-mounted row. Its id is stable across
+    // prepends AND across concurrent tail arrivals; after we insert older
+    // rows in front of it, the anchor's new index = olderUnique.length.
+    // Comparing the anchor's pixel offset before/after gives us an EXACT
+    // scroll delta — independent of virtualizer size estimates or realtime
+    // tail additions that mutate `getTotalSize()` mid-flight.
+    const anchor = rows[0]!;
+    const anchorId = anchor.id;
+    const oldest = anchor.created_at;
     const el = listRef.current;
-    const prevTotal = virtualizer.getTotalSize();
     const prevScroll = el?.scrollTop ?? 0;
+    const anchorOffsetBefore =
+      virtualizer.getOffsetForIndex?.(0, "start")?.[0] ?? 0;
+    const delta0 = prevScroll - anchorOffsetBefore;
+
     const { data } = await supabase
       .from("live_battle_comments")
       .select("id, battle_id, user_id, body, created_at, hidden_at")
@@ -276,38 +331,70 @@ export default function LiveBattleComments({
       .limit(PAGE);
     const olderRaw = ((data as Row[]) || []).reverse();
     await hydrate(olderRaw);
-    // Dedup against current rows so any comment that arrived via realtime
-    // during the fetch (or overlaps the boundary) never appears twice.
+
+    let prependedCount = 0;
     setRows((prev) => {
       const existing = new Set(prev.map((r) => r.id));
       const olderUnique = olderRaw.filter((r) => !existing.has(r.id));
+      prependedCount = olderUnique.length;
       return [...olderUnique, ...prev];
     });
     setHasMore((data?.length ?? 0) === PAGE);
     setLoadingOlder(false);
-    // Preserve scroll offset so newly prepended rows don't jump the view.
-    // Use rAF twice so the virtualizer has re-measured before we compute the delta.
+
+    // A first-unread index tracked from realtime arrivals must shift by the
+    // same prepended count so keyboard focus still lands on the right row.
+    if (firstUnreadIndexRef.current !== null && prependedCount > 0) {
+      firstUnreadIndexRef.current += prependedCount;
+      setFirstUnreadIndex(firstUnreadIndexRef.current);
+    }
+
+    // Restore the exact viewport by relocating our anchor row. Use two rAFs
+    // so the virtualizer has measured the newly prepended rows first.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (!el) return;
-        const diff = virtualizer.getTotalSize() - prevTotal;
-        el.scrollTop = prevScroll + diff;
+        const newIdx = prependedCount; // anchor now sits at this index
+        const anchorOffsetAfter =
+          virtualizer.getOffsetForIndex?.(newIdx, "start")?.[0] ?? null;
+        if (anchorOffsetAfter !== null) {
+          el.scrollTop = anchorOffsetAfter + delta0;
+        } else {
+          // Fallback: locate by DOM if virtualizer API isn't available.
+          const node = el.querySelector<HTMLElement>(
+            `[data-anchor-id="${CSS.escape(anchorId)}"]`,
+          );
+          if (node) el.scrollTop = node.offsetTop + delta0;
+        }
       });
     });
   }
 
 
+
+
   function broadcastTyping() {
     if (!channelRef.current || !user) return;
     const now = Date.now();
-    if (now - lastTypingSentRef.current < TYPING_THROTTLE_MS) return;
+    // Client-side throttle: at most one "typing" broadcast per interval
+    // per composer, regardless of keystroke frequency.
+    if (now - lastTypingSentRef.current < TYPING_THROTTLE_MS) {
+      if (typeof window !== "undefined") {
+        (window as any).__lbcTypingThrottled = ((window as any).__lbcTypingThrottled ?? 0) + 1;
+      }
+      return;
+    }
     lastTypingSentRef.current = now;
+    if (typeof window !== "undefined") {
+      (window as any).__lbcTypingSent = ((window as any).__lbcTypingSent ?? 0) + 1;
+    }
     channelRef.current.send({
       type: "broadcast",
       event: "typing",
       payload: { user_id: user.id, username: selfUsernameRef.current },
     });
   }
+
 
   async function submit() {
     if (!user) {
@@ -456,6 +543,7 @@ export default function LiveBattleComments({
                     key={vi.key}
                     ref={virtualizer.measureElement}
                     data-index={vi.index}
+                    data-anchor-id={r.id}
                     style={{
                       position: "absolute",
                       top: 0,
@@ -466,14 +554,17 @@ export default function LiveBattleComments({
                     }}
                   >
                     <div
-                      className={`flex items-start gap-2 group ${
+                      className={`flex items-start gap-2 group outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded-md ${
                         reducedMotion ? "" : "animate-in fade-in slide-in-from-bottom-1 duration-200"
                       } ${isHidden ? "opacity-50" : ""} ${
                         overlay ? "rounded-full bg-black/40 backdrop-blur-sm pl-1 pr-3 py-1 w-fit max-w-[85%] [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]" : ""
                       }`}
                       data-testid="live-battle-comment"
                       data-hidden={isHidden ? "true" : "false"}
+                      data-first-unread={firstUnreadIndex === vi.index ? "true" : "false"}
+                      tabIndex={-1}
                     >
+
 
                       {r.profile_photo_url ? (
                         <img src={r.profile_photo_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
