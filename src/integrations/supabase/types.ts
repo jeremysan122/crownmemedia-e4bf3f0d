@@ -2025,23 +2025,32 @@ export type Database = {
         Row: {
           battle_id: string
           created_at: string
+          handled_at: string | null
+          handled_by: string | null
           id: string
           reason: string
           reporter_id: string
+          status: string
         }
         Insert: {
           battle_id: string
           created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
           id?: string
           reason: string
           reporter_id: string
+          status?: string
         }
         Update: {
           battle_id?: string
           created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
           id?: string
           reason?: string
           reporter_id?: string
+          status?: string
         }
         Relationships: [
           {
@@ -5339,7 +5348,22 @@ export type Database = {
       }
       live_battle_report: {
         Args: { _battle_id: string; _reason: string }
-        Returns: undefined
+        Returns: {
+          battle_id: string
+          created_at: string
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          reason: string
+          reporter_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "live_battle_reports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       live_battle_start: {
         Args: { _battle_id: string }

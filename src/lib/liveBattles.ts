@@ -38,6 +38,7 @@ export function liveBattleErrorMessage(err: unknown, fallback: string): string {
   if (msg.includes("invalid_opponent")) return "That opponent can't be challenged.";
   if (msg.includes("invalid_choice")) return "Pick host or opponent to vote.";
   if (msg.includes("invalid_reason")) return "Please add a short reason (at least a few words).";
+  if (msg.includes("duplicate_report")) return "You already reported this battle recently. Our team is on it.";
   if (msg.includes("blocked")) return "You can't start a battle with that user.";
   if (msg.includes("token_mint_failed") || msg.includes("token")) return "Couldn't get a room pass. Please try again in a moment.";
   if (msg.includes("network") || msg.includes("failed to fetch") || msg.includes("timeout")) return "Network hiccup. Check your connection and try again.";
@@ -75,12 +76,24 @@ export async function voteInLiveBattle(battleId: string, choice: "host" | "oppon
   if (error) throw error;
 }
 
-export async function reportLiveBattle(battleId: string, reason: string) {
-  // Server-side RPC enforces rate limit + validation. Direct INSERT revoked.
-  const { error } = await supabase.rpc("live_battle_report", {
+export interface LiveBattleReportRow {
+  id: string;
+  battle_id: string;
+  reporter_id: string;
+  reason: string;
+  status: "queued" | "processing" | "handled" | "rejected";
+  created_at: string;
+  handled_at: string | null;
+  handled_by: string | null;
+}
+
+export async function reportLiveBattle(battleId: string, reason: string): Promise<LiveBattleReportRow> {
+  // Server-side RPC enforces rate limit + duplicate window + validation.
+  const { data, error } = await supabase.rpc("live_battle_report", {
     _battle_id: battleId, _reason: reason.slice(0, 500),
   });
   if (error) throw error;
+  return data as unknown as LiveBattleReportRow;
 }
 
 export async function roomControl(

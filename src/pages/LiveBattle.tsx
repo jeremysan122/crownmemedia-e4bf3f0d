@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { isFeatureEnabled } from "@/lib/featureFlags";
 import {
-  LiveBattleRow, liveBattleErrorMessage, mintLiveBattleToken,
+  LiveBattleRow, LiveBattleReportRow, liveBattleErrorMessage, mintLiveBattleToken,
   reportLiveBattle, roomControl, voteInLiveBattle,
 } from "@/lib/liveBattles";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,8 @@ export default function LiveBattlePage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reportBusy, setReportBusy] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [myReport, setMyReport] = useState<LiveBattleReportRow | null>(null);
   const [modBusy, setModBusy] = useState(false);
   const [showModPanel, setShowModPanel] = useState(false);
 
@@ -74,10 +76,94 @@ export default function LiveBattlePage() {
     const ch = supabase
       .channel(`live_battle:${battleId}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "live_battles", filter: `id=eq.${battleId}` },
-        (payload) => setBattle(payload.new as LiveBattleRow))
+        (payload) => {
+          const next = payload.new as LiveBattleRow;
+          setBattle((prev) => {
+            // Announce transition to ended so viewers see immediate confirmation
+            // before the results screen replaces the room.
+            if (prev && prev.status !== "ended" && next.status === "ended") {
+              const reason = next.ended_reason ?? "host_end";
+              const description =
+                reason === "admin_force_end" ? "A moderator ended this battle. Results are final."
+                : reason === "host_end" ? "The host ended the battle. Showing results now."
+                : "The battle ended. Showing results now.";
+              toast({ title: "Battle ended", description });
+              // Force teardown of the LiveKit room by clearing the token.
+              setToken(null);
+            }
+            return next;
+          });
+        })
       .subscribe();
     return () => { mounted = false; supabase.removeChannel(ch); };
   }, [battleId]);
+
+  // Real-time confirmations for mute/kick actions (target + host see it).
+  useEffect(() => {
+    if (!battleId || !user?.id) return;
+    const ch = supabase
+      .channel(`live_battle_mod:${battleId}`)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "live_battle_participants",
+        filter: `battle_id=eq.${battleId}`,
+      }, (payload) => {
+        const row = payload.new as { action: string; target_user_id: string; actor_id: string };
+        const isMe = row.target_user_id === user.id;
+        const isActor = row.actor_id === user.id;
+        if (isMe) {
+          if (row.action === "kick") {
+            toast({ title: "You were removed from the battle", description: "A host or moderator removed you. You can still watch from the results screen when it ends.", variant: "destructive" });
+            nav("/battles/live");
+          } else if (row.action === "mute") {
+            toast({ title: "You've been muted", description: "A host or moderator muted your microphone." });
+          } else if (row.action === "unmute") {
+            toast({ title: "You've been unmuted", description: "You can speak again." });
+          }
+        } else if (isActor) {
+          // Host/mod already sees a toast from the button handler; skip duplicate.
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [battleId, user?.id, nav]);
+
+  // Track this viewer's own report + live status updates.
+  useEffect(() => {
+    if (!battleId || !user?.id) return;
+    let mounted = true;
+    (async () => {
+      const { data } = await supabase
+        .from("live_battle_reports")
+        .select("*")
+        .eq("battle_id", battleId)
+        .eq("reporter_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (mounted && data) setMyReport(data as LiveBattleReportRow);
+    })();
+    const ch = supabase
+      .channel(`live_battle_report_self:${battleId}:${user.id}`)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "live_battle_reports",
+        filter: `battle_id=eq.${battleId}`,
+      }, (payload) => {
+        const row = (payload.new ?? payload.old) as LiveBattleReportRow | undefined;
+        if (!row || row.reporter_id !== user.id) return;
+        if (payload.eventType === "DELETE") { setMyReport(null); return; }
+        setMyReport((prev) => {
+          const next = payload.new as LiveBattleReportRow;
+          if (prev && prev.status !== next.status && next.status === "handled") {
+            toast({ title: "Your report was handled", description: "Thanks — our team reviewed it." });
+          } else if (prev && prev.status !== next.status && next.status === "rejected") {
+            toast({ title: "Report reviewed", description: "Our team looked at your report and closed it without action." });
+          }
+          return next;
+        });
+      })
+      .subscribe();
+    return () => { mounted = false; supabase.removeChannel(ch); };
+  }, [battleId, user?.id]);
 
   // Mint token once the battle is loaded.
   useEffect(() => {
@@ -140,20 +226,37 @@ export default function LiveBattlePage() {
   const handleReportSubmit = async () => {
     if (!battle) return;
     const reason = reportReason.trim();
+    setReportError(null);
     if (reason.length < 5) {
-      toast({ title: "Please add a short reason (at least a few words).", variant: "destructive" });
+      setReportError("Please add a short reason (at least a few words).");
       return;
     }
     setReportBusy(true);
     try {
-      await reportLiveBattle(battle.id, reason);
-      toast({ title: "Report submitted", description: "Thanks — our team will review it." });
+      const row = await reportLiveBattle(battle.id, reason);
+      setMyReport(row);
+      toast({
+        title: "Report submitted",
+        description: "Queued for review. You'll see status updates here.",
+      });
       setReportOpen(false);
       setReportReason("");
     } catch (e) {
-      toast({ title: liveBattleErrorMessage(e, "Couldn't submit report."), variant: "destructive" });
+      const msg = liveBattleErrorMessage(e, "Couldn't submit report. Please try again in a moment.");
+      setReportError(msg);
+      // If duplicate, close after a beat so they see the friendly badge below.
+      const raw = String((e as { message?: string })?.message ?? "").toLowerCase();
+      if (raw.includes("duplicate_report")) {
+        toast({ title: "Already reported", description: msg });
+      }
     } finally { setReportBusy(false); }
   };
+
+  const reportStatusLabel = (s: LiveBattleReportRow["status"]): string =>
+    s === "queued" ? "Queued for review"
+    : s === "processing" ? "Being reviewed"
+    : s === "handled" ? "Handled by our team"
+    : "Closed — no action taken";
 
   if (allowed === false && !err) return <Gate msg="Live battles aren't available yet." onBack={() => nav("/battles")} />;
   if (err) return <Gate msg={err} onBack={() => nav("/battles")} />;
@@ -278,35 +381,64 @@ export default function LiveBattlePage() {
             )}
           </div>
           {!isParticipant && (
-            <Button size="sm" variant="ghost" onClick={() => setReportOpen(true)}>
-              <Flag className="w-4 h-4 mr-1" />Report
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => { setReportError(null); setReportOpen(true); }}
+                disabled={!!myReport && myReport.status !== "rejected"}
+                title={myReport ? "You already reported this battle" : "Report this battle"}
+              >
+                <Flag className="w-4 h-4 mr-1" />
+                {myReport && myReport.status !== "rejected" ? "Reported" : "Report"}
+              </Button>
+              {myReport && (
+                <span className="text-[10px] text-muted-foreground">
+                  {reportStatusLabel(myReport.status)}
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
 
       {/* Report dialog */}
-      <Dialog open={reportOpen} onOpenChange={(v) => { if (!reportBusy) setReportOpen(v); }}>
+      <Dialog open={reportOpen} onOpenChange={(v) => { if (!reportBusy) { setReportOpen(v); if (!v) setReportError(null); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Report this live battle</DialogTitle>
             <DialogDescription>
               Tell us what's wrong. Reports are reviewed by our moderation team.
+              You can only submit one report per battle every 10 minutes.
             </DialogDescription>
           </DialogHeader>
           <Textarea
             value={reportReason}
-            onChange={(e) => setReportReason(e.target.value.slice(0, 500))}
+            onChange={(e) => { setReportReason(e.target.value.slice(0, 500)); if (reportError) setReportError(null); }}
             placeholder="Describe the issue (harassment, nudity, hate speech, etc.)"
             rows={4}
             disabled={reportBusy}
           />
-          <div className="text-[11px] text-muted-foreground text-right">{reportReason.length}/500</div>
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>{reportError && <span className="text-destructive" role="alert">{reportError}</span>}</span>
+            <span>{reportReason.length}/500</span>
+          </div>
+          {myReport && (
+            <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs">
+              <div className="font-semibold mb-0.5">Your last report</div>
+              <div className="text-muted-foreground">
+                Status: {reportStatusLabel(myReport.status)}
+                {myReport.handled_at && myReport.status === "handled" && (
+                  <> · handled {new Date(myReport.handled_at).toLocaleString()}</>
+                )}
+              </div>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setReportOpen(false)} disabled={reportBusy}>Cancel</Button>
             <Button onClick={handleReportSubmit} disabled={reportBusy}>
               {reportBusy && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-              Submit report
+              {reportError ? "Try again" : "Submit report"}
             </Button>
           </DialogFooter>
         </DialogContent>
