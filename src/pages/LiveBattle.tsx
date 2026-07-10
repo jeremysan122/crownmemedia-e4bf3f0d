@@ -562,6 +562,28 @@ export default function LiveBattlePage() {
                 <Users className="w-4 h-4 mr-1" />{showModPanel ? "Hide" : "Manage"} viewers
               </Button>
             )}
+            {(isHost || canModerate) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowBattleMod((v) => !v)}
+                aria-pressed={showBattleMod}
+                data-testid="battle-mod-toggle"
+              >
+                <Shield className="w-4 h-4 mr-1" />{showBattleMod ? "Hide" : "Chat"} controls
+              </Button>
+            )}
+            {isParticipant && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowBeauty((v) => !v)}
+                aria-pressed={showBeauty}
+                data-testid="beauty-filter-toggle-button"
+              >
+                <Sparkles className="w-4 h-4 mr-1" />{showBeauty ? "Hide" : "Beauty"} filter
+              </Button>
+            )}
             {canForceEnd && (
               <Button size="sm" variant="secondary" disabled={modBusy} onClick={handleForceEnd}>
                 <Gavel className="w-4 h-4 mr-1" />Admin force-end
