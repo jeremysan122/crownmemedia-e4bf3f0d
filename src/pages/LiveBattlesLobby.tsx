@@ -57,9 +57,19 @@ export default function LiveBattlesLobby() {
         <h1 className="text-2xl font-black tracking-tight flex items-center gap-2 mb-1">
           <Radio className="text-destructive" size={22} /> Live Battles
         </h1>
-        <p className="text-sm text-muted-foreground mb-6">
+        <p className="text-sm text-muted-foreground mb-4">
           Real-time 1v1 head-to-head with audience voting.
         </p>
+
+        {enabled && (
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="w-full mb-6"
+            size="lg"
+          >
+            <Plus size={18} className="mr-1" /> New Live Battle
+          </Button>
+        )}
 
         {enabled === false && (
           <EmptyState msg="Live battles aren't available yet. Check back soon." />
