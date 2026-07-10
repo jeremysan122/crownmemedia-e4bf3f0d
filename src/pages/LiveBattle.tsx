@@ -218,6 +218,7 @@ export default function LiveBattlePage() {
   const canForceEnd = canModerate && battle?.status !== "ended";
 
   const remainingSec = useCountdown(battle?.ends_at);
+  const windowClosed = remainingSec !== null && remainingSec <= 0;
 
   const handleVote = async (choice: "host" | "opponent") => {
     if (!battle) return;
