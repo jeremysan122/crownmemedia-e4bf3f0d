@@ -56,14 +56,20 @@ export default function CommandCenterReports() {
   const load = async () => {
     let q = supabase.from("reports").select("*").order("created_at", { ascending: false }).limit(80);
     if (filter !== "all") q = q.eq("status", filter);
-    const [{ data }, openC, resC, disC] = await Promise.all([
+    const [{ data }, openC, resC, disC, escC] = await Promise.all([
       q,
       supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "open"),
       supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "resolved"),
       supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "dismissed"),
+      supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "escalated"),
     ]);
     setRows((data ?? []) as ReportRow[]);
-    setCounts({ open: openC.count ?? 0, resolved: resC.count ?? 0, dismissed: disC.count ?? 0 });
+    setCounts({
+      open: openC.count ?? 0,
+      resolved: resC.count ?? 0,
+      dismissed: disC.count ?? 0,
+      escalated: escC.count ?? 0,
+    });
   };
 
   useEffect(() => { load();   }, [filter]);
