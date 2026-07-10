@@ -23,23 +23,28 @@ export interface LiveBattleRow {
 }
 
 export function liveBattleErrorMessage(err: unknown, fallback: string): string {
-  const msg = String((err as any)?.message ?? "").toLowerCase();
+  const raw = (err as any)?.message ?? (err as any)?.error ?? "";
+  const msg = String(raw).toLowerCase();
   if (msg.includes("battle_not_found")) return "This battle is no longer available.";
   if (msg.includes("battle_not_live")) return "This battle isn't live.";
   if (msg.includes("battle_not_pending")) return "This battle already started or ended.";
+  if (msg.includes("battle_ended") || msg.includes("already ended")) return "This battle has already ended.";
   if (msg.includes("already_voted")) return "You've already voted in this battle.";
   if (msg.includes("participants_cannot_vote")) return "Participants can't vote in their own battle.";
   if (msg.includes("not_participant")) return "Only participants can do that.";
-  if (msg.includes("not_authorized")) return "You can't do that.";
-  if (msg.includes("not_authenticated")) return "Please sign in.";
-  if (msg.includes("feature_disabled")) return "Live battles aren't available right now.";
+  if (msg.includes("not_authorized") || msg.includes("only the host") || msg.includes("can't do that")) return "You don't have permission to do that.";
+  if (msg.includes("not_authenticated") || msg.includes("please sign in")) return "Please sign in to continue.";
+  if (msg.includes("feature_disabled") || msg.includes("aren't available right now")) return "Live battles aren't available right now.";
   if (msg.includes("invalid_opponent")) return "That opponent can't be challenged.";
   if (msg.includes("invalid_choice")) return "Pick host or opponent to vote.";
-  if (msg.includes("invalid_reason")) return "Please add a short reason.";
+  if (msg.includes("invalid_reason")) return "Please add a short reason (at least a few words).";
   if (msg.includes("blocked")) return "You can't start a battle with that user.";
-  if (msg.includes("rate")) return "You're doing that too fast. Try again soon.";
+  if (msg.includes("token_mint_failed") || msg.includes("token")) return "Couldn't get a room pass. Please try again in a moment.";
+  if (msg.includes("network") || msg.includes("failed to fetch") || msg.includes("timeout")) return "Network hiccup. Check your connection and try again.";
+  if (msg.includes("rate")) return "You're doing that too fast. Try again in a moment.";
   return fallback;
 }
+
 
 export async function createLiveBattle(
   opponentId: string,
