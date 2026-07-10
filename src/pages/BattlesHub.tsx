@@ -71,7 +71,7 @@ export default function BattlesHub() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-lg px-4 pt-5 pb-28">
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 pt-5 pb-28">
         {/* ─── HERO ARENA ─── */}
         <header
           className="relative overflow-hidden rounded-[28px] border border-primary/30 p-6 mb-5
