@@ -38,6 +38,7 @@ export function liveBattleErrorMessage(err: unknown, fallback: string): string {
   if (msg.includes("invalid_opponent")) return "That opponent can't be challenged.";
   if (msg.includes("invalid_choice")) return "Pick host or opponent to vote.";
   if (msg.includes("invalid_reason")) return "Please add a short reason (at least a few words).";
+  if (msg.includes("duplicate_report")) return "You already reported this battle recently. Our team is on it.";
   if (msg.includes("blocked")) return "You can't start a battle with that user.";
   if (msg.includes("token_mint_failed") || msg.includes("token")) return "Couldn't get a room pass. Please try again in a moment.";
   if (msg.includes("network") || msg.includes("failed to fetch") || msg.includes("timeout")) return "Network hiccup. Check your connection and try again.";
