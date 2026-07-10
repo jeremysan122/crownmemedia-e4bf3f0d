@@ -298,6 +298,7 @@ export default function BattlesHub() {
       </div>
 
       {liveEnabled && <CreateLiveBattleDialog open={openLive} onOpenChange={setOpenLive} />}
+      {liveEnabled && <ScheduleBattleSheet open={openSchedule} onOpenChange={setOpenSchedule} />}
       <ChallengeDialog open={openPost} onOpenChange={setOpenPost} />
     </AppShell>
   );
