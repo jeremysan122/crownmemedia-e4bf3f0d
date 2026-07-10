@@ -63,8 +63,8 @@ describe("BattlesHub feature flag gating", () => {
   it("shows Go Live CTA when live_battles_enabled is true", async () => {
     flagVal.v = true;
     await renderHub();
-    await waitFor(() => expect(screen.getByText(/Go Live Battle/i)).toBeInTheDocument());
-    expect(screen.getByText(/Live Battle$/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText(/Go Live Battle/i).length).toBeGreaterThan(0));
+    expect(screen.getByText(/Real-time 1v1 head-to-head/i)).toBeInTheDocument();
   });
 
   it("hides Go Live CTA and Live mode card when flag is off", async () => {
