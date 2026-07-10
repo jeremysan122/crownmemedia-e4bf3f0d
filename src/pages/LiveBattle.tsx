@@ -304,8 +304,13 @@ function formatSec(s: number) {
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 
-function Loading() {
-  return <div className="flex-1 flex items-center justify-center text-muted-foreground"><Loader2 className="animate-spin w-6 h-6" /></div>;
+function Loading({ label }: { label?: string } = {}) {
+  return (
+    <div className="flex-1 flex items-center justify-center gap-2 text-muted-foreground">
+      <Loader2 className="animate-spin w-6 h-6" />
+      {label && <span className="text-sm">{label}</span>}
+    </div>
+  );
 }
 
 function Gate({ msg, onBack }: { msg: string; onBack: () => void }) {
