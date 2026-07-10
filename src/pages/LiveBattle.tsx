@@ -28,6 +28,7 @@ import LiveBattleShareCard from "@/components/battles/LiveBattleShareCard";
 import LiveBattleGiftsOverlay from "@/components/battles/LiveBattleGiftsOverlay";
 import LiveBattleGiftPicker from "@/components/battles/LiveBattleGiftPicker";
 import LiveBattleVoteChip from "@/components/battles/LiveBattleVoteChip";
+import FollowBattlerButton from "@/components/battles/FollowBattlerButton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
