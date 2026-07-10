@@ -52,9 +52,11 @@ const COOLDOWN_MS = 3000;
 export default function LiveBattleComments({
   battleId,
   isLive,
+  overlay = false,
 }: {
   battleId: string;
   isLive: boolean;
+  overlay?: boolean;
 }) {
   const { user, isModerator } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
@@ -253,21 +255,31 @@ export default function LiveBattleComments({
 
   return (
     <section
-      className="border-t border-border bg-card/60"
+      className={
+        overlay
+          ? "absolute inset-x-0 bottom-0 z-20 flex flex-col pointer-events-none"
+          : "border-t border-border bg-card/60"
+      }
       data-testid="live-battle-comments"
       aria-label="Live battle chat"
     >
-      <header className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        <MessageSquare className="w-3.5 h-3.5" aria-hidden /> Live chat
-        <span className="text-[10px] text-muted-foreground/70 normal-case ml-auto">
-          {rows.length} {rows.length === 1 ? "comment" : "comments"}
-        </span>
-      </header>
+      {!overlay && (
+        <header className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <MessageSquare className="w-3.5 h-3.5" aria-hidden /> Live chat
+          <span className="text-[10px] text-muted-foreground/70 normal-case ml-auto">
+            {rows.length} {rows.length === 1 ? "comment" : "comments"}
+          </span>
+        </header>
+      )}
 
       <div
         ref={listRef}
         onScroll={onScroll}
-        className="max-h-52 min-h-[6rem] overflow-y-auto px-3 pb-2 space-y-1.5"
+        className={
+          overlay
+            ? "pointer-events-auto max-h-[45vh] min-h-[6rem] overflow-y-auto px-3 pb-2 pt-8 space-y-1.5 [mask-image:linear-gradient(to_bottom,transparent,black_25%,black)]"
+            : "max-h-52 min-h-[6rem] overflow-y-auto px-3 pb-2 space-y-1.5"
+        }
         data-testid="live-battle-comments-list"
         role="log"
         aria-live="polite"
@@ -275,6 +287,7 @@ export default function LiveBattleComments({
         aria-label="Live battle chat messages"
         tabIndex={0}
       >
+
         {hasMore && rows.length >= PAGE && (
           <div className="flex justify-center py-1">
             <Button
@@ -296,10 +309,11 @@ export default function LiveBattleComments({
         )}
 
         {rows.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-4" role="status">
+          <p className={`text-xs text-center py-4 ${overlay ? "text-white/70 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]" : "text-muted-foreground"}`} role="status">
             {isLive ? "Be the first to say something." : "Chat opens when the battle goes live."}
           </p>
         ) : (
+
           rows.map((r) => {
             const isHidden = !!r.hidden_at;
             const canReport = !!user && user.id !== r.user_id && !r.id.startsWith("opt-");
@@ -309,7 +323,7 @@ export default function LiveBattleComments({
                 key={r.id}
                 className={`flex items-start gap-2 group animate-in fade-in slide-in-from-bottom-1 duration-200 ${
                   isHidden ? "opacity-50" : ""
-                }`}
+                } ${overlay ? "rounded-full bg-black/40 backdrop-blur-sm pl-1 pr-3 py-1 w-fit max-w-[85%] [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]" : ""}`}
                 data-testid="live-battle-comment"
                 data-hidden={isHidden ? "true" : "false"}
               >
@@ -319,17 +333,18 @@ export default function LiveBattleComments({
                   <div className="w-6 h-6 rounded-full bg-muted shrink-0" aria-hidden />
                 )}
                 <div className="min-w-0 flex-1 text-sm leading-snug">
-                  <span className="font-semibold text-foreground/90 mr-1.5">
+                  <span className={`font-semibold mr-1.5 ${overlay ? "text-white" : "text-foreground/90"}`}>
                     @{r.username ?? r.user_id.slice(0, 6)}
                   </span>
                   {isHidden ? (
-                    <span className="italic text-muted-foreground text-xs">
+                    <span className={`italic text-xs ${overlay ? "text-white/60" : "text-muted-foreground"}`}>
                       [hidden by moderator]
                     </span>
                   ) : (
-                    <span className="text-foreground/80 break-words">{r.body}</span>
+                    <span className={`break-words ${overlay ? "text-white/95" : "text-foreground/80"}`}>{r.body}</span>
                   )}
                 </div>
+
                 {(canReport || canModerate) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -368,7 +383,11 @@ export default function LiveBattleComments({
       </div>
 
       <form
-        className="flex flex-col gap-1 border-t border-border/60 px-3 py-2"
+        className={
+          overlay
+            ? "pointer-events-auto flex flex-col gap-1 px-3 py-2"
+            : "flex flex-col gap-1 border-t border-border/60 px-3 py-2"
+        }
         onSubmit={(e) => { e.preventDefault(); submit(); }}
       >
         <div className="flex items-center gap-2">
@@ -388,7 +407,9 @@ export default function LiveBattleComments({
             aria-describedby={`lbc-status-${battleId} lbc-count-${battleId}`}
             aria-invalid={remaining < 0 ? "true" : undefined}
             autoComplete="off"
+            className={overlay ? "rounded-full bg-black/40 backdrop-blur-sm border-white/20 text-white placeholder:text-white/60" : undefined}
           />
+
           <Button
             type="submit"
             size="icon"

@@ -445,13 +445,14 @@ export default function LiveBattlePage() {
           hostId={battle.host_id}
           opponentId={battle.opponent_id}
         />
+        {/* Instagram-style live chat overlay — sits on top of the video stage. */}
+        <LiveBattleComments battleId={battle.id} isLive={battle.status === "live"} overlay />
       </div>
 
       {/* Moderation activity log — visible to host + admins/mods and to the currently viewing user (self events). */}
       <LiveBattleActivityLog battleId={battle.id} selfId={user?.id ?? null} />
 
-      {/* Live chat for viewers/participants. Server RLS blocks writes when not live. */}
-      <LiveBattleComments battleId={battle.id} isLive={battle.status === "live"} />
+
 
 
       {/* Vote bar */}
