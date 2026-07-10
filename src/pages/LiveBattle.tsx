@@ -93,6 +93,12 @@ export default function LiveBattlePage() {
         (payload) => {
           const next = payload.new as LiveBattleRow;
           setBattle((prev) => {
+            // Vote totals came back from the server — clear the pending
+            // marker and flash the "confirmed" chip briefly.
+            if (prev && (prev.host_votes !== next.host_votes || prev.opponent_votes !== next.opponent_votes)) {
+              setPendingChoice(null);
+              setVoteConfirmedAt(Date.now());
+            }
             // Announce transition to ended so viewers see immediate confirmation
             // before the results screen replaces the room.
             if (prev && prev.status !== "ended" && next.status === "ended") {
