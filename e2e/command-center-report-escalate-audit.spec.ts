@@ -58,10 +58,11 @@ test.describe("Command Center — report_escalated audit log entry", () => {
 
       // Poll for the audit row — the write is best-effort/async in the
       // client (fire-and-forget after the status update commits).
-      const audit = await expect.poll(
-        async () => readLatestReportEscalatedAudit(reportId),
+      await expect.poll(
+        async () => (await readLatestReportEscalatedAudit(reportId)) !== null,
         { timeout: 8_000, message: "audit log row not written" },
-      ).not.toBeNull().then(() => readLatestReportEscalatedAudit(reportId));
+      ).toBe(true);
+      const audit = await readLatestReportEscalatedAudit(reportId);
 
       expect(audit).not.toBeNull();
       expect(audit!.action).toBe("report_escalated");
