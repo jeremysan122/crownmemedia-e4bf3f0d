@@ -77,6 +77,53 @@ export async function revokeModerator(userId: string) {
   await admin.from("user_roles").delete().eq("user_id", userId).eq("role", "moderator");
 }
 
+/** Insert a stand-alone report row so admin/mod UI tests have something to act on. */
+export async function seedReport(opts: {
+  reporterId: string;
+  reportedUserId?: string;
+  postId?: string;
+  commentId?: string;
+  reason?: string;
+  reasonCode?: string;
+}): Promise<string> {
+  const admin = adminClient();
+  const { data, error } = await admin
+    .from("reports")
+    .insert({
+      reporter_id: opts.reporterId,
+      reported_user_id: opts.reportedUserId ?? null,
+      post_id: opts.postId ?? null,
+      comment_id: opts.commentId ?? null,
+      reason: opts.reason ?? "e2e seeded report",
+      reason_code: opts.reasonCode ?? "spam",
+    } as any)
+    .select("id")
+    .single();
+  if (error || !data) throw error ?? new Error("seedReport failed");
+  return (data as any).id as string;
+}
+
+export async function deleteReport(reportId: string) {
+  const admin = adminClient();
+  await admin.from("reports").delete().eq("id", reportId);
+}
+
+export async function readReportRaw(reportId: string) {
+  const admin = adminClient();
+  const { data } = await admin
+    .from("reports")
+    .select("id, status, resolution, resolved_by, resolved_at")
+    .eq("id", reportId)
+    .maybeSingle();
+  return data as {
+    id: string;
+    status: string;
+    resolution: string | null;
+    resolved_by: string | null;
+    resolved_at: string | null;
+  } | null;
+}
+
 /** Read a single comment as service-role (bypasses RLS) for assertions. */
 export async function readCommentRaw(id: string) {
   const admin = adminClient();
