@@ -307,10 +307,21 @@ export default function LiveBattleComments({
   async function loadOlder() {
     if (loadingOlder || !hasMore || rows.length === 0) return;
     setLoadingOlder(true);
-    const oldest = rows[0]!.created_at;
+    // Anchor = the top-most currently-mounted row. Its id is stable across
+    // prepends AND across concurrent tail arrivals; after we insert older
+    // rows in front of it, the anchor's new index = olderUnique.length.
+    // Comparing the anchor's pixel offset before/after gives us an EXACT
+    // scroll delta — independent of virtualizer size estimates or realtime
+    // tail additions that mutate `getTotalSize()` mid-flight.
+    const anchor = rows[0]!;
+    const anchorId = anchor.id;
+    const oldest = anchor.created_at;
     const el = listRef.current;
-    const prevTotal = virtualizer.getTotalSize();
     const prevScroll = el?.scrollTop ?? 0;
+    const anchorOffsetBefore =
+      virtualizer.getOffsetForIndex?.(0, "start")?.[0] ?? 0;
+    const delta0 = prevScroll - anchorOffsetBefore;
+
     const { data } = await supabase
       .from("live_battle_comments")
       .select("id, battle_id, user_id, body, created_at, hidden_at")
@@ -320,25 +331,46 @@ export default function LiveBattleComments({
       .limit(PAGE);
     const olderRaw = ((data as Row[]) || []).reverse();
     await hydrate(olderRaw);
-    // Dedup against current rows so any comment that arrived via realtime
-    // during the fetch (or overlaps the boundary) never appears twice.
+
+    let prependedCount = 0;
     setRows((prev) => {
       const existing = new Set(prev.map((r) => r.id));
       const olderUnique = olderRaw.filter((r) => !existing.has(r.id));
+      prependedCount = olderUnique.length;
       return [...olderUnique, ...prev];
     });
     setHasMore((data?.length ?? 0) === PAGE);
     setLoadingOlder(false);
-    // Preserve scroll offset so newly prepended rows don't jump the view.
-    // Use rAF twice so the virtualizer has re-measured before we compute the delta.
+
+    // A first-unread index tracked from realtime arrivals must shift by the
+    // same prepended count so keyboard focus still lands on the right row.
+    if (firstUnreadIndexRef.current !== null && prependedCount > 0) {
+      firstUnreadIndexRef.current += prependedCount;
+      setFirstUnreadIndex(firstUnreadIndexRef.current);
+    }
+
+    // Restore the exact viewport by relocating our anchor row. Use two rAFs
+    // so the virtualizer has measured the newly prepended rows first.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (!el) return;
-        const diff = virtualizer.getTotalSize() - prevTotal;
-        el.scrollTop = prevScroll + diff;
+        const newIdx = prependedCount; // anchor now sits at this index
+        const anchorOffsetAfter =
+          virtualizer.getOffsetForIndex?.(newIdx, "start")?.[0] ?? null;
+        if (anchorOffsetAfter !== null) {
+          el.scrollTop = anchorOffsetAfter + delta0;
+        } else {
+          // Fallback: locate by DOM if virtualizer API isn't available.
+          const node = el.querySelector<HTMLElement>(
+            `[data-anchor-id="${CSS.escape(anchorId)}"]`,
+          );
+          if (node) el.scrollTop = node.offsetTop + delta0;
+        }
       });
     });
   }
+
+
 
 
   function broadcastTyping() {
