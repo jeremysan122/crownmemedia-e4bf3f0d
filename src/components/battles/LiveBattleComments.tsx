@@ -508,6 +508,15 @@ export default function LiveBattleComments({
     const body = text.trim();
     if (!body || sending || !isLive) return;
     if (Date.now() < cooldownUntil) return;
+    // Wave 4: block sends the host has disabled or filtered.
+    if (commentsLocked && !isModerator) {
+      toast({ title: "Chat is locked", description: "The host has paused chat for this battle.", variant: "destructive" });
+      return;
+    }
+    if (bodyMatchesKeyword(body, keywordFilters)) {
+      toast({ title: "That word is blocked here", description: "The host filtered this word out of chat.", variant: "destructive" });
+      return;
+    }
     setSending(true);
     const optimistic: Row = {
       id: `opt-${crypto.randomUUID()}`,
@@ -529,12 +538,23 @@ export default function LiveBattleComments({
       if (error) throw error;
       setJustSent(true);
       window.setTimeout(() => setJustSent(false), 900);
-      setCooldownUntil(Date.now() + COOLDOWN_MS);
+      // Slow mode uses the max of the base composer cooldown and the
+      // host-configured wait, keeping the UI in sync with the RLS policy.
+      const cooldownMs = Math.max(COOLDOWN_MS, (slowModeSeconds || 0) * 1000);
+      setCooldownUntil(Date.now() + cooldownMs);
     } catch (e: any) {
       setRows((prev) => prev.filter((r) => r.id !== optimistic.id));
+      const msg = String(e?.message ?? "");
+      const looksBlocked = /policy|denied|violat/i.test(msg);
+      const desc = looksBlocked
+        ? (commentsLocked ? "The host paused chat."
+          : slowModeSeconds > 0 ? `Slow mode is on — wait ${slowModeSeconds}s between messages.`
+          : keywordFilters.length > 0 ? "That message contains a blocked word."
+          : "This battle isn't live anymore.")
+        : "Please try again.";
       toast({
         title: "Couldn't send your comment.",
-        description: /policy|denied/i.test(e?.message || "") ? "This battle isn't live anymore." : "Please try again.",
+        description: desc,
         variant: "destructive",
       });
     } finally {
