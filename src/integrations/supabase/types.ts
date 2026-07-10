@@ -6148,6 +6148,29 @@ export type Database = {
       }
       request_account_deletion: { Args: never; Returns: Json }
       request_standard_verification: { Args: never; Returns: Json }
+      resolve_tournament_match: {
+        Args: { _match_id: string; _winner_id: string }
+        Returns: {
+          battle_id: string | null
+          created_at: string
+          host_id: string | null
+          id: string
+          next_match_id: string | null
+          next_slot: number | null
+          opponent_id: string | null
+          round: number
+          slot: number
+          status: string
+          tournament_id: string
+          winner_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournament_matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       royal_pass_daily_boost_status: { Args: never; Returns: Json }
       save_push_subscription: {
         Args: {

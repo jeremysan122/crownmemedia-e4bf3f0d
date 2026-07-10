@@ -44,6 +44,8 @@ describe("tournaments helpers", () => {
     expect(tournamentErrorMessage({ message: "duplicate_participants" })).toMatch(/only appear once/);
     expect(tournamentErrorMessage({ message: "match_not_ready" })).toMatch(/isn't ready/);
     expect(tournamentErrorMessage({ message: "feature_disabled" })).toMatch(/aren't available/);
+    expect(tournamentErrorMessage({ message: "match_not_resolvable" })).toMatch(/doesn't need resolution/);
+    expect(tournamentErrorMessage({ message: "invalid_winner" })).toMatch(/one of the two participants/);
     expect(tournamentErrorMessage({ message: "boom" })).toMatch(/wrong/);
   });
 });
