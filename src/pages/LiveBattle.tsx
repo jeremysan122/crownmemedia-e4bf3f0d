@@ -381,35 +381,64 @@ export default function LiveBattlePage() {
             )}
           </div>
           {!isParticipant && (
-            <Button size="sm" variant="ghost" onClick={() => setReportOpen(true)}>
-              <Flag className="w-4 h-4 mr-1" />Report
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => { setReportError(null); setReportOpen(true); }}
+                disabled={!!myReport && myReport.status !== "rejected"}
+                title={myReport ? "You already reported this battle" : "Report this battle"}
+              >
+                <Flag className="w-4 h-4 mr-1" />
+                {myReport && myReport.status !== "rejected" ? "Reported" : "Report"}
+              </Button>
+              {myReport && (
+                <span className="text-[10px] text-muted-foreground">
+                  {reportStatusLabel(myReport.status)}
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
 
       {/* Report dialog */}
-      <Dialog open={reportOpen} onOpenChange={(v) => { if (!reportBusy) setReportOpen(v); }}>
+      <Dialog open={reportOpen} onOpenChange={(v) => { if (!reportBusy) { setReportOpen(v); if (!v) setReportError(null); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Report this live battle</DialogTitle>
             <DialogDescription>
               Tell us what's wrong. Reports are reviewed by our moderation team.
+              You can only submit one report per battle every 10 minutes.
             </DialogDescription>
           </DialogHeader>
           <Textarea
             value={reportReason}
-            onChange={(e) => setReportReason(e.target.value.slice(0, 500))}
+            onChange={(e) => { setReportReason(e.target.value.slice(0, 500)); if (reportError) setReportError(null); }}
             placeholder="Describe the issue (harassment, nudity, hate speech, etc.)"
             rows={4}
             disabled={reportBusy}
           />
-          <div className="text-[11px] text-muted-foreground text-right">{reportReason.length}/500</div>
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>{reportError && <span className="text-destructive" role="alert">{reportError}</span>}</span>
+            <span>{reportReason.length}/500</span>
+          </div>
+          {myReport && (
+            <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs">
+              <div className="font-semibold mb-0.5">Your last report</div>
+              <div className="text-muted-foreground">
+                Status: {reportStatusLabel(myReport.status)}
+                {myReport.handled_at && myReport.status === "handled" && (
+                  <> · handled {new Date(myReport.handled_at).toLocaleString()}</>
+                )}
+              </div>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setReportOpen(false)} disabled={reportBusy}>Cancel</Button>
             <Button onClick={handleReportSubmit} disabled={reportBusy}>
               {reportBusy && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-              Submit report
+              {reportError ? "Try again" : "Submit report"}
             </Button>
           </DialogFooter>
         </DialogContent>
