@@ -4,8 +4,9 @@ import AppShell from "@/components/AppShell";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { supabase } from "@/integrations/supabase/client";
 import { isFeatureEnabled } from "@/lib/featureFlags";
-import { Radio, ArrowLeft, Loader2 } from "lucide-react";
+import { Radio, ArrowLeft, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import CreateLiveBattleDialog from "@/components/battles/CreateLiveBattleDialog";
 
 interface Row {
   id: string;
@@ -25,6 +26,7 @@ export default function LiveBattlesLobby() {
   const nav = useNavigate();
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     isFeatureEnabled("live_battles_enabled").then(setEnabled).catch(() => setEnabled(false));
@@ -55,9 +57,19 @@ export default function LiveBattlesLobby() {
         <h1 className="text-2xl font-black tracking-tight flex items-center gap-2 mb-1">
           <Radio className="text-destructive" size={22} /> Live Battles
         </h1>
-        <p className="text-sm text-muted-foreground mb-6">
+        <p className="text-sm text-muted-foreground mb-4">
           Real-time 1v1 head-to-head with audience voting.
         </p>
+
+        {enabled && (
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="w-full mb-6"
+            size="lg"
+          >
+            <Plus size={18} className="mr-1" /> New Live Battle
+          </Button>
+        )}
 
         {enabled === false && (
           <EmptyState msg="Live battles aren't available yet. Check back soon." />
@@ -104,6 +116,7 @@ export default function LiveBattlesLobby() {
           </ul>
         )}
       </div>
+      <CreateLiveBattleDialog open={createOpen} onOpenChange={setCreateOpen} />
     </AppShell>
   );
 }

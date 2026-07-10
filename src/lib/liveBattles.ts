@@ -18,6 +18,8 @@ export interface LiveBattleRow {
   ended_reason: string | null;
   is_hidden: boolean;
   created_at: string;
+  category_slug?: string | null;
+  region?: string | null;
 }
 
 export function liveBattleErrorMessage(err: unknown, fallback: string): string {
@@ -39,12 +41,20 @@ export function liveBattleErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-export async function createLiveBattle(opponentId: string, durationSeconds = 300): Promise<LiveBattleRow> {
+export async function createLiveBattle(
+  opponentId: string,
+  durationSeconds = 300,
+  categorySlug?: string | null,
+  region?: string | null,
+): Promise<LiveBattleRow> {
   // Server-side RPC: mints room_name, clamps duration, checks feature flag,
   // rate limit, blocks, self. Direct INSERT on live_battles is revoked.
   const { data, error } = await supabase.rpc("create_live_battle", {
-    _opponent_id: opponentId, _duration_seconds: durationSeconds,
-  });
+    _opponent_id: opponentId,
+    _duration_seconds: durationSeconds,
+    _category_slug: categorySlug ?? null,
+    _region: region ?? null,
+  } as any);
   if (error) throw error;
   return data as unknown as LiveBattleRow;
 }

@@ -2084,6 +2084,7 @@ export type Database = {
       }
       live_battles: {
         Row: {
+          category_slug: string | null
           created_at: string
           duration_seconds: number
           ended_reason: string | null
@@ -2095,6 +2096,7 @@ export type Database = {
           is_hidden: boolean
           opponent_id: string
           opponent_votes: number
+          region: string | null
           room_name: string
           started_at: string | null
           status: string
@@ -2102,6 +2104,7 @@ export type Database = {
           winner_id: string | null
         }
         Insert: {
+          category_slug?: string | null
           created_at?: string
           duration_seconds?: number
           ended_reason?: string | null
@@ -2113,6 +2116,7 @@ export type Database = {
           is_hidden?: boolean
           opponent_id: string
           opponent_votes?: number
+          region?: string | null
           room_name: string
           started_at?: string | null
           status?: string
@@ -2120,6 +2124,7 @@ export type Database = {
           winner_id?: string | null
         }
         Update: {
+          category_slug?: string | null
           created_at?: string
           duration_seconds?: number
           ended_reason?: string | null
@@ -2131,6 +2136,7 @@ export type Database = {
           is_hidden?: boolean
           opponent_id?: string
           opponent_votes?: number
+          region?: string | null
           room_name?: string
           started_at?: string | null
           status?: string
@@ -4988,8 +4994,14 @@ export type Database = {
         Returns: string
       }
       create_live_battle: {
-        Args: { _duration_seconds?: number; _opponent_id: string }
+        Args: {
+          _category_slug?: string
+          _duration_seconds?: number
+          _opponent_id: string
+          _region?: string
+        }
         Returns: {
+          category_slug: string | null
           created_at: string
           duration_seconds: number
           ended_reason: string | null
@@ -5001,6 +5013,7 @@ export type Database = {
           is_hidden: boolean
           opponent_id: string
           opponent_votes: number
+          region: string | null
           room_name: string
           started_at: string | null
           status: string
@@ -5294,6 +5307,7 @@ export type Database = {
       live_battle_end: {
         Args: { _battle_id: string; _force?: boolean; _reason?: string }
         Returns: {
+          category_slug: string | null
           created_at: string
           duration_seconds: number
           ended_reason: string | null
@@ -5305,6 +5319,7 @@ export type Database = {
           is_hidden: boolean
           opponent_id: string
           opponent_votes: number
+          region: string | null
           room_name: string
           started_at: string | null
           status: string
@@ -5329,6 +5344,7 @@ export type Database = {
       live_battle_start: {
         Args: { _battle_id: string }
         Returns: {
+          category_slug: string | null
           created_at: string
           duration_seconds: number
           ended_reason: string | null
@@ -5340,6 +5356,7 @@ export type Database = {
           is_hidden: boolean
           opponent_id: string
           opponent_votes: number
+          region: string | null
           room_name: string
           started_at: string | null
           status: string

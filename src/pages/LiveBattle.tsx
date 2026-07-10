@@ -19,7 +19,7 @@ import {
 } from "@/lib/liveBattles";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, ShieldAlert, Flag, Crown } from "lucide-react";
+import { Loader2, ShieldAlert, Flag, Crown, Trophy, Share2 } from "lucide-react";
 
 export default function LiveBattlePage() {
   const { battleId = "" } = useParams<{ battleId: string }>();
@@ -105,11 +105,24 @@ export default function LiveBattlePage() {
 
   if (allowed === false) return <Gate msg="Live battles aren't available yet." onBack={() => nav("/battles")} />;
   if (err) return <Gate msg={err} onBack={() => nav("/battles")} />;
-  if (!battle || allowed === null) return <Loading />;
+  if (!battle || allowed === null) return <Loading label="Loading battle…" />;
 
   const total = battle.host_votes + battle.opponent_votes;
   const hostPct = total ? Math.round((battle.host_votes / total) * 100) : 50;
   const oppPct = 100 - hostPct;
+  const leader: "host" | "opponent" | "tie" =
+    battle.host_votes === battle.opponent_votes ? "tie"
+    : battle.host_votes > battle.opponent_votes ? "host" : "opponent";
+
+  // Results screen after end.
+  if (battle.status === "ended") {
+    return (
+      <ResultsScreen
+        battle={battle}
+        onBack={() => nav("/battles/live")}
+      />
+    );
+  }
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground flex flex-col">
@@ -141,22 +154,33 @@ export default function LiveBattlePage() {
             <RoomAudioRenderer />
             {isParticipant && <ControlBar variation="minimal" controls={{ microphone: true, camera: true, screenShare: false, leave: false }} />}
           </LiveKitRoom>
-        ) : battle.status === "ended" ? (
-          <div className="h-full flex items-center justify-center text-muted-foreground">This battle has ended.</div>
         ) : (
-          <Loading />
+          <Loading label={isParticipant ? "Joining stage…" : "Joining as viewer…"} />
         )}
       </div>
 
-      {/* Score bar */}
+      {/* Vote bar */}
       <div className="p-3 border-t border-border">
-        <div className="flex items-center justify-between text-xs mb-1">
-          <span className="flex items-center gap-1"><Crown className="w-3 h-3" />Host {battle.host_votes}</span>
-          <span>Opponent {battle.opponent_votes}</span>
+        <div className="flex items-center justify-between text-xs mb-1.5">
+          <span className={`flex items-center gap-1 font-semibold ${leader === "host" ? "text-primary" : "text-muted-foreground"}`}>
+            {leader === "host" && <Crown className="w-3 h-3" />} Host · {battle.host_votes}
+          </span>
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            {total === 0 ? "No votes yet" : leader === "tie" ? "Tied" : `${leader === "host" ? hostPct : oppPct}% leading`}
+          </span>
+          <span className={`flex items-center gap-1 font-semibold ${leader === "opponent" ? "text-accent-foreground" : "text-muted-foreground"}`}>
+            Opponent · {battle.opponent_votes} {leader === "opponent" && <Crown className="w-3 h-3" />}
+          </span>
         </div>
-        <div className="h-2 rounded-full overflow-hidden bg-muted flex">
-          <div className="bg-primary" style={{ width: `${hostPct}%` }} />
-          <div className="bg-accent" style={{ width: `${oppPct}%` }} />
+        <div className="h-2.5 rounded-full overflow-hidden bg-muted flex">
+          <div
+            className="bg-primary transition-all duration-500 ease-out"
+            style={{ width: `${hostPct}%` }}
+          />
+          <div
+            className="bg-accent transition-all duration-500 ease-out"
+            style={{ width: `${oppPct}%` }}
+          />
         </div>
 
         {battle.status === "live" && !isParticipant && (
@@ -174,14 +198,78 @@ export default function LiveBattlePage() {
             <Button size="sm" variant="ghost" onClick={handleReport}><Flag className="w-4 h-4 mr-1" />Report</Button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
 
-        {battle.status === "ended" && (
-          <div className="mt-3 text-sm text-center">
-            {battle.winner_id
-              ? <>Winner: <span className="font-semibold">{battle.winner_id === battle.host_id ? "Host" : "Opponent"}</span></>
-              : <>Result: tie / no votes</>}
+function ResultsScreen({ battle, onBack }: { battle: LiveBattleRow; onBack: () => void }) {
+  const total = battle.host_votes + battle.opponent_votes;
+  const hostPct = total ? Math.round((battle.host_votes / total) * 100) : 50;
+  const oppPct = 100 - hostPct;
+  const winner: "host" | "opponent" | "tie" =
+    !battle.winner_id
+      ? "tie"
+      : battle.winner_id === battle.host_id ? "host" : "opponent";
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/live/${battle.id}`;
+    const text = winner === "tie"
+      ? `A live battle just ended in a tie on CrownMe!`
+      : `The ${winner} won a live battle on CrownMe with ${winner === "host" ? battle.host_votes : battle.opponent_votes} votes!`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "CrownMe Live Battle", text, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast({ title: "Link copied to clipboard" });
+      }
+    } catch { /* user cancelled */ }
+  };
+
+  return (
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-sm rounded-2xl border border-border/60 bg-card p-6 text-center">
+        <div className="mx-auto w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center">
+          <Trophy className="text-primary" size={28} />
+        </div>
+        <h1 className="mt-4 text-2xl font-black">
+          {winner === "tie" ? "It's a tie!" : `${winner === "host" ? "Host" : "Opponent"} wins`}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {total === 0 ? "No votes were cast." : `${total} total votes`}
+        </p>
+
+        {/* Breakdown */}
+        <div className="mt-6 text-left">
+          <div className="flex items-center justify-between text-xs font-semibold mb-1.5">
+            <span className={winner === "host" ? "text-primary" : "text-muted-foreground"}>
+              {winner === "host" && "👑 "}Host · {battle.host_votes} ({hostPct}%)
+            </span>
+            <span className={winner === "opponent" ? "text-accent-foreground" : "text-muted-foreground"}>
+              {winner === "opponent" && "👑 "}Opponent · {battle.opponent_votes} ({oppPct}%)
+            </span>
           </div>
+          <div className="h-3 rounded-full overflow-hidden bg-muted flex">
+            <div className="bg-primary transition-all duration-700 ease-out" style={{ width: `${hostPct}%` }} />
+            <div className="bg-accent transition-all duration-700 ease-out" style={{ width: `${oppPct}%` }} />
+          </div>
+        </div>
+
+        {battle.ended_reason && (
+          <p className="mt-4 text-xs text-muted-foreground italic">
+            Ended: {battle.ended_reason}
+          </p>
         )}
+
+        <div className="mt-6 grid gap-2">
+          <Button onClick={handleShare} className="w-full">
+            <Share2 className="w-4 h-4 mr-1" /> Share result
+          </Button>
+          <Button variant="outline" onClick={onBack} className="w-full">
+            Back to live battles
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -216,8 +304,13 @@ function formatSec(s: number) {
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 
-function Loading() {
-  return <div className="flex-1 flex items-center justify-center text-muted-foreground"><Loader2 className="animate-spin w-6 h-6" /></div>;
+function Loading({ label }: { label?: string } = {}) {
+  return (
+    <div className="flex-1 flex items-center justify-center gap-2 text-muted-foreground">
+      <Loader2 className="animate-spin w-6 h-6" />
+      {label && <span className="text-sm">{label}</span>}
+    </div>
+  );
 }
 
 function Gate({ msg, onBack }: { msg: string; onBack: () => void }) {
