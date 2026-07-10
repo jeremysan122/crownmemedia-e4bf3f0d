@@ -659,7 +659,8 @@ export default function LiveBattleComments({
               {virtualItems.map((vi) => {
                 const r = rows[vi.index];
                 if (!r) return null;
-                const isHidden = !!r.hidden_at;
+                const isKeywordHidden = !r.hidden_at && bodyMatchesKeyword(r.body, keywordFilters);
+                const isHidden = !!r.hidden_at || isKeywordHidden;
                 const canReport = !!user && user.id !== r.user_id && !r.id.startsWith("opt-");
                 const canModerate = isModerator && !r.id.startsWith("opt-");
                 return (
