@@ -114,7 +114,7 @@ export default function CreateLiveBattleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" data-testid="create-live-battle-dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Radio className="text-destructive" size={18} /> New Live Battle
@@ -131,7 +131,7 @@ export default function CreateLiveBattleDialog({
               Opponent
             </label>
             {opponent ? (
-              <div className="mt-1 flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 p-2">
+              <div className="mt-1 flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 p-2" data-testid="selected-opponent">
                 <div className="flex items-center gap-2">
                   {opponent.profile_photo_url ? (
                     <img src={opponent.profile_photo_url} alt="" className="w-8 h-8 rounded-full object-cover" />
@@ -153,20 +153,28 @@ export default function CreateLiveBattleDialog({
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search by username"
                     className="pl-8"
+                    data-testid="opponent-search-input"
                   />
                 </div>
                 {searching && (
-                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground" data-testid="opponent-search-loading" role="status" aria-live="polite">
                     <Loader2 className="animate-spin" size={12} /> Searching…
                   </div>
                 )}
-                {!searching && results.length > 0 && (
-                  <ul className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border/60 divide-y divide-border/40">
+                {!searching && searchError && (
+                  <p className="mt-2 text-xs text-destructive" role="alert" data-testid="opponent-search-error">
+                    {searchError}
+                  </p>
+                )}
+                {!searching && !searchError && results.length > 0 && (
+                  <ul className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-border/60 divide-y divide-border/40" data-testid="opponent-search-results">
                     {results.map((r) => (
                       <li key={r.id}>
                         <button
                           onClick={() => { setOpponent(r); setSearch(""); }}
                           className="w-full flex items-center gap-2 p-2 hover:bg-muted/50 text-left"
+                          data-testid="opponent-search-result"
+                          data-username={r.username}
                         >
                           {r.profile_photo_url ? (
                             <img src={r.profile_photo_url} alt="" className="w-7 h-7 rounded-full object-cover" />
@@ -179,8 +187,10 @@ export default function CreateLiveBattleDialog({
                     ))}
                   </ul>
                 )}
-                {!searching && search.trim() && results.length === 0 && (
-                  <p className="mt-2 text-xs text-muted-foreground">No royals found.</p>
+                {!searching && !searchError && search.trim() && results.length === 0 && (
+                  <p className="mt-2 text-xs text-muted-foreground" data-testid="opponent-search-empty">
+                    No royals found with that username.
+                  </p>
                 )}
               </>
             )}
@@ -240,11 +250,18 @@ export default function CreateLiveBattleDialog({
             </div>
           </div>
 
+          {submitError && (
+            <p className="text-xs text-destructive text-center" role="alert" data-testid="create-battle-error">
+              {submitError}
+            </p>
+          )}
           <Button
             onClick={handleCreate}
             disabled={!canSubmit}
             className="w-full"
             size="lg"
+            aria-busy={submitting}
+            data-testid="create-battle-submit"
           >
             {submitting ? (
               <><Loader2 className="animate-spin mr-2" size={16} /> Creating…</>
