@@ -126,7 +126,29 @@ export default function ChallengeDialog({ open, onOpenChange, presetOpponentId, 
   }, [search, step, user]);
 
   const submit = async () => {
-    if (!user || !opponent || !postId) return;
+    if (!user || !opponent) return;
+
+    // Live-battle branch: no post required, just duration + category → RPC → navigate.
+    if (mode === "live") {
+      setSubmitting(true);
+      try {
+        const secs = Math.max(60, Math.min(1800, parseInt(liveDuration, 10) || 300));
+        const battle = await createLiveBattle(opponent.id, secs, category === "overall" ? null : category);
+        toast.success(`Live battle invite sent to @${opponent.username}`);
+        onOpenChange(false);
+        onCreated?.();
+        nav(`/live/${battle.id}`);
+      } catch (e) {
+        console.error("[challenge] live rpc failed", e);
+        toast.error(liveBattleErrorMessage(e, "Couldn't start that live battle."));
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // Classic post-battle branch.
+    if (!postId) return;
     setSubmitting(true);
     const durationSeconds = Math.round(parseFloat(duration) * 3600);
     const { data, error } = await supabase.rpc("create_battle_challenge", {
