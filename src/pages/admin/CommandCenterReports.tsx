@@ -188,8 +188,9 @@ export default function CommandCenterReports() {
       <div className="flex items-center justify-end">
         <ConnectionStatus status={rt.status} retryIn={rt.retryIn} label="reports" />
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <StatTile label="Open" value={counts.open} tone={counts.open > 0 ? "warn" : "good"} />
+        <StatTile label="Escalated" value={counts.escalated} tone={counts.escalated > 0 ? "warn" : "default"} />
         <StatTile label="Resolved" value={counts.resolved} tone="good" />
         <StatTile label="Dismissed" value={counts.dismissed} />
       </div>
@@ -197,9 +198,15 @@ export default function CommandCenterReports() {
       <SectionCard
         title={`Reports (${rows.length})`}
         action={
-          <select value={filter} onChange={(e) => setFilter(e.target.value as any)}
-            className="h-7 rounded border border-border/60 bg-background px-2 text-[11px]">
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as any)}
+            aria-label="Filter reports by status"
+            data-testid="cc-reports-filter"
+            className="h-7 rounded border border-border/60 bg-background px-2 text-[11px]"
+          >
             <option value="open">Open</option>
+            <option value="escalated">Escalated</option>
             <option value="resolved">Resolved</option>
             <option value="dismissed">Dismissed</option>
             <option value="all">All</option>
