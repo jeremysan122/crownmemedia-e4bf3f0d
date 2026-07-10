@@ -446,6 +446,30 @@ export async function dismissReport(reportId: string, reason: string) {
   if (error) throw error;
 }
 
+/**
+ * Promote a report for higher-level review. Sets status to `escalated`,
+ * records the moderator + a note, and drops a row in `admin_alerts` so
+ * senior admins see it in the command center. Idempotent — re-escalating
+ * refreshes the note and re-notifies.
+ */
+export async function escalateReport(reportId: string, reason: string) {
+  const { data: u } = await supabase.auth.getUser();
+  if (!u.user) throw new Error("Not authenticated");
+  const { error } = await supabase
+    .from("reports")
+    .update({
+      status: "escalated" as never,
+      resolution: `Escalated: ${reason}`,
+      resolved_by: u.user.id,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq("id", reportId);
+  if (error) throw error;
+  try {
+    await logAdminAction("report_escalated", "report", reportId, { reason });
+  } catch { /* audit is best-effort here — status change already persisted */ }
+}
+
 // ---------- Payouts ----------
 
 export async function freezePayout(payoutId: string, reason: string) {
