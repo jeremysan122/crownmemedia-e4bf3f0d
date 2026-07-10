@@ -121,7 +121,7 @@ export default function LiveBattleGiftPicker(props: Props) {
                   </div>
                   <div className="text-[10px] font-bold text-center leading-tight truncate w-full">{g.name}</div>
                   <div className="text-[10px] font-black text-primary tabular-nums">
-                    {formatShekels(g.priceShekels)}
+                    {formatShekels(g.shekelCost)}
                   </div>
                   {isSending && (
                     <div className="absolute inset-0 grid place-items-center rounded-xl bg-background/70 backdrop-blur-sm">
