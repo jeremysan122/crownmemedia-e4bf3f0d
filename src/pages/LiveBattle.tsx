@@ -22,6 +22,8 @@ import {
 import { useLiveBattleViewerCount, useLiveBattleViewerHeartbeat } from "@/hooks/useLiveBattleViewers";
 import LiveBattleActivityLog from "@/components/battles/LiveBattleActivityLog";
 import LiveBattleShareCard from "@/components/battles/LiveBattleShareCard";
+import LiveBattleGiftsOverlay from "@/components/battles/LiveBattleGiftsOverlay";
+import LiveBattleGiftPicker from "@/components/battles/LiveBattleGiftPicker";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -30,7 +32,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Loader2, ShieldAlert, Flag, Crown, Trophy, Share2,
-  MicOff, Mic, UserX, Users, Gavel, Check, X, Eye,
+  MicOff, Mic, UserX, Users, Gavel, Check, X, Eye, Gift,
 } from "lucide-react";
 
 type JoinStep = "idle" | "verifying" | "minting" | "connecting" | "connected" | "error";
@@ -55,6 +57,7 @@ export default function LiveBattlePage() {
   const [myReport, setMyReport] = useState<LiveBattleReportRow | null>(null);
   const [modBusy, setModBusy] = useState(false);
   const [showModPanel, setShowModPanel] = useState(false);
+  const [giftOpen, setGiftOpen] = useState(false);
 
   // Feature-flag gate.
   useEffect(() => {
