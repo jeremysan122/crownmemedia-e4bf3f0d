@@ -12,7 +12,7 @@ import {
 } from "@/lib/tournaments";
 import TournamentBracket from "@/components/battles/TournamentBracket";
 
-interface ProfileLite { id: string; username: string | null; display_name: string | null }
+interface ProfileLite { id: string; username: string | null; first_name: string | null }
 
 export default function TournamentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -36,9 +36,12 @@ export default function TournamentDetail() {
       setMatches(m);
       const ids = Array.from(new Set(m.flatMap((x) => [x.host_id, x.opponent_id, x.winner_id]).filter(Boolean))) as string[];
       if (ids.length) {
-        const { data } = await supabase.from("profiles").select("id,username,display_name").in("id", ids);
+        const { data } = await supabase.from("profiles").select("id,username,first_name").in("id", ids);
         const map: Record<string, ProfileLite> = {};
-        (data ?? []).forEach((p: ProfileLite) => { map[p.id] = p; });
+        (data ?? []).forEach((p) => {
+          const row = p as unknown as ProfileLite;
+          if (row?.id) map[row.id] = row;
+        });
         setProfiles(map);
       }
     } catch (e) {
@@ -76,7 +79,9 @@ export default function TournamentDetail() {
 
   const profilesMap = useMemo(() => {
     const out: Record<string, { username: string | null; display_name: string | null }> = {};
-    Object.values(profiles).forEach((p) => { out[p.id] = { username: p.username, display_name: p.display_name }; });
+    Object.values(profiles).forEach((p) => {
+      out[p.id] = { username: p.username, display_name: p.first_name };
+    });
     return out;
   }, [profiles]);
 
@@ -104,7 +109,7 @@ export default function TournamentDetail() {
               {tournament.winner_id && profiles[tournament.winner_id] && (
                 <div className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
                   <Crown className="w-4 h-4" />
-                  Champion: {profiles[tournament.winner_id].display_name ?? profiles[tournament.winner_id].username}
+                  Champion: {profiles[tournament.winner_id].first_name ?? profiles[tournament.winner_id].username}
                 </div>
               )}
             </header>
