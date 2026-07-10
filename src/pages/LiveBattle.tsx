@@ -464,6 +464,19 @@ export default function LiveBattlePage() {
         </div>
       </div>
 
+      {/* Gift picker */}
+      {battle && (
+        <LiveBattleGiftPicker
+          open={giftOpen}
+          onOpenChange={setGiftOpen}
+          battleId={battle.id}
+          hostId={battle.host_id}
+          hostUsername={null}
+          opponentId={battle.opponent_id}
+          opponentUsername={null}
+        />
+      )}
+
       {/* Report dialog */}
       <Dialog open={reportOpen} onOpenChange={(v) => { if (!reportBusy) { setReportOpen(v); if (!v) setReportError(null); } }}>
         <DialogContent>
