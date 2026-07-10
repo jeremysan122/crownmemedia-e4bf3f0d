@@ -239,6 +239,7 @@ export default function LiveBattlePage() {
     try {
       const row = await reportLiveBattle(battle.id, reason);
       setMyReport(row);
+      setReportCooldown(null);
       toast({
         title: "Report submitted",
         description: "Queued for review. You'll see status updates here.",
@@ -246,15 +247,22 @@ export default function LiveBattlePage() {
       setReportOpen(false);
       setReportReason("");
     } catch (e) {
+      const cd = reportCooldownSeconds(e);
+      if (cd) {
+        setReportCooldown({ kind: cd.kind, until: Date.now() + cd.seconds * 1000 });
+      }
       const msg = liveBattleErrorMessage(e, "Couldn't submit report. Please try again in a moment.");
       setReportError(msg);
-      // If duplicate, close after a beat so they see the friendly badge below.
-      const raw = String((e as { message?: string })?.message ?? "").toLowerCase();
-      if (raw.includes("duplicate_report")) {
-        toast({ title: "Already reported", description: msg });
-      }
+      if (cd?.kind === "duplicate") toast({ title: "Already reported", description: msg });
+      if (cd?.kind === "rate_limited") toast({ title: "Report limit reached", description: msg });
     } finally { setReportBusy(false); }
   };
+
+  // Ticking countdown for the cooldown banner. Clears itself when it hits 0.
+  const cooldownRemaining = useCooldownRemaining(reportCooldown?.until ?? null);
+  useEffect(() => {
+    if (reportCooldown && cooldownRemaining === 0) setReportCooldown(null);
+  }, [cooldownRemaining, reportCooldown]);
 
   const reportStatusLabel = (s: LiveBattleReportRow["status"]): string =>
     s === "queued" ? "Queued for review"
