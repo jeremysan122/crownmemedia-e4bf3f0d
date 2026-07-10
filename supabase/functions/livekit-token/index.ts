@@ -63,6 +63,9 @@ Deno.serve(async (req) => {
   if (battle.status === "ended" || battle.status === "cancelled" || battle.status === "declined") {
     return json({ error: "This battle has ended." }, 410);
   }
+  if (battle.status === "scheduled") {
+    return json({ error: "This battle hasn't started yet." }, 409);
+  }
 
   const isHost = uid === battle.host_id;
   const isOpponent = uid === battle.opponent_id;

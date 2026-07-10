@@ -5926,6 +5926,44 @@ export type Database = {
         }
         Returns: string
       }
+      schedule_live_battle: {
+        Args: {
+          _category_slug?: string
+          _duration_seconds?: number
+          _opponent_id: string
+          _region?: string
+          _scheduled_start_at: string
+        }
+        Returns: {
+          category_slug: string | null
+          created_at: string
+          duration_seconds: number
+          ended_reason: string | null
+          ends_at: string | null
+          force_ended_by: string | null
+          host_id: string
+          host_votes: number
+          id: string
+          is_hidden: boolean
+          keyword_filters: Json
+          opponent_id: string
+          opponent_votes: number
+          region: string | null
+          room_name: string
+          scheduled_start_at: string | null
+          slow_mode_seconds: number
+          started_at: string | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "live_battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       send_dm_gift: {
         Args: {
           p_dedupe_key?: string

@@ -28,6 +28,7 @@ import LiveBattleShareCard from "@/components/battles/LiveBattleShareCard";
 import LiveBattleGiftsOverlay from "@/components/battles/LiveBattleGiftsOverlay";
 import LiveBattleGiftPicker from "@/components/battles/LiveBattleGiftPicker";
 import LiveBattleVoteChip from "@/components/battles/LiveBattleVoteChip";
+import FollowBattlerButton from "@/components/battles/FollowBattlerButton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -467,6 +468,10 @@ export default function LiveBattlePage() {
           <span className={`flex items-center gap-1 font-semibold ${leader === "opponent" ? "text-accent-foreground" : "text-muted-foreground"}`}>
             Opponent · {battle.opponent_votes} {leader === "opponent" && <Crown className="w-3 h-3" />}
           </span>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <FollowBattlerButton battlerId={battle.host_id} compact size="sm" />
+          <FollowBattlerButton battlerId={battle.opponent_id} compact size="sm" />
         </div>
         <div className="h-2.5 rounded-full overflow-hidden bg-muted flex">
           <div className="bg-primary transition-all duration-500 ease-out" style={{ width: `${hostPct}%` }} />
