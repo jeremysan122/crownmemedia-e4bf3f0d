@@ -107,6 +107,14 @@ export default function LiveBattleComments({
   const stickToBottomRef = useRef(true);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastTypingSentRef = useRef(0);
+  // Reconnect-safe pagination: remember the `oldest` cursor for the last
+  // successful older-page fetch AND the one currently in flight. If a fetch
+  // fails (e.g. offline mid-pagination), we DO NOT bump the successful
+  // cursor and DO NOT set hasMore=false — the loader stays retry-ready and
+  // the next click / reconnect re-issues the same query. Duplicate rows
+  // are also blocked at the reducer level by id-set diffing.
+  const loadOlderCursorRef = useRef<string | null>(null);
+  const loadOlderInflightRef = useRef<string | null>(null);
   const selfUsernameRef = useRef<string | null>(null);
   const restoredRef = useRef(false);
   const restoredAnchorIdRef = useRef<string | null>(null);
