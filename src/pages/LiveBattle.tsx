@@ -424,10 +424,25 @@ export default function LiveBattlePage() {
 
         {battle.status === "live" && !isParticipant && (
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <Button disabled={voting || voted !== null} onClick={() => handleVote("host")} variant={voted === "host" ? "default" : "outline"}>Vote Host</Button>
-            <Button disabled={voting || voted !== null} onClick={() => handleVote("opponent")} variant={voted === "opponent" ? "default" : "outline"}>Vote Opponent</Button>
+            <Button
+              disabled={voting}
+              onClick={() => handleVote("host")}
+              variant={voted === "host" ? "default" : "outline"}
+              data-testid="live-vote-host"
+            >
+              {voting && voted === "host" ? "Voting…" : "Vote Host"}
+            </Button>
+            <Button
+              disabled={voting}
+              onClick={() => handleVote("opponent")}
+              variant={voted === "opponent" ? "default" : "outline"}
+              data-testid="live-vote-opponent"
+            >
+              {voting && voted === "opponent" ? "Voting…" : "Vote Opponent"}
+            </Button>
           </div>
         )}
+
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap gap-2">
