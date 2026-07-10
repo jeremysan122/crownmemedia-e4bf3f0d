@@ -2277,6 +2277,7 @@ export type Database = {
       live_battles: {
         Row: {
           category_slug: string | null
+          comments_locked: boolean
           created_at: string
           duration_seconds: number
           ended_reason: string | null
@@ -2304,6 +2305,7 @@ export type Database = {
         }
         Insert: {
           category_slug?: string | null
+          comments_locked?: boolean
           created_at?: string
           duration_seconds?: number
           ended_reason?: string | null
@@ -2331,6 +2333,7 @@ export type Database = {
         }
         Update: {
           category_slug?: string | null
+          comments_locked?: boolean
           created_at?: string
           duration_seconds?: number
           ended_reason?: string | null
@@ -5275,6 +5278,7 @@ export type Database = {
         }
         Returns: {
           category_slug: string | null
+          comments_locked: boolean
           created_at: string
           duration_seconds: number
           ended_reason: string | null
@@ -5588,6 +5592,7 @@ export type Database = {
         Args: { _battle_id: string }
         Returns: {
           category_slug: string | null
+          comments_locked: boolean
           created_at: string
           duration_seconds: number
           ended_reason: string | null
@@ -5620,10 +5625,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      live_battle_body_matches_keyword: {
+        Args: { _battle_id: string; _body: string }
+        Returns: boolean
+      }
       live_battle_cancel: {
         Args: { _battle_id: string }
         Returns: {
           category_slug: string | null
+          comments_locked: boolean
           created_at: string
           duration_seconds: number
           ended_reason: string | null
@@ -5660,6 +5670,7 @@ export type Database = {
         Args: { _battle_id: string }
         Returns: {
           category_slug: string | null
+          comments_locked: boolean
           created_at: string
           duration_seconds: number
           ended_reason: string | null
@@ -5696,6 +5707,7 @@ export type Database = {
         Args: { _battle_id: string; _force?: boolean; _reason?: string }
         Returns: {
           category_slug: string | null
+          comments_locked: boolean
           created_at: string
           duration_seconds: number
           ended_reason: string | null
@@ -5759,6 +5771,7 @@ export type Database = {
         Args: { _battle_id: string }
         Returns: {
           category_slug: string | null
+          comments_locked: boolean
           created_at: string
           duration_seconds: number
           ended_reason: string | null
@@ -5976,6 +5989,7 @@ export type Database = {
         }
         Returns: {
           category_slug: string | null
+          comments_locked: boolean
           created_at: string
           duration_seconds: number
           ended_reason: string | null
@@ -6048,10 +6062,53 @@ export type Database = {
         }
         Returns: Json
       }
+      set_battle_moderation: {
+        Args: {
+          _battle_id: string
+          _comments_locked: boolean
+          _keyword_filters: Json
+          _slow_mode_seconds: number
+        }
+        Returns: {
+          category_slug: string | null
+          comments_locked: boolean
+          created_at: string
+          duration_seconds: number
+          ended_reason: string | null
+          ends_at: string | null
+          force_ended_by: string | null
+          go_live_at: string | null
+          host_id: string
+          host_ready: boolean
+          host_votes: number
+          id: string
+          is_hidden: boolean
+          keyword_filters: Json
+          lobby_opened_at: string | null
+          opponent_id: string
+          opponent_ready: boolean
+          opponent_votes: number
+          region: string | null
+          room_name: string
+          scheduled_start_at: string | null
+          slow_mode_seconds: number
+          started_at: string | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "live_battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_lobby_ready: {
         Args: { _battle_id: string; _ready: boolean }
         Returns: {
           category_slug: string | null
+          comments_locked: boolean
           created_at: string
           duration_seconds: number
           ended_reason: string | null
@@ -6091,6 +6148,7 @@ export type Database = {
         Args: { _battle_id: string }
         Returns: {
           category_slug: string | null
+          comments_locked: boolean
           created_at: string
           duration_seconds: number
           ended_reason: string | null
