@@ -60,6 +60,21 @@ const TYPING_TTL_MS = 3500;
 const TYPING_THROTTLE_MS = 1500;
 const STICK_THRESHOLD_PX = 60;
 
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => setReduced(mql.matches);
+    mql.addEventListener?.("change", onChange);
+    return () => mql.removeEventListener?.("change", onChange);
+  }, []);
+  return reduced;
+}
+
 export default function LiveBattleComments({
   battleId,
   isLive,
@@ -70,6 +85,7 @@ export default function LiveBattleComments({
   overlay?: boolean;
 }) {
   const { user, isModerator } = useAuth();
+  const reducedMotion = usePrefersReducedMotion();
   const [rows, setRows] = useState<Row[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -97,6 +113,7 @@ export default function LiveBattleComments({
     overscan: 8,
   });
 
+
   const hydrate = useCallback(async (list: Row[]) => {
     const ids = Array.from(new Set(list.map((r) => r.user_id)));
     if (ids.length === 0) return;
@@ -118,20 +135,21 @@ export default function LiveBattleComments({
     }
   }, [user]);
 
-  // Scroll to the newest message.
+  // Scroll to the newest message. Reduced-motion honors the user's OS setting.
   const scrollToBottom = useCallback((smooth = true) => {
     const el = listRef.current;
     if (!el) return;
-    // Use virtualizer when we have rows so the last item is realized before scroll.
+    const behavior: ScrollBehavior = smooth && !reducedMotion ? "smooth" : "auto";
     if (rows.length > 0) {
-      virtualizer.scrollToIndex(rows.length - 1, { align: "end", behavior: smooth ? "smooth" : "auto" });
+      virtualizer.scrollToIndex(rows.length - 1, { align: "end", behavior });
     } else {
-      el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+      el.scrollTo({ top: el.scrollHeight, behavior });
     }
     stickToBottomRef.current = true;
     setIsStuck(true);
     setUnread(0);
-  }, [rows.length, virtualizer]);
+  }, [rows.length, virtualizer, reducedMotion]);
+
 
   // Initial load + realtime subscription (comments + typing broadcast).
   useEffect(() => {
@@ -223,8 +241,11 @@ export default function LiveBattleComments({
   // Auto-scroll to newest when we're already pinned to the bottom.
   useEffect(() => {
     if (!stickToBottomRef.current || rows.length === 0) return;
-    virtualizer.scrollToIndex(rows.length - 1, { align: "end", behavior: "smooth" });
-  }, [rows.length, virtualizer]);
+    virtualizer.scrollToIndex(rows.length - 1, {
+      align: "end",
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
+  }, [rows.length, virtualizer, reducedMotion]);
 
   // Cooldown countdown for accessible feedback.
   useEffect(() => {
@@ -253,18 +274,28 @@ export default function LiveBattleComments({
       .lt("created_at", oldest)
       .order("created_at", { ascending: false })
       .limit(PAGE);
-    const older = ((data as Row[]) || []).reverse();
-    await hydrate(older);
-    setRows((prev) => [...older, ...prev]);
+    const olderRaw = ((data as Row[]) || []).reverse();
+    await hydrate(olderRaw);
+    // Dedup against current rows so any comment that arrived via realtime
+    // during the fetch (or overlaps the boundary) never appears twice.
+    setRows((prev) => {
+      const existing = new Set(prev.map((r) => r.id));
+      const olderUnique = olderRaw.filter((r) => !existing.has(r.id));
+      return [...olderUnique, ...prev];
+    });
     setHasMore((data?.length ?? 0) === PAGE);
     setLoadingOlder(false);
     // Preserve scroll offset so newly prepended rows don't jump the view.
+    // Use rAF twice so the virtualizer has re-measured before we compute the delta.
     requestAnimationFrame(() => {
-      if (!el) return;
-      const diff = virtualizer.getTotalSize() - prevTotal;
-      el.scrollTop = prevScroll + diff;
+      requestAnimationFrame(() => {
+        if (!el) return;
+        const diff = virtualizer.getTotalSize() - prevTotal;
+        el.scrollTop = prevScroll + diff;
+      });
     });
   }
+
 
   function broadcastTyping() {
     if (!channelRef.current || !user) return;
@@ -435,12 +466,15 @@ export default function LiveBattleComments({
                     }}
                   >
                     <div
-                      className={`flex items-start gap-2 group animate-in fade-in slide-in-from-bottom-1 duration-200 ${
-                        isHidden ? "opacity-50" : ""
-                      } ${overlay ? "rounded-full bg-black/40 backdrop-blur-sm pl-1 pr-3 py-1 w-fit max-w-[85%] [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]" : ""}`}
+                      className={`flex items-start gap-2 group ${
+                        reducedMotion ? "" : "animate-in fade-in slide-in-from-bottom-1 duration-200"
+                      } ${isHidden ? "opacity-50" : ""} ${
+                        overlay ? "rounded-full bg-black/40 backdrop-blur-sm pl-1 pr-3 py-1 w-fit max-w-[85%] [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]" : ""
+                      }`}
                       data-testid="live-battle-comment"
                       data-hidden={isHidden ? "true" : "false"}
                     >
+
                       {r.profile_photo_url ? (
                         <img src={r.profile_photo_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
                       ) : (
@@ -510,7 +544,10 @@ export default function LiveBattleComments({
                   : "Jump to latest messages"
               }
               data-testid="live-battle-comments-jump-latest"
-              className="pointer-events-auto h-7 rounded-full bg-primary text-primary-foreground shadow-lg text-[11px] px-3 animate-in fade-in slide-in-from-bottom-2"
+              data-reduced-motion={reducedMotion ? "true" : "false"}
+              className={`pointer-events-auto h-7 rounded-full bg-primary text-primary-foreground shadow-lg text-[11px] px-3 ${
+                reducedMotion ? "" : "animate-in fade-in slide-in-from-bottom-2"
+              }`}
             >
               <ArrowDown className="w-3 h-3 mr-1" aria-hidden />
               {unread > 0 ? `${unread} new` : "Jump to latest"}
@@ -518,6 +555,7 @@ export default function LiveBattleComments({
           </div>
         )}
       </div>
+
 
       {/* Typing indicator — announced politely for assistive tech. */}
       <div
@@ -529,14 +567,15 @@ export default function LiveBattleComments({
       >
         {typingLabel && (
           <span className="inline-flex items-center gap-1">
-            <span className="inline-flex gap-0.5" aria-hidden>
-              <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.2s]" />
-              <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.1s]" />
-              <span className="w-1 h-1 rounded-full bg-current animate-bounce" />
+            <span className="inline-flex gap-0.5" aria-hidden data-reduced-motion={reducedMotion ? "true" : "false"}>
+              <span className={`w-1 h-1 rounded-full bg-current ${reducedMotion ? "opacity-70" : "animate-bounce [animation-delay:-0.2s]"}`} />
+              <span className={`w-1 h-1 rounded-full bg-current ${reducedMotion ? "opacity-70" : "animate-bounce [animation-delay:-0.1s]"}`} />
+              <span className={`w-1 h-1 rounded-full bg-current ${reducedMotion ? "opacity-70" : "animate-bounce"}`} />
             </span>
             {typingLabel}
           </span>
         )}
+
       </div>
 
       <form
