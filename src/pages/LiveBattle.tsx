@@ -17,7 +17,9 @@ import {
   LiveBattleRow, LiveBattleReportRow, liveBattleErrorMessage, mintLiveBattleToken,
   reportCooldownSeconds, formatCooldown,
   reportLiveBattle, roomControl, voteInLiveBattle,
+  acceptLiveBattle, declineLiveBattle, cancelLiveBattle,
 } from "@/lib/liveBattles";
+import { useLiveBattleViewerCount, useLiveBattleViewerHeartbeat } from "@/hooks/useLiveBattleViewers";
 import LiveBattleActivityLog from "@/components/battles/LiveBattleActivityLog";
 import LiveBattleShareCard from "@/components/battles/LiveBattleShareCard";
 import { Button } from "@/components/ui/button";
@@ -28,7 +30,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Loader2, ShieldAlert, Flag, Crown, Trophy, Share2,
-  MicOff, Mic, UserX, Users, Gavel,
+  MicOff, Mic, UserX, Users, Gavel, Check, X, Eye,
 } from "lucide-react";
 
 type JoinStep = "idle" | "verifying" | "minting" | "connecting" | "connected" | "error";
@@ -169,10 +171,11 @@ export default function LiveBattlePage() {
     return () => { mounted = false; supabase.removeChannel(ch); };
   }, [battleId, user?.id]);
 
-  // Mint token once the battle is loaded.
+  // Mint token only once the battle is actually LIVE. Pending/declined/
+  // cancelled/ended states have their own screens and must not spawn a room.
   useEffect(() => {
     if (!battle || !user) return;
-    if (battle.status === "ended") return;
+    if (battle.status !== "live") return;
     setJoinStep("minting");
     (async () => {
       try {
@@ -186,6 +189,12 @@ export default function LiveBattlePage() {
       }
     })();
   }, [battle?.id, battle?.status, user?.id]);
+
+  // Viewer presence — only when live and not one of the two on-stage participants.
+  const isViewer = !!user && battle?.status === "live" &&
+    user.id !== battle?.host_id && user.id !== battle?.opponent_id;
+  useLiveBattleViewerHeartbeat(battle?.id ?? null, isViewer);
+  const viewerCount = useLiveBattleViewerCount(battle?.id ?? null, battle?.status === "live");
 
   const isHost = user?.id === battle?.host_id;
   const isOpponent = user?.id === battle?.opponent_id;
@@ -286,13 +295,30 @@ export default function LiveBattlePage() {
     return <ResultsScreen battle={battle} onBack={() => nav("/battles/live")} />;
   }
 
+  // Pending / declined / cancelled — no LiveKit room; show invite state.
+  if (battle.status !== "live") {
+    return (
+      <PendingScreen
+        battle={battle}
+        isHost={isHost}
+        isOpponent={isOpponent}
+        onBack={() => nav("/battles/live")}
+      />
+    );
+  }
+
   return (
     <div className="min-h-[100dvh] bg-background text-foreground flex flex-col">
       {/* Header */}
       <div className="p-3 flex items-center justify-between border-b border-border">
         <div className="text-sm font-semibold flex items-center gap-2">
           <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          {battle.status === "live" ? "LIVE" : battle.status.toUpperCase()}
+          LIVE
+          {viewerCount !== null && (
+            <span className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+              <Eye size={12} /> {viewerCount}
+            </span>
+          )}
         </div>
         <div className="text-sm tabular-nums font-mono">
           {battle.status === "live" && remainingSec !== null ? formatSec(remainingSec) : "—"}
@@ -664,6 +690,67 @@ function Gate({ msg, onBack }: { msg: string; onBack: () => void }) {
     <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4 p-6 text-center">
       <div className="text-lg">{msg}</div>
       <Button onClick={onBack} variant="outline">Back</Button>
+    </div>
+  );
+}
+
+// ------------------------- Pending invite screen -------------------------
+
+function PendingScreen({
+  battle, isHost, isOpponent, onBack,
+}: {
+  battle: LiveBattleRow; isHost: boolean; isOpponent: boolean; onBack: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const status = battle.status;
+
+  const run = async (fn: () => Promise<unknown>, ok: string) => {
+    setBusy(true);
+    try { await fn(); toast({ title: ok }); }
+    catch (e) { toast({ title: liveBattleErrorMessage(e, "That didn't work."), variant: "destructive" }); }
+    finally { setBusy(false); }
+  };
+
+  const heading =
+    status === "pending" ? (isOpponent ? "You've been challenged" : isHost ? "Waiting for opponent" : "Invite pending")
+    : status === "declined" ? "Invite declined"
+    : status === "cancelled" ? "Invite cancelled"
+    : "Not live";
+
+  const sub =
+    status === "pending" && isOpponent ? "Accept to go live now, or decline the invite."
+    : status === "pending" && isHost ? "We'll notify you the moment your opponent accepts."
+    : status === "declined" ? "Your opponent declined this invite."
+    : status === "cancelled" ? "The host cancelled this invite."
+    : "This battle isn't live.";
+
+  return (
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-sm rounded-2xl border border-border/60 bg-card p-6 text-center">
+        <div className="mx-auto w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center">
+          <ShieldAlert className="text-primary" size={26} />
+        </div>
+        <h1 className="mt-4 text-xl font-black">{heading}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{sub}</p>
+
+        {status === "pending" && isOpponent && (
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <Button disabled={busy} onClick={() => run(() => acceptLiveBattle(battle.id), "Invite accepted — going live")}>
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-1" />Accept</>}
+            </Button>
+            <Button variant="outline" disabled={busy} onClick={() => run(() => declineLiveBattle(battle.id), "Invite declined")}>
+              <X className="w-4 h-4 mr-1" />Decline
+            </Button>
+          </div>
+        )}
+        {status === "pending" && isHost && (
+          <Button variant="outline" disabled={busy} onClick={() => run(() => cancelLiveBattle(battle.id), "Invite cancelled")} className="mt-5 w-full">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Cancel invite"}
+          </Button>
+        )}
+
+        <Button variant="ghost" onClick={onBack} className="mt-3 w-full">Back to lobby</Button>
+      </div>
     </div>
   );
 }

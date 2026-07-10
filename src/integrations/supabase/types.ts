@@ -2062,6 +2062,32 @@ export type Database = {
           },
         ]
       }
+      live_battle_viewers: {
+        Row: {
+          battle_id: string
+          last_seen_at: string
+          viewer_id: string
+        }
+        Insert: {
+          battle_id: string
+          last_seen_at?: string
+          viewer_id: string
+        }
+        Update: {
+          battle_id?: string
+          last_seen_at?: string
+          viewer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_battle_viewers_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "live_battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_battle_votes: {
         Row: {
           battle_id: string
@@ -4689,6 +4715,17 @@ export type Database = {
       }
     }
     Functions: {
+      _notify_live_battle: {
+        Args: {
+          _battle_id: string
+          _body: string
+          _kind: string
+          _payload?: Json
+          _title: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       accept_battle: {
         Args: { _battle_id: string; _opponent_post_id: string }
         Returns: undefined
@@ -5354,6 +5391,93 @@ export type Database = {
         Args: { _post_id: string; _user_id: string }
         Returns: boolean
       }
+      live_battle_accept: {
+        Args: { _battle_id: string }
+        Returns: {
+          category_slug: string | null
+          created_at: string
+          duration_seconds: number
+          ended_reason: string | null
+          ends_at: string | null
+          force_ended_by: string | null
+          host_id: string
+          host_votes: number
+          id: string
+          is_hidden: boolean
+          opponent_id: string
+          opponent_votes: number
+          region: string | null
+          room_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "live_battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      live_battle_cancel: {
+        Args: { _battle_id: string }
+        Returns: {
+          category_slug: string | null
+          created_at: string
+          duration_seconds: number
+          ended_reason: string | null
+          ends_at: string | null
+          force_ended_by: string | null
+          host_id: string
+          host_votes: number
+          id: string
+          is_hidden: boolean
+          opponent_id: string
+          opponent_votes: number
+          region: string | null
+          room_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "live_battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      live_battle_decline: {
+        Args: { _battle_id: string }
+        Returns: {
+          category_slug: string | null
+          created_at: string
+          duration_seconds: number
+          ended_reason: string | null
+          ends_at: string | null
+          force_ended_by: string | null
+          host_id: string
+          host_votes: number
+          id: string
+          is_hidden: boolean
+          opponent_id: string
+          opponent_votes: number
+          region: string | null
+          room_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "live_battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       live_battle_end: {
         Args: { _battle_id: string; _force?: boolean; _reason?: string }
         Returns: {
@@ -5434,6 +5558,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      live_battle_viewer_count: {
+        Args: { _battle_id: string }
+        Returns: number
+      }
+      live_battle_viewer_heartbeat: {
+        Args: { _battle_id: string }
+        Returns: undefined
       }
       live_battle_vote: {
         Args: { _battle_id: string; _choice: string }

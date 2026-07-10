@@ -33,6 +33,7 @@ const CrownMap = lazy(() => import("./pages/CrownMap"));
 const Battles = lazy(() => import("./pages/Battles"));
 const BattlesHub = lazy(() => import("./pages/BattlesHub"));
 const LiveBattlesLobby = lazy(() => import("./pages/LiveBattlesLobby"));
+const BattlesHistory = lazy(() => import("./pages/BattlesHistory"));
 const BattleDetail = lazy(() => import("./pages/BattleDetail"));
 const LiveBattle = lazy(() => import("./pages/LiveBattle"));
 const Messages = lazy(() => import("./pages/Messages"));
@@ -186,6 +187,7 @@ const App = () => (
               {/* Legacy /crown-map links (older shares before the route rename) — preserve query string. */}
               <Route path="/crown-map" element={<CrownMapLegacyRedirect />} />
               <Route path="/battles" element={<ProtectedRoute><BattlesHub /></ProtectedRoute>} />
+              <Route path="/battles/history" element={<ProtectedRoute><BattlesHistory /></ProtectedRoute>} />
               <Route path="/battles/posts" element={<ProtectedRoute><Battles /></ProtectedRoute>} />
               <Route path="/battles/live" element={<ProtectedRoute><LiveBattlesLobby /></ProtectedRoute>} />
               <Route path="/battles/:id" element={<ProtectedRoute><BattleDetail /></ProtectedRoute>} />
