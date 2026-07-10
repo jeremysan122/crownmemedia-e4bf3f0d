@@ -15,8 +15,11 @@ import { useAuth } from "@/context/AuthContext";
 import { isFeatureEnabled } from "@/lib/featureFlags";
 import {
   LiveBattleRow, LiveBattleReportRow, liveBattleErrorMessage, mintLiveBattleToken,
+  reportCooldownSeconds, formatCooldown,
   reportLiveBattle, roomControl, voteInLiveBattle,
 } from "@/lib/liveBattles";
+import LiveBattleActivityLog from "@/components/battles/LiveBattleActivityLog";
+import LiveBattleShareCard from "@/components/battles/LiveBattleShareCard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
