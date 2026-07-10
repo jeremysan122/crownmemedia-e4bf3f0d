@@ -8,7 +8,7 @@ export interface LiveBattleRow {
   host_id: string;
   opponent_id: string;
   room_name: string;
-  status: "pending" | "live" | "ended" | "declined" | "cancelled";
+  status: "pending" | "scheduled" | "live" | "ended" | "declined" | "cancelled";
   duration_seconds: number;
   started_at: string | null;
   ends_at: string | null;
@@ -20,6 +20,7 @@ export interface LiveBattleRow {
   created_at: string;
   category_slug?: string | null;
   region?: string | null;
+  scheduled_start_at?: string | null;
 }
 
 /** Extract cooldown seconds from `duplicate_report:NN` / `rate_limited:NN`. */

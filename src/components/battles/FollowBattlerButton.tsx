@@ -1,4 +1,5 @@
-// Follow / Unfollow a specific battler. Powers notify-on-live.
+// Compact "notify me" follow button. Placed on live-battle cards, the
+// Live Now strip, and the live battle page — never for yourself.
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -11,9 +12,12 @@ interface Props {
   size?: "sm" | "default";
   variant?: "default" | "outline" | "ghost";
   className?: string;
+  compact?: boolean;
 }
 
-export default function FollowBattlerButton({ battlerId, size = "sm", variant = "outline", className }: Props) {
+export default function FollowBattlerButton({
+  battlerId, size = "sm", variant = "outline", className, compact,
+}: Props) {
   const { user } = useAuth();
   const [following, setFollowing] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -35,7 +39,9 @@ export default function FollowBattlerButton({ battlerId, size = "sm", variant = 
 
   if (!user?.id || user.id === battlerId || following === null) return null;
 
-  const toggle = async () => {
+  const toggle = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
     if (busy) return;
     setBusy(true);
     try {
@@ -73,9 +79,12 @@ export default function FollowBattlerButton({ battlerId, size = "sm", variant = 
       className={className}
       aria-pressed={following}
       aria-label={following ? "Unfollow battler" : "Follow battler to get notified"}
+      data-testid="follow-battler-button"
     >
-      {busy ? <Loader2 size={14} className="animate-spin" /> : following ? <BellOff size={14} /> : <Bell size={14} />}
-      <span className="ml-1.5">{following ? "Following" : "Notify me"}</span>
+      {busy
+        ? <Loader2 size={compact ? 12 : 14} className="animate-spin" />
+        : following ? <BellOff size={compact ? 12 : 14} /> : <Bell size={compact ? 12 : 14} />}
+      {!compact && <span className="ml-1.5">{following ? "Following" : "Notify me"}</span>}
     </Button>
   );
 }
