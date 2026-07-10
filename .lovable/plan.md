@@ -49,13 +49,38 @@ Before public launch of scheduling:
 2. **Emote bursts** (`LiveBattleEmoteBurst.tsx`): 5 emote kinds (heart, crown, fire, clap, laugh) broadcast on `battle_emotes:{id}`. Server RPC `live_battle_send_emote` enforces feature gate, blocks check, and a 30/10s per-user rate limit. Respects `prefers-reduced-motion`.
 3. **Picture-in-Picture** (`LiveBattlePiPButton.tsx`): native `requestPictureInPicture()` when supported, else a floating info card with a "Return to battle" CTA.
 
-## Wave 4 — Battler Tools ✅ shipped
+## Wave 4 — Battler Tools (moderation shipped; broadcast beauty filter deferred to Wave 4.5)
 
 **Goal:** hosts feel in control on-camera.
 
-1. **Beauty filter** (`BeautyFilterPanel.tsx`): brightness / contrast / smoothing (blur) applied via a scoped CSS `filter` on the local participant's `<video>` element. Settings persist in `localStorage` (`cm.battle.beauty.v1`). v1 is self-view only; piping the treated feed back into a `canvas.captureStream()` publish track is deferred to Wave 4.5.
-2. **Battle moderation panel** (`BattleModerationPanel.tsx`): host or moderator can lock chat, pick a slow-mode interval (0/5/10/30/60s), and manage up to 32 keyword filters. All writes go through the `set_battle_moderation` RPC (host + admin/mod only). New column `live_battles.comments_locked`, plus hardened `live_battle_comments` INSERT policy that enforces lock + slow mode + keyword filter server-side.
-3. **Chat integration** (`LiveBattleComments.tsx`): composer disables + shows the locked/slow-mode reason, blocked keywords are rejected locally with a toast, and filtered messages render as `[filtered by host]` for defense-in-depth if any slip past the policy.
+1. **Self-view filter** (`BeautyFilterPanel.tsx`) ✅ shipped as *preview only*: brightness / contrast / smoothing (blur) applied via a scoped CSS `filter` on the host's own `<video>` tile. Settings persist in `localStorage` (`cm.battle.beauty.v1`). **Viewers still see the raw camera feed** — the UI is explicitly labeled "Self-view filter" and carries an inline note to set expectations. A real broadcast beauty filter is tracked in Wave 4.5 below.
+2. **Battle moderation panel** (`BattleModerationPanel.tsx`) ✅ shipped: host or moderator can lock chat, pick a slow-mode interval (0/5/10/30/60s), and manage up to 32 keyword filters. All writes go through the `set_battle_moderation` RPC (host + admin/mod only). New column `live_battles.comments_locked`, plus hardened `live_battle_comments` INSERT policy that enforces lock + slow mode + keyword filter server-side.
+3. **Chat integration** (`LiveBattleComments.tsx`) ✅ shipped: composer disables + shows the locked/slow-mode reason, blocked keywords are rejected locally with a toast, and filtered messages render as `[filtered by host]` for defense-in-depth if any slip past the policy.
+
+## Wave 4.5 — Broadcast beauty filter (BLOCKS public "beauty filter" launch)
+
+**Goal:** viewers see the same treated feed the host sees.
+
+Deferred out of Wave 4 because publishing a replacement track requires care: it interacts with LiveKit's camera track lifecycle, `simulcast` layers, and mobile Safari's `canvas.captureStream()` quirks.
+
+Before we advertise "beauty filters" publicly:
+1. Grab the local camera `MediaStreamTrack` from LiveKit's `LocalParticipant` (Camera source).
+2. Draw it into an offscreen `<canvas>` per animation frame with `ctx.filter = beautyCssFilter(...)` (or a WebGL fragment shader for smoothing quality).
+3. Take the processed track via `canvas.captureStream(30).getVideoTracks()[0]` and swap it in with `LocalVideoTrack.replaceTrack(newTrack, /* stopProcessor */ false)`.
+4. On disable, restore the original camera track and stop the canvas RAF loop + processed track to release the GPU/CPU cost.
+5. Handle unmount cleanup (component teardown, disconnect, tab hidden) so we never leak a canvas capture that keeps the camera light on.
+6. Add tests for enable → publish, disable → restore, and unmount cleanup. Smoke-test on Safari iOS (known `captureStream` pitfalls).
+7. Only after all of the above ships can the toolbar label revert from "Self-view filter" to "Beauty filter".
+
+## Accepted scanner warnings (Wave 4)
+
+The two new `warn`-level findings introduced by Wave 4 are known-safe and match the pattern already accepted across the project:
+- `set_battle_moderation` — `SECURITY DEFINER` RPC (needed to bypass RLS for host/mod writes) with a mutable `search_path`. The function pins `search_path = public` at the top and does its own `not_authorized` / `battle_not_found` / `invalid_slow_mode` checks before any write. Callable by `authenticated` only, not `anon`.
+- `live_battle_body_matches_keyword` — pure helper used by the `live_battle_comments` INSERT policy; `SECURITY DEFINER` is required so the policy can read `live_battles.keyword_filters` regardless of the caller's SELECT rights. No side-effects, no dynamic SQL.
+
+Neither introduces a new policy risk. They're bundled into the existing `docs/security/linter-findings/0028-anon-security-definer.md` / `0029-authenticated-security-definer.md` acceptance rationale.
+
+
 
 
 
