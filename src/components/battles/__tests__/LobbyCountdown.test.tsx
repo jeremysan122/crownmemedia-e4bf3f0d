@@ -27,8 +27,30 @@ describe("LobbyCountdown", () => {
     act(() => { vi.advanceTimersByTime(2000); });
     expect(onLive).toHaveBeenCalledTimes(1);
 
-    // Further ticks must not fire onLive again.
     act(() => { vi.advanceTimersByTime(2000); });
+    expect(onLive).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts at 5 when given a 5-second horizon and fires onLive exactly once", () => {
+    const start = new Date("2026-07-10T20:00:00Z").getTime();
+    vi.setSystemTime(start);
+    const onLive = vi.fn();
+    render(<LobbyCountdown goLiveAt={new Date(start + 5000).toISOString()} onLive={onLive} />);
+
+    const announcer = screen.getByTestId("lobby-countdown");
+    expect(announcer.textContent).toMatch(/Going live in 5/);
+
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(announcer.textContent).toMatch(/Going live in 4/);
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(announcer.textContent).toMatch(/Going live in 3/);
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(announcer.textContent).toMatch(/Going live in 2/);
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(announcer.textContent).toMatch(/Going live in 1/);
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(onLive).toHaveBeenCalledTimes(1);
+    act(() => { vi.advanceTimersByTime(5000); });
     expect(onLive).toHaveBeenCalledTimes(1);
   });
 });
