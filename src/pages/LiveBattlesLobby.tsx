@@ -4,8 +4,9 @@ import AppShell from "@/components/AppShell";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { supabase } from "@/integrations/supabase/client";
 import { isFeatureEnabled } from "@/lib/featureFlags";
-import { Radio, ArrowLeft, Loader2 } from "lucide-react";
+import { Radio, ArrowLeft, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import CreateLiveBattleDialog from "@/components/battles/CreateLiveBattleDialog";
 
 interface Row {
   id: string;
