@@ -411,7 +411,7 @@ export default function LiveBattlePage() {
       </div>
 
       {/* Video area */}
-      <div className="flex-1 relative bg-black">
+      <div id={`stage-${battle.id}`} className="flex-1 relative bg-black">
         {token && lkUrl ? (
           <LiveKitRoom
             token={token}
