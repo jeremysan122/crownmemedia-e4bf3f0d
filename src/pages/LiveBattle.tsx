@@ -19,6 +19,7 @@ import {
   reportLiveBattle, roomControl, voteInLiveBattle,
   acceptLiveBattle, declineLiveBattle, cancelLiveBattle,
 } from "@/lib/liveBattles";
+import { isEndedTransition, mergeLiveBattleUpdate } from "@/lib/liveBattleRealtime";
 import { useServerTimeOffset } from "@/lib/serverTime";
 import { useLiveBattleViewerCount, useLiveBattleViewerHeartbeat } from "@/hooks/useLiveBattleViewers";
 import LiveBattleActivityLog from "@/components/battles/LiveBattleActivityLog";
@@ -89,45 +90,55 @@ export default function LiveBattlePage() {
       if (error || !data) { setErr("This battle isn't available."); setJoinStep("error"); return; }
       setBattle(data as LiveBattleRow);
     })();
-    const ch = supabase
+    let ch: ReturnType<typeof supabase.channel> | null = supabase
       .channel(`live_battle:${battleId}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "live_battles", filter: `id=eq.${battleId}` },
         (payload) => {
           const next = payload.new as LiveBattleRow;
           setBattle((prev) => {
-            // Once the battle has ended, freeze the leaderboard snapshot.
-            // Ignore any further realtime patches to vote counts — the
-            // results screen must show the exact final backend snapshot.
-            if (prev && prev.status === "ended") {
-              return { ...prev, ...next, host_votes: prev.host_votes, opponent_votes: prev.opponent_votes, status: "ended" };
-            }
             // Vote totals came back from the server — clear the pending
-            // marker and flash the "confirmed" chip briefly.
-            if (prev && (prev.host_votes !== next.host_votes || prev.opponent_votes !== next.opponent_votes)) {
+            // marker and flash the "confirmed" chip briefly (live only).
+            if (prev && prev.status !== "ended"
+              && (prev.host_votes !== next.host_votes || prev.opponent_votes !== next.opponent_votes)) {
               setPendingChoice(null);
               setVoteConfirmedAt(Date.now());
             }
             // Announce transition to ended so viewers see immediate confirmation
-            // before the results screen replaces the room.
-            if (prev && prev.status !== "ended" && next.status === "ended") {
+            // before the results screen replaces the room, then tear down the
+            // realtime channel so no post-ended payloads can ever be applied.
+            if (isEndedTransition(prev, next)) {
               const reason = next.ended_reason ?? "host_end";
               const description =
                 reason === "admin_force_end" ? "A moderator ended this battle. Results are final."
                 : reason === "host_end" ? "The host ended the battle. Showing results now."
                 : "The battle ended. Showing results now.";
               toast({ title: "Battle ended", description });
-              // Force teardown of the LiveKit room by clearing the token.
               setToken(null);
-              // Clear any in-flight optimistic vote state so the results
-              // screen renders the final backend snapshot cleanly.
               setPendingChoice(null);
               setVoting(false);
+              // Unsubscribe: no further vote count or chip updates after end.
+              if (ch) { const dead = ch; ch = null; queueMicrotask(() => supabase.removeChannel(dead)); }
             }
-            return next;
+            return mergeLiveBattleUpdate(prev, next);
           });
         })
       .subscribe();
-    return () => { mounted = false; supabase.removeChannel(ch); };
+    // Expose a test hook so E2E can simulate a stray post-ended realtime
+    // payload and assert the UI ignores it.
+    if (typeof window !== "undefined") {
+      (window as unknown as { __testSimulateRealtimeVoteBump?: (id: string, patch: Partial<LiveBattleRow>) => void })
+        .__testSimulateRealtimeVoteBump = (id, patch) => {
+          if (id !== battleId) return;
+          setBattle((prev) => prev ? mergeLiveBattleUpdate(prev, { ...prev, ...patch } as LiveBattleRow) : prev);
+        };
+    }
+    return () => {
+      mounted = false;
+      if (ch) supabase.removeChannel(ch);
+      if (typeof window !== "undefined") {
+        delete (window as unknown as { __testSimulateRealtimeVoteBump?: unknown }).__testSimulateRealtimeVoteBump;
+      }
+    };
   }, [battleId]);
 
 
