@@ -443,33 +443,13 @@ export default function LiveBattlePage() {
           <>
             {/* Optimistic-vote feedback strip: pending → confirmed → failed */}
             <div className="mt-2 h-5 flex items-center justify-center text-[11px] font-bold tracking-wider">
-              {pendingChoice ? (
-                <span
-                  data-testid="vote-pending"
-                  aria-live="polite"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 text-amber-500 px-2 py-0.5 animate-pulse"
-                >
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  Counting your vote…
-                </span>
-              ) : voteConfirmedAt && Date.now() - voteConfirmedAt < 1400 ? (
-                <span
-                  data-testid="vote-confirmed"
-                  aria-live="polite"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-500 px-2 py-0.5"
-                >
-                  ✓ Vote confirmed
-                </span>
-              ) : voteFailedAt && Date.now() - voteFailedAt < 4000 ? (
-                <span
-                  data-testid="vote-failed"
-                  aria-live="assertive"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 text-red-500 px-2 py-0.5"
-                >
-                  Vote didn't stick — try again
-                </span>
-              ) : null}
+              <LiveBattleVoteChip
+                pendingChoice={pendingChoice}
+                voteConfirmedAt={voteConfirmedAt}
+                voteFailedAt={voteFailedAt}
+              />
             </div>
+
 
             <div className="mt-1 grid grid-cols-2 gap-2">
               <Button
