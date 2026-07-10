@@ -322,7 +322,7 @@ export default function LiveBattleComments({
                 key={r.id}
                 className={`flex items-start gap-2 group animate-in fade-in slide-in-from-bottom-1 duration-200 ${
                   isHidden ? "opacity-50" : ""
-                }`}
+                } ${overlay ? "rounded-full bg-black/40 backdrop-blur-sm pl-1 pr-3 py-1 w-fit max-w-[85%] [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]" : ""}`}
                 data-testid="live-battle-comment"
                 data-hidden={isHidden ? "true" : "false"}
               >
@@ -332,17 +332,18 @@ export default function LiveBattleComments({
                   <div className="w-6 h-6 rounded-full bg-muted shrink-0" aria-hidden />
                 )}
                 <div className="min-w-0 flex-1 text-sm leading-snug">
-                  <span className="font-semibold text-foreground/90 mr-1.5">
+                  <span className={`font-semibold mr-1.5 ${overlay ? "text-white" : "text-foreground/90"}`}>
                     @{r.username ?? r.user_id.slice(0, 6)}
                   </span>
                   {isHidden ? (
-                    <span className="italic text-muted-foreground text-xs">
+                    <span className={`italic text-xs ${overlay ? "text-white/60" : "text-muted-foreground"}`}>
                       [hidden by moderator]
                     </span>
                   ) : (
-                    <span className="text-foreground/80 break-words">{r.body}</span>
+                    <span className={`break-words ${overlay ? "text-white/95" : "text-foreground/80"}`}>{r.body}</span>
                   )}
                 </div>
+
                 {(canReport || canModerate) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
