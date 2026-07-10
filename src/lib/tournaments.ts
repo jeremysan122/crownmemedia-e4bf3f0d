@@ -116,27 +116,48 @@ export async function fetchTournament(id: string): Promise<{
   tournament: TournamentRow;
   matches: TournamentMatchRow[];
 }> {
+  const db = supabase as unknown as {
+    from: (t: string) => {
+      select: (s: string) => {
+        eq: (k: string, v: string) => {
+          maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
+          order: (k: string, o: { ascending: boolean }) => {
+            order: (k: string, o: { ascending: boolean }) => Promise<{ data: unknown; error: unknown }>;
+          };
+        };
+      };
+    };
+  };
   const [t, m] = await Promise.all([
-    supabase.from("tournaments" as never).select("*").eq("id", id).maybeSingle(),
-    supabase.from("tournament_matches" as never).select("*").eq("tournament_id", id)
+    db.from("tournaments").select("*").eq("id", id).maybeSingle(),
+    db.from("tournament_matches").select("*").eq("tournament_id", id)
       .order("round", { ascending: true }).order("slot", { ascending: true }),
   ]);
-  if (t.error) throw t.error;
-  if (m.error) throw m.error;
+  if (t.error) throw t.error as Error;
+  if (m.error) throw m.error as Error;
   if (!t.data) throw new Error("tournament_not_found");
   return {
-    tournament: t.data as unknown as TournamentRow,
-    matches: (m.data ?? []) as unknown as TournamentMatchRow[],
+    tournament: t.data as TournamentRow,
+    matches: (m.data ?? []) as TournamentMatchRow[],
   };
 }
 
 export async function listActiveTournaments(limit = 30): Promise<TournamentRow[]> {
-  const { data, error } = await supabase
-    .from("tournaments" as never)
-    .select("*")
+  const db = supabase as unknown as {
+    from: (t: string) => {
+      select: (s: string) => {
+        eq: (k: string, v: string) => {
+          order: (k: string, o: { ascending: boolean }) => {
+            limit: (n: number) => Promise<{ data: unknown; error: unknown }>;
+          };
+        };
+      };
+    };
+  };
+  const { data, error } = await db.from("tournaments").select("*")
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(limit);
-  if (error) throw error;
-  return (data ?? []) as unknown as TournamentRow[];
+  if (error) throw error as Error;
+  return (data ?? []) as TournamentRow[];
 }
