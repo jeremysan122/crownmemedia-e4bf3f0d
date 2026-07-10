@@ -48,9 +48,10 @@ Deno.serve(async (req) => {
   if (!battleId) return json({ error: "Missing battle." }, 400);
 
   // Rate limit per user: 30 mints / minute (covers reconnects).
-  const rlKey = `livebattle:join:${uid}`;
-  const { data: rl } = await admin.rpc("check_rate_limit", { _key: rlKey, _limit: 30, _window_seconds: 60 } as never);
-  if (rl === false) return json({ error: "You're joining too fast. Try again in a moment." }, 429);
+  const { error: rlErr } = await userClient.rpc("enforce_rate_limit", {
+    _action_key: `livebattle:join`, _max_count: 30, _window_seconds: 60,
+  });
+  if (rlErr) return json({ error: "You're joining too fast. Try again in a moment." }, 429);
 
   const { data: battle, error: bErr } = await admin
     .from("live_battles")
