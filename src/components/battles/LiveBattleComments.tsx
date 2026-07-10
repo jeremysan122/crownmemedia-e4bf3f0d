@@ -255,21 +255,31 @@ export default function LiveBattleComments({
 
   return (
     <section
-      className="border-t border-border bg-card/60"
+      className={
+        overlay
+          ? "absolute inset-x-0 bottom-0 z-20 flex flex-col pointer-events-none"
+          : "border-t border-border bg-card/60"
+      }
       data-testid="live-battle-comments"
       aria-label="Live battle chat"
     >
-      <header className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        <MessageSquare className="w-3.5 h-3.5" aria-hidden /> Live chat
-        <span className="text-[10px] text-muted-foreground/70 normal-case ml-auto">
-          {rows.length} {rows.length === 1 ? "comment" : "comments"}
-        </span>
-      </header>
+      {!overlay && (
+        <header className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <MessageSquare className="w-3.5 h-3.5" aria-hidden /> Live chat
+          <span className="text-[10px] text-muted-foreground/70 normal-case ml-auto">
+            {rows.length} {rows.length === 1 ? "comment" : "comments"}
+          </span>
+        </header>
+      )}
 
       <div
         ref={listRef}
         onScroll={onScroll}
-        className="max-h-52 min-h-[6rem] overflow-y-auto px-3 pb-2 space-y-1.5"
+        className={
+          overlay
+            ? "pointer-events-auto max-h-[45vh] min-h-[6rem] overflow-y-auto px-3 pb-2 pt-8 space-y-1.5 [mask-image:linear-gradient(to_bottom,transparent,black_25%,black)]"
+            : "max-h-52 min-h-[6rem] overflow-y-auto px-3 pb-2 space-y-1.5"
+        }
         data-testid="live-battle-comments-list"
         role="log"
         aria-live="polite"
@@ -277,6 +287,7 @@ export default function LiveBattleComments({
         aria-label="Live battle chat messages"
         tabIndex={0}
       >
+
         {hasMore && rows.length >= PAGE && (
           <div className="flex justify-center py-1">
             <Button
