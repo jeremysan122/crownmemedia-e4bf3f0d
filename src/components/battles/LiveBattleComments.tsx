@@ -567,14 +567,15 @@ export default function LiveBattleComments({
       >
         {typingLabel && (
           <span className="inline-flex items-center gap-1">
-            <span className="inline-flex gap-0.5" aria-hidden>
-              <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.2s]" />
-              <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.1s]" />
-              <span className="w-1 h-1 rounded-full bg-current animate-bounce" />
+            <span className="inline-flex gap-0.5" aria-hidden data-reduced-motion={reducedMotion ? "true" : "false"}>
+              <span className={`w-1 h-1 rounded-full bg-current ${reducedMotion ? "opacity-70" : "animate-bounce [animation-delay:-0.2s]"}`} />
+              <span className={`w-1 h-1 rounded-full bg-current ${reducedMotion ? "opacity-70" : "animate-bounce [animation-delay:-0.1s]"}`} />
+              <span className={`w-1 h-1 rounded-full bg-current ${reducedMotion ? "opacity-70" : "animate-bounce"}`} />
             </span>
             {typingLabel}
           </span>
         )}
+
       </div>
 
       <form
