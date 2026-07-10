@@ -108,6 +108,9 @@ export default function LiveBattleComments({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastTypingSentRef = useRef(0);
   const selfUsernameRef = useRef<string | null>(null);
+  const restoredRef = useRef(false);
+  const restoredAnchorIdRef = useRef<string | null>(null);
+  const persistKey = `lbc:unread:${battleId}`;
 
   const virtualizer = useVirtualizer({
     count: rows.length,
