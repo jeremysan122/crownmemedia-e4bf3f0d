@@ -548,17 +548,6 @@ function ResultsScreen({ battle, onBack }: { battle: LiveBattleRow; onBack: () =
   const winner: "host" | "opponent" | "tie" =
     !battle.winner_id ? "tie" : battle.winner_id === battle.host_id ? "host" : "opponent";
 
-  const handleShare = async () => {
-    const url = `${window.location.origin}/live/${battle.id}`;
-    const text = winner === "tie"
-      ? `A live battle just ended in a tie on CrownMe!`
-      : `The ${winner} won a live battle on CrownMe with ${winner === "host" ? battle.host_votes : battle.opponent_votes} votes!`;
-    try {
-      if (navigator.share) await navigator.share({ title: "CrownMe Live Battle", text, url });
-      else { await navigator.clipboard.writeText(url); toast({ title: "Link copied to clipboard" }); }
-    } catch { /* user cancelled */ }
-  };
-
   return (
     <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-2xl border border-border/60 bg-card p-6 text-center">
@@ -591,9 +580,8 @@ function ResultsScreen({ battle, onBack }: { battle: LiveBattleRow; onBack: () =
           </p>
         )}
         <div className="mt-6 grid gap-2">
-          <Button onClick={handleShare} className="w-full">
-            <Share2 className="w-4 h-4 mr-1" /> Share result
-          </Button>
+          {/* Branded share card handles both native-share and download-as-PNG. */}
+          <LiveBattleShareCard battle={battle} winner={winner} />
           <Button variant="outline" onClick={onBack} className="w-full">Back to live battles</Button>
         </div>
       </div>
