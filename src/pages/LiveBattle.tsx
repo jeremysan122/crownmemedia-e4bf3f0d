@@ -349,6 +349,9 @@ export default function LiveBattlePage() {
         )}
       </div>
 
+      {/* Moderation activity log — visible to host + admins/mods and to the currently viewing user (self events). */}
+      <LiveBattleActivityLog battleId={battle.id} selfUserId={user?.id ?? null} canSeeAll={isHost || canModerate} />
+
       {/* Vote bar */}
       <div className="p-3 border-t border-border">
         <div className="flex items-center justify-between text-xs mb-1.5">
