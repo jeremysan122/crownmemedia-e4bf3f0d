@@ -29,7 +29,13 @@ export function liveBattleErrorMessage(err: unknown, fallback: string): string {
   if (msg.includes("participants_cannot_vote")) return "Participants can't vote in their own battle.";
   if (msg.includes("not_participant")) return "Only participants can do that.";
   if (msg.includes("not_authorized")) return "You can't do that.";
-  if (msg.includes("rate")) return "You're doing that too fast. Try again in a moment.";
+  if (msg.includes("not_authenticated")) return "Please sign in.";
+  if (msg.includes("feature_disabled")) return "Live battles aren't available right now.";
+  if (msg.includes("invalid_opponent")) return "That opponent can't be challenged.";
+  if (msg.includes("invalid_choice")) return "Pick host or opponent to vote.";
+  if (msg.includes("invalid_reason")) return "Please add a short reason.";
+  if (msg.includes("blocked")) return "You can't start a battle with that user.";
+  if (msg.includes("rate")) return "You're doing that too fast. Try again soon.";
   return fallback;
 }
 
