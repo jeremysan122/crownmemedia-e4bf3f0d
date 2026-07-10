@@ -1986,11 +1986,59 @@ export type Database = {
         }
         Relationships: []
       }
+      live_battle_comment_reports: {
+        Row: {
+          battle_id: string
+          comment_id: string
+          created_at: string
+          id: string
+          reason: string
+          reporter_id: string
+          status: string
+        }
+        Insert: {
+          battle_id: string
+          comment_id: string
+          created_at?: string
+          id?: string
+          reason: string
+          reporter_id: string
+          status?: string
+        }
+        Update: {
+          battle_id?: string
+          comment_id?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          reporter_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_battle_comment_reports_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "live_battles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_battle_comment_reports_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "live_battle_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_battle_comments: {
         Row: {
           battle_id: string
           body: string
           created_at: string
+          hidden_at: string | null
+          hidden_by: string | null
+          hide_reason: string | null
           id: string
           user_id: string
         }
@@ -1998,6 +2046,9 @@ export type Database = {
           battle_id: string
           body: string
           created_at?: string
+          hidden_at?: string | null
+          hidden_by?: string | null
+          hide_reason?: string | null
           id?: string
           user_id: string
         }
@@ -2005,6 +2056,9 @@ export type Database = {
           battle_id?: string
           body?: string
           created_at?: string
+          hidden_at?: string | null
+          hidden_by?: string | null
+          hide_reason?: string | null
           id?: string
           user_id?: string
         }
@@ -4849,6 +4903,10 @@ export type Database = {
           _notes: string
           _request_id: string
         }
+        Returns: undefined
+      }
+      admin_hide_live_battle_comment: {
+        Args: { _comment_id: string; _hide: boolean; _reason?: string }
         Returns: undefined
       }
       admin_list_boost_bundles: {
