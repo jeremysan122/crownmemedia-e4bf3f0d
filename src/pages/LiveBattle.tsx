@@ -73,6 +73,8 @@ export default function LiveBattlePage() {
   const [myReport, setMyReport] = useState<LiveBattleReportRow | null>(null);
   const [modBusy, setModBusy] = useState(false);
   const [showModPanel, setShowModPanel] = useState(false);
+  const [showBattleMod, setShowBattleMod] = useState(false);
+  const [showBeauty, setShowBeauty] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
 
   // Feature-flag gate.
