@@ -95,6 +95,12 @@ export default function LiveBattlePage() {
         (payload) => {
           const next = payload.new as LiveBattleRow;
           setBattle((prev) => {
+            // Once the battle has ended, freeze the leaderboard snapshot.
+            // Ignore any further realtime patches to vote counts — the
+            // results screen must show the exact final backend snapshot.
+            if (prev && prev.status === "ended") {
+              return { ...prev, ...next, host_votes: prev.host_votes, opponent_votes: prev.opponent_votes, status: "ended" };
+            }
             // Vote totals came back from the server — clear the pending
             // marker and flash the "confirmed" chip briefly.
             if (prev && (prev.host_votes !== next.host_votes || prev.opponent_votes !== next.opponent_votes)) {
@@ -112,6 +118,10 @@ export default function LiveBattlePage() {
               toast({ title: "Battle ended", description });
               // Force teardown of the LiveKit room by clearing the token.
               setToken(null);
+              // Clear any in-flight optimistic vote state so the results
+              // screen renders the final backend snapshot cleanly.
+              setPendingChoice(null);
+              setVoting(false);
             }
             return next;
           });
@@ -119,6 +129,7 @@ export default function LiveBattlePage() {
       .subscribe();
     return () => { mounted = false; supabase.removeChannel(ch); };
   }, [battleId]);
+
 
   // Real-time confirmations for mute/kick actions (target + host see it).
   useEffect(() => {
