@@ -19,7 +19,7 @@ import {
 } from "@/lib/liveBattles";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, ShieldAlert, Flag, Crown } from "lucide-react";
+import { Loader2, ShieldAlert, Flag, Crown, Trophy, Share2 } from "lucide-react";
 
 export default function LiveBattlePage() {
   const { battleId = "" } = useParams<{ battleId: string }>();
