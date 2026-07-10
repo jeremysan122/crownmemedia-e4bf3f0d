@@ -36,6 +36,7 @@ const LiveBattlesLobby = lazy(() => import("./pages/LiveBattlesLobby"));
 const BattlesHistory = lazy(() => import("./pages/BattlesHistory"));
 const BattleDetail = lazy(() => import("./pages/BattleDetail"));
 const LiveBattle = lazy(() => import("./pages/LiveBattle"));
+const BattleLobby = lazy(() => import("./pages/BattleLobby"));
 const Messages = lazy(() => import("./pages/Messages"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -192,6 +193,7 @@ const App = () => (
               <Route path="/battles/live" element={<ProtectedRoute><LiveBattlesLobby /></ProtectedRoute>} />
               <Route path="/battles/:id" element={<ProtectedRoute><BattleDetail /></ProtectedRoute>} />
               <Route path="/live/:battleId" element={<ProtectedRoute><LiveBattle /></ProtectedRoute>} />
+              <Route path="/battles/:battleId/lobby" element={<ProtectedRoute><BattleLobby /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/messages/:otherId" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />

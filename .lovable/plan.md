@@ -29,15 +29,17 @@ Before public launch of scheduling:
 3. Add an idempotency guard column (e.g. `reminder_sent_at`) so the reminder fires exactly once.
 4. Add a test that the RPC/function marks reminders sent, or document a clear skip reason if `pg_cron` is unavailable in the target env.
 
-## Wave 2 — Pre-battle Lobby
+## Wave 2 — Pre-battle Lobby ✅ shipped
 
 **Goal:** battles start clean, not chaotic.
 
-1. **Warmup lobby room** (`/battles/:id/lobby`) with:
-   - AV pre-check (mic level meter, camera preview, network test).
-   - Battler ready state + host "Start" gated on both ready.
-   - Countdown to go-live with `aria-live` announcements.
-2. **Reuse existing realtime channel** for lobby presence + ready toggles.
+1. **Warmup lobby room** (`/battles/:battleId/lobby`) with:
+   - AV pre-check: camera preview, mic level meter, network signal (`AVPreCheck.tsx`).
+   - Ready-state panel with host / opponent flags, host "Go live" gated on both (`LobbyReadyPanel.tsx`).
+   - Synchronized go-live countdown with polite `aria-live` announcements (`LobbyCountdown.tsx`).
+2. **Schema:** `live_battles` gained `host_ready`, `opponent_ready`, `lobby_opened_at`, `go_live_at`. RPCs `set_lobby_ready` and `start_battle_from_lobby` gate all writes server-side.
+3. **LiveKit token** accepts `mode: "lobby"` — participants-only, `${room_name}__lobby`, no auto-start.
+4. **Realtime:** existing `live_battles` UPDATE stream drives the lobby; status flip to `live` auto-navigates to `/live/:id`.
 
 ## Wave 3 — Spectator UX
 
