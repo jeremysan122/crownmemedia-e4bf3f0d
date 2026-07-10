@@ -84,15 +84,21 @@ Neither introduces a new policy risk. They're bundled into the existing `docs/se
 
 
 
-## Wave 5 — Structure (Tournaments & Rematches)
+## Wave 5 — Structure (Tournaments & Rematches) ✅ shipped
 
 **Goal:** more than one-off matches.
 
-1. **Rematch CTA** on the results screen → creates a new `live_battles` row prefilled with same participants.
-2. **Tournaments**
-   - Tables: `tournaments`, `tournament_rounds`, `tournament_matches` (winner_id, next_match_id).
-   - Bracket UI (`TournamentBracket.tsx`) with auto-advance on battle end.
-   - Support 4/8/16-player single-elim in v1.
+1. **Rematch CTA** ✅ shipped on the ended battle results screen (`RematchButton.tsx`). New `create_rematch(_battle_id)` RPC verifies the caller is host/opponent of an ended battle, re-checks the block relationship + `live_battles_enabled` flag, shares the `livebattle:create` 5/hour rate-limit bucket, and mints a fresh `pending` battle with the same opponent, category, region, and duration. Caller becomes the new host and lands on `/live/:id`.
+2. **Tournaments (single-elim, 4/8/16)** ✅ shipped:
+   - Schema: `tournaments` (title, size, status, winner_id, current_round, category, region, duration) + `tournament_matches` (round, slot, host_id, opponent_id, battle_id, winner_id, `next_match_id`/`next_slot` wiring, status). Signed-in users can read; all writes go through RPCs.
+   - `create_tournament(title, size, participants[], category, region, duration)` builds every round's empty match rows, wires next-match/next-slot links top-down, then seeds round 1 sequentially. Enforces size (4/8/16), participant uniqueness/count, feature flag, and a `tournament:create` 3/hour rate limit.
+   - `start_tournament_match(match_id)` — creator, participant, admin, or moderator opens the live battle for a `ready` bracket slot. Creates a `live_battles` row wired to the match and navigates to `/battles/:id/lobby`.
+   - `tg_tournament_advance` trigger — when `live_battles.status` flips to `ended`, the winner (or host on tie/no-winner) is slotted into `next_match_id` at `next_slot`; the child match flips to `ready` once both sides are filled. When the final ends, the tournament is marked `completed` with a `winner_id`.
+   - UI: `/tournaments` list, `/tournaments/:id` bracket detail with realtime subscription on `tournament_matches` + `tournaments`, `TournamentBracket.tsx` renderer (round headers, per-match status pills, Start / Watch controls), `CreateTournamentDialog.tsx` (title + size + @username participants, resolves handles → ids, seeds pairs in order). BattlesHub gets a "Tournaments" tile in the explore grid.
+
+### Accepted scanner warnings (Wave 5)
+
+The new Wave 5 findings match the earlier accepted `SECURITY DEFINER` pattern (see `docs/security/linter-findings/0028-anon-security-definer.md` / `0029-authenticated-security-definer.md`): every new function pins `search_path = public`, does its own `not_authenticated` / `not_authorized` / participant checks, and is granted only to `authenticated`. The trigger function `tg_tournament_advance` runs `SECURITY DEFINER` so it can update `tournament_matches` regardless of which participant ended the battle — but it only ever mirrors data from the source `live_battles` row (winner, status) that was itself gated by the existing battle-end RPCs.
 
 ## Wave 6 — Post-battle
 
