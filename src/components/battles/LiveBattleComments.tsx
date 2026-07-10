@@ -309,10 +309,11 @@ export default function LiveBattleComments({
         )}
 
         {rows.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-4" role="status">
+          <p className={`text-xs text-center py-4 ${overlay ? "text-white/70 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]" : "text-muted-foreground"}`} role="status">
             {isLive ? "Be the first to say something." : "Chat opens when the battle goes live."}
           </p>
         ) : (
+
           rows.map((r) => {
             const isHidden = !!r.hidden_at;
             const canReport = !!user && user.id !== r.user_id && !r.id.startsWith("opt-");
