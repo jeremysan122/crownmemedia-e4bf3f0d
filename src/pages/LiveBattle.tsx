@@ -43,7 +43,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Loader2, ShieldAlert, Flag, Crown, Trophy, Share2,
-  MicOff, Mic, UserX, Users, Gavel, Check, X, Eye, Gift,
+  MicOff, Mic, UserX, Users, Gavel, Check, X, Eye, Gift, Sparkles, Shield,
 } from "lucide-react";
 
 type JoinStep = "idle" | "verifying" | "minting" | "connecting" | "connected" | "error";
