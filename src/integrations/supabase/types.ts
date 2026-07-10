@@ -1986,6 +1986,53 @@ export type Database = {
         }
         Relationships: []
       }
+      live_battle_gifts: {
+        Row: {
+          battle_id: string
+          created_at: string
+          gift_id: string
+          gift_name: string
+          id: string
+          quantity: number
+          recipient_id: string
+          sender_id: string
+          total_shekels: number
+          transaction_id: string | null
+        }
+        Insert: {
+          battle_id: string
+          created_at?: string
+          gift_id: string
+          gift_name: string
+          id?: string
+          quantity?: number
+          recipient_id: string
+          sender_id: string
+          total_shekels?: number
+          transaction_id?: string | null
+        }
+        Update: {
+          battle_id?: string
+          created_at?: string
+          gift_id?: string
+          gift_name?: string
+          id?: string
+          quantity?: number
+          recipient_id?: string
+          sender_id?: string
+          total_shekels?: number
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_battle_gifts_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "live_battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_battle_participants: {
         Row: {
           action: string
@@ -5751,6 +5798,16 @@ export type Database = {
           p_post_id?: string
           p_profile_id?: string
           p_recipient_id: string
+        }
+        Returns: Json
+      }
+      send_live_battle_gift: {
+        Args: {
+          _battle_id: string
+          _dedupe_key?: string
+          _gift_id: string
+          _quantity?: number
+          _recipient_id: string
         }
         Returns: Json
       }
