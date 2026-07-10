@@ -269,6 +269,7 @@ export default function CreateLiveBattleDialog({
             >
               <p className="text-xs text-destructive font-medium">{submitError}</p>
               <Button
+                ref={retryRef}
                 type="button"
                 size="sm"
                 variant="outline"
@@ -276,6 +277,7 @@ export default function CreateLiveBattleDialog({
                 onClick={handleCreate}
                 disabled={!canSubmit}
                 data-testid="create-battle-retry"
+                aria-label="Retry creating live battle"
               >
                 {submitting ? (
                   <><Loader2 className="animate-spin mr-2" size={12} /> Retrying…</>
