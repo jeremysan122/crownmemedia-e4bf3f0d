@@ -22,6 +22,8 @@ import {
 import { useLiveBattleViewerCount, useLiveBattleViewerHeartbeat } from "@/hooks/useLiveBattleViewers";
 import LiveBattleActivityLog from "@/components/battles/LiveBattleActivityLog";
 import LiveBattleShareCard from "@/components/battles/LiveBattleShareCard";
+import LiveBattleGiftsOverlay from "@/components/battles/LiveBattleGiftsOverlay";
+import LiveBattleGiftPicker from "@/components/battles/LiveBattleGiftPicker";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -30,7 +32,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Loader2, ShieldAlert, Flag, Crown, Trophy, Share2,
-  MicOff, Mic, UserX, Users, Gavel, Check, X, Eye,
+  MicOff, Mic, UserX, Users, Gavel, Check, X, Eye, Gift,
 } from "lucide-react";
 
 type JoinStep = "idle" | "verifying" | "minting" | "connecting" | "connected" | "error";
@@ -55,6 +57,7 @@ export default function LiveBattlePage() {
   const [myReport, setMyReport] = useState<LiveBattleReportRow | null>(null);
   const [modBusy, setModBusy] = useState(false);
   const [showModPanel, setShowModPanel] = useState(false);
+  const [giftOpen, setGiftOpen] = useState(false);
 
   // Feature-flag gate.
   useEffect(() => {
@@ -373,6 +376,12 @@ export default function LiveBattlePage() {
         ) : (
           <FullScreenLoading step={joinStep === "idle" ? "verifying" : joinStep} />
         )}
+        {/* TikTok-style floating gift popups — overlays the video stage. */}
+        <LiveBattleGiftsOverlay
+          battleId={battle.id}
+          hostId={battle.host_id}
+          opponentId={battle.opponent_id}
+        />
       </div>
 
       {/* Moderation activity log — visible to host + admins/mods and to the currently viewing user (self events). */}
@@ -422,26 +431,51 @@ export default function LiveBattlePage() {
             )}
           </div>
           {!isParticipant && (
-            <div className="flex flex-col items-end gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => { setReportError(null); setReportOpen(true); }}
-                disabled={!!myReport && myReport.status !== "rejected"}
-                title={myReport ? "You already reported this battle" : "Report this battle"}
-              >
-                <Flag className="w-4 h-4 mr-1" />
-                {myReport && myReport.status !== "rejected" ? "Reported" : "Report"}
-              </Button>
-              {myReport && (
-                <span className="text-[10px] text-muted-foreground">
-                  {reportStatusLabel(myReport.status)}
-                </span>
+            <div className="flex items-center gap-2">
+              {battle.status === "live" && user && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="bg-primary/15 text-primary hover:bg-primary/25"
+                  onClick={() => setGiftOpen(true)}
+                >
+                  <Gift className="w-4 h-4 mr-1" />Send gift
+                </Button>
               )}
+              <div className="flex flex-col items-end gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => { setReportError(null); setReportOpen(true); }}
+                  disabled={!!myReport && myReport.status !== "rejected"}
+                  title={myReport ? "You already reported this battle" : "Report this battle"}
+                >
+                  <Flag className="w-4 h-4 mr-1" />
+                  {myReport && myReport.status !== "rejected" ? "Reported" : "Report"}
+                </Button>
+                {myReport && (
+                  <span className="text-[10px] text-muted-foreground">
+                    {reportStatusLabel(myReport.status)}
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Gift picker */}
+      {battle && (
+        <LiveBattleGiftPicker
+          open={giftOpen}
+          onOpenChange={setGiftOpen}
+          battleId={battle.id}
+          hostId={battle.host_id}
+          hostUsername={null}
+          opponentId={battle.opponent_id}
+          opponentUsername={null}
+        />
+      )}
 
       {/* Report dialog */}
       <Dialog open={reportOpen} onOpenChange={(v) => { if (!reportBusy) { setReportOpen(v); if (!v) setReportError(null); } }}>
