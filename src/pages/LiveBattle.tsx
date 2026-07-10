@@ -379,8 +379,8 @@ export default function LiveBattlePage() {
         {/* TikTok-style floating gift popups — overlays the video stage. */}
         <LiveBattleGiftsOverlay
           battleId={battle.id}
-          hostId={battle.host_user_id}
-          opponentId={battle.opponent_user_id}
+          hostId={battle.host_id}
+          opponentId={battle.opponent_id}
         />
       </div>
 
