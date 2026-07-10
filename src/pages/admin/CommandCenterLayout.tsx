@@ -34,6 +34,7 @@ const NAV: Array<{ to: string; label: string; icon: ReactNode }> = [
   { to: "/admin/command-center/users", label: "Users", icon: <Users size={14} /> },
   { to: "/admin/command-center/content", label: "Content", icon: <Flag size={14} /> },
   { to: "/admin/command-center/reports", label: "Reports", icon: <Flag size={14} /> },
+  { to: "/admin/command-center/live-battle-reports", label: "Live Battle Reports", icon: <Flag size={14} /> },
   { to: "/admin/command-center/broadcasts", label: "Broadcasts", icon: <Megaphone size={14} /> },
   { to: "/admin/command-center/support", label: "Support", icon: <LifeBuoy size={14} /> },
   { to: "/admin/command-center/settings", label: "Settings", icon: <SettingsIcon size={14} /> },

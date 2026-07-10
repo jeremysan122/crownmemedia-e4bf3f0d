@@ -15,8 +15,11 @@ import { useAuth } from "@/context/AuthContext";
 import { isFeatureEnabled } from "@/lib/featureFlags";
 import {
   LiveBattleRow, LiveBattleReportRow, liveBattleErrorMessage, mintLiveBattleToken,
+  reportCooldownSeconds, formatCooldown,
   reportLiveBattle, roomControl, voteInLiveBattle,
 } from "@/lib/liveBattles";
+import LiveBattleActivityLog from "@/components/battles/LiveBattleActivityLog";
+import LiveBattleShareCard from "@/components/battles/LiveBattleShareCard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -46,6 +49,7 @@ export default function LiveBattlePage() {
   const [reportReason, setReportReason] = useState("");
   const [reportBusy, setReportBusy] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
+  const [reportCooldown, setReportCooldown] = useState<{ kind: "duplicate" | "rate_limited"; until: number } | null>(null);
   const [myReport, setMyReport] = useState<LiveBattleReportRow | null>(null);
   const [modBusy, setModBusy] = useState(false);
   const [showModPanel, setShowModPanel] = useState(false);
@@ -235,6 +239,7 @@ export default function LiveBattlePage() {
     try {
       const row = await reportLiveBattle(battle.id, reason);
       setMyReport(row);
+      setReportCooldown(null);
       toast({
         title: "Report submitted",
         description: "Queued for review. You'll see status updates here.",
@@ -242,15 +247,22 @@ export default function LiveBattlePage() {
       setReportOpen(false);
       setReportReason("");
     } catch (e) {
+      const cd = reportCooldownSeconds(e);
+      if (cd) {
+        setReportCooldown({ kind: cd.kind, until: Date.now() + cd.seconds * 1000 });
+      }
       const msg = liveBattleErrorMessage(e, "Couldn't submit report. Please try again in a moment.");
       setReportError(msg);
-      // If duplicate, close after a beat so they see the friendly badge below.
-      const raw = String((e as { message?: string })?.message ?? "").toLowerCase();
-      if (raw.includes("duplicate_report")) {
-        toast({ title: "Already reported", description: msg });
-      }
+      if (cd?.kind === "duplicate") toast({ title: "Already reported", description: msg });
+      if (cd?.kind === "rate_limited") toast({ title: "Report limit reached", description: msg });
     } finally { setReportBusy(false); }
   };
+
+  // Ticking countdown for the cooldown banner. Clears itself when it hits 0.
+  const cooldownRemaining = useCooldownRemaining(reportCooldown?.until ?? null);
+  useEffect(() => {
+    if (reportCooldown && cooldownRemaining === 0) setReportCooldown(null);
+  }, [cooldownRemaining, reportCooldown]);
 
   const reportStatusLabel = (s: LiveBattleReportRow["status"]): string =>
     s === "queued" ? "Queued for review"
@@ -336,6 +348,9 @@ export default function LiveBattlePage() {
           <FullScreenLoading step={joinStep === "idle" ? "verifying" : joinStep} />
         )}
       </div>
+
+      {/* Moderation activity log — visible to host + admins/mods and to the currently viewing user (self events). */}
+      <LiveBattleActivityLog battleId={battle.id} selfId={user?.id ?? null} />
 
       {/* Vote bar */}
       <div className="p-3 border-t border-border">
@@ -423,6 +438,17 @@ export default function LiveBattlePage() {
             <span>{reportError && <span className="text-destructive" role="alert">{reportError}</span>}</span>
             <span>{reportReason.length}/500</span>
           </div>
+          {reportCooldown && cooldownRemaining > 0 && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs" role="status" aria-live="polite">
+              <div className="font-semibold text-amber-400 mb-0.5">
+                {reportCooldown.kind === "duplicate" ? "Cooldown active" : "Report limit reached"}
+              </div>
+              <div className="text-muted-foreground">
+                You can send another report in{" "}
+                <span className="tabular-nums font-mono text-foreground">{formatCooldown(cooldownRemaining)}</span>.
+              </div>
+            </div>
+          )}
           {myReport && (
             <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs">
               <div className="font-semibold mb-0.5">Your last report</div>
@@ -436,9 +462,14 @@ export default function LiveBattlePage() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setReportOpen(false)} disabled={reportBusy}>Cancel</Button>
-            <Button onClick={handleReportSubmit} disabled={reportBusy}>
+            <Button
+              onClick={handleReportSubmit}
+              disabled={reportBusy || (reportCooldown !== null && cooldownRemaining > 0)}
+            >
               {reportBusy && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-              {reportError ? "Try again" : "Submit report"}
+              {reportCooldown && cooldownRemaining > 0
+                ? `Try again in ${formatCooldown(cooldownRemaining)}`
+                : reportError ? "Try again" : "Submit report"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -517,17 +548,6 @@ function ResultsScreen({ battle, onBack }: { battle: LiveBattleRow; onBack: () =
   const winner: "host" | "opponent" | "tie" =
     !battle.winner_id ? "tie" : battle.winner_id === battle.host_id ? "host" : "opponent";
 
-  const handleShare = async () => {
-    const url = `${window.location.origin}/live/${battle.id}`;
-    const text = winner === "tie"
-      ? `A live battle just ended in a tie on CrownMe!`
-      : `The ${winner} won a live battle on CrownMe with ${winner === "host" ? battle.host_votes : battle.opponent_votes} votes!`;
-    try {
-      if (navigator.share) await navigator.share({ title: "CrownMe Live Battle", text, url });
-      else { await navigator.clipboard.writeText(url); toast({ title: "Link copied to clipboard" }); }
-    } catch { /* user cancelled */ }
-  };
-
   return (
     <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-2xl border border-border/60 bg-card p-6 text-center">
@@ -560,9 +580,18 @@ function ResultsScreen({ battle, onBack }: { battle: LiveBattleRow; onBack: () =
           </p>
         )}
         <div className="mt-6 grid gap-2">
-          <Button onClick={handleShare} className="w-full">
-            <Share2 className="w-4 h-4 mr-1" /> Share result
-          </Button>
+          {/* Branded share card handles both native-share and download-as-PNG. */}
+          <LiveBattleShareCard
+            battleId={battle.id}
+            winnerSide={winner}
+            winnerLabel={winner === "tie" ? "It's a tie!" : `${winner === "host" ? "Host" : "Opponent"} wins`}
+            hostName="Host"
+            opponentName="Opponent"
+            hostVotes={battle.host_votes}
+            opponentVotes={battle.opponent_votes}
+            category={battle.category_slug ?? null}
+            region={battle.region ?? null}
+          />
           <Button variant="outline" onClick={onBack} className="w-full">Back to live battles</Button>
         </div>
       </div>
@@ -590,6 +619,20 @@ function useCountdown(endsAt: string | null | undefined): number | null {
     return Math.max(0, Math.floor((Date.parse(endsAt) - Date.now()) / 1000));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endsAt, tick]);
+}
+
+function useCooldownRemaining(untilTs: number | null): number {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (untilTs === null) return;
+    const t = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [untilTs]);
+  return useMemo(() => {
+    if (untilTs === null) return 0;
+    return Math.max(0, Math.ceil((untilTs - Date.now()) / 1000));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [untilTs, tick]);
 }
 
 function formatSec(s: number) {

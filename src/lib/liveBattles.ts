@@ -22,9 +22,34 @@ export interface LiveBattleRow {
   region?: string | null;
 }
 
+/** Extract cooldown seconds from `duplicate_report:NN` / `rate_limited:NN`. */
+export function reportCooldownSeconds(err: unknown): { kind: "duplicate" | "rate_limited"; seconds: number } | null {
+  const raw = String((err as { message?: string })?.message ?? "");
+  const dup = raw.match(/duplicate_report:(\d+)/i);
+  if (dup) return { kind: "duplicate", seconds: parseInt(dup[1], 10) };
+  const rl = raw.match(/rate_limited:(\d+)/i);
+  if (rl) return { kind: "rate_limited", seconds: parseInt(rl[1], 10) };
+  return null;
+}
+
+export function formatCooldown(seconds: number): string {
+  const s = Math.max(1, Math.ceil(seconds));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return r === 0 ? `${m}m` : `${m}m ${r}s`;
+}
+
 export function liveBattleErrorMessage(err: unknown, fallback: string): string {
-  const raw = (err as any)?.message ?? (err as any)?.error ?? "";
+  const raw = (err as { message?: string; error?: string })?.message ?? (err as { error?: string })?.error ?? "";
   const msg = String(raw).toLowerCase();
+  const cd = reportCooldownSeconds(err);
+  if (cd?.kind === "duplicate") {
+    return `You already reported this battle. Try again in ${formatCooldown(cd.seconds)}.`;
+  }
+  if (cd?.kind === "rate_limited") {
+    return `You've hit the report limit. Try again in ${formatCooldown(cd.seconds)}.`;
+  }
   if (msg.includes("battle_not_found")) return "This battle is no longer available.";
   if (msg.includes("battle_not_live")) return "This battle isn't live.";
   if (msg.includes("battle_not_pending")) return "This battle already started or ended.";
@@ -106,4 +131,63 @@ export async function roomControl(
   });
   if (error || (data && data.error)) throw error ?? new Error(data.error);
   return data;
+}
+
+// ---- Admin review queue ----
+
+export interface AdminLiveBattleReportRow extends LiveBattleReportRow {
+  reporter_username: string | null;
+  reporter_photo: string | null;
+  battle_room: string | null;
+  battle_status: string | null;
+  battle_host_id: string | null;
+  battle_opponent_id: string | null;
+  battle_category: string | null;
+  battle_region: string | null;
+  total_open: number;
+}
+
+export async function adminListLiveBattleReports(
+  status: "queued" | "processing" | "handled" | "rejected" | null,
+  limit = 50,
+  offset = 0,
+): Promise<AdminLiveBattleReportRow[]> {
+  const { data, error } = await supabase.rpc("admin_list_live_battle_reports", {
+    _status: status, _limit: limit, _offset: offset,
+  } as never);
+  if (error) throw error;
+  return (data ?? []) as unknown as AdminLiveBattleReportRow[];
+}
+
+export async function adminUpdateLiveBattleReportStatus(
+  reportId: string,
+  status: "queued" | "processing" | "handled" | "rejected",
+): Promise<LiveBattleReportRow> {
+  const { data, error } = await supabase.rpc("admin_update_live_battle_report_status", {
+    _report_id: reportId, _status: status,
+  } as never);
+  if (error) throw error;
+  return data as unknown as LiveBattleReportRow;
+}
+
+// ---- Moderation activity log ----
+
+export interface LiveBattleModAction {
+  id: string;
+  battle_id: string;
+  target_user_id: string;
+  action: "mute" | "unmute" | "kick";
+  actor_id: string;
+  created_at: string;
+}
+
+export async function fetchLiveBattleModActions(battleId: string): Promise<LiveBattleModAction[]> {
+  const { data, error } = await supabase
+    .from("live_battle_participants")
+    .select("id,battle_id,target_user_id,action,actor_id,created_at")
+    .eq("battle_id", battleId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []) as unknown as LiveBattleModAction[];
 }
