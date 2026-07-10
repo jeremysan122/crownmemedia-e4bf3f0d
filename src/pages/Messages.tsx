@@ -771,6 +771,21 @@ export default function Messages() {
           >
             <Paperclip size={16} />
           </Button>
+          {otherId && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-9 px-2 text-primary hover:text-primary hover:bg-primary/10"
+              onClick={() => setShowChallenge(true)}
+              aria-label="Challenge to a battle"
+              data-testid="dm-battle-button"
+              title="Battle this royal"
+            >
+              <Swords size={16} />
+            </Button>
+          )}
+
           <Input
             value={text}
             onChange={(e) => { setText(e.target.value); pingTyping(); }}
