@@ -48,6 +48,11 @@ export default function LiveBattlePage() {
   const [err, setErr] = useState<string | null>(null);
   const [voting, setVoting] = useState(false);
   const [voted, setVoted] = useState<"host" | "opponent" | null>(null);
+  // Pending → set when the optimistic bump is applied; cleared when the
+  // next realtime UPDATE for this battle row lands (server truth).
+  const [pendingChoice, setPendingChoice] = useState<"host" | "opponent" | null>(null);
+  const [voteConfirmedAt, setVoteConfirmedAt] = useState<number | null>(null);
+  const [voteFailedAt, setVoteFailedAt] = useState<number | null>(null);
   const [joinStep, setJoinStep] = useState<JoinStep>("idle");
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
