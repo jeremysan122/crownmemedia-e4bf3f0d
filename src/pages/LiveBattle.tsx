@@ -376,6 +376,12 @@ export default function LiveBattlePage() {
         ) : (
           <FullScreenLoading step={joinStep === "idle" ? "verifying" : joinStep} />
         )}
+        {/* TikTok-style floating gift popups — overlays the video stage. */}
+        <LiveBattleGiftsOverlay
+          battleId={battle.id}
+          hostId={battle.host_user_id}
+          opponentId={battle.opponent_user_id}
+        />
       </div>
 
       {/* Moderation activity log — visible to host + admins/mods and to the currently viewing user (self events). */}
