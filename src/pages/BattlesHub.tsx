@@ -225,27 +225,23 @@ export default function BattlesHub() {
 
         {/* ─── LIVE NOW ─── */}
         {liveEnabled && (
-          stats.liveNow > 0 ? (
-            <LiveNowStrip />
-          ) : (
-            <section className="mb-6">
-              <div className="mb-2 flex items-center gap-2">
-                <Radio size={14} className="text-red-500 animate-pulse" />
-                <h2 className="text-xs font-black uppercase tracking-wider">Live now</h2>
-              </div>
-              <div className="rounded-2xl border border-dashed border-border/60 bg-card/50 p-5 text-center">
-                <div className="mx-auto w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center mb-2">
-                  <Radio size={16} className="text-red-500" />
-                </div>
-                <p className="text-sm font-semibold">No one is live yet.</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Be the first to step into the arena.</p>
-                <Button size="sm" className="mt-3" onClick={() => setOpenLive(true)}>
-                  <Radio size={14} className="mr-1.5" /> Go Live
-                </Button>
-              </div>
-            </section>
-          )
+          <LiveNowStrip />
         )}
+
+        {/* ─── UPCOMING (SCHEDULED) ─── */}
+        {liveEnabled && (
+          <UpcomingBattlesStrip />
+        )}
+
+        {/* Schedule for later CTA */}
+        {liveEnabled && (
+          <div className="mb-6">
+            <Button variant="outline" size="sm" onClick={() => setOpenSchedule(true)}>
+              <CalendarClock size={14} className="mr-1.5" /> Schedule for later
+            </Button>
+          </div>
+        )}
+
 
         {/* ─── PENDING INVITES ─── */}
         <PendingInvitesList />
