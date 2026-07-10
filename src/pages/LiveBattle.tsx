@@ -466,7 +466,14 @@ export default function LiveBattlePage() {
         {/* Spectator emote bursts — floating hearts/crowns triggered by viewers. */}
         <LiveBattleEmoteBurst battleId={battle.id} enabled={battle.status === "live" && !isParticipant && !!user} />
         {/* Instagram-style live chat overlay — sits on top of the video stage. */}
-        <LiveBattleComments battleId={battle.id} isLive={battle.status === "live"} overlay />
+        <LiveBattleComments
+          battleId={battle.id}
+          isLive={battle.status === "live"}
+          overlay
+          keywordFilters={readKeywordFilters((battle as unknown as { keyword_filters?: unknown }).keyword_filters)}
+          commentsLocked={!!(battle as unknown as { comments_locked?: boolean }).comments_locked}
+          slowModeSeconds={(battle as unknown as { slow_mode_seconds?: number }).slow_mode_seconds ?? 0}
+        />
       </div>
 
       {/* Moderation activity log — visible to host + admins/mods and to the currently viewing user (self events). */}
