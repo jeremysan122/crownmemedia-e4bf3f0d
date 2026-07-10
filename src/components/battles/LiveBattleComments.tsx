@@ -579,7 +579,7 @@ export default function LiveBattleComments({
   }
 
   const cooldownSeconds = Math.ceil(cooldownLeft / 1000);
-  const canSend = !!user && isLive && !sending && text.trim().length > 0 && cooldownLeft === 0;
+  const canSend = !!user && isLive && !sending && text.trim().length > 0 && cooldownLeft === 0 && !(commentsLocked && !isModerator);
   const remaining = MAX - text.length;
 
   const typingLabel = useMemo(() => {
