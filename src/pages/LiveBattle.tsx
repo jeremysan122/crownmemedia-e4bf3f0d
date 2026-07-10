@@ -237,9 +237,11 @@ export default function LiveBattlePage() {
   const isViewer = !!user && battle?.status === "live" &&
     user.id !== battle?.host_id && user.id !== battle?.opponent_id;
   useLiveBattleViewerHeartbeat(battle?.id ?? null, isViewer);
-  const viewerCount = useLiveBattleViewerCount(battle?.id ?? null, battle?.status === "live");
-
-  const isHost = user?.id === battle?.host_id;
+  const pollCount = useLiveBattleViewerCount(battle?.id ?? null, battle?.status === "live");
+  // Prefer low-latency presence count; fall back to the 15s poll (also
+  // authoritative for historical DB truth on flaky realtime links).
+  const presenceCount = useLiveBattlePresence(battle?.id ?? null, user?.id ?? null, battle?.status === "live");
+  const viewerCount = presenceCount ?? pollCount;
   const isOpponent = user?.id === battle?.opponent_id;
   const isParticipant = isHost || isOpponent;
   const canModerate = isAdmin || isModerator;
