@@ -10,12 +10,12 @@ import { getNotificationTarget } from "../notificationRouting";
 
 const rpcMock = vi.fn();
 const insertMock = vi.fn(() => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }));
-const fromMock = vi.fn(() => ({ insert: insertMock }));
+const fromMock = vi.fn((_t: string) => ({ insert: insertMock }));
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     auth: { getUser: () => Promise.resolve({ data: { user: { id: "u1" } } }) },
-    from: (_t: string) => fromMock(),
+    from: (t: string) => fromMock(t),
     rpc: (name: string, args?: unknown) => rpcMock(name, args),
     functions: { invoke: vi.fn() },
   },
