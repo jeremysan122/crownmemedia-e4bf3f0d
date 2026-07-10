@@ -69,11 +69,11 @@ export default function LiveBattleVoteChip({
     </span>
   );
 
+  let chip: JSX.Element | null = null;
   if (state === "pending") {
-    return (
+    chip = (
       <span
         data-testid="vote-pending"
-        aria-live="polite"
         aria-busy="true"
         className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 text-amber-500 px-2 py-0.5 animate-pulse"
       >
@@ -81,31 +81,26 @@ export default function LiveBattleVoteChip({
         Counting your vote…
       </span>
     );
-  }
-  if (state === "confirmed") {
-    return (
+  } else if (state === "confirmed") {
+    chip = (
       <span
         data-testid="vote-confirmed"
-        aria-live="polite"
         aria-busy="false"
         className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-500 px-2 py-0.5"
       >
         ✓ Vote confirmed
       </span>
     );
-  }
-  if (state === "failed") {
-    return (
+  } else if (state === "failed") {
+    chip = (
       <span
         data-testid="vote-failed"
-        aria-live="assertive"
         aria-busy="false"
-        role="alert"
         className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 text-red-500 px-2 py-0.5"
       >
         Vote didn't stick — try again
       </span>
     );
   }
-  return null;
+  return (<>{announcer}{chip}</>);
 }
