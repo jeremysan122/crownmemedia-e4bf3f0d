@@ -32,6 +32,9 @@ import LiveBattleVoteChip from "@/components/battles/LiveBattleVoteChip";
 import LiveBattleEmoteBurst from "@/components/battles/LiveBattleEmoteBurst";
 import LiveBattlePiPButton from "@/components/battles/LiveBattlePiPButton";
 import FollowBattlerButton from "@/components/battles/FollowBattlerButton";
+import BattleModerationPanel from "@/components/battles/BattleModerationPanel";
+import BeautyFilterPanel from "@/components/battles/BeautyFilterPanel";
+import { readKeywordFilters } from "@/lib/battleModeration";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
