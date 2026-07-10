@@ -702,7 +702,7 @@ export default function LiveBattleComments({
                         </span>
                         {isHidden ? (
                           <span className={`italic text-xs ${overlay ? "text-white/60" : "text-muted-foreground"}`}>
-                            [hidden by moderator]
+                            {isKeywordHidden ? "[filtered by host]" : "[hidden by moderator]"}
                           </span>
                         ) : (
                           <span className={`break-words ${overlay ? "text-white/95" : "text-foreground/80"}`}>{r.body}</span>
