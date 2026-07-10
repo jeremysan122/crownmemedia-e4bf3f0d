@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import CreateLiveBattleDialog from "@/components/battles/CreateLiveBattleDialog";
+import LiveBattleEmptyState from "@/components/battles/LiveBattleEmptyState";
 import { useMainCategories } from "@/lib/categories";
 
 interface Row {
@@ -85,12 +86,17 @@ export default function LiveBattlesLobby() {
         <p className="text-sm text-muted-foreground mb-4">Real-time 1v1 head-to-head with audience voting.</p>
 
         {enabled && (
-          <Button onClick={() => setCreateOpen(true)} className="w-full mb-4" size="lg">
-            <Plus size={18} className="mr-1" /> New Live Battle
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="w-full mb-4"
+            size="lg"
+            data-testid="go-live-cta-lobby"
+          >
+            <Plus size={18} className="mr-1" /> Go Live Battle
           </Button>
         )}
 
-        {enabled === false && <EmptyState msg="Live battles aren't available yet. Check back soon." />}
+        {enabled === false && <div className="mb-4"><LiveBattleEmptyState /></div>}
 
         {enabled && (
           <>
