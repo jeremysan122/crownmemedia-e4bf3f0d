@@ -76,12 +76,24 @@ export async function voteInLiveBattle(battleId: string, choice: "host" | "oppon
   if (error) throw error;
 }
 
-export async function reportLiveBattle(battleId: string, reason: string) {
-  // Server-side RPC enforces rate limit + validation. Direct INSERT revoked.
-  const { error } = await supabase.rpc("live_battle_report", {
+export interface LiveBattleReportRow {
+  id: string;
+  battle_id: string;
+  reporter_id: string;
+  reason: string;
+  status: "queued" | "processing" | "handled" | "rejected";
+  created_at: string;
+  handled_at: string | null;
+  handled_by: string | null;
+}
+
+export async function reportLiveBattle(battleId: string, reason: string): Promise<LiveBattleReportRow> {
+  // Server-side RPC enforces rate limit + duplicate window + validation.
+  const { data, error } = await supabase.rpc("live_battle_report", {
     _battle_id: battleId, _reason: reason.slice(0, 500),
   });
   if (error) throw error;
+  return data as unknown as LiveBattleReportRow;
 }
 
 export async function roomControl(
