@@ -4,7 +4,8 @@
 // Renders animated emote sprites that rise + fade over the video stage.
 // Respects prefers-reduced-motion (single fade, no rise).
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -39,10 +40,27 @@ export default function LiveBattleEmoteBurst({ battleId, enabled }: Props) {
   const { user } = useAuth();
   const [bursts, setBursts] = useState<EmoteBurst[]>([]);
   const cooldownRef = useRef(0);
+  // Stable subscribed channel — created once per (battleId,enabled), reused
+  // for both receiving remote bursts and sending our own. Prevents leaking
+  // a fresh channel per tap.
+  const channelRef = useRef<RealtimeChannel | null>(null);
   const reducedMotion = useMemo(
     () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
     [],
   );
+
+  const addBurst = useCallback((kind: BattleEmoteKind) => {
+    const b: EmoteBurst = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      kind,
+      x: 35 + Math.random() * 30,
+      createdAt: Date.now(),
+    };
+    setBursts((prev) => [...prev.slice(-40), b]);
+    window.setTimeout(() => {
+      setBursts((prev) => prev.filter((x) => x.id !== b.id));
+    }, BURST_TTL_MS);
+  }, []);
 
   // Subscribe to broadcast channel — every viewer receives every burst.
   useEffect(() => {
@@ -55,36 +73,33 @@ export default function LiveBattleEmoteBurst({ battleId, enabled }: Props) {
         addBurst(kind);
       })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [battleId, enabled]);
-
-  const addBurst = (kind: BattleEmoteKind) => {
-    const b: EmoteBurst = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      kind,
-      x: 35 + Math.random() * 30, // cluster near center-bottom
-      createdAt: Date.now(),
+    channelRef.current = ch;
+    return () => {
+      channelRef.current = null;
+      supabase.removeChannel(ch);
     };
-    setBursts((prev) => [...prev.slice(-40), b]);
-    window.setTimeout(() => {
-      setBursts((prev) => prev.filter((x) => x.id !== b.id));
-    }, BURST_TTL_MS);
-  };
+  }, [battleId, enabled, addBurst]);
 
   const handleTap = async (kind: BattleEmoteKind) => {
     if (!enabled) return;
     // Optimistic local burst so tap feels instant.
     addBurst(kind);
-    // Client throttle: 8/s max — server also enforces 30/10s.
     const now = Date.now();
     if (now - cooldownRef.current < 125) return;
     cooldownRef.current = now;
     try {
       await sendLiveBattleEmote(battleId, kind);
-      await supabase.channel(`battle_emotes:${battleId}`).send({
-        type: "broadcast", event: "emote",
-        payload: { kind, from: user?.id ?? null },
-      });
+      const ch = channelRef.current;
+      if (ch) {
+        try {
+          await ch.send({
+            type: "broadcast", event: "emote",
+            payload: { kind, from: user?.id ?? null },
+          });
+        } catch {
+          // Swallow transient broadcast errors — local burst already shown.
+        }
+      }
     } catch (e) {
       const msg = emoteErrorMessage(e);
       if (msg) toast({ title: msg, variant: "destructive" });
