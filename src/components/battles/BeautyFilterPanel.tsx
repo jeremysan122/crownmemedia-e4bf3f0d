@@ -1,11 +1,15 @@
-// Wave 4 — Beauty filter for battlers.
+// Wave 4 — Self-view Filter (a.k.a. "Beauty Preview").
 //
-// v1 scope: brightness / contrast / smoothing (blur) applied as a CSS `filter`
-// to the local participant's video tile via a scoped <style> tag. This gives
-// the host on-camera confidence during a live battle without touching the
-// LiveKit publish pipeline. A future Wave 4.5 will pipe the same filter into
-// a `canvas.captureStream()` LocalVideoTrack so viewers see the treatment
-// too. Documented in .lovable/plan.md.
+// Scope in v1: brightness / contrast / smoothing (blur) applied as a CSS
+// `filter` to the host's OWN video tile via a scoped <style> tag. It never
+// touches the LiveKit publish pipeline, so viewers keep seeing the raw
+// camera feed. This is the honest v1 — it helps the host frame themselves
+// on-camera but is NOT a broadcast beauty filter.
+//
+// Wave 4.5 (tracked as a launch blocker before we advertise beauty filters
+// publicly) will pipe the treated frames through `canvas.captureStream()`
+// and republish the resulting `MediaStreamTrack` through
+// `LocalVideoTrack.replaceTrack(...)` so viewers see the same look.
 //
 // Settings persist in localStorage across battles so the host doesn't have
 // to re-dial after every match.
@@ -54,11 +58,11 @@ export default function BeautyFilterPanel({ scopeId, onClose }: Props) {
       <div
         className="rounded-xl border border-border/60 bg-card p-3 space-y-3"
         data-testid="beauty-filter-panel"
-        aria-label="Beauty filter"
+        aria-label="Self-view filter"
       >
         <div className="flex items-center justify-between">
           <div className="text-sm font-semibold flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-primary" /> Beauty filter
+            <Sparkles className="w-4 h-4 text-primary" /> Self-view filter
           </div>
           <div className="flex items-center gap-2">
             <Label htmlFor="beauty-enabled" className="text-xs text-muted-foreground">
@@ -69,7 +73,7 @@ export default function BeautyFilterPanel({ scopeId, onClose }: Props) {
               checked={settings.enabled}
               onCheckedChange={(v) => update("enabled", v)}
               data-testid="beauty-filter-toggle"
-              aria-label="Toggle beauty filter"
+              aria-label="Toggle self-view filter"
             />
           </div>
         </div>
@@ -109,8 +113,9 @@ export default function BeautyFilterPanel({ scopeId, onClose }: Props) {
             <Button size="sm" variant="outline" onClick={onClose}>Done</Button>
           )}
         </div>
-        <p className="text-[10px] text-muted-foreground italic">
-          Preview-only in v1. Viewers currently see the raw camera feed.
+        <p className="text-[10px] text-muted-foreground italic" data-testid="beauty-filter-scope-note">
+          Self-view only — viewers still see your raw camera feed. A broadcast
+          beauty filter is coming in a follow-up update.
         </p>
       </div>
     </>
