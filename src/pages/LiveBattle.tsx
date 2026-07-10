@@ -23,6 +23,7 @@ import { isEndedTransition, mergeLiveBattleUpdate } from "@/lib/liveBattleRealti
 import { useServerTimeOffset } from "@/lib/serverTime";
 import { useLiveBattleViewerCount, useLiveBattleViewerHeartbeat } from "@/hooks/useLiveBattleViewers";
 import LiveBattleActivityLog from "@/components/battles/LiveBattleActivityLog";
+import LiveBattleComments from "@/components/battles/LiveBattleComments";
 import LiveBattleShareCard from "@/components/battles/LiveBattleShareCard";
 import LiveBattleGiftsOverlay from "@/components/battles/LiveBattleGiftsOverlay";
 import LiveBattleGiftPicker from "@/components/battles/LiveBattleGiftPicker";
@@ -448,6 +449,10 @@ export default function LiveBattlePage() {
 
       {/* Moderation activity log — visible to host + admins/mods and to the currently viewing user (self events). */}
       <LiveBattleActivityLog battleId={battle.id} selfId={user?.id ?? null} />
+
+      {/* Live chat for viewers/participants. Server RLS blocks writes when not live. */}
+      <LiveBattleComments battleId={battle.id} isLive={battle.status === "live"} />
+
 
       {/* Vote bar */}
       <div className="p-3 border-t border-border">
