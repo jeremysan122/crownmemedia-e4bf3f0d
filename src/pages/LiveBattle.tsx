@@ -350,7 +350,7 @@ export default function LiveBattlePage() {
       </div>
 
       {/* Moderation activity log — visible to host + admins/mods and to the currently viewing user (self events). */}
-      <LiveBattleActivityLog battleId={battle.id} selfUserId={user?.id ?? null} canSeeAll={isHost || canModerate} />
+      <LiveBattleActivityLog battleId={battle.id} selfId={user?.id ?? null} />
 
       {/* Vote bar */}
       <div className="p-3 border-t border-border">
