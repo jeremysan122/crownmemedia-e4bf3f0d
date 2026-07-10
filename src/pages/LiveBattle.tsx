@@ -602,7 +602,7 @@ export default function LiveBattlePage() {
                 aria-pressed={showBeauty}
                 data-testid="beauty-filter-toggle-button"
               >
-                <Sparkles className="w-4 h-4 mr-1" />{showBeauty ? "Hide" : "Beauty"} filter
+                <Sparkles className="w-4 h-4 mr-1" />{showBeauty ? "Hide" : "Self-view"} filter
               </Button>
             )}
             {canForceEnd && (
