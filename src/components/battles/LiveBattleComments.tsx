@@ -241,8 +241,11 @@ export default function LiveBattleComments({
   // Auto-scroll to newest when we're already pinned to the bottom.
   useEffect(() => {
     if (!stickToBottomRef.current || rows.length === 0) return;
-    virtualizer.scrollToIndex(rows.length - 1, { align: "end", behavior: "smooth" });
-  }, [rows.length, virtualizer]);
+    virtualizer.scrollToIndex(rows.length - 1, {
+      align: "end",
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
+  }, [rows.length, virtualizer, reducedMotion]);
 
   // Cooldown countdown for accessible feedback.
   useEffect(() => {
@@ -271,18 +274,28 @@ export default function LiveBattleComments({
       .lt("created_at", oldest)
       .order("created_at", { ascending: false })
       .limit(PAGE);
-    const older = ((data as Row[]) || []).reverse();
-    await hydrate(older);
-    setRows((prev) => [...older, ...prev]);
+    const olderRaw = ((data as Row[]) || []).reverse();
+    await hydrate(olderRaw);
+    // Dedup against current rows so any comment that arrived via realtime
+    // during the fetch (or overlaps the boundary) never appears twice.
+    setRows((prev) => {
+      const existing = new Set(prev.map((r) => r.id));
+      const olderUnique = olderRaw.filter((r) => !existing.has(r.id));
+      return [...olderUnique, ...prev];
+    });
     setHasMore((data?.length ?? 0) === PAGE);
     setLoadingOlder(false);
     // Preserve scroll offset so newly prepended rows don't jump the view.
+    // Use rAF twice so the virtualizer has re-measured before we compute the delta.
     requestAnimationFrame(() => {
-      if (!el) return;
-      const diff = virtualizer.getTotalSize() - prevTotal;
-      el.scrollTop = prevScroll + diff;
+      requestAnimationFrame(() => {
+        if (!el) return;
+        const diff = virtualizer.getTotalSize() - prevTotal;
+        el.scrollTop = prevScroll + diff;
+      });
     });
   }
+
 
   function broadcastTyping() {
     if (!channelRef.current || !user) return;
