@@ -49,13 +49,15 @@ Before public launch of scheduling:
 2. **Emote bursts** (`LiveBattleEmoteBurst.tsx`): 5 emote kinds (heart, crown, fire, clap, laugh) broadcast on `battle_emotes:{id}`. Server RPC `live_battle_send_emote` enforces feature gate, blocks check, and a 30/10s per-user rate limit. Respects `prefers-reduced-motion`.
 3. **Picture-in-Picture** (`LiveBattlePiPButton.tsx`): native `requestPictureInPicture()` when supported, else a floating info card with a "Return to battle" CTA.
 
-## Wave 4 — Battler Tools
+## Wave 4 — Battler Tools ✅ shipped
 
 **Goal:** hosts feel in control on-camera.
 
-1. **Beauty / basic filters** (brightness, smoothing) via WebGL shader layer on the local track.
-2. **Host moderation panel in-battle**: mute viewer, kick, lock comments, slow-mode toggle — reuses existing `live_battle_comment_reports` + `admin_audit_log` plumbing.
-3. **Keyword filter** per battle; auto-hides matching comments before render.
+1. **Beauty filter** (`BeautyFilterPanel.tsx`): brightness / contrast / smoothing (blur) applied via a scoped CSS `filter` on the local participant's `<video>` element. Settings persist in `localStorage` (`cm.battle.beauty.v1`). v1 is self-view only; piping the treated feed back into a `canvas.captureStream()` publish track is deferred to Wave 4.5.
+2. **Battle moderation panel** (`BattleModerationPanel.tsx`): host or moderator can lock chat, pick a slow-mode interval (0/5/10/30/60s), and manage up to 32 keyword filters. All writes go through the `set_battle_moderation` RPC (host + admin/mod only). New column `live_battles.comments_locked`, plus hardened `live_battle_comments` INSERT policy that enforces lock + slow mode + keyword filter server-side.
+3. **Chat integration** (`LiveBattleComments.tsx`): composer disables + shows the locked/slow-mode reason, blocked keywords are rejected locally with a toast, and filtered messages render as `[filtered by host]` for defense-in-depth if any slip past the policy.
+
+
 
 ## Wave 5 — Structure (Tournaments & Rematches)
 
