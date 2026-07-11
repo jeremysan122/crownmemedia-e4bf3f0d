@@ -14,11 +14,27 @@ interface Plan {
   interval: string;
 }
 
-const PERKS = [
-  { icon: Zap, label: "Daily Royal Boost (1.5× Crown Score)" },
-  { icon: Shield, label: "Permanent Crown Shield" },
-  { icon: Sparkles, label: "Exclusive royal-tier profile glow" },
-  { icon: Crown, label: "Priority placement in regional feeds" },
+const PERKS: Array<{ icon: typeof Zap; label: string; detail: string }> = [
+  {
+    icon: Zap,
+    label: "Daily Royal Boost",
+    detail: "Multiply one post's Crown Score by 1.5× every day for 24 hours — stack it on your best content to climb the leaderboards faster.",
+  },
+  {
+    icon: Shield,
+    label: "Permanent Crown Shield",
+    detail: "Keep your crowns safe from being dethroned overnight. Your rank sticks around even on your slower days.",
+  },
+  {
+    icon: Sparkles,
+    label: "Royal-tier profile glow",
+    detail: "A gold-accented avatar ring and glow that shows up everywhere your profile appears — in comments, battles, and the feed.",
+  },
+  {
+    icon: Crown,
+    label: "Priority regional placement",
+    detail: "Your posts get prioritized in your city and country feeds so more of the right people see (and vote on) your content.",
+  },
 ];
 
 export default function RoyalPassCard() {
