@@ -42,7 +42,7 @@ interface PostRow {
 interface CrownRow {
   id: string;
   category: string;
-  awarded_at: string;
+  started_at: string;
   user: { username: string; profile_photo_url: string | null } | null;
 }
 interface BattleRow {
@@ -114,10 +114,10 @@ export default function CategoryHub() {
     (async () => {
       const { data } = await supabase
         .from("crowns")
-        .select("id, category, awarded_at, user:profiles!crowns_user_id_fkey(username, profile_photo_url)")
+        .select("id, category, started_at, user:profiles!crowns_user_id_fkey(username, profile_photo_url)")
         .eq("active", true)
         .in("category", legacyEnums as any)
-        .order("awarded_at", { ascending: false })
+        .order("started_at", { ascending: false })
         .limit(10);
       setCrowns((data as any) || []);
     })();

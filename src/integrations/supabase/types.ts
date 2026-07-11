@@ -1909,7 +1909,22 @@ export type Database = {
           status?: string
           total_shekels?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "gift_transactions_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gift_transactions_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gifts: {
         Row: {
@@ -3541,6 +3556,7 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          crown_score: number
           crowns_held: number
           crowns_total: number
           deactivated_at: string | null
@@ -3610,6 +3626,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          crown_score?: number
           crowns_held?: number
           crowns_total?: number
           deactivated_at?: string | null
@@ -3679,6 +3696,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          crown_score?: number
           crowns_held?: number
           crowns_total?: number
           deactivated_at?: string | null
@@ -4998,7 +5016,22 @@ export type Database = {
           sender_id?: string | null
           total_shekels?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "gift_transactions_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gift_transactions_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trending_hashtags: {
         Row: {
@@ -5671,6 +5704,7 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          crown_score: number
           crowns_held: number
           crowns_total: number
           deactivated_at: string | null
