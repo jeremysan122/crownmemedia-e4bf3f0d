@@ -417,15 +417,11 @@ export default function RoyalPassCard() {
         </div>
         <button
           onClick={() => subscribe(primaryPlan)}
-          disabled={pending !== null}
-          className="relative w-full py-4 rounded-2xl bg-gradient-gold text-primary-foreground text-base font-bold gold-shadow active:scale-[0.98] hover:scale-[1.01] transition-transform flex items-center justify-center gap-2 disabled:opacity-60"
+          className="relative w-full py-4 rounded-2xl bg-gradient-gold text-primary-foreground text-base font-bold gold-shadow active:scale-[0.98] hover:scale-[1.01] transition-transform flex items-center justify-center gap-2"
         >
-          {pending ? (
-            <><Loader2 size={16} className="animate-spin" /> Starting…</>
-          ) : (
-            <><Crown size={18} /> Become Royal</>
-          )}
+          <Crown size={18} /> Become Royal
         </button>
+
         <div className="relative grid grid-cols-3 gap-2 text-[10px] text-center text-muted-foreground pt-1">
           <div className="flex flex-col items-center gap-1">
             <Shield size={14} className="text-gold" />
