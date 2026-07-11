@@ -511,15 +511,29 @@ export default function RoyalPassCard() {
         <GoldParticles count={10} />
         <div className="relative text-center space-y-1">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/25 border border-gold/50 text-[10px] font-bold uppercase tracking-widest text-gold">
-            <Lock size={11} /> Limited Time · Launch Only
+            <Lock size={11} />
+            {founder.status?.active && founder.status.remaining > 0
+              ? `${founder.status.remaining.toLocaleString()} spots left · ends ${founderEndLabel ?? "soon"}`
+              : "Founder program closed"}
           </div>
           <h3 className="font-display text-2xl text-gold flex items-center justify-center gap-2">
             <Flame size={20} className="text-gold" /> Founding Royal Member
           </h3>
           <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-            Join now and permanently keep these founder-only perks — never sold again.
+            {founder.status?.active
+              ? "Founder Badge, Frame, and Title are granted for life on your first paid month — even if you later cancel."
+              : "The Founder window has closed. You can still subscribe to Royal Pass with all standard perks."}
           </p>
+          {founder.status && (
+            <div className="flex items-center justify-center gap-3 pt-1 text-[10px] text-muted-foreground/80">
+              <span className="inline-flex items-center gap-1"><Users size={11} /> {founder.status.granted.toLocaleString()} / {founder.status.cap.toLocaleString()} claimed</span>
+              {founderEndLabel && (
+                <span className="inline-flex items-center gap-1"><Clock size={11} /> Ends {founderEndLabel}</span>
+              )}
+            </div>
+          )}
         </div>
+
         <div className="relative grid grid-cols-2 gap-2.5">
           {FOUNDER_PERKS.map((p, i) => {
             const Icon = p.icon;
