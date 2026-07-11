@@ -667,10 +667,11 @@ export default function LiveBattleComments({
               {virtualItems.map((vi) => {
                 const r = rows[vi.index];
                 if (!r) return null;
-                const isKeywordHidden = !r.hidden_at && bodyMatchesKeyword(r.body, keywordFilters);
-                const isBlockedByViewer = safety.isBlocked(r.user_id);
-                const isMutedByViewer = !isBlockedByViewer && safety.matchesMutedWord(r.body);
-                const isHidden = !!r.hidden_at || isKeywordHidden || isBlockedByViewer || isMutedByViewer;
+                const reason = commentHiddenReason(r, safety, keywordFilters);
+                const isBlockedByViewer = reason === "blocked";
+                const isMutedByViewer = reason === "muted-word";
+                const isKeywordHidden = reason === "keyword";
+                const isHidden = reason !== "";
                 const canReport = !!user && user.id !== r.user_id && !r.id.startsWith("opt-");
                 const canBlock = !!user && user.id !== r.user_id && !r.id.startsWith("opt-");
                 const canModerate = isModerator && !r.id.startsWith("opt-");
@@ -697,15 +698,11 @@ export default function LiveBattleComments({
                       }`}
                       data-testid="live-battle-comment"
                       data-hidden={isHidden ? "true" : "false"}
-                      data-hidden-reason={
-                        r.hidden_at ? "moderator" :
-                        isKeywordHidden ? "keyword" :
-                        isBlockedByViewer ? "blocked" :
-                        isMutedByViewer ? "muted-word" : ""
-                      }
+                      data-hidden-reason={reason}
                       data-first-unread={firstUnreadIndex === vi.index ? "true" : "false"}
                       tabIndex={-1}
                     >
+
 
 
                       {r.profile_photo_url ? (
