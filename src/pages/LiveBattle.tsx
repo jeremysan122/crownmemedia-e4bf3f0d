@@ -248,6 +248,14 @@ export default function LiveBattlePage() {
   // authoritative for historical DB truth on flaky realtime links).
   const presenceCount = useLiveBattlePresence(battle?.id ?? null, user?.id ?? null, battle?.status === "live");
   const viewerCount = presenceCount ?? pollCount;
+  // Wave 6 — bump peak_viewers as presence rises. Server-side clamps to
+  // "only ever raise" so multiple viewers racing is harmless.
+  useEffect(() => {
+    if (!battle?.id || battle.status !== "live" || viewerCount == null) return;
+    supabase.rpc("bump_live_battle_peak_viewers" as never, {
+      _battle_id: battle.id, _count: viewerCount,
+    } as never).then(() => {}, () => {});
+  }, [battle?.id, battle?.status, viewerCount]);
   const isHost = user?.id === battle?.host_id;
   const isOpponent = user?.id === battle?.opponent_id;
   const isParticipant = isHost || isOpponent;
@@ -784,11 +792,24 @@ function ModeratorPanel({
 // ------------------------- Results screen -------------------------
 
 function ResultsScreen({ battle, onBack }: { battle: LiveBattleRow; onBack: () => void }) {
+  const { user } = useAuth();
   const total = battle.host_votes + battle.opponent_votes;
   const hostPct = total ? Math.round((battle.host_votes / total) * 100) : 50;
   const oppPct = 100 - hostPct;
   const winner: "host" | "opponent" | "tie" =
     !battle.winner_id ? "tie" : battle.winner_id === battle.host_id ? "host" : "opponent";
+
+  const [highlight, setHighlight] = useState<import("@/lib/battleHighlight").LiveBattleHighlight | null>(null);
+  useEffect(() => {
+    let alive = true;
+    import("@/lib/battleHighlight").then(({ fetchLiveBattleHighlight }) =>
+      fetchLiveBattleHighlight(battle.id).then((h) => { if (alive) setHighlight(h); }, () => {}));
+    return () => { alive = false; };
+  }, [battle.id]);
+
+  const hostName = highlight?.host?.display_name || highlight?.host?.username || "Host";
+  const opponentName = highlight?.opponent?.display_name || highlight?.opponent?.username || "Opponent";
+  const isViewer = !!user && user.id !== battle.host_id && user.id !== battle.opponent_id;
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center p-6" data-testid="live-battle-ended">
@@ -797,18 +818,19 @@ function ResultsScreen({ battle, onBack }: { battle: LiveBattleRow; onBack: () =
           <Trophy className="text-primary" size={28} />
         </div>
         <h1 className="mt-4 text-2xl font-black">
-          {winner === "tie" ? "It's a tie!" : `${winner === "host" ? "Host" : "Opponent"} wins`}
+          {winner === "tie" ? "It's a tie!" : `${winner === "host" ? hostName : opponentName} wins`}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {total === 0 ? "No votes were cast." : `${total} total votes`}
+          {highlight && highlight.peak_viewers > 0 && ` · peak ${highlight.peak_viewers.toLocaleString()} watching`}
         </p>
         <div className="mt-6 text-left">
           <div className="flex items-center justify-between text-xs font-semibold mb-1.5">
             <span className={winner === "host" ? "text-primary" : "text-muted-foreground"}>
-              {winner === "host" && "👑 "}Host · {battle.host_votes} ({hostPct}%)
+              {winner === "host" && "👑 "}{hostName} · {battle.host_votes} ({hostPct}%)
             </span>
             <span className={winner === "opponent" ? "text-accent-foreground" : "text-muted-foreground"}>
-              {winner === "opponent" && "👑 "}Opponent · {battle.opponent_votes} ({oppPct}%)
+              {winner === "opponent" && "👑 "}{opponentName} · {battle.opponent_votes} ({oppPct}%)
             </span>
           </div>
           <div className="h-3 rounded-full overflow-hidden bg-muted flex">
@@ -816,19 +838,47 @@ function ResultsScreen({ battle, onBack }: { battle: LiveBattleRow; onBack: () =
             <div className="bg-accent transition-all duration-700 ease-out" style={{ width: `${oppPct}%` }} />
           </div>
         </div>
+
+        {highlight && highlight.top_gifters.length > 0 && (
+          <div className="mt-5 text-left rounded-lg border border-border/60 bg-muted/30 p-3">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1">
+              <Gift size={12} className="text-primary" /> Top gifters
+            </div>
+            <ul className="space-y-1.5">
+              {highlight.top_gifters.map((g) => (
+                <li key={g.sender_id} className="flex items-center justify-between text-xs">
+                  <span className="truncate font-medium">
+                    @{g.username ?? "unknown"}
+                  </span>
+                  <span className="text-primary font-semibold tabular-nums">
+                    {g.shekels.toLocaleString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {isViewer && (
+          <div className="mt-5 flex items-center justify-center gap-2">
+            <span className="text-xs text-muted-foreground mr-1">Notify me next time:</span>
+            <FollowBattlerButton battlerId={battle.host_id} compact size="sm" />
+            <FollowBattlerButton battlerId={battle.opponent_id} compact size="sm" />
+          </div>
+        )}
+
         {battle.ended_reason && (
           <p className="mt-4 text-xs text-muted-foreground italic">
             Ended: {battle.ended_reason.replace(/_/g, " ")}
           </p>
         )}
         <div className="mt-6 grid gap-2">
-          {/* Branded share card handles both native-share and download-as-PNG. */}
           <LiveBattleShareCard
             battleId={battle.id}
             winnerSide={winner}
-            winnerLabel={winner === "tie" ? "It's a tie!" : `${winner === "host" ? "Host" : "Opponent"} wins`}
-            hostName="Host"
-            opponentName="Opponent"
+            winnerLabel={winner === "tie" ? "It's a tie!" : `${winner === "host" ? hostName : opponentName} wins`}
+            hostName={hostName}
+            opponentName={opponentName}
             hostVotes={battle.host_votes}
             opponentVotes={battle.opponent_votes}
             category={battle.category_slug ?? null}

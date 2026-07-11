@@ -100,13 +100,18 @@ Neither introduces a new policy risk. They're bundled into the existing `docs/se
 
 The new Wave 5 findings match the earlier accepted `SECURITY DEFINER` pattern (see `docs/security/linter-findings/0028-anon-security-definer.md` / `0029-authenticated-security-definer.md`): every new function pins `search_path = public`, does its own `not_authenticated` / `not_authorized` / participant checks, and is granted only to `authenticated`. The trigger function `tg_tournament_advance` runs `SECURITY DEFINER` so it can update `tournament_matches` regardless of which participant ended the battle — but it only ever mirrors data from the source `live_battles` row (winner, status) that was itself gated by the existing battle-end RPCs.
 
-## Wave 6 — Post-battle
+## Wave 6 — Post-battle ✅ shipped
 
 **Goal:** the moment doesn't die when the timer hits zero.
 
-1. **Shareable highlight card** (existing `share_cards` infra) with winner, score, top gifters.
-2. **Performance analytics** for each battler: peak viewers, votes over time, gift revenue, top supporters — visible on their dashboard only.
-3. **Rematch + "Notify me next time" CTAs** on results screen.
+1. **Shareable highlight card** ✅ — `get_live_battle_highlight(battle_id)` RPC returns host/opponent profiles, per-side gift totals, top 3 gifters, and peak viewers. `LiveBattle` results screen shows real usernames, a "Top gifters" panel, and passes real names into `LiveBattleShareCard` for the PNG.
+2. **Performance analytics** ✅ — new column `live_battles.peak_viewers` (bumped every presence tick via `bump_live_battle_peak_viewers`) plus `get_battler_battle_analytics(user_id, limit)` RPC (self/admin/mod only). New page `/battles/analytics` (`BattlerAnalytics.tsx`) shows lifetime summary and last 25 ended battles with peak viewers, votes, gift shekels, and top supporter per battle.
+3. **Rematch + "Notify me next time" CTAs** ✅ — `RematchButton` (from Wave 5) sits on the results screen alongside a viewer-only "Notify me next time" row that reuses `FollowBattlerButton` for both battlers (rides the Wave 1 `battler_follows` + `battle_going_live` notification pipeline).
+
+### Accepted scanner warnings (Wave 6)
+
+Three new `warn`-level findings match the accepted `SECURITY DEFINER` pattern (see `docs/security/linter-findings/0028-anon-security-definer.md` / `0029-authenticated-security-definer.md`): every new function pins `search_path = public`, is granted only to `authenticated`, and enforces its own auth checks (`not_authenticated` on all; `not_authorized` on the analytics RPC when the caller is neither the target user nor admin/moderator). `bump_live_battle_peak_viewers` only ever raises the ceiling and clamps the input range, so a hostile caller can't lower or wildly inflate it.
+
 
 ## Wave 7 — Safety hardening
 
