@@ -5602,6 +5602,17 @@ export type Database = {
         }[]
       }
       get_db_vitals: { Args: never; Returns: Json }
+      get_live_battle_comments: {
+        Args: { _battle_id: string; _before?: string; _limit?: number }
+        Returns: {
+          battle_id: string
+          body: string
+          created_at: string
+          hidden_at: string
+          id: string
+          user_id: string
+        }[]
+      }
       get_live_battle_highlight: { Args: { _battle_id: string }; Returns: Json }
       get_live_battle_vote_timeline: {
         Args: { _battle_id: string }
