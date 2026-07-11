@@ -34,7 +34,7 @@ export const MagicLinkEmail = ({
         <Section style={{ padding: 0, margin: 0 }}>
           <Link href={confirmationUrl}>
             <Img
-              src={`${HERO_BASE}/crownme-magic-link-full-design.png`}
+              src={`${HERO_BASE}/0529a9aa-596f-4854-8782-c62d0954a7dd/crownme-magic-link-hero.jpg`}
               alt="CrownMe — Your royal key"
               width="560"
               style={heroImg}

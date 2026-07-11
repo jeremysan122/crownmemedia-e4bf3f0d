@@ -18,7 +18,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview={`Confirm your email change for ${name}`}
-      heroFile="crownme-email-change-full-design.png"
+      heroFile="f51ba113-49fa-4bd1-9c24-70fa0e3d5fab/crownme-email-change-hero.jpg"
       heroAlt={`${name} — Confirm email change`}
       heroHref={href}
       heading="Confirm your new address."

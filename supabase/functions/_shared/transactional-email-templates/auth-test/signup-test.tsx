@@ -19,7 +19,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview={`Claim your throne — confirm your ${name} email 👑`}
-      heroFile="crownme-confirm-signup-full-design.png"
+      heroFile="7e065d5a-5acb-4807-94f6-8406859cc51e/crownme-confirm-signup-hero.jpg"
       heroAlt={`${name} — Confirm your signup`}
       heroHref={href}
       heading="Claim your throne, royal."

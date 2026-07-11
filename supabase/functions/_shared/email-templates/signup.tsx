@@ -38,7 +38,7 @@ export const SignupEmail = ({
         <Section style={{ padding: 0, margin: 0 }}>
           <Link href={confirmationUrl}>
             <Img
-              src={`${HERO_BASE}/crownme-confirm-signup-full-design.png`}
+              src={`${HERO_BASE}/7e065d5a-5acb-4807-94f6-8406859cc51e/crownme-confirm-signup-hero.jpg`}
               alt="CrownMe — Where Legends Reign"
               width="560"
               style={heroImg}

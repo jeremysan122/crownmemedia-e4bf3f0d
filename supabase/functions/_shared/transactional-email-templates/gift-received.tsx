@@ -16,7 +16,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview="A gift has arrived at your throne."
-      heroFile="crownme-gift-received-full-design.png"
+      heroFile="96c33ae3-b0f1-4f4d-a475-f2df42c35d7e/crownme-gift-received-hero.jpg"
       heroAlt="You received a gift on CrownMe"
       heroHref={href}
       heading="A royal gift has arrived."

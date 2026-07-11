@@ -18,7 +18,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview="Your weekly reign — the court's recap."
-      heroFile="crownme-weekly-recap-full-design.png"
+      heroFile="eb48a1ee-1ca0-445e-962e-c57fcfa8a9f3/crownme-weekly-recap-hero.jpg"
       heroAlt="Your CrownMe weekly recap"
       heroHref={`${SITE_URL}/profile`}
       heading={`Your week in the court${first_name ? `, ${first_name}` : ''}.`}

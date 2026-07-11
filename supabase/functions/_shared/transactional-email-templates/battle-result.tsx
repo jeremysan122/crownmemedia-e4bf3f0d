@@ -15,7 +15,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview={won ? 'You won the battle — the crown is yours.' : 'The battle is decided — your rival took it this round.'}
-      heroFile="crownme-battle-result-full-design.png"
+      heroFile="c285135b-0f3f-4fcf-82ec-f9a4a5e4cbab/crownme-battle-result-hero-2.jpg"
       heroAlt="CrownMe battle result"
       heroHref={battle_url || SITE_URL}
       heading={won ? 'Victory is yours.' : 'A noble defeat.'}

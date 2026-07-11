@@ -36,7 +36,7 @@ export const InviteEmail = ({
         <Section style={{ padding: 0, margin: 0 }}>
           <Link href={confirmationUrl}>
             <Img
-              src={`${HERO_BASE}/crownme-invite-full-design.png`}
+              src={`${HERO_BASE}/99d80aaf-6a87-4f46-b1ed-79959812aaa1/crownme-invite-hero.jpg`}
               alt="CrownMe — A summons to the court"
               width="560"
               style={heroImg}

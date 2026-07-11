@@ -11,7 +11,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview="Upload your first post and enter the arena."
-      heroFile="crownme-upload-first-post-full-design.png"
+      heroFile="95ed6179-9ee3-487c-9a01-a8d26fb7493c/crownme-upload-first-post-hero.jpg"
       heroAlt="Upload your first CrownMe post"
       heroHref={`${SITE_URL}/upload`}
       heading={`The arena awaits${first_name ? `, ${first_name}` : ''}.`}

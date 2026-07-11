@@ -17,7 +17,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview="Your Shekels purchase is confirmed."
-      heroFile="crownme-shekels-receipt-full-design.png"
+      heroFile="1b886cee-fb86-4a4d-8039-fe6d1b0401e9/crownme-shekels-receipt-hero.jpg"
       heroAlt="CrownMe Shekels purchase receipt"
       heroHref={href}
       heading="Your treasury has grown."

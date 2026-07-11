@@ -17,7 +17,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview={`You've been summoned to ${name} 👑`}
-      heroFile="crownme-invite-full-design.png"
+      heroFile="99d80aaf-6a87-4f46-b1ed-79959812aaa1/crownme-invite-hero.jpg"
       heroAlt={`${name} — Invitation`}
       heroHref={href}
       heading="A summons to the court."

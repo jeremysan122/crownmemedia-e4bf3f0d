@@ -16,7 +16,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview="Welcome to CrownMe — your reign begins now."
-      heroFile="crownme-welcome-full-design.png"
+      heroFile="9ae73d0d-d4eb-46d7-9381-37b817959d44/crownme-welcome-hero.jpg"
       heroAlt="Welcome to CrownMe"
       heroHref={SITE_URL}
       heading={`Welcome, ${name}.`}

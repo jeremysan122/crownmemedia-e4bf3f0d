@@ -27,7 +27,7 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
       <Container style={styles.container}>
         <Section style={{ padding: 0, margin: 0 }}>
           <Img
-            src={`${HERO_BASE}/crownme-reauthentication-full-design.png`}
+            src={`${HERO_BASE}/d6a3ab22-3668-428a-a13c-a9e2990cb3c7/crownme-reauthentication-hero.jpg`}
             alt="CrownMe — Confirm it's you"
             width="560"
             style={heroImg}

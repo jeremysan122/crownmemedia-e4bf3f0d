@@ -34,7 +34,7 @@ export const RecoveryEmail = ({
         <Section style={{ padding: 0, margin: 0 }}>
           <Link href={confirmationUrl}>
             <Img
-              src={`${HERO_BASE}/crownme-password-reset-full-design.png`}
+              src={`${HERO_BASE}/f76c69f1-aecb-4bc8-92f5-6fcca7f19568/crownme-password-reset-hero.jpg`}
               alt="CrownMe — Restore your reign"
               width="560"
               style={heroImg}
