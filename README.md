@@ -6,13 +6,14 @@ A social voting and royalty-themed media platform where users post photos and vi
 
 - React 18 + Vite + TypeScript
 - Tailwind CSS + shadcn/ui
-- Lovable Cloud (Supabase) — auth, database, storage, edge functions
+- Lovable Cloud — auth, database, storage, edge functions
+- Bun (package manager, dev/build/test runner)
 
 ## Setup
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 ## Environment Variables
@@ -27,10 +28,11 @@ VITE_SUPABASE_PROJECT_ID=
 
 > Never commit a real `.env` file. Only `.env.example` should be checked in.
 
-## Build
+## Build & Test
 
 ```bash
-npm run build
+bun run build
+bunx vitest run
 ```
 
 ## Deployment

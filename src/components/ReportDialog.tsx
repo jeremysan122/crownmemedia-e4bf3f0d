@@ -73,8 +73,10 @@ export default function ReportDialog({ open, onOpenChange, postId, commentId, re
       setEvidencePaths([]);
       onOpenChange(false);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Could not submit report";
-      setErr(msg);
+      // Log raw error for internal debugging only; show a friendly message.
+      // eslint-disable-next-line no-console
+      console.error("[ReportDialog] submit failed", e);
+      setErr("Couldn't submit report. Please try again.");
     } finally {
       setSubmitting(false);
     }

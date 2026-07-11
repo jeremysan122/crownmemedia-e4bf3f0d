@@ -36,7 +36,7 @@ export default function MutedWords() {
   const add = async () => {
     const word = input.trim().toLowerCase();
     if (!word || !user?.id) return;
-    if (word.length > 60) { toast.error("Keep it under 60 characters."); return; }
+    if (word.length > 64) { toast.error("Keep it under 64 characters."); return; }
     setBusy(true);
     const { error } = await supabase.from("muted_words" as any).insert({ user_id: user.id, word });
     setBusy(false);
@@ -60,9 +60,8 @@ export default function MutedWords() {
       <div className="px-4 py-4 space-y-4">
         <h1 className="font-display text-2xl text-gold">Muted words</h1>
         <p className="text-[12px] text-muted-foreground">
-          Muted words are saved and used by supported surfaces. Full enforcement
-          across every feed, comment, and notification lands in v1.1.
-          Case-insensitive, exact word match.
+          Hides posts and live-battle comments whose text contains any of these
+          phrases. Case-insensitive substring match — "spam" also hides "spammer".
         </p>
 
         <div className="flex gap-2">
@@ -72,7 +71,7 @@ export default function MutedWords() {
             onKeyDown={(e) => { if (e.key === "Enter") add(); }}
             placeholder="Add a word or phrase…"
             className="bg-input h-10"
-            maxLength={60}
+            maxLength={64}
           />
           <Button onClick={add} disabled={busy || !input.trim()} className="h-10">
             <Plus size={16} /> Add
