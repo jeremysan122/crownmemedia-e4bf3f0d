@@ -47,6 +47,24 @@ export default function AppShell({ children, title, showHeader = true, rightSlot
   // Notifications icon excludes DMs (DMs have their own icon).
   const notifCount = Math.max(0, unread.total - unread.dm);
 
+  // Mobile header hides when the user scrolls down and returns when they
+  // scroll back up (or reach the top). Prevents the logo bar from
+  // reappearing mid-scroll and covering feed content.
+  const [headerHidden, setHeaderHidden] = useState(false);
+  const lastY = useRef(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      const dy = y - lastY.current;
+      if (y < 8) setHeaderHidden(false);
+      else if (dy > 6) setHeaderHidden(true);
+      else if (dy < -6) setHeaderHidden(false);
+      lastY.current = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Desktop header (lg+) */}
