@@ -9,10 +9,11 @@
 // The overlay sits on top of the video with pointer-events:none so it
 // never blocks host/opponent controls.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import GiftIcon from "@/components/gifts/GiftIcon";
 import { findGift } from "@/lib/gifts";
+import { useViewerSafety } from "@/hooks/useViewerSafety";
 
 interface Popup {
   id: string;
@@ -33,6 +34,11 @@ const LIFETIME_MS = 3_200;
 
 export default function LiveBattleGiftsOverlay({ battleId, hostId, opponentId }: Props) {
   const [popups, setPopups] = useState<Popup[]>([]);
+  const safety = useViewerSafety();
+  // Read the latest blockedIds inside the realtime callback without
+  // resubscribing the channel every time the set mutates.
+  const blockedRef = useRef(safety.blockedIds);
+  useEffect(() => { blockedRef.current = safety.blockedIds; }, [safety.blockedIds]);
 
   useEffect(() => {
     if (!battleId) return;
@@ -43,8 +49,10 @@ export default function LiveBattleGiftsOverlay({ battleId, hostId, opponentId }:
         { event: "INSERT", schema: "public", table: "live_battle_gifts", filter: `battle_id=eq.${battleId}` },
         (payload) => {
           const row = payload.new as {
-            id: string; gift_id: string; gift_name: string; quantity: number; recipient_id: string;
+            id: string; gift_id: string; gift_name: string; quantity: number; recipient_id: string; sender_id?: string;
           };
+          // Wave 7: viewer-level block — hide gifts from blocked senders.
+          if (row.sender_id && blockedRef.current.has(row.sender_id)) return;
           const side: "left" | "right" =
             row.recipient_id === hostId ? "left" :
             row.recipient_id === opponentId ? "right" : "left";

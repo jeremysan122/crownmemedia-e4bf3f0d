@@ -118,13 +118,14 @@ The new Wave 5 findings match the earlier accepted `SECURITY DEFINER` pattern (s
 New `warn`-level findings match the accepted `SECURITY DEFINER` pattern (see `docs/security/linter-findings/0028-anon-security-definer.md` / `0029-authenticated-security-definer.md`): every new function pins `search_path = public`, is granted only to `authenticated`, and enforces its own auth checks (`not_authenticated` on all; `not_authorized` on the analytics RPC when the caller is neither the target user nor admin/moderator). `bump_live_battle_peak_viewers` takes no client count, only ever raises the ceiling, and refuses ended battles — so it cannot be used to inflate analytics.
 
 
-## Wave 7 — Safety hardening
+## Wave 7 — Safety hardening ✅ shipped
 
 **Goal:** viewer-level control matches host-level control.
 
-1. **In-battle block/mute** for viewers (client + server-side hide of that user's comments/gifts).
-2. **Global keyword filter list** per viewer (`muted_words` — reuse existing table).
-3. **Report-viewer flow** parallel to existing comment reports.
+1. **In-battle block/mute** ✅ — new `useViewerSafety` hook loads the current viewer's blocklist (`blocks`, RLS-scoped to `auth.uid()=blocker_id`) + muted words (`muted_words`, RLS-scoped to `auth.uid()=user_id`) and exposes `blockUser` / `unblockUser` / `muteWord`. `LiveBattleComments` hides rows from blocked users and rows matching a muted word (with an inline "hidden — you blocked / muted" placeholder + `data-hidden-reason`), and the dropdown menu now offers "Block @user" / "Unblock" / "Mute a word…". `LiveBattleGiftsOverlay` filters gift popups whose `sender_id` is in the viewer's blocklist (blockedRef pattern — no channel resubscribe on set mutation). No migration required — all tables + policies already existed.
+2. **Global keyword filter list** ✅ — reuses existing `muted_words` table; the "Mute a word…" action from any comment persists a lowercased, 64-char-clamped entry that then applies everywhere the hook is consumed (Feed already used it via `useFeedFilters`; battles now do too).
+3. **Report-viewer flow** ✅ — added a "Report user" menu item alongside "Report comment"; wired to the existing `ReportDialog` with `reportedUserId`, routing through the `reports` table's mod pipeline (unchanged RLS).
+
 
 ## Technical Details
 
