@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Crown, Sparkles, Zap, Shield, Check, Loader2, TrendingUp, Gift, Palette,
   MessageCircle, Star, Rocket, Percent, FlaskConical, CalendarClock, Trophy,
-  BadgeCheck, Lock, MapPin, Flame, Heart, Diamond, Swords, Eye, ArrowRight,
+  BadgeCheck, Lock, MapPin, Flame, Swords, ArrowRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
