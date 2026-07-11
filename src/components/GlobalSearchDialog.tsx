@@ -83,16 +83,18 @@ export default function GlobalSearchDialog({ open, onOpenChange }: Props) {
 
         term.startsWith("@")
           ? Promise.resolve({ data: [], error: null })
-          : supabase
-              .from("posts")
-              .select("id, image_url, caption, category")
-              .eq("is_removed", false)
-              // `ai_searchable_text` is populated by the analyze-post-media edge
-              // function with OCR text + AI topic, lowercased. Including it here
-              // lets users find posts by text inside images (memes, posters,
-              // signage) even when the caption doesn't mention it.
-              .or(`caption.ilike.%${term}%,city.ilike.%${term}%,country.ilike.%${term}%,ai_searchable_text.ilike.%${term.toLowerCase()}%`)
-              .limit(6),
+          // `search_public_posts` is a SECURITY DEFINER RPC that uses the
+          // internal `ai_searchable_text` column (OCR + AI topic) server-side
+          // but returns only safe public post fields — the AI metadata is
+          // no longer directly readable from `public.posts`.
+          : supabase.rpc("search_public_posts" as any, { _query: term, _limit: 6, _offset: 0 })
+              .then(({ data, error }) => ({
+                data: (data ?? []).map((r: any) => ({
+                  id: r.id, image_url: r.image_url, caption: r.caption, category: r.category,
+                })),
+                error,
+              })),
+
       ]);
 
       if (cancelled) return;

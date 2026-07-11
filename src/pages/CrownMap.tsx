@@ -36,8 +36,9 @@ type Row = {
     country: string | null;
     location_enabled: boolean | null;
     location_source: string | null;
-    post_lat: number | null;
-    post_lng: number | null;
+    // Exact coords intentionally excluded — column-level revoke keeps them
+    // server-side. Public pins snap to city/state/country centers.
+
     post_location_precision: string | null;
     image_url?: string | null;
     caption?: string | null;
@@ -271,7 +272,7 @@ export default function CrownMap() {
     let q = supabase
       .from("crowns")
       .select(
-        `region_name, region_type, user_id, post_id, crown_score, category, ${joinSpec}, post:posts!crowns_post_id_fkey(city, state, country, location_enabled, location_source, post_lat, post_lng, post_location_precision, image_url, caption)`,
+        `region_name, region_type, user_id, post_id, crown_score, category, ${joinSpec}, post:posts!crowns_post_id_fkey(city, state, country, location_enabled, location_source, post_location_precision, image_url, caption)`,
         { count: "estimated" },
       )
       .eq("active", true)
@@ -355,7 +356,7 @@ export default function CrownMap() {
   const upsertRow = useCallback(async (region_type: Row["region_type"], region_name: string) => {
     const { data } = await supabase
       .from("crowns")
-      .select("region_name, region_type, user_id, post_id, crown_score, category, profile:profiles!crowns_user_id_fkey(username, profile_photo_url), post:posts!crowns_post_id_fkey(city, state, country, location_enabled, location_source, post_lat, post_lng, post_location_precision, image_url, caption)")
+      .select("region_name, region_type, user_id, post_id, crown_score, category, profile:profiles!crowns_user_id_fkey(username, profile_photo_url), post:posts!crowns_post_id_fkey(city, state, country, location_enabled, location_source, post_location_precision, image_url, caption)")
       .eq("active", true)
       .eq("category", category)
       .eq("region_type", region_type)
@@ -1390,10 +1391,11 @@ function geoFor(r: Row): { coord: LatLng | null; precision: "exact" | "city" | "
   // then post city, then region, then post state/country. Never uses profile
   // or device location, never invents a fake pin position.
   return lookupPostGeo({
-    post_lat: r.post?.post_lat ?? null,
-    post_lng: r.post?.post_lng ?? null,
+    post_lat: null,
+    post_lng: null,
     location_enabled: r.post?.location_enabled ?? null,
     location_source: r.post?.location_source ?? null,
+
     city: r.post?.city ?? null,
     state: r.post?.state ?? null,
     country: r.post?.country ?? null,

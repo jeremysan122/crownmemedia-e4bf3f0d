@@ -24,12 +24,16 @@ export type CrownRow = {
     country: string | null;
     location_enabled: boolean | null;
     location_source: string | null;
-    post_lat: number | null;
-    post_lng: number | null;
+    // Exact coords are no longer readable client-side (column-level revoke).
+    // Kept optional here for legacy callers/tests; classifier always falls
+    // back to city/state/country centers when they're absent.
+    post_lat?: number | null;
+    post_lng?: number | null;
     post_location_precision: string | null;
     image_url?: string | null;
     caption?: string | null;
   } | null;
+
 };
 
 export type MappedPoint<R extends CrownRow = CrownRow> = {
