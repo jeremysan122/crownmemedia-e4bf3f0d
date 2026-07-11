@@ -92,6 +92,10 @@ export default function AdminSystemAudit() {
 
         <AdminSessionHint />
 
+        <EmailTestSuiteCard />
+
+
+
         {/* Summary chips */}
         <div className="grid grid-cols-3 gap-2">
           <SummaryCard icon={<CreditCard size={14} />} label="Stripe events" value={summary.stripe} active={tab === "stripe"} onClick={() => setTab("stripe")} />
