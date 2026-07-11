@@ -257,3 +257,67 @@ function Pill({ label, ok }: { label: string; ok: boolean }) {
 function Empty({ children }: { children: React.ReactNode }) {
   return <p className="text-center text-sm text-muted-foreground py-10">{children}</p>;
 }
+
+function EmailTestSuiteCard() {
+  const [sending, setSending] = useState(false);
+  const [recipient, setRecipient] = useState("jeremysanders122@gmail.com");
+  const [result, setResult] = useState<null | { ok: number; failed: number }>(null);
+
+  const send = async () => {
+    setSending(true);
+    setResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-test-emails", {
+        body: { recipientEmail: recipient },
+      });
+      if (error) throw error;
+      const results = (data as any)?.results ?? [];
+      const ok = results.filter((r: any) => r.status === "queued").length;
+      const failed = results.length - ok;
+      setResult({ ok, failed });
+      toast.success(`Queued ${ok}/${results.length} templates to ${recipient}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to send test suite");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-gold/30 bg-gradient-to-br from-royal/40 to-transparent p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Mail size={16} className="text-gold" />
+        <h2 className="font-display text-sm text-gold uppercase tracking-wider">Email Test Suite</h2>
+      </div>
+      <p className="text-[12px] text-muted-foreground mb-3">
+        Sends all 20 templates (14 app + 6 auth previews) to the recipient. Uses the new hero images.
+      </p>
+      <div className="flex gap-2">
+        <input
+          type="email"
+          value={recipient}
+          onChange={(e) => setRecipient(e.target.value)}
+          className="flex-1 rounded-lg bg-background/60 border border-border/50 px-3 py-2 text-sm"
+          placeholder="you@example.com"
+        />
+        <button
+          onClick={send}
+          disabled={sending || !recipient}
+          className="inline-flex items-center gap-2 rounded-lg bg-gold text-royal-deep font-bold text-sm px-4 py-2 hover:brightness-110 disabled:opacity-50"
+        >
+          {sending ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+          {sending ? "Sending…" : "Send all 20"}
+        </button>
+      </div>
+      {result && (
+        <p className="text-[11px] mt-2 text-muted-foreground">
+          Queued: <span className="text-emerald-300 font-bold">{result.ok}</span>
+          {result.failed > 0 && (
+            <> · Failed: <span className="text-red-400 font-bold">{result.failed}</span></>
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
+}
