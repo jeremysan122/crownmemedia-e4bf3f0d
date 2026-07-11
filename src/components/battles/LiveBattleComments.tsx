@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { bodyMatchesKeyword } from "@/lib/battleModeration";
+import { commentHiddenReason } from "@/lib/commentHiddenReason";
 import { useViewerSafety } from "@/hooks/useViewerSafety";
 import ReportDialog from "@/components/ReportDialog";
 
