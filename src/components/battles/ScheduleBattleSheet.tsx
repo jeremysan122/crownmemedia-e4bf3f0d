@@ -24,10 +24,10 @@ import { buildIcsEvent, downloadIcs } from "@/lib/ics";
 interface UserResult { id: string; username: string; profile_photo_url: string | null }
 
 const DURATION_OPTIONS = [
+  { value: 60, label: "1 min" },
   { value: 180, label: "3 min" },
   { value: 300, label: "5 min" },
   { value: 600, label: "10 min" },
-  { value: 900, label: "15 min" },
 ];
 
 /** Format Date -> value suitable for <input type="datetime-local"> in local TZ. */
