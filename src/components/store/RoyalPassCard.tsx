@@ -589,7 +589,7 @@ export default function RoyalPassCard() {
             <Swords size={20} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] uppercase tracking-widest text-gold/70 font-bold">Live Battles</div>
+            <div className="flex items-center gap-2"><span className="text-[10px] uppercase tracking-widest text-gold/70 font-bold">Live Battles</span><span className="text-[8px] px-1.5 py-0.5 rounded bg-muted/60 border border-border text-muted-foreground uppercase tracking-wider">Preview</span></div>
             <h3 className="font-display text-xl text-gold leading-tight">Dominate the arena</h3>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               Royal cosmetics, animated chat badges, and priority gift reactions make your presence unmissable in every live battle.
