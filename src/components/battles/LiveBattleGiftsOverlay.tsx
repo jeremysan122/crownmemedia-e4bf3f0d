@@ -9,7 +9,7 @@
 // The overlay sits on top of the video with pointer-events:none so it
 // never blocks host/opponent controls.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import GiftIcon from "@/components/gifts/GiftIcon";
 import { findGift } from "@/lib/gifts";
