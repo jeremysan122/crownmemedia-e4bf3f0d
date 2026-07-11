@@ -5352,8 +5352,8 @@ export type Database = {
         }
       }
       bump_live_battle_peak_viewers: {
-        Args: { _battle_id: string; _count: number }
-        Returns: undefined
+        Args: { _battle_id: string }
+        Returns: number
       }
       can_view_posts_of: { Args: { _owner: string }; Returns: boolean }
       cancel_account_deletion: { Args: never; Returns: undefined }
@@ -5603,6 +5603,10 @@ export type Database = {
       }
       get_db_vitals: { Args: never; Returns: Json }
       get_live_battle_highlight: { Args: { _battle_id: string }; Returns: Json }
+      get_live_battle_vote_timeline: {
+        Args: { _battle_id: string }
+        Returns: Json
+      }
       get_my_admin_roles: {
         Args: never
         Returns: {

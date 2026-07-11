@@ -92,3 +92,23 @@ export async function fetchBattlerAnalytics(userId: string, limit = 25): Promise
   if (error) throw error;
   return data as unknown as BattlerAnalytics;
 }
+
+export interface VoteTimelineBucket {
+  bucket: string; // ISO timestamp
+  host_votes: number;
+  opponent_votes: number;
+  host_cumulative: number;
+  opponent_cumulative: number;
+}
+
+/**
+ * Wave 6 — votes-over-time. 1-minute buckets ordered ascending by bucket.
+ * Empty array for battles with no votes yet.
+ */
+export async function fetchLiveBattleVoteTimeline(battleId: string): Promise<VoteTimelineBucket[]> {
+  const { data, error } = await supabase.rpc("get_live_battle_vote_timeline" as never, {
+    _battle_id: battleId,
+  } as never);
+  if (error) throw error;
+  return (data as unknown as VoteTimelineBucket[]) ?? [];
+}
