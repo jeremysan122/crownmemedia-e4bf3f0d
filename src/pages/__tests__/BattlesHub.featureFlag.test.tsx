@@ -21,11 +21,17 @@ vi.mock("@/components/battles/ChallengeDialog", () => ({
   default: ({ open }: { open: boolean }) => (open ? <div data-testid="challenge" /> : null),
 }));
 
-const buildQuery = (result: any) => {
+// Mock BattlesHub's own component tree elements it renders alongside the
+// hub — UpcomingBattlesStrip runs a live query that expects an array.
+vi.mock("@/components/battles/UpcomingBattlesStrip", () => ({ default: () => null }));
+
+const buildQuery = (singleResult: any, listResult: any = { data: [], error: null }) => {
   const q: any = {
     select: () => q, eq: () => q, order: () => q, limit: () => q,
-    maybeSingle: () => Promise.resolve(result),
-    then: (r: any) => Promise.resolve(result).then(r),
+    or: () => q, in: () => q, gte: () => q, lte: () => q, is: () => q, not: () => q,
+    maybeSingle: () => Promise.resolve(singleResult),
+    single: () => Promise.resolve(singleResult),
+    then: (r: any) => Promise.resolve(listResult).then(r),
   };
   return q;
 };
