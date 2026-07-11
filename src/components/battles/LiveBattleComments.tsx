@@ -666,8 +666,11 @@ export default function LiveBattleComments({
                 const r = rows[vi.index];
                 if (!r) return null;
                 const isKeywordHidden = !r.hidden_at && bodyMatchesKeyword(r.body, keywordFilters);
-                const isHidden = !!r.hidden_at || isKeywordHidden;
+                const isBlockedByViewer = safety.isBlocked(r.user_id);
+                const isMutedByViewer = !isBlockedByViewer && safety.matchesMutedWord(r.body);
+                const isHidden = !!r.hidden_at || isKeywordHidden || isBlockedByViewer || isMutedByViewer;
                 const canReport = !!user && user.id !== r.user_id && !r.id.startsWith("opt-");
+                const canBlock = !!user && user.id !== r.user_id && !r.id.startsWith("opt-");
                 const canModerate = isModerator && !r.id.startsWith("opt-");
                 return (
                   <div
@@ -692,6 +695,12 @@ export default function LiveBattleComments({
                       }`}
                       data-testid="live-battle-comment"
                       data-hidden={isHidden ? "true" : "false"}
+                      data-hidden-reason={
+                        r.hidden_at ? "moderator" :
+                        isKeywordHidden ? "keyword" :
+                        isBlockedByViewer ? "blocked" :
+                        isMutedByViewer ? "muted-word" : ""
+                      }
                       data-first-unread={firstUnreadIndex === vi.index ? "true" : "false"}
                       tabIndex={-1}
                     >
@@ -708,13 +717,16 @@ export default function LiveBattleComments({
                         </span>
                         {isHidden ? (
                           <span className={`italic text-xs ${overlay ? "text-white/60" : "text-muted-foreground"}`}>
-                            {isKeywordHidden ? "[filtered by host]" : "[hidden by moderator]"}
+                            {r.hidden_at ? "[hidden by moderator]" :
+                             isKeywordHidden ? "[filtered by host]" :
+                             isBlockedByViewer ? "[hidden — you blocked this user]" :
+                             "[hidden — matched a muted word]"}
                           </span>
                         ) : (
                           <span className={`break-words ${overlay ? "text-white/95" : "text-foreground/80"}`}>{r.body}</span>
                         )}
                       </div>
-                      {(canReport || canModerate) && (
+                      {(canReport || canModerate || canBlock) && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
@@ -729,15 +741,58 @@ export default function LiveBattleComments({
                           <DropdownMenuContent align="end">
                             {canReport && (
                               <DropdownMenuItem onClick={() => setReportFor(r)}>
-                                <Flag className="w-3.5 h-3.5 mr-2" aria-hidden /> Report
+                                <Flag className="w-3.5 h-3.5 mr-2" aria-hidden /> Report comment
                               </DropdownMenuItem>
                             )}
-                            {canModerate && !isHidden && (
+                            {canReport && (
+                              <DropdownMenuItem onClick={() => setReportUserFor(r)} data-testid="live-battle-report-user">
+                                <Flag className="w-3.5 h-3.5 mr-2" aria-hidden /> Report user
+                              </DropdownMenuItem>
+                            )}
+                            {canBlock && !isBlockedByViewer && (
+                              <DropdownMenuItem
+                                data-testid="live-battle-block-user"
+                                onClick={async () => {
+                                  const { error } = await safety.blockUser(r.user_id);
+                                  if (error) toast({ title: "Couldn't block. Please try again.", variant: "destructive" });
+                                  else toast({ title: `Blocked @${r.username ?? "user"}`, description: "Their messages and gifts are now hidden for you." });
+                                }}
+                              >
+                                <UserX className="w-3.5 h-3.5 mr-2" aria-hidden /> Block @{r.username ?? "user"}
+                              </DropdownMenuItem>
+                            )}
+                            {canBlock && isBlockedByViewer && (
+                              <DropdownMenuItem
+                                onClick={async () => {
+                                  const { error } = await safety.unblockUser(r.user_id);
+                                  if (error) toast({ title: "Couldn't unblock. Please try again.", variant: "destructive" });
+                                  else toast({ title: `Unblocked @${r.username ?? "user"}` });
+                                }}
+                              >
+                                <Eye className="w-3.5 h-3.5 mr-2" aria-hidden /> Unblock @{r.username ?? "user"}
+                              </DropdownMenuItem>
+                            )}
+                            {canBlock && r.body && (
+                              <DropdownMenuItem
+                                data-testid="live-battle-mute-word"
+                                onClick={async () => {
+                                  const raw = window.prompt("Mute a word or phrase (hidden from your chat everywhere):", r.body.split(/\s+/)[0] ?? "");
+                                  if (!raw) return;
+                                  const { error } = await safety.muteWord(raw);
+                                  if (error === "empty") return;
+                                  if (error) toast({ title: "Couldn't mute that word.", variant: "destructive" });
+                                  else toast({ title: "Muted", description: "You won't see messages containing that word." });
+                                }}
+                              >
+                                <VolumeX className="w-3.5 h-3.5 mr-2" aria-hidden /> Mute a word…
+                              </DropdownMenuItem>
+                            )}
+                            {canModerate && !r.hidden_at && (
                               <DropdownMenuItem onClick={() => hideComment(r, true)}>
                                 <EyeOff className="w-3.5 h-3.5 mr-2" aria-hidden /> Hide comment
                               </DropdownMenuItem>
                             )}
-                            {canModerate && isHidden && (
+                            {canModerate && r.hidden_at && (
                               <DropdownMenuItem onClick={() => hideComment(r, false)}>
                                 <Eye className="w-3.5 h-3.5 mr-2" aria-hidden /> Unhide
                               </DropdownMenuItem>
@@ -745,6 +800,7 @@ export default function LiveBattleComments({
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
+
                     </div>
                   </div>
                 );
