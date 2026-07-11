@@ -15,7 +15,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview="Your post is live — the votes begin now."
-      heroFile="crownme-post-live-full-design.png"
+      heroFile="07982903-c7c5-476d-9cbc-2787458c0dbf/crownme-post-live-hero.jpg"
       heroAlt="Your CrownMe post is live"
       heroHref={href}
       heading="Your post is live."

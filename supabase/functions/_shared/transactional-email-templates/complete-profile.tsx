@@ -11,7 +11,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview="Your throne is incomplete — finish your profile."
-      heroFile="crownme-complete-profile-full-design.png"
+      heroFile="965b8258-e1a7-401b-9e52-6328ba71afa4/crownme-complete-profile-hero-2.jpg"
       heroAlt="Complete your CrownMe profile"
       heroHref={`${SITE_URL}/edit-profile`}
       heading={`Finish your ascent${first_name ? `, ${first_name}` : ''}.`}

@@ -16,7 +16,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview={`Your royal key to ${name} awaits 👑`}
-      heroFile="crownme-magic-link-full-design.png"
+      heroFile="0529a9aa-596f-4854-8782-c62d0954a7dd/crownme-magic-link-hero.jpg"
       heroAlt={`${name} — Magic link sign-in`}
       heroHref={href}
       heading="Your royal key has arrived."

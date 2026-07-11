@@ -15,7 +15,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview="Your battle ends soon — the throne is still in play."
-      heroFile="crownme-battle-ending-soon-full-design.png"
+      heroFile="2bd03a53-9275-4301-adda-f2486d548989/crownme-battle-ending-soon-hero-2.jpg"
       heroAlt="CrownMe battle ending soon"
       heroHref={href}
       heading="Final hours."

@@ -16,7 +16,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview={`Restore your reign at ${name}`}
-      heroFile="crownme-password-reset-full-design.png"
+      heroFile="f76c69f1-aecb-4bc8-92f5-6fcca7f19568/crownme-password-reset-hero.jpg"
       heroAlt={`${name} — Password reset`}
       heroHref={href}
       heading="Restore your reign."

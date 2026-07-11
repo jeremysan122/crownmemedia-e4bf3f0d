@@ -39,7 +39,7 @@ export const EmailChangeEmail = ({
         <Section style={{ padding: 0, margin: 0 }}>
           <Link href={confirmationUrl}>
             <Img
-              src={`${HERO_BASE}/crownme-email-change-full-design.png`}
+              src={`${HERO_BASE}/f51ba113-49fa-4bd1-9c24-70fa0e3d5fab/crownme-email-change-hero.jpg`}
               alt="CrownMe — Confirm your new address"
               width="560"
               style={heroImg}

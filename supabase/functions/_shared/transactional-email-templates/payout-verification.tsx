@@ -14,7 +14,7 @@ const Email = (raw: unknown) => {
   return (
     <CrownMeEmail
       preview="Verify your payout request to release your earnings."
-      heroFile="crownme-payout-verification-full-design.png"
+      heroFile="62b0f83c-2359-40b0-84c1-9cd67d6b89e7/crownme-payout-verification-hero.jpg"
       heroAlt="CrownMe payout verification"
       heroHref={`${SITE_URL}/wallet`}
       heading="Confirm your payout."
