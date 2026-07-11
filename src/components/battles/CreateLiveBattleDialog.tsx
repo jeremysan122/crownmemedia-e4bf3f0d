@@ -25,10 +25,10 @@ interface UserResult {
 }
 
 const DURATION_OPTIONS = [
+  { value: 60, label: "1 min" },
   { value: 180, label: "3 min" },
   { value: 300, label: "5 min" },
   { value: 600, label: "10 min" },
-  { value: 900, label: "15 min" },
 ];
 
 export default function CreateLiveBattleDialog({
