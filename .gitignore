@@ -13,8 +13,9 @@ dist-ssr
 *.local
 
 # Environment files — never commit real secrets
-.env.production
-.env.staging
+.env
+.env.*
+!.env.example
 
 # Large build artifacts / nested archives
 *.zip
@@ -34,6 +35,8 @@ dist-ssr
 e2e/.seed.json
 e2e/test-results/
 playwright-report/
+
+# Bun-only project — ignore other package-manager lockfiles
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
