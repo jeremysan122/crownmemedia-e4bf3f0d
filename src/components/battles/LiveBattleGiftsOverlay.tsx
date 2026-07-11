@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import GiftIcon from "@/components/gifts/GiftIcon";
 import { findGift } from "@/lib/gifts";
+import { useViewerSafety } from "@/hooks/useViewerSafety";
 
 interface Popup {
   id: string;
