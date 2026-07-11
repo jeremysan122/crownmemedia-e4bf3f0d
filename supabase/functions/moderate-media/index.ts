@@ -77,14 +77,17 @@ Deno.serve(async (req) => {
     // ─── Input ───
     const body = (await req.json().catch(() => ({}))) as ModerateBody
     const urls = Array.isArray(body.image_urls)
-      ? body.image_urls.filter((u): u is string => typeof u === 'string' && /^https?:\/\//.test(u)).slice(0, 10)
+      ? body.image_urls
+          .filter((u): u is string => typeof u === 'string' && isAllowedStorageUrl(u, supabaseUrl))
+          .slice(0, 10)
       : []
     const kind: 'photo' | 'video' = body.kind === 'video' ? 'video' : 'photo'
     if (urls.length === 0) {
-      return new Response(JSON.stringify({ error: 'image_urls required' }), {
+      return new Response(JSON.stringify({ error: 'image_urls must reference CrownMe storage' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
     if (!LOVABLE_API_KEY) {
