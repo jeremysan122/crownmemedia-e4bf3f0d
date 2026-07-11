@@ -248,6 +248,14 @@ export default function LiveBattlePage() {
   // authoritative for historical DB truth on flaky realtime links).
   const presenceCount = useLiveBattlePresence(battle?.id ?? null, user?.id ?? null, battle?.status === "live");
   const viewerCount = presenceCount ?? pollCount;
+  // Wave 6 — bump peak_viewers as presence rises. Server-side clamps to
+  // "only ever raise" so multiple viewers racing is harmless.
+  useEffect(() => {
+    if (!battle?.id || battle.status !== "live" || viewerCount == null) return;
+    supabase.rpc("bump_live_battle_peak_viewers" as never, {
+      _battle_id: battle.id, _count: viewerCount,
+    } as never).then(() => {}, () => {});
+  }, [battle?.id, battle?.status, viewerCount]);
   const isHost = user?.id === battle?.host_id;
   const isOpponent = user?.id === battle?.opponent_id;
   const isParticipant = isHost || isOpponent;
