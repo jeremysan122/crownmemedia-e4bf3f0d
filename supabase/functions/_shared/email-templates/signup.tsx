@@ -46,6 +46,8 @@ export const SignupEmail = ({
           </Link>
         </Section>
         <Section style={styles.body}>
+          <Text style={styles.ornament}>✦ ♛ ✦</Text>
+          <Text style={styles.overline}>{siteName}</Text>
           <Heading style={styles.h1}>Claim your throne, royal.</Heading>
           <Text style={styles.text}>
             Welcome to{' '}
@@ -58,10 +60,13 @@ export const SignupEmail = ({
             </Link>
             .
           </Text>
-          <Button style={styles.button} href={confirmationUrl}>
-            Verify & Enter the Court
-          </Button>
-          <Text style={styles.signature}>— The CrownMe Court</Text>
+          <Section style={styles.buttonWrap}>
+            <Button style={styles.button} href={confirmationUrl}>
+              Verify & Enter the Court
+            </Button>
+          </Section>
+          <Text style={styles.signature}>— The CrownMe Court —</Text>
+          <hr style={styles.hr} />
           <Text style={styles.footer}>
             If you didn't create a CrownMe account, you can safely ignore this
             email. No crown will be issued in your name.
