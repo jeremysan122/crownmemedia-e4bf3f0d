@@ -208,14 +208,16 @@ export default function LiveBattleComments({
     let cancelled = false;
 
     (async () => {
-      const { data } = await supabase
-        .from("live_battle_comments")
-        .select("id, battle_id, user_id, body, created_at, hidden_at")
-        .eq("battle_id", battleId)
-        .order("created_at", { ascending: false })
-        .limit(PAGE);
+      // Wave 7: server-side filter excludes comments from users the caller
+      // has blocked (moderators bypass). Client-side hiding remains as
+      // defense-in-depth for realtime INSERT payloads.
+      const { data } = await supabase.rpc("get_live_battle_comments", {
+        _battle_id: battleId,
+        _before: null,
+        _limit: PAGE,
+      });
       if (cancelled) return;
-      const base = ((data as Row[]) || []).reverse();
+      const base = ((data as Row[]) || []).slice().reverse();
       await hydrate(base);
       if (!cancelled) {
         setRows(base);
