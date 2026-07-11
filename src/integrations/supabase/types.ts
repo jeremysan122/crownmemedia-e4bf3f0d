@@ -6293,6 +6293,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      search_public_posts: {
+        Args: { _limit?: number; _offset?: number; _query: string }
+        Returns: {
+          caption: string
+          category: string
+          city: string
+          comment_count: number
+          content_type: string
+          country: string
+          created_at: string
+          crown_score: number
+          id: string
+          image_url: string
+          image_urls: string[]
+          main_category_slug: string
+          media_type: string
+          repost_count: number
+          state: string
+          subcategory_slug: string
+          user_id: string
+          video_poster_url: string
+          vote_count: number
+        }[]
+      }
       send_dm_gift: {
         Args: {
           p_dedupe_key?: string
