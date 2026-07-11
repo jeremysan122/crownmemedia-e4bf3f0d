@@ -33,9 +33,13 @@ import {
   Eye,
   ChevronUp,
   ArrowDown,
+  UserX,
+  VolumeX,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { bodyMatchesKeyword } from "@/lib/battleModeration";
+import { useViewerSafety } from "@/hooks/useViewerSafety";
+import ReportDialog from "@/components/ReportDialog";
 
 interface Row {
   id: string;
