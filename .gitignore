@@ -34,3 +34,6 @@ dist-ssr
 e2e/.seed.json
 e2e/test-results/
 playwright-report/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
