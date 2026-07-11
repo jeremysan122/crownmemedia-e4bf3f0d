@@ -456,30 +456,37 @@ export default function RoyalPassCard() {
         </div>
       </div>
 
-      {/* WHY ROYAL MEMBERS WIN MORE — social-proof style stats */}
+      {/* HOW ROYAL HELPS YOU STAND OUT — honest, feature-based */}
       <div className="royal-card p-5 space-y-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-gold/10 to-transparent pointer-events-none" />
-        <SectionTitle kicker="Members outperform">Why Royal Members Win More</SectionTitle>
-        <div className="relative grid grid-cols-3 gap-2">
+        <SectionTitle kicker="Designed to help you">How Royal helps you stand out</SectionTitle>
+        <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-2">
           {[
-            { stat: "3.2×", label: "More profile visits" },
-            { stat: "+47%", label: "More votes earned" },
-            { stat: "5×", label: "Higher discovery" },
-          ].map((s, i) => (
-            <div
-              key={s.label}
-              className="rounded-xl bg-background/60 border border-gold/20 p-3 text-center animate-fade-in"
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <div className="font-display text-2xl text-gold leading-none">{s.stat}</div>
-              <div className="text-[10px] text-muted-foreground mt-1 leading-tight">{s.label}</div>
-            </div>
-          ))}
+            { icon: Rocket, label: "Daily 1.5× Boost", detail: "One post gets a 24-hour Crown Score multiplier every day." },
+            { icon: Shield, label: "5 Shields / month", detail: "Protect a crowned post for 24 hours, up to five times each month." },
+            { icon: Sparkles, label: "Royal identity", detail: "Auto-applied glow, animated frame, and chat badge." },
+          ].map((s, i) => {
+            const Icon = s.icon;
+            return (
+              <div
+                key={s.label}
+                className="rounded-xl bg-background/60 border border-gold/20 p-3 text-center animate-fade-in space-y-1"
+                style={{ animationDelay: `${i * 80}ms` }}
+              >
+                <div className="size-8 mx-auto rounded-lg bg-gradient-gold flex items-center justify-center text-primary-foreground gold-shadow">
+                  <Icon size={14} />
+                </div>
+                <div className="font-display text-sm text-gold leading-tight">{s.label}</div>
+                <div className="text-[10px] text-muted-foreground leading-tight">{s.detail}</div>
+              </div>
+            );
+          })}
         </div>
         <p className="relative text-[10px] text-center text-muted-foreground/80 pt-2 border-t border-border/40">
           Royal Pass rewards progression and prestige — never guaranteed wins. Fair competition, always.
         </p>
       </div>
+
 
       {/* FOUNDING MEMBER */}
       <div className="royal-card p-5 space-y-4 relative overflow-hidden border-gold/50">
