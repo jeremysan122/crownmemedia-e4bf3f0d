@@ -149,17 +149,18 @@ describe("Wave 8.2a — webhook routing", () => {
     ["charge.dispute.funds_withdrawn", "handle_royal_dispute_funds_withdrawn"],
     ["charge.dispute.funds_reinstated", "handle_royal_dispute_reinstated"],
   ])("%s → %s", (evt, rpc) => {
-    const idx = webhook.indexOf(`"${evt}"`);
-    expect(idx).toBeGreaterThan(0);
-    // The RPC call for this branch should appear within a reasonable window after the event check.
-    expect(webhook.slice(idx, idx + 2000)).toContain(rpc);
+    // Locate the specific if-branch that dispatches this event (not the top-level filter).
+    const re = new RegExp(`if \\(event\\.type === "${evt.replace(/\./g, "\\.")}"\\)`);
+    const m = re.exec(webhook);
+    expect(m, `branch for ${evt} not found`).not.toBeNull();
+    expect(webhook.slice(m!.index, m!.index + 1500)).toContain(rpc);
   });
   it("charge.dispute.closed routes lost→handle_royal_dispute_lost and won→handle_royal_dispute_won", () => {
-    const idx = webhook.indexOf(`"charge.dispute.closed"`);
-    expect(idx).toBeGreaterThan(0);
-    const window = webhook.slice(idx, idx + 3000);
-    expect(window).toMatch(/dispute\.status === "lost"[\s\S]+?handle_royal_dispute_lost/);
-    expect(window).toMatch(/dispute\.status === "won"[\s\S]+?handle_royal_dispute_won/);
+    const m = /if \(event\.type === "charge\.dispute\.closed"\)/.exec(webhook);
+    expect(m).not.toBeNull();
+    const win = webhook.slice(m!.index, m!.index + 3000);
+    expect(win).toMatch(/dispute\.status === "lost"[\s\S]+?handle_royal_dispute_lost/);
+    expect(win).toMatch(/dispute\.status === "won"[\s\S]+?handle_royal_dispute_won/);
   });
   it("safely no-ops on missing charge id (logs and continues)", () => {
     expect(webhook).toMatch(/dispute \$\{disputeId\} missing charge id/);
