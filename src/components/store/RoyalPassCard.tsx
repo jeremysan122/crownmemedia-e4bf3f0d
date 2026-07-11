@@ -647,7 +647,11 @@ export default function RoyalPassCard() {
 
       {/* ROYAL LEADERBOARD PREVIEW */}
       <div className="royal-card p-5 space-y-3 relative overflow-hidden">
-        <SectionTitle kicker="Rankings">Royals climb faster</SectionTitle>
+        <div className="flex items-center justify-center gap-2">
+          <SectionTitle kicker="Rankings">Royals stand out on the leaderboard</SectionTitle>
+        </div>
+        <div className="text-center -mt-2"><span className="text-[9px] px-1.5 py-0.5 rounded bg-muted/60 border border-border text-muted-foreground uppercase tracking-wider">Illustrative preview</span></div>
+
         <div className="space-y-1.5">
           {[
             { rank: 1, name: "@royal_you", score: "1,240", royal: true, up: "+3" },
