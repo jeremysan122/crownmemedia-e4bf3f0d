@@ -44,19 +44,19 @@ const BENEFITS: Array<{ icon: typeof Zap; label: string; detail: string }> = [
 ];
 
 const MONTHLY_REWARDS: Array<{ icon: typeof Gift; label: string; sub: string }> = [
-  { icon: Gift, label: "500 FREE Shekels", sub: "Deposited every month" },
-  { icon: Rocket, label: "3 FREE Boost Tokens", sub: "Use them anytime" },
+  { icon: Gift, label: "500 Shekels", sub: "Deposited on renewal" },
+  { icon: Rocket, label: "3 Boost Tokens", sub: "Use them anytime" },
   { icon: Shield, label: "5 Crown Shields", sub: "24h each · defend your wins" },
-  { icon: Palette, label: "Royal Profile Themes", sub: "Members only" },
-  { icon: Crown, label: "Royal Gifts & Reactions", sub: "Exclusive drops" },
-  { icon: Sparkles, label: "Animated Royal Frame", sub: "Gold, always on" },
+  { icon: Sparkles, label: "Animated Royal Frame", sub: "Members only" },
+  { icon: Crown, label: "Royal Chat Badge", sub: "Visible in Live Battles" },
+  { icon: Palette, label: "Royal Profile Glow", sub: "Auto-applied everywhere" },
 ];
 
 const SAVINGS = [
-  { icon: Percent, label: "10% OFF every Shekel purchase" },
+  { icon: Percent, label: "10% off every Shekel purchase" },
   { icon: Star, label: "Early access to new features" },
   { icon: FlaskConical, label: "Priority access to beta releases" },
-  { icon: CalendarClock, label: "Exclusive seasonal collectibles" },
+  { icon: CalendarClock, label: "Seasonal member-only drops" },
 ];
 
 const OUTCOMES = [
@@ -69,26 +69,19 @@ const OUTCOMES = [
 ];
 
 const FOUNDER_PERKS = [
-  { icon: Crown, label: "Founder Royal Badge" },
-  { icon: Sparkles, label: "Exclusive Founder Frame" },
+  { icon: Crown, label: "Founding Royal Badge (kept for life)" },
+  { icon: Sparkles, label: "Exclusive Founder Frame (kept for life)" },
+  { icon: BadgeCheck, label: "\"Founding Royal\" Title (kept for life)" },
   { icon: Trophy, label: "Early Supporter Recognition" },
-  { icon: BadgeCheck, label: "Limited Edition Founder Title" },
 ];
 
 const COSMETICS = [
   { emoji: "👑", label: "Royal Crown Badge" },
-  { emoji: "🌹", label: "Royal Rose Reaction" },
-  { emoji: "💎", label: "Diamond Frame" },
-  { emoji: "🚀", label: "Rocket Boost FX" },
-  { emoji: "🔥", label: "Ember Glow Theme" },
-  { emoji: "⚜️", label: "Fleur Chat Badge" },
+  { emoji: "✨", label: "Royal Profile Glow" },
+  { emoji: "🖼️", label: "Animated Royal Frame" },
+  { emoji: "⚜️", label: "Royal Chat Badge" },
 ];
 
-const TESTIMONIALS = [
-  { name: "@ava.k", quote: "I 3x'd my votes in the first week. The glow gets people to actually stop and look.", crown: 1240 },
-  { name: "@marco", quote: "The monthly shields are clutch — I finally hold my crowns overnight.", crown: 980 },
-  { name: "@lena.rose", quote: "Founder frame is unreal. Feels like I actually built something here.", crown: 1560 },
-];
 
 const COMPARE_ROWS: Array<{ label: string; free: boolean | string; royal: boolean | string }> = [
   { label: "Basic profile", free: true, royal: true },
