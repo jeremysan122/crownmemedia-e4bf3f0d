@@ -272,6 +272,44 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
 
+    // Royal Pass monthly benefit grants — fires on initial paid invoice AND every renewal.
+    // Idempotent by (user_id, period_start) and by stripe event id.
+    if (event.type === "invoice.paid" || event.type === "invoice.payment_succeeded") {
+      const invoice = event.data.object as any;
+      const subId = typeof invoice.subscription === "string"
+        ? invoice.subscription
+        : invoice.subscription?.id;
+      if (subId) {
+        try {
+          const sub = await stripe.subscriptions.retrieve(subId);
+          const kind = sub.metadata?.kind as string | undefined;
+          const userId = sub.metadata?.userId || sub.metadata?.user_id;
+          if (kind === "royal_pass" && userId) {
+            const line = invoice.lines?.data?.[0];
+            const periodStart = line?.period?.start ?? sub.items?.data?.[0]?.current_period_start ?? sub.current_period_start;
+            const periodEnd = line?.period?.end ?? sub.items?.data?.[0]?.current_period_end ?? sub.current_period_end;
+            if (periodStart && periodEnd) {
+              const { error: grantErr } = await supabase.rpc("grant_royal_monthly_benefits", {
+                _user_id: userId,
+                _stripe_event_id: event.id,
+                _stripe_invoice_id: invoice.id,
+                _period_start: new Date(periodStart * 1000).toISOString(),
+                _period_end: new Date(periodEnd * 1000).toISOString(),
+              });
+              if (grantErr) {
+                console.error(`[stripe-webhook] grant_royal_monthly_benefits failed for ${userId}: ${grantErr.message}`);
+              } else {
+                console.log(`[stripe-webhook] royal monthly benefits granted user=${userId}`);
+              }
+            }
+          }
+        } catch (e) {
+          console.error(`[stripe-webhook] invoice.paid processing error: ${(e as Error).message}`);
+        }
+      }
+    }
+
+
     if (
       event.type === "customer.subscription.updated" ||
       event.type === "customer.subscription.deleted" ||
