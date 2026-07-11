@@ -50,15 +50,24 @@ export const CrownMeEmail = ({
             {heroHref ? <Link href={heroHref}>{hero}</Link> : hero}
           </Section>
           <Section style={styles.body}>
+            <Text style={styles.ornament}>✦ ♛ ✦</Text>
+            <Text style={styles.overline}>{SITE_NAME}</Text>
             <Heading style={styles.h1}>{heading}</Heading>
             {paragraphs.map((p, i) => (
               <Text key={i} style={styles.text}>{p}</Text>
             ))}
             {ctaLabel && ctaHref && (
-              <Button style={styles.button} href={ctaHref}>{ctaLabel}</Button>
+              <Section style={styles.buttonWrap}>
+                <Button style={styles.button} href={ctaHref}>{ctaLabel}</Button>
+              </Section>
             )}
-            <Text style={styles.signature}>— The CrownMe Court</Text>
-            {footerNote && <Text style={styles.footer}>{footerNote}</Text>}
+            <Text style={styles.signature}>— The CrownMe Court —</Text>
+            {footerNote && (
+              <>
+                <hr style={styles.hr} />
+                <Text style={styles.footer}>{footerNote}</Text>
+              </>
+            )}
           </Section>
         </Container>
       </Body>
