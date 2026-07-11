@@ -181,16 +181,21 @@ export default function RoyalPassCard() {
             <p className="relative text-xs text-muted-foreground">{plan.description}</p>
           )}
 
-          <ul className="relative space-y-2">
+          <ul className="relative space-y-3">
             {PERKS.map((p) => {
               const Icon = p.icon;
               return (
-                <li key={p.label} className="flex items-center gap-3 text-sm">
-                  <div className="size-7 rounded-full bg-muted/40 flex items-center justify-center text-gold">
+                <li key={p.label} className="flex items-start gap-3 text-sm">
+                  <div className="size-8 rounded-full bg-muted/40 flex items-center justify-center text-gold shrink-0 mt-0.5">
                     <Icon size={14} />
                   </div>
-                  <span className="flex-1">{p.label}</span>
-                  <Check size={14} className="text-emerald-500/70" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground">{p.label}</span>
+                      <Check size={13} className="text-emerald-500/70 shrink-0" />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">{p.detail}</p>
+                  </div>
                 </li>
               );
             })}
