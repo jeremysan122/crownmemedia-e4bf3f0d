@@ -35,6 +35,21 @@ Block (safe=false) for: nudity, sexual content, graphic violence/gore, hate symb
 illegal acts. Allow swimwear, art, tattoos, athletic context. When uncertain, prefer
 safe=false with category="suggestive".`
 
+// SSRF guard: only accept URLs that reference this project's Supabase Storage.
+const ALLOWED_BUCKETS = new Set(['avatars', 'posts', 'media', 'banners', 'share-cards'])
+function isAllowedStorageUrl(url: string, supabaseUrl: string): boolean {
+  if (typeof url !== 'string' || !url) return false
+  let parsed: URL
+  try { parsed = new URL(url) } catch { return false }
+  let base: URL
+  try { base = new URL(supabaseUrl) } catch { return false }
+  if (parsed.origin !== base.origin) return false
+  const m = parsed.pathname.match(/^\/storage\/v1\/object\/(public|sign)\/([^/]+)\/.+/)
+  if (!m) return false
+  return ALLOWED_BUCKETS.has(m[2])
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
