@@ -3556,6 +3556,7 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          crown_score: number
           crowns_held: number
           crowns_total: number
           deactivated_at: string | null
@@ -3625,6 +3626,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          crown_score?: number
           crowns_held?: number
           crowns_total?: number
           deactivated_at?: string | null
@@ -3694,6 +3696,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          crown_score?: number
           crowns_held?: number
           crowns_total?: number
           deactivated_at?: string | null
@@ -5701,6 +5704,7 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          crown_score: number
           crowns_held: number
           crowns_total: number
           deactivated_at: string | null
