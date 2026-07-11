@@ -378,15 +378,17 @@ Deno.serve(async (req) => {
     ) {
       try {
         const dispute = event.data.object as any;
+        const disputeId: string = dispute.id;
         const chargeId: string | null = typeof dispute.charge === "string"
           ? dispute.charge
           : dispute.charge?.id ?? null;
-        if (!chargeId) {
-          console.warn(`[stripe-webhook] dispute ${dispute.id} missing charge id — no-op`);
-        } else {
-          // Resolve charge → payment_intent → invoice
-          let paymentIntentId: string | null = null;
-          let invoiceId: string | null = null;
+
+        // Resolve charge → payment_intent → invoice. Uses latest_charge fallback where needed.
+        // (Full resolveInvoicePaymentReferences helper lands in Wave 8.2c; for 8.2a this
+        // charge-based path is sufficient because dispute.charge is always populated.)
+        let paymentIntentId: string | null = null;
+        let invoiceId: string | null = null;
+        if (chargeId) {
           try {
             const charge = await stripe.charges.retrieve(chargeId);
             invoiceId = typeof charge.invoice === "string"
@@ -398,53 +400,65 @@ Deno.serve(async (req) => {
           } catch (e) {
             console.warn(`[stripe-webhook] could not retrieve charge ${chargeId}: ${(e as Error).message}`);
           }
+        } else {
+          console.warn(`[stripe-webhook] dispute ${disputeId} missing charge id`);
+        }
 
-          if (event.type === "charge.dispute.funds_reinstated") {
-            const { error } = await supabase.rpc("handle_royal_dispute_reinstated", {
+        if (event.type === "charge.dispute.created") {
+          const { error } = await supabase.rpc("handle_royal_dispute_created", {
+            _stripe_event_id: event.id,
+            _stripe_dispute_id: disputeId,
+            _dispute_reason: dispute.reason ?? null,
+            _stripe_invoice_id: invoiceId,
+            _stripe_payment_intent_id: paymentIntentId,
+            _stripe_charge_id: chargeId,
+          });
+          if (error) console.error(`[stripe-webhook] handle_royal_dispute_created failed: ${error.message}`);
+          else console.log(`[stripe-webhook] dispute created dispute=${disputeId}`);
+        } else if (event.type === "charge.dispute.funds_withdrawn") {
+          const { error } = await supabase.rpc("handle_royal_dispute_funds_withdrawn", {
+            _stripe_event_id: event.id,
+            _stripe_dispute_id: disputeId,
+            _stripe_invoice_id: invoiceId,
+            _stripe_payment_intent_id: paymentIntentId,
+            _stripe_charge_id: chargeId,
+          });
+          if (error) console.error(`[stripe-webhook] handle_royal_dispute_funds_withdrawn failed: ${error.message}`);
+          else console.log(`[stripe-webhook] dispute funds withdrawn dispute=${disputeId}`);
+        } else if (event.type === "charge.dispute.funds_reinstated") {
+          const { error } = await supabase.rpc("handle_royal_dispute_reinstated", {
+            _stripe_event_id: event.id,
+            _stripe_invoice_id: invoiceId,
+            _stripe_payment_intent_id: paymentIntentId,
+            _stripe_charge_id: chargeId,
+            _stripe_dispute_id: disputeId,
+          });
+          if (error) console.error(`[stripe-webhook] handle_royal_dispute_reinstated failed: ${error.message}`);
+          else console.log(`[stripe-webhook] dispute funds reinstated dispute=${disputeId}`);
+        } else if (event.type === "charge.dispute.closed") {
+          if (dispute.status === "lost") {
+            const { error } = await supabase.rpc("handle_royal_dispute_lost", {
               _stripe_event_id: event.id,
+              _stripe_dispute_id: disputeId,
+              _reason: `dispute_lost${dispute.reason ? `:${dispute.reason}` : ""}`,
               _stripe_invoice_id: invoiceId,
               _stripe_payment_intent_id: paymentIntentId,
               _stripe_charge_id: chargeId,
             });
-            if (error) console.error(`[stripe-webhook] handle_royal_dispute_reinstated failed: ${error.message}`);
-            else console.log(`[stripe-webhook] dispute funds reinstated charge=${chargeId}`);
+            if (error) console.error(`[stripe-webhook] handle_royal_dispute_lost failed: ${error.message}`);
+            else console.log(`[stripe-webhook] dispute lost dispute=${disputeId}`);
+          } else if (dispute.status === "won") {
+            const { error } = await supabase.rpc("handle_royal_dispute_won", {
+              _stripe_event_id: event.id,
+              _stripe_dispute_id: disputeId,
+              _stripe_invoice_id: invoiceId,
+              _stripe_payment_intent_id: paymentIntentId,
+              _stripe_charge_id: chargeId,
+            });
+            if (error) console.error(`[stripe-webhook] handle_royal_dispute_won failed: ${error.message}`);
+            else console.log(`[stripe-webhook] dispute won dispute=${disputeId}`);
           } else {
-            // Choose status by event.
-            //   dispute.created                    → 'disputed' (suspend)
-            //   dispute.funds_withdrawn            → 'reversed' (permanent)
-            //   dispute.closed with status 'lost'  → 'reversed'
-            //   dispute.closed with status 'won'   → 'granted' via reinstate
-            let newStatus: "disputed" | "reversed" | null = null;
-            if (event.type === "charge.dispute.created") newStatus = "disputed";
-            else if (event.type === "charge.dispute.funds_withdrawn") newStatus = "reversed";
-            else if (event.type === "charge.dispute.closed") {
-              if (dispute.status === "lost") newStatus = "reversed";
-              else if (dispute.status === "won") {
-                const { error } = await supabase.rpc("handle_royal_dispute_reinstated", {
-                  _stripe_event_id: event.id,
-                  _stripe_invoice_id: invoiceId,
-                  _stripe_payment_intent_id: paymentIntentId,
-                  _stripe_charge_id: chargeId,
-                });
-                if (error) console.error(`[stripe-webhook] reinstate (dispute won) failed: ${error.message}`);
-                newStatus = null;
-              } else {
-                newStatus = null; // warning_needs_response / warning_under_review etc — no-op
-              }
-            }
-
-            if (newStatus) {
-              const { error } = await supabase.rpc("handle_royal_refund", {
-                _stripe_event_id: event.id,
-                _reason: `${event.type}${dispute.reason ? `:${dispute.reason}` : ""}`,
-                _stripe_invoice_id: invoiceId,
-                _stripe_payment_intent_id: paymentIntentId,
-                _stripe_charge_id: chargeId,
-                _new_status: newStatus,
-              });
-              if (error) console.error(`[stripe-webhook] handle_royal_refund (dispute) failed: ${error.message}`);
-              else console.log(`[stripe-webhook] dispute ${event.type} → status=${newStatus} charge=${chargeId}`);
-            }
+            console.log(`[stripe-webhook] dispute closed with status=${dispute.status} — no-op`);
           }
         }
       } catch (e) {
