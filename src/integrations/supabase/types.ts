@@ -1876,6 +1876,7 @@ export type Database = {
           granted_at: string
           id: string
           metadata: Json
+          paid_amount_cents: number | null
           stripe_invoice_id: string | null
           user_id: string
         }
@@ -1883,6 +1884,7 @@ export type Database = {
           granted_at?: string
           id?: string
           metadata?: Json
+          paid_amount_cents?: number | null
           stripe_invoice_id?: string | null
           user_id: string
         }
@@ -1890,6 +1892,7 @@ export type Database = {
           granted_at?: string
           id?: string
           metadata?: Json
+          paid_amount_cents?: number | null
           stripe_invoice_id?: string | null
           user_id?: string
         }
@@ -6020,16 +6023,28 @@ export type Database = {
         Args: { _user_id: string }
         Returns: undefined
       }
-      grant_royal_monthly_benefits: {
-        Args: {
-          _period_end: string
-          _period_start: string
-          _stripe_event_id: string
-          _stripe_invoice_id: string
-          _user_id: string
-        }
-        Returns: Json
-      }
+      grant_royal_monthly_benefits:
+        | {
+            Args: {
+              _period_end: string
+              _period_start: string
+              _stripe_event_id: string
+              _stripe_invoice_id: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _paid_amount_cents?: number
+              _period_end: string
+              _period_start: string
+              _stripe_event_id: string
+              _stripe_invoice_id: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       has_active_boost: {
         Args: { _boost_type: string; _user_id: string }
         Returns: boolean
@@ -6470,6 +6485,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      revoke_founder_for_refund: {
+        Args: { _reason: string; _stripe_invoice_id: string; _user_id: string }
+        Returns: Json
       }
       royal_entitlements: { Args: never; Returns: Json }
       royal_pass_daily_boost_status: { Args: never; Returns: Json }
