@@ -12,11 +12,11 @@ import {
 } from "@/lib/battleHighlight";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Crown, Eye, Gift, Loader2, Trophy } from "lucide-react";
+import { BarChart3, Crown, Eye, Gift, Loader2, Trophy, type LucideIcon } from "lucide-react";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 
 function Stat({ icon: Icon, label, value }: {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   label: string;
   value: string | number;
 }) {
