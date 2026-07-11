@@ -640,33 +640,35 @@ export default function RoyalPassCard() {
         </div>
       </div>
 
-      {/* TESTIMONIALS */}
+      {/* WHAT ROYAL IS DESIGNED FOR — honest, no fabricated testimonials */}
       <div className="space-y-3">
-        <SectionTitle kicker="Members are winning">What Royals are saying</SectionTitle>
+        <SectionTitle kicker="Built for">What Royal is designed for</SectionTitle>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-          {TESTIMONIALS.map((t, i) => (
-            <div
-              key={t.name}
-              className="royal-card p-3 space-y-2 animate-fade-in"
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <div className="flex items-center gap-2">
-                <div className="size-7 rounded-full bg-gradient-gold flex items-center justify-center text-primary-foreground">
-                  <Crown size={12} />
+          {[
+            { icon: TrendingUp, title: "Serious creators", body: "You post regularly and want your best content to compound faster." },
+            { icon: Swords, title: "Battlers", body: "You want a visible Royal identity in Live Battles and comments." },
+            { icon: Shield, title: "Crown holders", body: "You want a way to defend key wins without buying one-off boosts." },
+          ].map((t, i) => {
+            const Icon = t.icon;
+            return (
+              <div
+                key={t.title}
+                className="royal-card p-3 space-y-2 animate-fade-in"
+                style={{ animationDelay: `${i * 80}ms` }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="size-7 rounded-full bg-gradient-gold flex items-center justify-center text-primary-foreground">
+                    <Icon size={12} />
+                  </div>
+                  <div className="text-xs font-bold text-gold">{t.title}</div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold text-gold truncate">{t.name}</div>
-                  <div className="text-[9px] text-muted-foreground">{t.crown} 👑 score</div>
-                </div>
+                <p className="text-[11px] leading-snug text-muted-foreground">{t.body}</p>
               </div>
-              <p className="text-[11px] leading-snug text-muted-foreground italic">"{t.quote}"</p>
-              <div className="flex gap-0.5 text-gold text-xs">
-                {"★★★★★".split("").map((s, j) => <span key={j}>{s}</span>)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
+
 
       {/* COMPARISON */}
       <div className="space-y-3">
