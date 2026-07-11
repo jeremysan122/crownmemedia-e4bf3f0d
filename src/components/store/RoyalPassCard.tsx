@@ -14,11 +14,27 @@ interface Plan {
   interval: string;
 }
 
-const PERKS = [
-  { icon: Zap, label: "Daily Royal Boost (1.5× Crown Score)" },
-  { icon: Shield, label: "Permanent Crown Shield" },
-  { icon: Sparkles, label: "Exclusive royal-tier profile glow" },
-  { icon: Crown, label: "Priority placement in regional feeds" },
+const PERKS: Array<{ icon: typeof Zap; label: string; detail: string }> = [
+  {
+    icon: Zap,
+    label: "Daily Royal Boost",
+    detail: "Multiply one post's Crown Score by 1.5× every day for 24 hours — stack it on your best content to climb the leaderboards faster.",
+  },
+  {
+    icon: Shield,
+    label: "Permanent Crown Shield",
+    detail: "Keep your crowns safe from being dethroned overnight. Your rank sticks around even on your slower days.",
+  },
+  {
+    icon: Sparkles,
+    label: "Royal-tier profile glow",
+    detail: "A gold-accented avatar ring and glow that shows up everywhere your profile appears — in comments, battles, and the feed.",
+  },
+  {
+    icon: Crown,
+    label: "Priority regional placement",
+    detail: "Your posts get prioritized in your city and country feeds so more of the right people see (and vote on) your content.",
+  },
 ];
 
 export default function RoyalPassCard() {
@@ -97,16 +113,21 @@ export default function RoyalPassCard() {
           </span>
         </div>
 
-        <ul className="relative space-y-2">
+        <ul className="relative space-y-3">
           {PERKS.map((p) => {
             const Icon = p.icon;
             return (
-              <li key={p.label} className="flex items-center gap-3 text-sm">
-                <div className="size-7 rounded-full bg-gold/20 flex items-center justify-center text-gold">
+              <li key={p.label} className="flex items-start gap-3 text-sm">
+                <div className="size-8 rounded-full bg-gold/20 flex items-center justify-center text-gold shrink-0 mt-0.5">
                   <Icon size={14} />
                 </div>
-                <span className="flex-1">{p.label}</span>
-                <Check size={14} className="text-emerald-500" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-foreground">{p.label}</span>
+                    <Check size={13} className="text-emerald-500 shrink-0" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">{p.detail}</p>
+                </div>
               </li>
             );
           })}
@@ -165,16 +186,21 @@ export default function RoyalPassCard() {
             <p className="relative text-xs text-muted-foreground">{plan.description}</p>
           )}
 
-          <ul className="relative space-y-2">
+          <ul className="relative space-y-3">
             {PERKS.map((p) => {
               const Icon = p.icon;
               return (
-                <li key={p.label} className="flex items-center gap-3 text-sm">
-                  <div className="size-7 rounded-full bg-muted/40 flex items-center justify-center text-gold">
+                <li key={p.label} className="flex items-start gap-3 text-sm">
+                  <div className="size-8 rounded-full bg-muted/40 flex items-center justify-center text-gold shrink-0 mt-0.5">
                     <Icon size={14} />
                   </div>
-                  <span className="flex-1">{p.label}</span>
-                  <Check size={14} className="text-emerald-500/70" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground">{p.label}</span>
+                      <Check size={13} className="text-emerald-500/70 shrink-0" />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">{p.detail}</p>
+                  </div>
                 </li>
               );
             })}
