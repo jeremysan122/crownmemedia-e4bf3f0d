@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.run_crown_score_guard_selftest() TO authenticated, service_role, postgres;
