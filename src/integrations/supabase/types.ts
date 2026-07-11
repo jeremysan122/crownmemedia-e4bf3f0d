@@ -1876,7 +1876,13 @@ export type Database = {
           granted_at: string
           id: string
           metadata: Json
+          original_granted_at: string | null
           paid_amount_cents: number | null
+          qualifying_invoice_id: string | null
+          revoked_at: string | null
+          revoked_reason: string | null
+          revoked_stripe_event_id: string | null
+          status: string
           stripe_invoice_id: string | null
           user_id: string
         }
@@ -1884,7 +1890,13 @@ export type Database = {
           granted_at?: string
           id?: string
           metadata?: Json
+          original_granted_at?: string | null
           paid_amount_cents?: number | null
+          qualifying_invoice_id?: string | null
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          revoked_stripe_event_id?: string | null
+          status?: string
           stripe_invoice_id?: string | null
           user_id: string
         }
@@ -1892,7 +1904,13 @@ export type Database = {
           granted_at?: string
           id?: string
           metadata?: Json
+          original_granted_at?: string | null
           paid_amount_cents?: number | null
+          qualifying_invoice_id?: string | null
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          revoked_stripe_event_id?: string | null
+          status?: string
           stripe_invoice_id?: string | null
           user_id?: string
         }
@@ -1900,7 +1918,7 @@ export type Database = {
           {
             foreignKeyName: "founder_grants_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -6023,28 +6041,25 @@ export type Database = {
         Args: { _user_id: string }
         Returns: undefined
       }
-      grant_royal_monthly_benefits:
-        | {
-            Args: {
-              _period_end: string
-              _period_start: string
-              _stripe_event_id: string
-              _stripe_invoice_id: string
-              _user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _paid_amount_cents?: number
-              _period_end: string
-              _period_start: string
-              _stripe_event_id: string
-              _stripe_invoice_id: string
-              _user_id: string
-            }
-            Returns: Json
-          }
+      grant_royal_monthly_benefits: {
+        Args: {
+          _paid_amount_cents?: number
+          _period_end: string
+          _period_start: string
+          _stripe_event_id: string
+          _stripe_invoice_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
+      handle_royal_refund: {
+        Args: {
+          _reason?: string
+          _stripe_event_id: string
+          _stripe_invoice_id: string
+        }
+        Returns: Json
+      }
       has_active_boost: {
         Args: { _boost_type: string; _user_id: string }
         Returns: boolean
@@ -6488,6 +6503,15 @@ export type Database = {
       }
       revoke_founder_for_refund: {
         Args: { _reason: string; _stripe_invoice_id: string; _user_id: string }
+        Returns: Json
+      }
+      revoke_royal_founder: {
+        Args: {
+          _actor_id?: string
+          _reason: string
+          _stripe_event_id?: string
+          _user_id: string
+        }
         Returns: Json
       }
       royal_entitlements: { Args: never; Returns: Json }

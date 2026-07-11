@@ -288,23 +288,57 @@ Deno.serve(async (req) => {
             const line = invoice.lines?.data?.[0];
             const periodStart = line?.period?.start ?? sub.items?.data?.[0]?.current_period_start ?? sub.current_period_start;
             const periodEnd = line?.period?.end ?? sub.items?.data?.[0]?.current_period_end ?? sub.current_period_end;
-            if (periodStart && periodEnd) {
+            const paidCents = Number(invoice.amount_paid ?? invoice.amount_due ?? 0);
+            if (periodStart && periodEnd && paidCents > 0) {
               const { error: grantErr } = await supabase.rpc("grant_royal_monthly_benefits", {
                 _user_id: userId,
                 _stripe_event_id: event.id,
                 _stripe_invoice_id: invoice.id,
                 _period_start: new Date(periodStart * 1000).toISOString(),
                 _period_end: new Date(periodEnd * 1000).toISOString(),
+                _paid_amount_cents: paidCents,
               });
               if (grantErr) {
                 console.error(`[stripe-webhook] grant_royal_monthly_benefits failed for ${userId}: ${grantErr.message}`);
               } else {
-                console.log(`[stripe-webhook] royal monthly benefits granted user=${userId}`);
+                console.log(`[stripe-webhook] royal monthly benefits granted user=${userId} paid=${paidCents}`);
               }
+            } else {
+              console.warn(`[stripe-webhook] invoice.paid skipped — missing period or zero amount (user=${userId})`);
             }
           }
         } catch (e) {
           console.error(`[stripe-webhook] invoice.paid processing error: ${(e as Error).message}`);
+        }
+      }
+    }
+
+    // Refund / chargeback — revoke Founder cosmetics, preserve grant ledger, audit trail.
+    if (
+      event.type === "charge.refunded" ||
+      event.type === "charge.dispute.created" ||
+      event.type === "charge.dispute.funds_withdrawn"
+    ) {
+      const charge = event.data.object as any;
+      const invoiceId = typeof charge.invoice === "string" ? charge.invoice : charge.invoice?.id;
+      const isFullRefund =
+        event.type === "charge.refunded"
+          ? Number(charge.amount_refunded ?? 0) >= Number(charge.amount ?? 0)
+          : true;
+      if (invoiceId && isFullRefund) {
+        try {
+          const { error: refundErr } = await supabase.rpc("handle_royal_refund", {
+            _stripe_event_id: event.id,
+            _stripe_invoice_id: invoiceId,
+            _reason: event.type,
+          });
+          if (refundErr) {
+            console.error(`[stripe-webhook] handle_royal_refund failed: ${refundErr.message}`);
+          } else {
+            console.log(`[stripe-webhook] refund processed invoice=${invoiceId}`);
+          }
+        } catch (e) {
+          console.error(`[stripe-webhook] refund handler error: ${(e as Error).message}`);
         }
       }
     }
