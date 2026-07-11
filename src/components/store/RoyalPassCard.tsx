@@ -1,14 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Crown, Sparkles, Zap, Shield, Check, Loader2, TrendingUp, Gift, Palette,
   Star, Rocket, Percent, FlaskConical, CalendarClock, Trophy,
-  BadgeCheck, Lock, MapPin, Flame, Swords, ArrowRight,
+  BadgeCheck, Lock, MapPin, Flame, Swords, ArrowRight, Users, Clock,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
+import { useRoyalEntitlements, useFounderStatus } from "@/hooks/useRoyalEntitlements";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
+
 
 interface Plan {
   id: string;
