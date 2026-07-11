@@ -247,25 +247,32 @@ export default function RoyalPassCard() {
             Member
           </span>
         </div>
-        <ul className="relative space-y-3">
-          {BENEFITS.map((p) => {
-            const Icon = p.icon;
+        {/* Real, server-backed balances */}
+        <div className="relative grid grid-cols-3 gap-2">
+          {[
+            { icon: Shield, label: "Shields", value: `${entitlements.shields_remaining}/${entitlements.shields_granted || 5}`, sub: "this month" },
+            { icon: Rocket, label: "Boost tokens", value: entitlements.boost_tokens.toLocaleString(), sub: "available" },
+            { icon: Crown, label: "Founder", value: entitlements.is_founder ? "Yes" : "No", sub: entitlements.is_founder ? "for life" : "—" },
+          ].map((s) => {
+            const Icon = s.icon;
             return (
-              <li key={p.label} className="flex items-start gap-3 text-sm">
-                <div className="size-8 rounded-full bg-gold/20 flex items-center justify-center text-gold shrink-0 mt-0.5">
-                  <Icon size={14} />
+              <div key={s.label} className="rounded-xl bg-background/60 border border-gold/20 p-3 text-center">
+                <div className="size-7 mx-auto rounded-lg bg-gold/15 text-gold flex items-center justify-center mb-1">
+                  <Icon size={13} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-foreground">{p.label}</span>
-                    <Check size={13} className="text-emerald-500 shrink-0" />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">{p.detail}</p>
-                </div>
-              </li>
+                <div className="font-display text-lg text-gold leading-none">{s.value}</div>
+                <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-1">{s.label}</div>
+                <div className="text-[9px] text-muted-foreground/70">{s.sub}</div>
+              </div>
             );
           })}
-        </ul>
+        </div>
+        {entitlements.period_end && (
+          <p className="relative text-[10px] text-center text-muted-foreground/80">
+            Shields reset on {new Date(entitlements.period_end).toLocaleDateString(undefined, { month: "short", day: "numeric" })}. Unused shields do not roll over.
+          </p>
+        )}
+
         <div className="relative flex gap-2 pt-2 border-t border-border/50">
           <Link to="/wallet" className="flex-1 h-9 rounded-full bg-muted/40 border border-border text-xs font-bold uppercase tracking-wider flex items-center justify-center hover:bg-muted/60">
             View billing
