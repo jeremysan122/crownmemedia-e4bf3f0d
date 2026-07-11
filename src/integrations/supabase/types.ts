@@ -4391,6 +4391,7 @@ export type Database = {
           id: string
           period_end: string
           period_start: string
+          royal_pass_grant_id: string | null
           shields_granted: number
           shields_used: number
           updated_at: string
@@ -4401,6 +4402,7 @@ export type Database = {
           id?: string
           period_end: string
           period_start: string
+          royal_pass_grant_id?: string | null
           shields_granted?: number
           shields_used?: number
           updated_at?: string
@@ -4411,12 +4413,20 @@ export type Database = {
           id?: string
           period_end?: string
           period_start?: string
+          royal_pass_grant_id?: string | null
           shields_granted?: number
           shields_used?: number
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "royal_pass_shield_allowances_grant_fk"
+            columns: ["royal_pass_grant_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_grants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "royal_pass_shield_allowances_user_id_fkey"
             columns: ["user_id"]
@@ -6138,26 +6148,16 @@ export type Database = {
         }
         Returns: Json
       }
-      handle_royal_dispute_reinstated:
-        | {
-            Args: {
-              _stripe_charge_id?: string
-              _stripe_event_id: string
-              _stripe_invoice_id?: string
-              _stripe_payment_intent_id?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _stripe_charge_id?: string
-              _stripe_dispute_id?: string
-              _stripe_event_id: string
-              _stripe_invoice_id?: string
-              _stripe_payment_intent_id?: string
-            }
-            Returns: Json
-          }
+      handle_royal_dispute_reinstated: {
+        Args: {
+          _stripe_charge_id?: string
+          _stripe_dispute_id?: string
+          _stripe_event_id: string
+          _stripe_invoice_id?: string
+          _stripe_payment_intent_id?: string
+        }
+        Returns: Json
+      }
       handle_royal_dispute_won: {
         Args: {
           _stripe_charge_id?: string
@@ -6624,27 +6624,17 @@ export type Database = {
         Args: { _reason: string; _stripe_invoice_id: string; _user_id: string }
         Returns: Json
       }
-      revoke_royal_founder:
-        | {
-            Args: {
-              _actor_id?: string
-              _reason: string
-              _stripe_event_id: string
-              _user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _actor_id?: string
-              _mode?: string
-              _reason: string
-              _stripe_dispute_id?: string
-              _stripe_event_id: string
-              _user_id: string
-            }
-            Returns: Json
-          }
+      revoke_royal_founder: {
+        Args: {
+          _actor_id?: string
+          _mode?: string
+          _reason: string
+          _stripe_dispute_id?: string
+          _stripe_event_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       royal_entitlements: { Args: never; Returns: Json }
       royal_pass_daily_boost_status: { Args: never; Returns: Json }
       save_push_subscription: {

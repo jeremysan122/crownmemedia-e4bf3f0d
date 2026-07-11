@@ -282,11 +282,11 @@ Deno.serve(async (req) => {
         : invoice.subscription?.id;
       if (subId) {
         try {
-          const sub = await stripe.subscriptions.retrieve(subId);
+          const sub = await stripe.subscriptions.retrieve(subId) as any;
           const kind = sub.metadata?.kind as string | undefined;
           const userId = sub.metadata?.userId || sub.metadata?.user_id;
           if (kind === "royal_pass" && userId) {
-            const line = invoice.lines?.data?.[0];
+            const line = invoice.lines?.data?.[0] as any;
             const periodStart = line?.period?.start ?? sub.items?.data?.[0]?.current_period_start ?? sub.current_period_start;
             const periodEnd = line?.period?.end ?? sub.items?.data?.[0]?.current_period_end ?? sub.current_period_end;
             const paidCents = Number(invoice.amount_paid ?? 0);
@@ -390,7 +390,7 @@ Deno.serve(async (req) => {
         let invoiceId: string | null = null;
         if (chargeId) {
           try {
-            const charge = await stripe.charges.retrieve(chargeId);
+            const charge = await stripe.charges.retrieve(chargeId) as any;
             invoiceId = typeof charge.invoice === "string"
               ? charge.invoice
               : (charge.invoice as any)?.id ?? null;
