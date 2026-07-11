@@ -272,25 +272,31 @@ export default function EditProfile() {
         .filter((l) => l.url.length > 0)
         .slice(0, 3);
 
+      // Only include username in the upsert if the user actually changed it.
+      // Otherwise a case-insensitive uniqueness check can flag the user's own
+      // existing row as a collision and block unrelated edits (e.g. avatar).
+      const nextUsername = username.trim().toLowerCase();
+      const currentUsername = (profile?.username || "").toLowerCase();
+      const usernameChanged = nextUsername !== currentUsername;
+
+      const profilePayload: Record<string, unknown> = {
+        id: uid,
+        first_name: firstName.trim() || null,
+        last_name: lastName.trim() || null,
+        bio: bio.trim().slice(0, 200),
+        city: city.trim(),
+        state: state.trim(),
+        country: country.trim(),
+        profile_photo_url: photoUrl,
+        links: cleanedLinks,
+        pronouns: pronouns.trim() ? pronouns.trim().slice(0, 30) : null,
+        gender: gender || null,
+      };
+      if (usernameChanged) profilePayload.username = nextUsername;
+
       const { error: profileError } = await supabase
         .from("profiles")
-        .upsert(
-          {
-            id: uid,
-            username: username.trim().toLowerCase(),
-            first_name: firstName.trim() || null,
-            last_name: lastName.trim() || null,
-            bio: bio.trim().slice(0, 200),
-            city: city.trim(),
-            state: state.trim(),
-            country: country.trim(),
-            profile_photo_url: photoUrl,
-            links: cleanedLinks,
-            pronouns: pronouns.trim() ? pronouns.trim().slice(0, 30) : null,
-            gender: gender || null,
-          } as any,
-          { onConflict: "id" },
-        );
+        .upsert(profilePayload as any, { onConflict: "id" });
 
       if (profileError) throw profileError;
 
