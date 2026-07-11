@@ -24,7 +24,9 @@ vi.mock("@/components/battles/ChallengeDialog", () => ({
 const buildQuery = (result: any) => {
   const q: any = {
     select: () => q, eq: () => q, order: () => q, limit: () => q,
+    or: () => q, in: () => q, gte: () => q, lte: () => q, is: () => q, not: () => q,
     maybeSingle: () => Promise.resolve(result),
+    single: () => Promise.resolve(result),
     then: (r: any) => Promise.resolve(result).then(r),
   };
   return q;
