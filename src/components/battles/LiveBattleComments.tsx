@@ -411,13 +411,12 @@ export default function LiveBattleComments({
     let data: Row[] | null = null;
     let fetchError: unknown = null;
     try {
-      const res = await supabase
-        .from("live_battle_comments")
-        .select("id, battle_id, user_id, body, created_at, hidden_at")
-        .eq("battle_id", battleId)
-        .lt("created_at", oldest)
-        .order("created_at", { ascending: false })
-        .limit(PAGE);
+      // Wave 7: same block-aware RPC for pagination.
+      const res = await supabase.rpc("get_live_battle_comments", {
+        _battle_id: battleId,
+        _before: oldest,
+        _limit: PAGE,
+      });
       if (res.error) throw res.error;
       data = (res.data as Row[]) ?? [];
     } catch (err) {
