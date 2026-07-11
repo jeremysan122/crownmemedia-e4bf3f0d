@@ -1,14 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Crown, Sparkles, Zap, Shield, Check, Loader2, TrendingUp, Gift, Palette,
   Star, Rocket, Percent, FlaskConical, CalendarClock, Trophy,
-  BadgeCheck, Lock, MapPin, Flame, Swords, ArrowRight,
+  BadgeCheck, Lock, MapPin, Flame, Swords, ArrowRight, Users, Clock,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
+import { useRoyalEntitlements, useFounderStatus } from "@/hooks/useRoyalEntitlements";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
+
 
 interface Plan {
   id: string;
@@ -42,19 +44,19 @@ const BENEFITS: Array<{ icon: typeof Zap; label: string; detail: string }> = [
 ];
 
 const MONTHLY_REWARDS: Array<{ icon: typeof Gift; label: string; sub: string }> = [
-  { icon: Gift, label: "500 FREE Shekels", sub: "Deposited every month" },
-  { icon: Rocket, label: "3 FREE Boost Tokens", sub: "Use them anytime" },
+  { icon: Gift, label: "500 Shekels", sub: "Deposited on renewal" },
+  { icon: Rocket, label: "3 Boost Tokens", sub: "Use them anytime" },
   { icon: Shield, label: "5 Crown Shields", sub: "24h each · defend your wins" },
-  { icon: Palette, label: "Royal Profile Themes", sub: "Members only" },
-  { icon: Crown, label: "Royal Gifts & Reactions", sub: "Exclusive drops" },
-  { icon: Sparkles, label: "Animated Royal Frame", sub: "Gold, always on" },
+  { icon: Sparkles, label: "Animated Royal Frame", sub: "Members only" },
+  { icon: Crown, label: "Royal Chat Badge", sub: "Visible in Live Battles" },
+  { icon: Palette, label: "Royal Profile Glow", sub: "Auto-applied everywhere" },
 ];
 
 const SAVINGS = [
-  { icon: Percent, label: "10% OFF every Shekel purchase" },
+  { icon: Percent, label: "10% off every Shekel purchase" },
   { icon: Star, label: "Early access to new features" },
   { icon: FlaskConical, label: "Priority access to beta releases" },
-  { icon: CalendarClock, label: "Exclusive seasonal collectibles" },
+  { icon: CalendarClock, label: "Seasonal member-only drops" },
 ];
 
 const OUTCOMES = [
@@ -67,26 +69,19 @@ const OUTCOMES = [
 ];
 
 const FOUNDER_PERKS = [
-  { icon: Crown, label: "Founder Royal Badge" },
-  { icon: Sparkles, label: "Exclusive Founder Frame" },
+  { icon: Crown, label: "Founding Royal Badge (kept for life)" },
+  { icon: Sparkles, label: "Exclusive Founder Frame (kept for life)" },
+  { icon: BadgeCheck, label: "\"Founding Royal\" Title (kept for life)" },
   { icon: Trophy, label: "Early Supporter Recognition" },
-  { icon: BadgeCheck, label: "Limited Edition Founder Title" },
 ];
 
 const COSMETICS = [
   { emoji: "👑", label: "Royal Crown Badge" },
-  { emoji: "🌹", label: "Royal Rose Reaction" },
-  { emoji: "💎", label: "Diamond Frame" },
-  { emoji: "🚀", label: "Rocket Boost FX" },
-  { emoji: "🔥", label: "Ember Glow Theme" },
-  { emoji: "⚜️", label: "Fleur Chat Badge" },
+  { emoji: "✨", label: "Royal Profile Glow" },
+  { emoji: "🖼️", label: "Animated Royal Frame" },
+  { emoji: "⚜️", label: "Royal Chat Badge" },
 ];
 
-const TESTIMONIALS = [
-  { name: "@ava.k", quote: "I 3x'd my votes in the first week. The glow gets people to actually stop and look.", crown: 1240 },
-  { name: "@marco", quote: "The monthly shields are clutch — I finally hold my crowns overnight.", crown: 980 },
-  { name: "@lena.rose", quote: "Founder frame is unreal. Feels like I actually built something here.", crown: 1560 },
-];
 
 const COMPARE_ROWS: Array<{ label: string; free: boolean | string; royal: boolean | string }> = [
   { label: "Basic profile", free: true, royal: true },
@@ -172,10 +167,19 @@ function RoyalMockPhone() {
 export default function RoyalPassCard() {
   const { user } = useAuth();
   const pass = useRoyalPass();
+  const entitlements = useRoyalEntitlements();
+  const founder = useFounderStatus();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [subscribing, setSubscribing] = useState<string | null>(null);
   const { openCheckout, checkoutElement } = useStripeCheckout();
   const ctaRef = useRef<HTMLDivElement | null>(null);
+
+  const founderEndLabel = useMemo(() => {
+    if (!founder.status?.end_at) return null;
+    return new Date(founder.status.end_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }, [founder.status?.end_at]);
+
 
   useEffect(() => {
     let cancelled = false;
@@ -193,14 +197,21 @@ export default function RoyalPassCard() {
   }, []);
 
   const subscribe = (plan: Plan) => {
-    if (!user) return;
-    openCheckout({
-      fnName: "create-royal-pass-checkout",
-      extraBody: { plan_id: plan.id },
-      title: plan.name,
-      returnUrl: `${window.location.origin}/store/success?kind=royal_pass`,
-    });
+    if (!user || subscribing) return;
+    setSubscribing(plan.id);
+    try {
+      openCheckout({
+        fnName: "create-royal-pass-checkout",
+        extraBody: { plan_id: plan.id },
+        title: plan.name,
+        returnUrl: `${window.location.origin}/store/success?kind=royal_pass`,
+      });
+    } finally {
+      // openCheckout mounts the dialog synchronously; clear immediately after mount tick
+      setTimeout(() => setSubscribing(null), 800);
+    }
   };
+
 
   const scrollToCta = () => {
     ctaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -236,25 +247,32 @@ export default function RoyalPassCard() {
             Member
           </span>
         </div>
-        <ul className="relative space-y-3">
-          {BENEFITS.map((p) => {
-            const Icon = p.icon;
+        {/* Real, server-backed balances */}
+        <div className="relative grid grid-cols-3 gap-2">
+          {[
+            { icon: Shield, label: "Shields", value: `${entitlements.shields_remaining}/${entitlements.shields_granted || 5}`, sub: "this month" },
+            { icon: Rocket, label: "Boost tokens", value: entitlements.boost_tokens.toLocaleString(), sub: "available" },
+            { icon: Crown, label: "Founder", value: entitlements.is_founder ? "Yes" : "No", sub: entitlements.is_founder ? "for life" : "—" },
+          ].map((s) => {
+            const Icon = s.icon;
             return (
-              <li key={p.label} className="flex items-start gap-3 text-sm">
-                <div className="size-8 rounded-full bg-gold/20 flex items-center justify-center text-gold shrink-0 mt-0.5">
-                  <Icon size={14} />
+              <div key={s.label} className="rounded-xl bg-background/60 border border-gold/20 p-3 text-center">
+                <div className="size-7 mx-auto rounded-lg bg-gold/15 text-gold flex items-center justify-center mb-1">
+                  <Icon size={13} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-foreground">{p.label}</span>
-                    <Check size={13} className="text-emerald-500 shrink-0" />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">{p.detail}</p>
-                </div>
-              </li>
+                <div className="font-display text-lg text-gold leading-none">{s.value}</div>
+                <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-1">{s.label}</div>
+                <div className="text-[9px] text-muted-foreground/70">{s.sub}</div>
+              </div>
             );
           })}
-        </ul>
+        </div>
+        {entitlements.period_end && (
+          <p className="relative text-[10px] text-center text-muted-foreground/80">
+            Shields reset on {new Date(entitlements.period_end).toLocaleDateString(undefined, { month: "short", day: "numeric" })}. Unused shields do not roll over.
+          </p>
+        )}
+
         <div className="relative flex gap-2 pt-2 border-t border-border/50">
           <Link to="/wallet" className="flex-1 h-9 rounded-full bg-muted/40 border border-border text-xs font-bold uppercase tracking-wider flex items-center justify-center hover:bg-muted/60">
             View billing
@@ -461,30 +479,37 @@ export default function RoyalPassCard() {
         </div>
       </div>
 
-      {/* WHY ROYAL MEMBERS WIN MORE — social-proof style stats */}
+      {/* HOW ROYAL HELPS YOU STAND OUT — honest, feature-based */}
       <div className="royal-card p-5 space-y-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-gold/10 to-transparent pointer-events-none" />
-        <SectionTitle kicker="Members outperform">Why Royal Members Win More</SectionTitle>
-        <div className="relative grid grid-cols-3 gap-2">
+        <SectionTitle kicker="Designed to help you">How Royal helps you stand out</SectionTitle>
+        <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-2">
           {[
-            { stat: "3.2×", label: "More profile visits" },
-            { stat: "+47%", label: "More votes earned" },
-            { stat: "5×", label: "Higher discovery" },
-          ].map((s, i) => (
-            <div
-              key={s.label}
-              className="rounded-xl bg-background/60 border border-gold/20 p-3 text-center animate-fade-in"
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <div className="font-display text-2xl text-gold leading-none">{s.stat}</div>
-              <div className="text-[10px] text-muted-foreground mt-1 leading-tight">{s.label}</div>
-            </div>
-          ))}
+            { icon: Rocket, label: "Daily 1.5× Boost", detail: "One post gets a 24-hour Crown Score multiplier every day." },
+            { icon: Shield, label: "5 Shields / month", detail: "Protect a crowned post for 24 hours, up to five times each month." },
+            { icon: Sparkles, label: "Royal identity", detail: "Auto-applied glow, animated frame, and chat badge." },
+          ].map((s, i) => {
+            const Icon = s.icon;
+            return (
+              <div
+                key={s.label}
+                className="rounded-xl bg-background/60 border border-gold/20 p-3 text-center animate-fade-in space-y-1"
+                style={{ animationDelay: `${i * 80}ms` }}
+              >
+                <div className="size-8 mx-auto rounded-lg bg-gradient-gold flex items-center justify-center text-primary-foreground gold-shadow">
+                  <Icon size={14} />
+                </div>
+                <div className="font-display text-sm text-gold leading-tight">{s.label}</div>
+                <div className="text-[10px] text-muted-foreground leading-tight">{s.detail}</div>
+              </div>
+            );
+          })}
         </div>
         <p className="relative text-[10px] text-center text-muted-foreground/80 pt-2 border-t border-border/40">
           Royal Pass rewards progression and prestige — never guaranteed wins. Fair competition, always.
         </p>
       </div>
+
 
       {/* FOUNDING MEMBER */}
       <div className="royal-card p-5 space-y-4 relative overflow-hidden border-gold/50">
@@ -493,15 +518,29 @@ export default function RoyalPassCard() {
         <GoldParticles count={10} />
         <div className="relative text-center space-y-1">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/25 border border-gold/50 text-[10px] font-bold uppercase tracking-widest text-gold">
-            <Lock size={11} /> Limited Time · Launch Only
+            <Lock size={11} />
+            {founder.status?.active && founder.status.remaining > 0
+              ? `${founder.status.remaining.toLocaleString()} spots left · ends ${founderEndLabel ?? "soon"}`
+              : "Founder program closed"}
           </div>
           <h3 className="font-display text-2xl text-gold flex items-center justify-center gap-2">
             <Flame size={20} className="text-gold" /> Founding Royal Member
           </h3>
           <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-            Join now and permanently keep these founder-only perks — never sold again.
+            {founder.status?.active
+              ? "Founder Badge, Frame, and Title are granted for life on your first paid month — even if you later cancel."
+              : "The Founder window has closed. You can still subscribe to Royal Pass with all standard perks."}
           </p>
+          {founder.status && (
+            <div className="flex items-center justify-center gap-3 pt-1 text-[10px] text-muted-foreground/80">
+              <span className="inline-flex items-center gap-1"><Users size={11} /> {founder.status.granted.toLocaleString()} / {founder.status.cap.toLocaleString()} claimed</span>
+              {founderEndLabel && (
+                <span className="inline-flex items-center gap-1"><Clock size={11} /> Ends {founderEndLabel}</span>
+              )}
+            </div>
+          )}
         </div>
+
         <div className="relative grid grid-cols-2 gap-2.5">
           {FOUNDER_PERKS.map((p, i) => {
             const Icon = p.icon;
@@ -550,7 +589,7 @@ export default function RoyalPassCard() {
             <Swords size={20} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] uppercase tracking-widest text-gold/70 font-bold">Live Battles</div>
+            <div className="flex items-center gap-2"><span className="text-[10px] uppercase tracking-widest text-gold/70 font-bold">Live Battles</span><span className="text-[8px] px-1.5 py-0.5 rounded bg-muted/60 border border-border text-muted-foreground uppercase tracking-wider">Preview</span></div>
             <h3 className="font-display text-xl text-gold leading-tight">Dominate the arena</h3>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               Royal cosmetics, animated chat badges, and priority gift reactions make your presence unmissable in every live battle.
@@ -587,7 +626,7 @@ export default function RoyalPassCard() {
             <MapPin size={20} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] uppercase tracking-widest text-gold/70 font-bold">Crown Map</div>
+            <div className="flex items-center gap-2"><span className="text-[10px] uppercase tracking-widest text-gold/70 font-bold">Crown Map</span><span className="text-[8px] px-1.5 py-0.5 rounded bg-muted/60 border border-border text-muted-foreground uppercase tracking-wider">Preview</span></div>
             <h3 className="font-display text-xl text-gold leading-tight">Stand out on the map</h3>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               Royal pins glow gold on the Crown Map — visible across your city, state, and country.
@@ -608,7 +647,11 @@ export default function RoyalPassCard() {
 
       {/* ROYAL LEADERBOARD PREVIEW */}
       <div className="royal-card p-5 space-y-3 relative overflow-hidden">
-        <SectionTitle kicker="Rankings">Royals climb faster</SectionTitle>
+        <div className="flex items-center justify-center gap-2">
+          <SectionTitle kicker="Rankings">Royals stand out on the leaderboard</SectionTitle>
+        </div>
+        <div className="text-center -mt-2"><span className="text-[9px] px-1.5 py-0.5 rounded bg-muted/60 border border-border text-muted-foreground uppercase tracking-wider">Illustrative preview</span></div>
+
         <div className="space-y-1.5">
           {[
             { rank: 1, name: "@royal_you", score: "1,240", royal: true, up: "+3" },
@@ -638,33 +681,35 @@ export default function RoyalPassCard() {
         </div>
       </div>
 
-      {/* TESTIMONIALS */}
+      {/* WHAT ROYAL IS DESIGNED FOR — honest, no fabricated testimonials */}
       <div className="space-y-3">
-        <SectionTitle kicker="Members are winning">What Royals are saying</SectionTitle>
+        <SectionTitle kicker="Built for">What Royal is designed for</SectionTitle>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-          {TESTIMONIALS.map((t, i) => (
-            <div
-              key={t.name}
-              className="royal-card p-3 space-y-2 animate-fade-in"
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <div className="flex items-center gap-2">
-                <div className="size-7 rounded-full bg-gradient-gold flex items-center justify-center text-primary-foreground">
-                  <Crown size={12} />
+          {[
+            { icon: TrendingUp, title: "Serious creators", body: "You post regularly and want your best content to compound faster." },
+            { icon: Swords, title: "Battlers", body: "You want a visible Royal identity in Live Battles and comments." },
+            { icon: Shield, title: "Crown holders", body: "You want a way to defend key wins without buying one-off boosts." },
+          ].map((t, i) => {
+            const Icon = t.icon;
+            return (
+              <div
+                key={t.title}
+                className="royal-card p-3 space-y-2 animate-fade-in"
+                style={{ animationDelay: `${i * 80}ms` }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="size-7 rounded-full bg-gradient-gold flex items-center justify-center text-primary-foreground">
+                    <Icon size={12} />
+                  </div>
+                  <div className="text-xs font-bold text-gold">{t.title}</div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold text-gold truncate">{t.name}</div>
-                  <div className="text-[9px] text-muted-foreground">{t.crown} 👑 score</div>
-                </div>
+                <p className="text-[11px] leading-snug text-muted-foreground">{t.body}</p>
               </div>
-              <p className="text-[11px] leading-snug text-muted-foreground italic">"{t.quote}"</p>
-              <div className="flex gap-0.5 text-gold text-xs">
-                {"★★★★★".split("").map((s, j) => <span key={j}>{s}</span>)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
+
 
       {/* COMPARISON */}
       <div className="space-y-3">
@@ -705,23 +750,30 @@ export default function RoyalPassCard() {
         <GoldParticles count={14} />
         <div className="relative text-center space-y-2">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/20 border border-gold/40 text-[10px] font-bold uppercase tracking-widest text-gold mb-1">
-            <Flame size={11} /> Founder pricing · Limited time
+            <Flame size={11} />
+            {founder.status?.active && founder.status.remaining > 0
+              ? `Founder window · ${founder.status.remaining.toLocaleString()} spots left`
+              : "Royal Pass · Monthly membership"}
           </div>
           <div className="font-display text-5xl md:text-6xl text-gold leading-none">
             ${Number(primaryPlan.usd).toFixed(2)}
             <span className="text-base text-muted-foreground font-sans">/{primaryPlan.interval}</span>
           </div>
           <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-            Premium status, monthly rewards, 5 Crown Shields, and founder-only perks — locked in for life when you join now.
+            Premium identity, 5 monthly Crown Shields (24h each), 500 Shekels, 3 Boost Tokens, and — during the Founder window — a Badge, Frame, and Title kept for life.
           </p>
         </div>
         <button
           onClick={() => subscribe(primaryPlan)}
-          className="group relative w-full py-4 rounded-2xl bg-gradient-gold text-primary-foreground text-base font-bold gold-shadow active:scale-[0.98] hover:scale-[1.01] transition-transform flex items-center justify-center gap-2 overflow-hidden"
+          disabled={subscribing !== null || !user}
+          className="group relative w-full py-4 rounded-2xl bg-gradient-gold text-primary-foreground text-base font-bold gold-shadow active:scale-[0.98] hover:scale-[1.01] transition-transform flex items-center justify-center gap-2 overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed"
         >
           <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-          <Crown size={18} className="relative" /> <span className="relative">Become Royal</span>
+          {subscribing === primaryPlan.id
+            ? <><Loader2 size={16} className="relative animate-spin" /> <span className="relative">Opening checkout…</span></>
+            : <><Crown size={18} className="relative" /> <span className="relative">{user ? "Become Royal" : "Sign in to join"}</span></>}
         </button>
+
         <div className="relative grid grid-cols-3 gap-2 text-[10px] text-center text-muted-foreground pt-1">
           <div className="flex flex-col items-center gap-1">
             <Shield size={14} className="text-gold" />

@@ -468,6 +468,44 @@ export type Database = {
         }
         Relationships: []
       }
+      boost_tokens_ledger: {
+        Row: {
+          created_at: string
+          delta: number
+          id: string
+          metadata: Json
+          reason: string
+          reference_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          id?: string
+          metadata?: Json
+          reason: string
+          reference_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          id?: string
+          metadata?: Json
+          reason?: string
+          reference_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boost_tokens_ledger_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boosts: {
         Row: {
           active: boolean
@@ -1832,6 +1870,71 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      founder_grants: {
+        Row: {
+          granted_at: string
+          id: string
+          metadata: Json
+          stripe_invoice_id: string | null
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          id?: string
+          metadata?: Json
+          stripe_invoice_id?: string | null
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          id?: string
+          metadata?: Json
+          stripe_invoice_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "founder_grants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      founder_program_config: {
+        Row: {
+          active: boolean
+          end_at: string
+          founder_frame_variant: string
+          founder_title: string
+          id: number
+          member_cap: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          end_at: string
+          founder_frame_variant?: string
+          founder_title?: string
+          id?: number
+          member_cap: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          end_at?: string
+          founder_frame_variant?: string
+          founder_title?: string
+          id?: number
+          member_cap?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       geo_public_centers: {
         Row: {
@@ -3552,6 +3655,7 @@ export type Database = {
           banner_url: string | null
           battle_wins: number
           bio: string | null
+          boost_tokens_balance: number
           captions_default_on: boolean
           city: string | null
           country: string | null
@@ -3569,6 +3673,8 @@ export type Database = {
           first_name: string | null
           followers_count: number
           following_count: number
+          founder_granted_at: string | null
+          founder_title: string | null
           gender: Database["public"]["Enums"]["gender_type"] | null
           hide_comments: boolean
           hide_likes: boolean
@@ -3576,6 +3682,7 @@ export type Database = {
           high_contrast: boolean
           id: string
           is_banned: boolean
+          is_founder: boolean
           is_private: boolean
           is_suspended: boolean
           larger_text: boolean
@@ -3593,6 +3700,7 @@ export type Database = {
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           reduce_motion: boolean
+          royal_frame_variant: string | null
           sensitive_content_mode: string
           state: string | null
           tag_review_required: boolean
@@ -3622,6 +3730,7 @@ export type Database = {
           banner_url?: string | null
           battle_wins?: number
           bio?: string | null
+          boost_tokens_balance?: number
           captions_default_on?: boolean
           city?: string | null
           country?: string | null
@@ -3639,6 +3748,8 @@ export type Database = {
           first_name?: string | null
           followers_count?: number
           following_count?: number
+          founder_granted_at?: string | null
+          founder_title?: string | null
           gender?: Database["public"]["Enums"]["gender_type"] | null
           hide_comments?: boolean
           hide_likes?: boolean
@@ -3646,6 +3757,7 @@ export type Database = {
           high_contrast?: boolean
           id: string
           is_banned?: boolean
+          is_founder?: boolean
           is_private?: boolean
           is_suspended?: boolean
           larger_text?: boolean
@@ -3663,6 +3775,7 @@ export type Database = {
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           reduce_motion?: boolean
+          royal_frame_variant?: string | null
           sensitive_content_mode?: string
           state?: string | null
           tag_review_required?: boolean
@@ -3692,6 +3805,7 @@ export type Database = {
           banner_url?: string | null
           battle_wins?: number
           bio?: string | null
+          boost_tokens_balance?: number
           captions_default_on?: boolean
           city?: string | null
           country?: string | null
@@ -3709,6 +3823,8 @@ export type Database = {
           first_name?: string | null
           followers_count?: number
           following_count?: number
+          founder_granted_at?: string | null
+          founder_title?: string | null
           gender?: Database["public"]["Enums"]["gender_type"] | null
           hide_comments?: boolean
           hide_likes?: boolean
@@ -3716,6 +3832,7 @@ export type Database = {
           high_contrast?: boolean
           id?: string
           is_banned?: boolean
+          is_founder?: boolean
           is_private?: boolean
           is_suspended?: boolean
           larger_text?: boolean
@@ -3733,6 +3850,7 @@ export type Database = {
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           reduce_motion?: boolean
+          royal_frame_variant?: string | null
           sensitive_content_mode?: string
           state?: string | null
           tag_review_required?: boolean
@@ -4103,6 +4221,59 @@ export type Database = {
         }
         Relationships: []
       }
+      royal_pass_grants: {
+        Row: {
+          boost_tokens_granted: number
+          created_at: string
+          founder_granted: boolean
+          id: string
+          metadata: Json
+          period_end: string
+          period_start: string
+          shekels_granted: number
+          shields_granted: number
+          stripe_event_id: string | null
+          stripe_invoice_id: string | null
+          user_id: string
+        }
+        Insert: {
+          boost_tokens_granted?: number
+          created_at?: string
+          founder_granted?: boolean
+          id?: string
+          metadata?: Json
+          period_end: string
+          period_start: string
+          shekels_granted?: number
+          shields_granted?: number
+          stripe_event_id?: string | null
+          stripe_invoice_id?: string | null
+          user_id: string
+        }
+        Update: {
+          boost_tokens_granted?: number
+          created_at?: string
+          founder_granted?: boolean
+          id?: string
+          metadata?: Json
+          period_end?: string
+          period_start?: string
+          shekels_granted?: number
+          shields_granted?: number
+          stripe_event_id?: string | null
+          stripe_invoice_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "royal_pass_grants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       royal_pass_plans: {
         Row: {
           active: boolean
@@ -4141,6 +4312,47 @@ export type Database = {
           usd?: number
         }
         Relationships: []
+      }
+      royal_pass_shield_allowances: {
+        Row: {
+          granted_at: string
+          id: string
+          period_end: string
+          period_start: string
+          shields_granted: number
+          shields_used: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          id?: string
+          period_end: string
+          period_start: string
+          shields_granted?: number
+          shields_used?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          shields_granted?: number
+          shields_used?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "royal_pass_shield_allowances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       royal_pass_subscriptions: {
         Row: {
@@ -5277,6 +5489,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_set_founder_program: {
+        Args: { _active: boolean; _end_at: string; _member_cap: number }
+        Returns: Json
+      }
       admin_set_post_removed: {
         Args: { _post_id: string; _removed: boolean }
         Returns: undefined
@@ -5567,6 +5783,7 @@ export type Database = {
         Args: { _creator_id: string }
         Returns: undefined
       }
+      founder_program_public_status: { Args: never; Returns: Json }
       get_battle_official_result: {
         Args: { _battle_id: string }
         Returns: Json
@@ -5700,6 +5917,7 @@ export type Database = {
           banner_url: string | null
           battle_wins: number
           bio: string | null
+          boost_tokens_balance: number
           captions_default_on: boolean
           city: string | null
           country: string | null
@@ -5717,6 +5935,8 @@ export type Database = {
           first_name: string | null
           followers_count: number
           following_count: number
+          founder_granted_at: string | null
+          founder_title: string | null
           gender: Database["public"]["Enums"]["gender_type"] | null
           hide_comments: boolean
           hide_likes: boolean
@@ -5724,6 +5944,7 @@ export type Database = {
           high_contrast: boolean
           id: string
           is_banned: boolean
+          is_founder: boolean
           is_private: boolean
           is_suspended: boolean
           larger_text: boolean
@@ -5741,6 +5962,7 @@ export type Database = {
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           reduce_motion: boolean
+          royal_frame_variant: string | null
           sensitive_content_mode: string
           state: string | null
           tag_review_required: boolean
@@ -5797,6 +6019,16 @@ export type Database = {
       grant_pass_invite_bonus: {
         Args: { _user_id: string }
         Returns: undefined
+      }
+      grant_royal_monthly_benefits: {
+        Args: {
+          _period_end: string
+          _period_start: string
+          _stripe_event_id: string
+          _stripe_invoice_id: string
+          _user_id: string
+        }
+        Returns: Json
       }
       has_active_boost: {
         Args: { _boost_type: string; _user_id: string }
@@ -6239,6 +6471,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      royal_entitlements: { Args: never; Returns: Json }
       royal_pass_daily_boost_status: { Args: never; Returns: Json }
       save_push_subscription: {
         Args: {
@@ -6540,6 +6773,7 @@ export type Database = {
       undo_repost: { Args: { p_repost_id: string }; Returns: Json }
       update_my_dob: { Args: { _dob: string }; Returns: undefined }
       update_my_preferences: { Args: { _prefs: Json }; Returns: undefined }
+      use_royal_shield: { Args: { _post_id: string }; Returns: Json }
       validate_storage_object: {
         Args: {
           _allowed_mimes: string[]
