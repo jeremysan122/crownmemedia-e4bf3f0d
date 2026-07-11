@@ -76,7 +76,7 @@ export default function AppShell({ children, title, showHeader = true, rightSlot
         {/* Main content column — children mount exactly once to avoid duplicate dialogs/menus. */}
         <div className="flex-1 min-w-0 lg:py-5 w-full flex flex-col">
           {showHeader && (
-            <header className="lg:hidden sticky top-0 z-40 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/85 border-b border-border/40 w-full px-3 py-1.5 grid grid-cols-3 items-center gap-2">
+            <header className={`lg:hidden sticky top-0 z-40 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/85 border-b border-border/40 w-full px-3 py-1.5 grid grid-cols-3 items-center gap-2 transition-transform duration-200 ease-out ${headerHidden ? "-translate-y-full" : "translate-y-0"}`}>
               <div className="flex items-center justify-start">
                 <button
                   onClick={() => nav("/store")}
