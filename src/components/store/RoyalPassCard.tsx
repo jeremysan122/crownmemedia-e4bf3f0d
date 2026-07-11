@@ -103,9 +103,9 @@ export default function RoyalPassCard() {
   const pass = useRoyalPass();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pending] = useState<string | null>(null);
   const { openCheckout, checkoutElement } = useStripeCheckout();
   const ctaRef = useRef<HTMLDivElement | null>(null);
+
 
   useEffect(() => {
     let cancelled = false;
