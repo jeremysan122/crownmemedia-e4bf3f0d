@@ -1391,10 +1391,11 @@ function geoFor(r: Row): { coord: LatLng | null; precision: "exact" | "city" | "
   // then post city, then region, then post state/country. Never uses profile
   // or device location, never invents a fake pin position.
   return lookupPostGeo({
-    post_lat: r.post?.post_lat ?? null,
-    post_lng: r.post?.post_lng ?? null,
+    post_lat: null,
+    post_lng: null,
     location_enabled: r.post?.location_enabled ?? null,
     location_source: r.post?.location_source ?? null,
+
     city: r.post?.city ?? null,
     state: r.post?.state ?? null,
     country: r.post?.country ?? null,
