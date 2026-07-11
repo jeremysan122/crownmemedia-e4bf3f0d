@@ -252,10 +252,11 @@ export default function BattlesHub() {
         <PendingInvitesList />
 
         {/* ─── EXPLORE ─── */}
-        <div className={`grid gap-2 mb-6 ${liveEnabled ? "grid-cols-4" : "grid-cols-3"}`}>
+        <div className={`grid gap-2 mb-6 ${liveEnabled ? "grid-cols-5" : "grid-cols-4"}`}>
           {liveEnabled && <TileLink to="/battles/live" icon={<Users size={16} />} label="Live lobby" />}
           <TileLink to="/tournaments" icon={<Trophy size={16} />} label="Tournaments" />
           <TileLink to="/battles/history" icon={<History size={16} />} label="History" />
+          <TileLink to="/battles/analytics" icon={<Flame size={16} />} label="Analytics" />
           <TileLink to="/leaderboard" icon={<Sparkles size={16} />} label="Leaders" />
         </div>
 
