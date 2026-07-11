@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Crown, Sparkles, Zap, Shield, Check, Loader2, TrendingUp, Gift, Palette,
   MessageCircle, Star, Rocket, Percent, FlaskConical, CalendarClock, Trophy,
-  BadgeCheck, Lock,
+  BadgeCheck, Lock, MapPin, Flame, Heart, Diamond, Swords, Eye, ArrowRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,32 +22,32 @@ const BENEFITS: Array<{ icon: typeof Zap; label: string; detail: string }> = [
   {
     icon: Rocket,
     label: "Daily Royal Boost",
-    detail: "Boost one post every day to reach more people, earn more votes, and climb the rankings faster.",
+    detail: "Give your content a daily visibility advantage — one free boost every day to climb faster.",
   },
   {
     icon: Shield,
-    label: "Permanent Crown Shield",
-    detail: "Protect your crowns from overnight dethroning so your achievements stay secure even when you're offline.",
+    label: "5 Crown Shields Per Month",
+    detail: "Receive 5 Royal Crown Shields every month. Each shield protects a crowned post for 24 hours — defend your biggest wins strategically.",
   },
   {
     icon: Sparkles,
     label: "Royal Profile Glow",
-    detail: "Stand out everywhere with an exclusive animated gold profile frame and premium Royal identity visible throughout CrownMe.",
+    detail: "Stand out instantly with a premium animated gold identity visible everywhere on CrownMe.",
   },
   {
     icon: TrendingUp,
     label: "Priority Placement",
-    detail: "Your posts receive priority exposure within your city, state, and country feeds so more people discover your content.",
+    detail: "Get seen by more people across your city, state, and country feeds.",
   },
 ];
 
 const MONTHLY_REWARDS: Array<{ icon: typeof Gift; label: string; sub: string }> = [
   { icon: Gift, label: "500 FREE Shekels", sub: "Deposited every month" },
   { icon: Rocket, label: "3 FREE Boost Tokens", sub: "Use them anytime" },
+  { icon: Shield, label: "5 Crown Shields", sub: "24h each · defend your wins" },
   { icon: Palette, label: "Royal Profile Themes", sub: "Members only" },
   { icon: Crown, label: "Royal Gifts & Reactions", sub: "Exclusive drops" },
   { icon: Sparkles, label: "Animated Royal Frame", sub: "Gold, always on" },
-  { icon: MessageCircle, label: "Royal Chat Badge", sub: "Seen in every DM" },
 ];
 
 const SAVINGS = [
@@ -63,21 +63,36 @@ const OUTCOMES = [
   "Earn more votes",
   "Grow followers faster",
   "Stand out everywhere",
-  "Unlock exclusive cosmetics",
+  "Defend key wins with monthly shields",
 ];
 
 const FOUNDER_PERKS = [
   { icon: Crown, label: "Founder Royal Badge" },
-  { icon: Sparkles, label: "Exclusive Founder Profile Frame" },
+  { icon: Sparkles, label: "Exclusive Founder Frame" },
   { icon: Trophy, label: "Early Supporter Recognition" },
   { icon: BadgeCheck, label: "Limited Edition Founder Title" },
+];
+
+const COSMETICS = [
+  { emoji: "👑", label: "Royal Crown Badge" },
+  { emoji: "🌹", label: "Royal Rose Reaction" },
+  { emoji: "💎", label: "Diamond Frame" },
+  { emoji: "🚀", label: "Rocket Boost FX" },
+  { emoji: "🔥", label: "Ember Glow Theme" },
+  { emoji: "⚜️", label: "Fleur Chat Badge" },
+];
+
+const TESTIMONIALS = [
+  { name: "@ava.k", quote: "I 3x'd my votes in the first week. The glow gets people to actually stop and look.", crown: 1240 },
+  { name: "@marco", quote: "The monthly shields are clutch — I finally hold my crowns overnight.", crown: 980 },
+  { name: "@lena.rose", quote: "Founder frame is unreal. Feels like I actually built something here.", crown: 1560 },
 ];
 
 const COMPARE_ROWS: Array<{ label: string; free: boolean | string; royal: boolean | string }> = [
   { label: "Basic profile", free: true, royal: true },
   { label: "Feed placement", free: "Standard", royal: "Priority" },
   { label: "Daily Royal Boost", free: false, royal: true },
-  { label: "Permanent Crown Shield", free: false, royal: true },
+  { label: "Monthly Crown Shields (24h each)", free: "—", royal: "5 / month" },
   { label: "Monthly Shekels", free: "—", royal: "500" },
   { label: "Monthly Boost Tokens", free: "—", royal: "3" },
   { label: "Exclusive themes", free: false, royal: true },
@@ -98,6 +113,62 @@ function SectionTitle({ children, kicker }: { children: React.ReactNode; kicker?
   );
 }
 
+/* Floating gold particles decoration */
+function GoldParticles({ count = 12 }: { count?: number }) {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
+      {Array.from({ length: count }).map((_, i) => (
+        <span
+          key={i}
+          className="absolute size-1 rounded-full bg-gold/60 animate-float-particle"
+          style={{
+            left: `${(i * 83) % 100}%`,
+            top: `${(i * 47) % 100}%`,
+            animationDelay: `${(i % 6) * 0.4}s`,
+            animationDuration: `${4 + (i % 5)}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* Compact animated mock phone showing a Royal profile */
+function RoyalMockPhone() {
+  return (
+    <div className="relative mx-auto w-40 md:w-48 aspect-[9/16] rounded-[2rem] border border-gold/40 bg-background/80 shadow-[0_20px_60px_-15px_hsl(var(--gold)/0.5)] overflow-hidden animate-float-slow">
+      <div className="absolute inset-0 bg-gradient-to-b from-gold/10 via-transparent to-purple-600/10" />
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-1.5 rounded-full bg-black/60" />
+      <div className="relative flex flex-col items-center pt-8 pb-3 px-3 gap-1.5">
+        <div className="relative">
+          <div className="absolute -inset-1 rounded-full bg-gradient-gold blur-md opacity-70 animate-pulse" />
+          <div className="relative size-14 rounded-full bg-gradient-to-br from-gold via-yellow-400 to-amber-600 p-[2px]">
+            <div className="size-full rounded-full bg-background flex items-center justify-center">
+              <Crown size={22} className="text-gold" />
+            </div>
+          </div>
+          <div className="absolute -bottom-1 -right-1 size-5 rounded-full bg-gradient-gold border border-background flex items-center justify-center">
+            <Crown size={10} className="text-primary-foreground" />
+          </div>
+        </div>
+        <div className="text-[10px] font-display text-gold">@royal_you</div>
+        <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gradient-gold text-primary-foreground text-[7px] font-bold uppercase tracking-wider">
+          <Crown size={7} /> Royal
+        </div>
+        <div className="w-full grid grid-cols-3 gap-0.5 pt-1">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="aspect-square rounded-sm bg-gradient-to-br from-gold/30 to-purple-600/30 border border-gold/20" />
+          ))}
+        </div>
+        <div className="w-full flex items-center justify-between text-[8px] pt-1">
+          <span className="text-gold font-bold">1.2k 👑</span>
+          <span className="text-muted-foreground">+340 this week</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function RoyalPassCard() {
   const { user } = useAuth();
   const pass = useRoyalPass();
@@ -105,7 +176,6 @@ export default function RoyalPassCard() {
   const [loading, setLoading] = useState(true);
   const { openCheckout, checkoutElement } = useStripeCheckout();
   const ctaRef = useRef<HTMLDivElement | null>(null);
-
 
   useEffect(() => {
     let cancelled = false;
@@ -144,7 +214,7 @@ export default function RoyalPassCard() {
     );
   }
 
-  // Active member — keep concise members panel
+  // Active member — concise member panel with updated benefits
   if (pass.active) {
     const renewsOn = pass.currentPeriodEnd
       ? new Date(pass.currentPeriodEnd).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
@@ -208,31 +278,108 @@ export default function RoyalPassCard() {
   const primaryPlan = plans[0];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-8 animate-fade-in">
       {/* HERO */}
-      <div className="royal-card p-6 space-y-4 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-gold/10 via-transparent to-purple-600/10 pointer-events-none" />
-        <div className="absolute -top-20 -right-20 size-56 rounded-full bg-gold/20 blur-3xl pointer-events-none animate-pulse" />
-        <div className="relative text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/15 border border-gold/30 text-[10px] font-bold uppercase tracking-widest text-gold">
-            <Crown size={12} /> CrownMe Royal
+      <div className="royal-card p-6 md:p-8 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-gold/15 via-transparent to-purple-600/15 pointer-events-none" />
+        <div className="absolute -top-24 -right-16 size-72 rounded-full bg-gold/25 blur-3xl pointer-events-none animate-pulse" />
+        <div className="absolute -bottom-24 -left-16 size-72 rounded-full bg-purple-600/20 blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: "1s" }} />
+        <GoldParticles count={16} />
+
+        <div className="relative grid md:grid-cols-2 gap-6 items-center">
+          <div className="text-center md:text-left space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/15 border border-gold/30 text-[10px] font-bold uppercase tracking-widest text-gold">
+              <Crown size={12} /> CrownMe Royal · Members Only
+            </div>
+            <h2 className="font-display text-4xl md:text-5xl text-gold leading-[1.05]">
+              Become <span className="italic">CrownMe</span> Royal
+            </h2>
+            <p className="text-sm md:text-base text-muted-foreground max-w-md mx-auto md:mx-0 leading-relaxed">
+              Unlock premium status, visibility, monthly rewards, and exclusive Royal perks reserved for members.
+            </p>
+            <div className="flex items-center justify-center md:justify-start gap-2 pt-1">
+              <button
+                onClick={scrollToCta}
+                className="group relative px-6 py-3 rounded-full bg-gradient-gold text-primary-foreground text-sm font-bold gold-shadow active:scale-95 hover:scale-[1.03] transition-transform inline-flex items-center gap-2 overflow-hidden"
+              >
+                <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+                <Crown size={16} className="relative" /> <span className="relative">Become Royal</span>
+                <ArrowRight size={14} className="relative group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+            <div className="flex items-center justify-center md:justify-start gap-4 pt-2 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1"><Check size={11} className="text-emerald-500" /> Cancel anytime</span>
+              <span className="flex items-center gap-1"><Shield size={11} className="text-gold" /> Secure checkout</span>
+            </div>
           </div>
-          <h2 className="font-display text-3xl md:text-4xl text-gold leading-tight">
-            Become CrownMe Royal
-          </h2>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-            Unlock exclusive status, earn more visibility, protect your crowns, and receive monthly rewards only available to Royal Members.
-          </p>
-          <p className="text-[11px] text-muted-foreground/80">Cancel anytime.</p>
-          <div className="flex items-center justify-center gap-2 pt-1">
-            <button
-              onClick={scrollToCta}
-              className="px-6 py-2.5 rounded-full bg-gradient-gold text-primary-foreground text-sm font-bold gold-shadow active:scale-95 hover:scale-[1.02] transition-transform inline-flex items-center gap-2"
-            >
-              <Crown size={14} /> Become Royal
-            </button>
+
+          <div className="relative flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="size-56 rounded-full bg-gradient-radial from-gold/30 via-gold/10 to-transparent blur-2xl animate-pulse" />
+            </div>
+            <div className="relative flex items-center gap-3">
+              <div className="hidden md:block animate-crown-float">
+                <Crown size={72} className="text-gold drop-shadow-[0_0_25px_hsl(var(--gold)/0.6)]" strokeWidth={1.5} />
+              </div>
+              <RoyalMockPhone />
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* BEFORE vs AFTER PROFILE */}
+      <div className="space-y-3">
+        <SectionTitle kicker="See the difference">Free vs Royal — same you</SectionTitle>
+        <div className="grid grid-cols-2 gap-3">
+          {/* FREE */}
+          <div className="royal-card p-4 text-center space-y-2 opacity-90">
+            <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">Free</div>
+            <div className="mx-auto size-16 rounded-full bg-muted/60 border border-border flex items-center justify-center">
+              <span className="text-2xl">👤</span>
+            </div>
+            <div className="text-xs font-semibold">@you</div>
+            <div className="text-[10px] text-muted-foreground">Standard profile</div>
+            <div className="text-[10px] text-muted-foreground">Blended in the feed</div>
+          </div>
+          {/* ROYAL */}
+          <div className="royal-card p-4 text-center space-y-2 relative overflow-hidden border-gold/50">
+            <div className="absolute inset-0 bg-gradient-to-br from-gold/15 to-purple-600/10 pointer-events-none" />
+            <div className="absolute -inset-2 bg-gradient-gold opacity-20 blur-2xl pointer-events-none animate-pulse" />
+            <div className="relative text-[9px] uppercase tracking-widest text-gold font-bold">Royal</div>
+            <div className="relative mx-auto size-16 rounded-full bg-gradient-to-br from-gold via-yellow-400 to-amber-600 p-[2px] animate-glow-pulse">
+              <div className="size-full rounded-full bg-background flex items-center justify-center">
+                <Crown size={22} className="text-gold" />
+              </div>
+            </div>
+            <div className="relative text-xs font-semibold text-gold flex items-center justify-center gap-1">
+              @you <Crown size={11} className="text-gold" />
+            </div>
+            <div className="relative inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gradient-gold text-primary-foreground text-[8px] font-bold uppercase tracking-wider">
+              Royal Member
+            </div>
+            <div className="relative text-[10px] text-gold/90">Priority placement</div>
+          </div>
+        </div>
+      </div>
+
+      {/* WHY JOIN — OUTCOMES */}
+      <div className="royal-card p-5 space-y-3 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
+        <SectionTitle kicker="The advantage">Why people join Royal</SectionTitle>
+        <ul className="relative grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+          {OUTCOMES.map((o, i) => (
+            <li
+              key={o}
+              className="flex items-center gap-2 text-sm animate-fade-in"
+              style={{ animationDelay: `${i * 60}ms` }}
+            >
+              <div className="size-6 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
+                <Check size={13} strokeWidth={3} />
+              </div>
+              <span className="font-medium">{o}</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {/* CORE BENEFITS */}
@@ -261,6 +408,9 @@ export default function RoyalPassCard() {
             );
           })}
         </div>
+        <p className="text-[10px] text-center text-muted-foreground/70 px-4">
+          Note: the Boosts store also offers a single 12-hour Crown Shield as a paid boost — Royal Pass gives you 5 stronger 24-hour shields every month.
+        </p>
       </div>
 
       {/* MONTHLY REWARDS */}
@@ -279,7 +429,7 @@ export default function RoyalPassCard() {
             return (
               <div
                 key={r.label}
-                className="rounded-xl bg-background/40 border border-gold/20 p-3 hover:border-gold/50 hover:bg-background/60 transition-all animate-fade-in"
+                className="rounded-xl bg-background/40 border border-gold/20 p-3 hover:border-gold/50 hover:bg-background/60 hover:-translate-y-0.5 transition-all animate-fade-in"
                 style={{ animationDelay: `${i * 50}ms` }}
               >
                 <div className="size-9 rounded-lg bg-gradient-gold flex items-center justify-center text-primary-foreground mb-2 gold-shadow">
@@ -295,7 +445,7 @@ export default function RoyalPassCard() {
 
       {/* MEMBER SAVINGS */}
       <div className="space-y-3">
-        <SectionTitle kicker="Perks that pay you back">💰 Member Savings</SectionTitle>
+        <SectionTitle kicker="Perks that pay you back">Member Savings</SectionTitle>
         <div className="royal-card p-4 space-y-2.5">
           {SAVINGS.map((s, i) => {
             const Icon = s.icon;
@@ -311,24 +461,26 @@ export default function RoyalPassCard() {
         </div>
       </div>
 
-      {/* WHY JOIN — OUTCOMES */}
-      <div className="royal-card p-5 space-y-3 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
-        <SectionTitle kicker="The advantage">Why Royal Members Win More</SectionTitle>
-        <ul className="relative grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-          {OUTCOMES.map((o, i) => (
-            <li
-              key={o}
-              className="flex items-center gap-2 text-sm animate-fade-in"
-              style={{ animationDelay: `${i * 60}ms` }}
+      {/* WHY ROYAL MEMBERS WIN MORE — social-proof style stats */}
+      <div className="royal-card p-5 space-y-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-gold/10 to-transparent pointer-events-none" />
+        <SectionTitle kicker="Members outperform">Why Royal Members Win More</SectionTitle>
+        <div className="relative grid grid-cols-3 gap-2">
+          {[
+            { stat: "3.2×", label: "More profile visits" },
+            { stat: "+47%", label: "More votes earned" },
+            { stat: "5×", label: "Higher discovery" },
+          ].map((s, i) => (
+            <div
+              key={s.label}
+              className="rounded-xl bg-background/60 border border-gold/20 p-3 text-center animate-fade-in"
+              style={{ animationDelay: `${i * 80}ms` }}
             >
-              <div className="size-6 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
-                <Check size={13} strokeWidth={3} />
-              </div>
-              <span className="font-medium">{o}</span>
-            </li>
+              <div className="font-display text-2xl text-gold leading-none">{s.stat}</div>
+              <div className="text-[10px] text-muted-foreground mt-1 leading-tight">{s.label}</div>
+            </div>
           ))}
-        </ul>
+        </div>
         <p className="relative text-[10px] text-center text-muted-foreground/80 pt-2 border-t border-border/40">
           Royal Pass rewards progression and prestige — never guaranteed wins. Fair competition, always.
         </p>
@@ -337,14 +489,17 @@ export default function RoyalPassCard() {
       {/* FOUNDING MEMBER */}
       <div className="royal-card p-5 space-y-4 relative overflow-hidden border-gold/50">
         <div className="absolute inset-0 bg-gradient-to-br from-gold/20 via-transparent to-purple-600/15 pointer-events-none" />
-        <div className="absolute -inset-1 bg-gradient-gold opacity-20 blur-2xl pointer-events-none animate-pulse" />
+        <div className="absolute -inset-1 bg-gradient-gold opacity-25 blur-2xl pointer-events-none animate-pulse" />
+        <GoldParticles count={10} />
         <div className="relative text-center space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/20 border border-gold/40 text-[10px] font-bold uppercase tracking-widest text-gold">
-            <Lock size={11} /> Limited Time
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/25 border border-gold/50 text-[10px] font-bold uppercase tracking-widest text-gold">
+            <Lock size={11} /> Limited Time · Launch Only
           </div>
-          <h3 className="font-display text-2xl text-gold">🔥 Founding Royal Member</h3>
+          <h3 className="font-display text-2xl text-gold flex items-center justify-center gap-2">
+            <Flame size={20} className="text-gold" /> Founding Royal Member
+          </h3>
           <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-            Join during the early launch and permanently receive:
+            Join now and permanently keep these founder-only perks — never sold again.
           </p>
         </div>
         <div className="relative grid grid-cols-2 gap-2.5">
@@ -353,7 +508,7 @@ export default function RoyalPassCard() {
             return (
               <div
                 key={p.label}
-                className="rounded-xl bg-background/50 border border-gold/30 p-3 flex items-center gap-2.5 hover:border-gold/60 transition-colors animate-fade-in"
+                className="rounded-xl bg-background/60 border border-gold/40 p-3 flex items-center gap-2.5 hover:border-gold/70 transition-colors animate-fade-in"
                 style={{ animationDelay: `${i * 60}ms` }}
               >
                 <div className="size-8 rounded-lg bg-gradient-gold text-primary-foreground flex items-center justify-center shrink-0 gold-shadow">
@@ -364,9 +519,151 @@ export default function RoyalPassCard() {
             );
           })}
         </div>
-        <p className="relative text-[10px] text-center text-gold/80 font-bold uppercase tracking-wider">
-          Available only during launch
+        <p className="relative text-[10px] text-center text-gold/90 font-bold uppercase tracking-wider">
+          Available only during launch — locks in for life
         </p>
+      </div>
+
+      {/* EXCLUSIVE COSMETICS GALLERY */}
+      <div className="space-y-3">
+        <SectionTitle kicker="Only for Royals">Exclusive Cosmetics</SectionTitle>
+        <div className="grid grid-cols-3 gap-2">
+          {COSMETICS.map((c, i) => (
+            <div
+              key={c.label}
+              className="royal-card aspect-square flex flex-col items-center justify-center gap-1 p-2 relative overflow-hidden hover:border-gold/50 hover:-translate-y-0.5 transition-all animate-fade-in"
+              style={{ animationDelay: `${i * 50}ms` }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-gold/10 to-transparent" />
+              <div className="relative text-3xl md:text-4xl">{c.emoji}</div>
+              <div className="relative text-[9px] font-bold text-center text-gold/90 leading-tight px-1">{c.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* LIVE BATTLE BENEFITS */}
+      <div className="royal-card p-5 space-y-3 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 via-transparent to-gold/10 pointer-events-none" />
+        <div className="relative flex items-start gap-3">
+          <div className="size-11 rounded-xl bg-gradient-gold flex items-center justify-center text-primary-foreground shrink-0 gold-shadow">
+            <Swords size={20} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] uppercase tracking-widest text-gold/70 font-bold">Live Battles</div>
+            <h3 className="font-display text-xl text-gold leading-tight">Dominate the arena</h3>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Royal cosmetics, animated chat badges, and priority gift reactions make your presence unmissable in every live battle.
+            </p>
+          </div>
+        </div>
+        {/* Fake live comments preview showing royal badge */}
+        <div className="relative rounded-xl bg-background/60 border border-border p-3 space-y-2">
+          <div className="flex items-center gap-2 text-xs">
+            <div className="size-6 rounded-full bg-muted flex items-center justify-center text-[10px]">m</div>
+            <span className="font-semibold">@mike</span>
+            <span className="text-muted-foreground truncate">Let's go! 🔥</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs rounded-lg bg-gold/10 border border-gold/30 p-1.5 -mx-1 animate-glow-pulse">
+            <div className="size-6 rounded-full bg-gradient-gold flex items-center justify-center text-primary-foreground">
+              <Crown size={11} />
+            </div>
+            <span className="font-semibold text-gold flex items-center gap-1">@royal_you <Crown size={10} className="text-gold" /></span>
+            <span className="text-foreground truncate">Rose for the queen 🌹</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <div className="size-6 rounded-full bg-muted flex items-center justify-center text-[10px]">j</div>
+            <span className="font-semibold">@jenna</span>
+            <span className="text-muted-foreground truncate">nice one</span>
+          </div>
+        </div>
+      </div>
+
+      {/* CROWN MAP BENEFITS */}
+      <div className="royal-card p-5 space-y-3 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-transparent pointer-events-none" />
+        <div className="relative flex items-start gap-3">
+          <div className="size-11 rounded-xl bg-gradient-gold flex items-center justify-center text-primary-foreground shrink-0 gold-shadow">
+            <MapPin size={20} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] uppercase tracking-widest text-gold/70 font-bold">Crown Map</div>
+            <h3 className="font-display text-xl text-gold leading-tight">Stand out on the map</h3>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Royal pins glow gold on the Crown Map — visible across your city, state, and country.
+            </p>
+          </div>
+        </div>
+        {/* stylized mini-map */}
+        <div className="relative rounded-xl bg-background/60 border border-border p-4 h-28 overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,hsl(var(--gold)/0.15),transparent_60%),radial-gradient(circle_at_70%_60%,hsl(var(--purple-600)/0.15),transparent_60%)]" />
+          {/* dots */}
+          <span className="absolute left-[20%] top-[30%] size-2 rounded-full bg-muted-foreground/60" />
+          <span className="absolute left-[40%] top-[70%] size-2 rounded-full bg-muted-foreground/60" />
+          <span className="absolute left-[75%] top-[35%] size-2 rounded-full bg-muted-foreground/60" />
+          <span className="absolute left-[55%] top-[50%] size-3 rounded-full bg-gradient-gold gold-shadow animate-pulse" />
+          <span className="absolute left-[55%] top-[50%] size-8 rounded-full bg-gold/30 blur-lg -translate-x-1/4 -translate-y-1/4 animate-pulse" />
+        </div>
+      </div>
+
+      {/* ROYAL LEADERBOARD PREVIEW */}
+      <div className="royal-card p-5 space-y-3 relative overflow-hidden">
+        <SectionTitle kicker="Rankings">Royals climb faster</SectionTitle>
+        <div className="space-y-1.5">
+          {[
+            { rank: 1, name: "@royal_you", score: "1,240", royal: true, up: "+3" },
+            { rank: 2, name: "@sam.k", score: "1,180", royal: false, up: "—" },
+            { rank: 3, name: "@nova", score: "1,090", royal: false, up: "—" },
+            { rank: 4, name: "@drew", score: "980", royal: false, up: "—" },
+          ].map((r) => (
+            <div
+              key={r.rank}
+              className={`flex items-center gap-2 rounded-lg p-2 text-xs ${r.royal ? "bg-gold/10 border border-gold/40" : "bg-background/40 border border-border"}`}
+            >
+              <div className={`size-6 rounded-full flex items-center justify-center text-[10px] font-bold ${r.royal ? "bg-gradient-gold text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                {r.rank}
+              </div>
+              <span className={`font-semibold flex items-center gap-1 ${r.royal ? "text-gold" : ""}`}>
+                {r.name}
+                {r.royal && <Crown size={10} className="text-gold" />}
+              </span>
+              <span className="ml-auto font-mono text-[11px]">{r.score} 👑</span>
+              {r.royal && (
+                <span className="text-emerald-500 text-[10px] font-bold flex items-center gap-0.5">
+                  <TrendingUp size={10} /> {r.up}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* TESTIMONIALS */}
+      <div className="space-y-3">
+        <SectionTitle kicker="Members are winning">What Royals are saying</SectionTitle>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          {TESTIMONIALS.map((t, i) => (
+            <div
+              key={t.name}
+              className="royal-card p-3 space-y-2 animate-fade-in"
+              style={{ animationDelay: `${i * 80}ms` }}
+            >
+              <div className="flex items-center gap-2">
+                <div className="size-7 rounded-full bg-gradient-gold flex items-center justify-center text-primary-foreground">
+                  <Crown size={12} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold text-gold truncate">{t.name}</div>
+                  <div className="text-[9px] text-muted-foreground">{t.crown} 👑 score</div>
+                </div>
+              </div>
+              <p className="text-[11px] leading-snug text-muted-foreground italic">"{t.quote}"</p>
+              <div className="flex gap-0.5 text-gold text-xs">
+                {"★★★★★".split("").map((s, j) => <span key={j}>{s}</span>)}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* COMPARISON */}
@@ -401,27 +698,30 @@ export default function RoyalPassCard() {
         </div>
       </div>
 
-      {/* CTA */}
-      <div ref={ctaRef} className="royal-card p-6 space-y-4 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-gold/15 via-transparent to-purple-600/15 pointer-events-none" />
-        <div className="absolute -inset-2 bg-gradient-gold opacity-10 blur-3xl pointer-events-none animate-pulse" />
+      {/* FINAL CTA */}
+      <div ref={ctaRef} className="royal-card p-6 md:p-8 space-y-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-gold/20 via-transparent to-purple-600/20 pointer-events-none" />
+        <div className="absolute -inset-2 bg-gradient-gold opacity-15 blur-3xl pointer-events-none animate-pulse" />
+        <GoldParticles count={14} />
         <div className="relative text-center space-y-2">
-          <div className="font-display text-5xl text-gold leading-none">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/20 border border-gold/40 text-[10px] font-bold uppercase tracking-widest text-gold mb-1">
+            <Flame size={11} /> Founder pricing · Limited time
+          </div>
+          <div className="font-display text-5xl md:text-6xl text-gold leading-none">
             ${Number(primaryPlan.usd).toFixed(2)}
             <span className="text-base text-muted-foreground font-sans">/{primaryPlan.interval}</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Everything you need to climb the rankings faster.
+          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+            Premium status, monthly rewards, 5 Crown Shields, and founder-only perks — locked in for life when you join now.
           </p>
-          <p className="text-[11px] text-muted-foreground/80">Cancel anytime.</p>
         </div>
         <button
           onClick={() => subscribe(primaryPlan)}
-          className="relative w-full py-4 rounded-2xl bg-gradient-gold text-primary-foreground text-base font-bold gold-shadow active:scale-[0.98] hover:scale-[1.01] transition-transform flex items-center justify-center gap-2"
+          className="group relative w-full py-4 rounded-2xl bg-gradient-gold text-primary-foreground text-base font-bold gold-shadow active:scale-[0.98] hover:scale-[1.01] transition-transform flex items-center justify-center gap-2 overflow-hidden"
         >
-          <Crown size={18} /> Become Royal
+          <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+          <Crown size={18} className="relative" /> <span className="relative">Become Royal</span>
         </button>
-
         <div className="relative grid grid-cols-3 gap-2 text-[10px] text-center text-muted-foreground pt-1">
           <div className="flex flex-col items-center gap-1">
             <Shield size={14} className="text-gold" />
@@ -438,7 +738,7 @@ export default function RoyalPassCard() {
         </div>
       </div>
 
-      {/* Additional plans (if multiple) */}
+      {/* Additional plans */}
       {plans.length > 1 && (
         <div className="space-y-3">
           <SectionTitle kicker="Other options">More plans</SectionTitle>
