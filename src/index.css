@@ -215,7 +215,30 @@
   .scrollbar-none::-webkit-scrollbar { display: none; }
   .scrollbar-none { scrollbar-width: none; }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .bg-gradient-radial { background-image: radial-gradient(circle, var(--tw-gradient-stops)); }
+  .animate-float-particle { animation: float-particle 5s ease-in-out infinite; }
+  .animate-crown-float { animation: crown-float 4s ease-in-out infinite; }
+  .animate-float-slow { animation: float-slow 5s ease-in-out infinite; }
+  .animate-glow-pulse { animation: glow-pulse 2.6s ease-in-out infinite; }
 }
+
+@keyframes float-particle {
+  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.3; }
+  50% { transform: translateY(-14px) translateX(6px); opacity: 0.9; }
+}
+@keyframes crown-float {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-8px) rotate(3deg); }
+}
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(43 95% 60% / 0.35); }
+  50% { box-shadow: 0 0 24px 4px hsl(43 95% 60% / 0.55); }
+}
+
 
 @keyframes spin-slow { to { transform: rotate(360deg); } }
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
