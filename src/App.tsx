@@ -199,6 +199,7 @@ const App = () => (
               <Route path="/battles/:battleId/lobby" element={<ProtectedRoute><BattleLobby /></ProtectedRoute>} />
               <Route path="/tournaments" element={<ProtectedRoute><Tournaments /></ProtectedRoute>} />
               <Route path="/tournaments/:id" element={<ProtectedRoute><TournamentDetail /></ProtectedRoute>} />
+              <Route path="/battles/analytics" element={<ProtectedRoute><BattlerAnalytics /></ProtectedRoute>} />
 
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/messages/:otherId" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
