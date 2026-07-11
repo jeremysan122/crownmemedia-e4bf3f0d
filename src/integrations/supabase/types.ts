@@ -2294,6 +2294,7 @@ export type Database = {
           opponent_id: string
           opponent_ready: boolean
           opponent_votes: number
+          peak_viewers: number
           region: string | null
           room_name: string
           scheduled_start_at: string | null
@@ -2322,6 +2323,7 @@ export type Database = {
           opponent_id: string
           opponent_ready?: boolean
           opponent_votes?: number
+          peak_viewers?: number
           region?: string | null
           room_name: string
           scheduled_start_at?: string | null
@@ -2350,6 +2352,7 @@ export type Database = {
           opponent_id?: string
           opponent_ready?: boolean
           opponent_votes?: number
+          peak_viewers?: number
           region?: string | null
           room_name?: string
           scheduled_start_at?: string | null
@@ -5348,6 +5351,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      bump_live_battle_peak_viewers: {
+        Args: { _battle_id: string; _count: number }
+        Returns: undefined
+      }
       can_view_posts_of: { Args: { _owner: string }; Returns: boolean }
       cancel_account_deletion: { Args: never; Returns: undefined }
       capture_db_health_snapshot: { Args: never; Returns: string }
@@ -5407,6 +5414,7 @@ export type Database = {
           opponent_id: string
           opponent_ready: boolean
           opponent_votes: number
+          peak_viewers: number
           region: string | null
           room_name: string
           scheduled_start_at: string | null
@@ -5444,6 +5452,7 @@ export type Database = {
           opponent_id: string
           opponent_ready: boolean
           opponent_votes: number
+          peak_viewers: number
           region: string | null
           room_name: string
           scheduled_start_at: string | null
@@ -5529,6 +5538,10 @@ export type Database = {
         Args: { _battle_id: string }
         Returns: Json
       }
+      get_battler_battle_analytics: {
+        Args: { _limit?: number; _user_id: string }
+        Returns: Json
+      }
       get_category_leaderboard: {
         Args: {
           _limit?: number
@@ -5589,6 +5602,7 @@ export type Database = {
         }[]
       }
       get_db_vitals: { Args: never; Returns: Json }
+      get_live_battle_highlight: { Args: { _battle_id: string }; Returns: Json }
       get_my_admin_roles: {
         Args: never
         Returns: {
@@ -5788,6 +5802,7 @@ export type Database = {
           opponent_id: string
           opponent_ready: boolean
           opponent_votes: number
+          peak_viewers: number
           region: string | null
           room_name: string
           scheduled_start_at: string | null
@@ -5829,6 +5844,7 @@ export type Database = {
           opponent_id: string
           opponent_ready: boolean
           opponent_votes: number
+          peak_viewers: number
           region: string | null
           room_name: string
           scheduled_start_at: string | null
@@ -5866,6 +5882,7 @@ export type Database = {
           opponent_id: string
           opponent_ready: boolean
           opponent_votes: number
+          peak_viewers: number
           region: string | null
           room_name: string
           scheduled_start_at: string | null
@@ -5903,6 +5920,7 @@ export type Database = {
           opponent_id: string
           opponent_ready: boolean
           opponent_votes: number
+          peak_viewers: number
           region: string | null
           room_name: string
           scheduled_start_at: string | null
@@ -5967,6 +5985,7 @@ export type Database = {
           opponent_id: string
           opponent_ready: boolean
           opponent_votes: number
+          peak_viewers: number
           region: string | null
           room_name: string
           scheduled_start_at: string | null
@@ -6208,6 +6227,7 @@ export type Database = {
           opponent_id: string
           opponent_ready: boolean
           opponent_votes: number
+          peak_viewers: number
           region: string | null
           room_name: string
           scheduled_start_at: string | null
@@ -6290,6 +6310,7 @@ export type Database = {
           opponent_id: string
           opponent_ready: boolean
           opponent_votes: number
+          peak_viewers: number
           region: string | null
           room_name: string
           scheduled_start_at: string | null
@@ -6327,6 +6348,7 @@ export type Database = {
           opponent_id: string
           opponent_ready: boolean
           opponent_votes: number
+          peak_viewers: number
           region: string | null
           room_name: string
           scheduled_start_at: string | null
@@ -6367,6 +6389,7 @@ export type Database = {
           opponent_id: string
           opponent_ready: boolean
           opponent_votes: number
+          peak_viewers: number
           region: string | null
           room_name: string
           scheduled_start_at: string | null
@@ -6404,6 +6427,7 @@ export type Database = {
           opponent_id: string
           opponent_ready: boolean
           opponent_votes: number
+          peak_viewers: number
           region: string | null
           room_name: string
           scheduled_start_at: string | null
