@@ -142,3 +142,12 @@ New `warn`-level findings match the accepted `SECURITY DEFINER` pattern (see `do
 Wave 1 → 2 → 3 → 4 → 5 → 6 → 7. Each wave is independently shippable behind a feature flag (`feature_flags` table already exists).
 
 Approve and I'll start with Wave 1.
+
+### Wave 7 — Safety model (client + server)
+
+Two-layer defense:
+
+- **Primary (server-side)** — chat reads go through `get_live_battle_comments(_battle_id, _before, _limit)` (SECURITY INVOKER), which excludes rows whose `user_id` appears in the caller's `blocks` (moderators/admins bypass so they can still moderate). Blocked users' comments never reach the client on initial load or pagination.
+- **Defense-in-depth (client-side)** — `useViewerSafety` still filters realtime INSERT payloads and gift-overlay events. Supabase realtime `postgres_changes` payloads cannot enforce per-viewer `auth.uid()` block checks at the channel filter level, so blocked users' realtime events may still arrive and are hidden immediately by the client. Muted-word matching is entirely client-side by design (words are private to the viewer and never sent to other clients).
+
+Reports table already has a nullable `reported_user_id` (verified against `information_schema`), and `ReportDialog` accepts `reportedUserId` and inserts a row with `post_id`/`comment_id` null — proven end-to-end by the existing dialog + Wave 7 menu item.

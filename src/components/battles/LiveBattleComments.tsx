@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { bodyMatchesKeyword } from "@/lib/battleModeration";
+import { commentHiddenReason } from "@/lib/commentHiddenReason";
 import { useViewerSafety } from "@/hooks/useViewerSafety";
 import ReportDialog from "@/components/ReportDialog";
 
@@ -208,14 +209,16 @@ export default function LiveBattleComments({
     let cancelled = false;
 
     (async () => {
-      const { data } = await supabase
-        .from("live_battle_comments")
-        .select("id, battle_id, user_id, body, created_at, hidden_at")
-        .eq("battle_id", battleId)
-        .order("created_at", { ascending: false })
-        .limit(PAGE);
+      // Wave 7: server-side filter excludes comments from users the caller
+      // has blocked (moderators bypass). Client-side hiding remains as
+      // defense-in-depth for realtime INSERT payloads.
+      const { data } = await supabase.rpc("get_live_battle_comments", {
+        _battle_id: battleId,
+        _before: null,
+        _limit: PAGE,
+      });
       if (cancelled) return;
-      const base = ((data as Row[]) || []).reverse();
+      const base = ((data as Row[]) || []).slice().reverse();
       await hydrate(base);
       if (!cancelled) {
         setRows(base);
@@ -409,13 +412,12 @@ export default function LiveBattleComments({
     let data: Row[] | null = null;
     let fetchError: unknown = null;
     try {
-      const res = await supabase
-        .from("live_battle_comments")
-        .select("id, battle_id, user_id, body, created_at, hidden_at")
-        .eq("battle_id", battleId)
-        .lt("created_at", oldest)
-        .order("created_at", { ascending: false })
-        .limit(PAGE);
+      // Wave 7: same block-aware RPC for pagination.
+      const res = await supabase.rpc("get_live_battle_comments", {
+        _battle_id: battleId,
+        _before: oldest,
+        _limit: PAGE,
+      });
       if (res.error) throw res.error;
       data = (res.data as Row[]) ?? [];
     } catch (err) {
@@ -665,10 +667,11 @@ export default function LiveBattleComments({
               {virtualItems.map((vi) => {
                 const r = rows[vi.index];
                 if (!r) return null;
-                const isKeywordHidden = !r.hidden_at && bodyMatchesKeyword(r.body, keywordFilters);
-                const isBlockedByViewer = safety.isBlocked(r.user_id);
-                const isMutedByViewer = !isBlockedByViewer && safety.matchesMutedWord(r.body);
-                const isHidden = !!r.hidden_at || isKeywordHidden || isBlockedByViewer || isMutedByViewer;
+                const reason = commentHiddenReason(r, safety, keywordFilters);
+                const isBlockedByViewer = reason === "blocked";
+                const isMutedByViewer = reason === "muted-word";
+                const isKeywordHidden = reason === "keyword";
+                const isHidden = reason !== "";
                 const canReport = !!user && user.id !== r.user_id && !r.id.startsWith("opt-");
                 const canBlock = !!user && user.id !== r.user_id && !r.id.startsWith("opt-");
                 const canModerate = isModerator && !r.id.startsWith("opt-");
@@ -695,15 +698,11 @@ export default function LiveBattleComments({
                       }`}
                       data-testid="live-battle-comment"
                       data-hidden={isHidden ? "true" : "false"}
-                      data-hidden-reason={
-                        r.hidden_at ? "moderator" :
-                        isKeywordHidden ? "keyword" :
-                        isBlockedByViewer ? "blocked" :
-                        isMutedByViewer ? "muted-word" : ""
-                      }
+                      data-hidden-reason={reason}
                       data-first-unread={firstUnreadIndex === vi.index ? "true" : "false"}
                       tabIndex={-1}
                     >
+
 
 
                       {r.profile_photo_url ? (
