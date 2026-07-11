@@ -35,6 +35,21 @@ Block (safe=false) for: nudity, sexual content, graphic violence/gore, hate symb
 illegal acts. Allow swimwear, art, tattoos, athletic context. When uncertain, prefer
 safe=false with category="suggestive".`
 
+// SSRF guard: only accept URLs that reference this project's Supabase Storage.
+const ALLOWED_BUCKETS = new Set(['avatars', 'posts', 'media', 'banners', 'share-cards'])
+function isAllowedStorageUrl(url: string, supabaseUrl: string): boolean {
+  if (typeof url !== 'string' || !url) return false
+  let parsed: URL
+  try { parsed = new URL(url) } catch { return false }
+  let base: URL
+  try { base = new URL(supabaseUrl) } catch { return false }
+  if (parsed.origin !== base.origin) return false
+  const m = parsed.pathname.match(/^\/storage\/v1\/object\/(public|sign)\/([^/]+)\/.+/)
+  if (!m) return false
+  return ALLOWED_BUCKETS.has(m[2])
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -62,14 +77,17 @@ Deno.serve(async (req) => {
     // ─── Input ───
     const body = (await req.json().catch(() => ({}))) as ModerateBody
     const urls = Array.isArray(body.image_urls)
-      ? body.image_urls.filter((u): u is string => typeof u === 'string' && /^https?:\/\//.test(u)).slice(0, 10)
+      ? body.image_urls
+          .filter((u): u is string => typeof u === 'string' && isAllowedStorageUrl(u, supabaseUrl))
+          .slice(0, 10)
       : []
     const kind: 'photo' | 'video' = body.kind === 'video' ? 'video' : 'photo'
     if (urls.length === 0) {
-      return new Response(JSON.stringify({ error: 'image_urls required' }), {
+      return new Response(JSON.stringify({ error: 'image_urls must reference CrownMe storage' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
     if (!LOVABLE_API_KEY) {

@@ -19,6 +19,23 @@ Rules:
 - Plain English, no emoji.
 - If you cannot identify anything, return "Photo".`
 
+// SSRF guard: only accept URLs that reference this project's Supabase Storage.
+// Prevents callers passing arbitrary http(s) URLs to the AI gateway.
+const ALLOWED_BUCKETS = new Set(['avatars', 'posts', 'media', 'banners', 'share-cards'])
+function isAllowedStorageUrl(url: string, supabaseUrl: string): boolean {
+  if (typeof url !== 'string' || !url) return false
+  let parsed: URL
+  try { parsed = new URL(url) } catch { return false }
+  let base: URL
+  try { base = new URL(supabaseUrl) } catch { return false }
+  if (parsed.origin !== base.origin) return false
+  // /storage/v1/object/(public|sign)/{bucket}/{path...}
+  const m = parsed.pathname.match(/^\/storage\/v1\/object\/(public|sign)\/([^/]+)\/.+/)
+  if (!m) return false
+  return ALLOWED_BUCKETS.has(m[2])
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -40,12 +57,14 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}))
-    const url = typeof body?.image_url === 'string' && /^https?:\/\//.test(body.image_url) ? body.image_url : null
+    const rawUrl = typeof body?.image_url === 'string' ? body.image_url : ''
+    const url = isAllowedStorageUrl(rawUrl, supabaseUrl) ? rawUrl : null
     if (!url) {
-      return new Response(JSON.stringify({ error: 'image_url required' }), {
+      return new Response(JSON.stringify({ error: 'image_url must reference CrownMe storage' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
     if (!LOVABLE_API_KEY) {
