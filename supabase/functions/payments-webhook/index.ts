@@ -390,7 +390,7 @@ Deno.serve(async (req) => {
         let invoiceId: string | null = null;
         if (chargeId) {
           try {
-            const charge = await stripe.charges.retrieve(chargeId);
+            const charge = await stripe.charges.retrieve(chargeId) as any;
             invoiceId = typeof charge.invoice === "string"
               ? charge.invoice
               : (charge.invoice as any)?.id ?? null;
