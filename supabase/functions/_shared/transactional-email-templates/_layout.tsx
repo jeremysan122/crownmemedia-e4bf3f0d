@@ -7,6 +7,8 @@ import { HERO_BASE, heroImg, styles } from '../email-templates/_brand.ts'
 
 export const SITE_NAME = 'CrownMe'
 export const SITE_URL = 'https://crownmemedia.com'
+const SITE_DOMAIN = 'crownmemedia.com'
+const TAGLINE = 'Where Legends Reign'
 
 interface CrownMeEmailProps {
   preview: string
@@ -14,12 +16,49 @@ interface CrownMeEmailProps {
   heroAlt: string
   heroHref?: string
   heading: string
-  /** Body paragraphs, rendered in order. */
   paragraphs: React.ReactNode[]
   ctaLabel?: string
   ctaHref?: string
   footerNote?: string
 }
+
+// Split the heading so the last word renders in italic gold, matching the
+// "You Won the Crown" reference (final word emphasized).
+const splitHeading = (heading: string): [string, string | null] => {
+  const trimmed = heading.replace(/\.$/, '').trim()
+  const parts = trimmed.split(/\s+/)
+  if (parts.length < 2) return [heading, null]
+  const last = parts.pop() as string
+  return [parts.join(' ') + ' ', last]
+}
+
+const Divider = () => (
+  <table role="presentation" cellPadding={0} cellSpacing={0} style={styles.dividerRow}>
+    <tbody>
+      <tr>
+        <td style={styles.dividerLine as React.CSSProperties} />
+        <td style={styles.dividerGem}>◆</td>
+        <td style={styles.dividerLine as React.CSSProperties} />
+      </tr>
+    </tbody>
+  </table>
+)
+
+const DarkFooter = () => (
+  <Section style={styles.darkFooter}>
+    <table role="presentation" cellPadding={0} cellSpacing={0} width="100%" style={styles.darkFooterRow}>
+      <tbody>
+        <tr>
+          <td style={styles.darkFooterIcon}>✦</td>
+          <td style={styles.darkFooterDomain}>{SITE_DOMAIN}</td>
+          <td style={styles.darkFooterIcon}>♛</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style={styles.darkFooterDivider} />
+    <Text style={styles.darkFooterTag}>— {TAGLINE} —</Text>
+  </Section>
+)
 
 export const CrownMeEmail = ({
   preview,
@@ -40,6 +79,7 @@ export const CrownMeEmail = ({
       style={heroImg}
     />
   )
+  const [headLead, headAccent] = splitHeading(heading)
   return (
     <Html lang="en" dir="ltr">
       <Head />
@@ -50,25 +90,31 @@ export const CrownMeEmail = ({
             {heroHref ? <Link href={heroHref}>{hero}</Link> : hero}
           </Section>
           <Section style={styles.body}>
-            <Text style={styles.ornament}>✦ ♛ ✦</Text>
-            <Text style={styles.overline}>{SITE_NAME}</Text>
-            <Heading style={styles.h1}>{heading}</Heading>
+            <Divider />
+            <Heading style={styles.h1}>
+              {headLead}
+              {headAccent && <span style={styles.h1Accent}>{headAccent}</span>}
+            </Heading>
+            <Divider />
             {paragraphs.map((p, i) => (
               <Text key={i} style={styles.text}>{p}</Text>
             ))}
             {ctaLabel && ctaHref && (
               <Section style={styles.buttonWrap}>
-                <Button style={styles.button} href={ctaHref}>{ctaLabel}</Button>
+                <Button style={styles.button} href={ctaHref}>
+                  <span style={styles.buttonCrown}>♛</span>
+                  {ctaLabel}
+                  <span style={styles.buttonCrown}>♛</span>
+                </Button>
               </Section>
             )}
+            <Text style={styles.miniCrown}>♛</Text>
             <Text style={styles.signature}>— The CrownMe Court —</Text>
             {footerNote && (
-              <>
-                <hr style={styles.hr} />
-                <Text style={styles.footer}>{footerNote}</Text>
-              </>
+              <Text style={styles.footerNote}>{footerNote}</Text>
             )}
           </Section>
+          <DarkFooter />
         </Container>
       </Body>
     </Html>

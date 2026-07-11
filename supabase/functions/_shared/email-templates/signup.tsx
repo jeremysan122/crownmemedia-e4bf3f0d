@@ -24,6 +24,21 @@ interface SignupEmailProps {
   confirmationUrl: string
 }
 
+const SITE_DOMAIN = 'crownmemedia.com'
+const TAGLINE = 'Where Legends Reign'
+
+const Divider = () => (
+  <table role="presentation" cellPadding={0} cellSpacing={0} style={styles.dividerRow}>
+    <tbody>
+      <tr>
+        <td style={styles.dividerLine as React.CSSProperties} />
+        <td style={styles.dividerGem}>◆</td>
+        <td style={styles.dividerLine as React.CSSProperties} />
+      </tr>
+    </tbody>
+  </table>
+)
+
 export const SignupEmail = ({
   siteName,
   siteUrl,
@@ -46,9 +61,12 @@ export const SignupEmail = ({
           </Link>
         </Section>
         <Section style={styles.body}>
-          <Text style={styles.ornament}>✦ ♛ ✦</Text>
-          <Text style={styles.overline}>{siteName}</Text>
-          <Heading style={styles.h1}>Claim your throne, royal.</Heading>
+          <Divider />
+          <Heading style={styles.h1}>
+            {'Claim Your '}
+            <span style={styles.h1Accent}>Throne</span>
+          </Heading>
+          <Divider />
           <Text style={styles.text}>
             Welcome to{' '}
             <Link href={siteUrl} style={styles.link}>
@@ -62,15 +80,30 @@ export const SignupEmail = ({
           </Text>
           <Section style={styles.buttonWrap}>
             <Button style={styles.button} href={confirmationUrl}>
-              Verify & Enter the Court
+              <span style={styles.buttonCrown}>♛</span>
+              Verify &amp; Enter the Court
+              <span style={styles.buttonCrown}>♛</span>
             </Button>
           </Section>
+          <Text style={styles.miniCrown}>♛</Text>
           <Text style={styles.signature}>— The CrownMe Court —</Text>
-          <hr style={styles.hr} />
-          <Text style={styles.footer}>
+          <Text style={styles.footerNote}>
             If you didn't create a CrownMe account, you can safely ignore this
             email. No crown will be issued in your name.
           </Text>
+        </Section>
+        <Section style={styles.darkFooter}>
+          <table role="presentation" cellPadding={0} cellSpacing={0} width="100%" style={styles.darkFooterRow}>
+            <tbody>
+              <tr>
+                <td style={styles.darkFooterIcon}>✦</td>
+                <td style={styles.darkFooterDomain}>{SITE_DOMAIN}</td>
+                <td style={styles.darkFooterIcon}>♛</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style={styles.darkFooterDivider} />
+          <Text style={styles.darkFooterTag}>— {TAGLINE} —</Text>
         </Section>
       </Container>
     </Body>
