@@ -941,6 +941,12 @@ export default function LiveBattleComments({
         battleId={battleId}
         onClose={() => setReportFor(null)}
       />
+
+      <ReportDialog
+        open={!!reportUserFor}
+        onOpenChange={(o) => { if (!o) setReportUserFor(null); }}
+        reportedUserId={reportUserFor?.user_id}
+      />
     </section>
   );
 }
