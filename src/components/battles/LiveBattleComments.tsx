@@ -96,6 +96,7 @@ export default function LiveBattleComments({
   slowModeSeconds?: number;
 }) {
   const { user, isModerator } = useAuth();
+  const safety = useViewerSafety();
   const reducedMotion = usePrefersReducedMotion();
   const [rows, setRows] = useState<Row[]>([]);
   const [text, setText] = useState("");
@@ -106,6 +107,7 @@ export default function LiveBattleComments({
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [reportFor, setReportFor] = useState<Row | null>(null);
+  const [reportUserFor, setReportUserFor] = useState<Row | null>(null);
   const [unread, setUnread] = useState(0);
   const [isStuck, setIsStuck] = useState(true);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
