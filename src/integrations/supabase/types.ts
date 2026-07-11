@@ -1873,44 +1873,59 @@ export type Database = {
       }
       founder_grants: {
         Row: {
+          dispute_resolved_at: string | null
+          disputed_at: string | null
           granted_at: string
           id: string
           metadata: Json
           original_granted_at: string | null
+          original_paid_amount_cents: number | null
           paid_amount_cents: number | null
+          pre_dispute_status: string | null
           qualifying_invoice_id: string | null
           revoked_at: string | null
           revoked_reason: string | null
           revoked_stripe_event_id: string | null
           status: string
+          stripe_dispute_id: string | null
           stripe_invoice_id: string | null
           user_id: string
         }
         Insert: {
+          dispute_resolved_at?: string | null
+          disputed_at?: string | null
           granted_at?: string
           id?: string
           metadata?: Json
           original_granted_at?: string | null
+          original_paid_amount_cents?: number | null
           paid_amount_cents?: number | null
+          pre_dispute_status?: string | null
           qualifying_invoice_id?: string | null
           revoked_at?: string | null
           revoked_reason?: string | null
           revoked_stripe_event_id?: string | null
           status?: string
+          stripe_dispute_id?: string | null
           stripe_invoice_id?: string | null
           user_id: string
         }
         Update: {
+          dispute_resolved_at?: string | null
+          disputed_at?: string | null
           granted_at?: string
           id?: string
           metadata?: Json
           original_granted_at?: string | null
+          original_paid_amount_cents?: number | null
           paid_amount_cents?: number | null
+          pre_dispute_status?: string | null
           qualifying_invoice_id?: string | null
           revoked_at?: string | null
           revoked_reason?: string | null
           revoked_stripe_event_id?: string | null
           status?: string
+          stripe_dispute_id?: string | null
           stripe_invoice_id?: string | null
           user_id?: string
         }
@@ -4246,11 +4261,15 @@ export type Database = {
         Row: {
           boost_tokens_granted: number
           created_at: string
+          dispute_resolved_at: string | null
+          dispute_status: string | null
+          disputed_at: string | null
           founder_granted: boolean
           id: string
           metadata: Json
           period_end: string
           period_start: string
+          pre_dispute_status: string | null
           reversal_stripe_event_id: string | null
           reversed_at: string | null
           reversed_reason: string | null
@@ -4258,6 +4277,7 @@ export type Database = {
           shields_granted: number
           status: string
           stripe_charge_id: string | null
+          stripe_dispute_id: string | null
           stripe_event_id: string | null
           stripe_invoice_id: string | null
           stripe_payment_intent_id: string | null
@@ -4267,11 +4287,15 @@ export type Database = {
         Insert: {
           boost_tokens_granted?: number
           created_at?: string
+          dispute_resolved_at?: string | null
+          dispute_status?: string | null
+          disputed_at?: string | null
           founder_granted?: boolean
           id?: string
           metadata?: Json
           period_end: string
           period_start: string
+          pre_dispute_status?: string | null
           reversal_stripe_event_id?: string | null
           reversed_at?: string | null
           reversed_reason?: string | null
@@ -4279,6 +4303,7 @@ export type Database = {
           shields_granted?: number
           status?: string
           stripe_charge_id?: string | null
+          stripe_dispute_id?: string | null
           stripe_event_id?: string | null
           stripe_invoice_id?: string | null
           stripe_payment_intent_id?: string | null
@@ -4288,11 +4313,15 @@ export type Database = {
         Update: {
           boost_tokens_granted?: number
           created_at?: string
+          dispute_resolved_at?: string | null
+          dispute_status?: string | null
+          disputed_at?: string | null
           founder_granted?: boolean
           id?: string
           metadata?: Json
           period_end?: string
           period_start?: string
+          pre_dispute_status?: string | null
           reversal_stripe_event_id?: string | null
           reversed_at?: string | null
           reversed_reason?: string | null
@@ -4300,6 +4329,7 @@ export type Database = {
           shields_granted?: number
           status?: string
           stripe_charge_id?: string | null
+          stripe_dispute_id?: string | null
           stripe_event_id?: string | null
           stripe_invoice_id?: string | null
           stripe_payment_intent_id?: string | null
@@ -6076,9 +6106,62 @@ export type Database = {
         }
         Returns: Json
       }
-      handle_royal_dispute_reinstated: {
+      handle_royal_dispute_created: {
+        Args: {
+          _dispute_reason?: string
+          _stripe_charge_id?: string
+          _stripe_dispute_id: string
+          _stripe_event_id: string
+          _stripe_invoice_id?: string
+          _stripe_payment_intent_id?: string
+        }
+        Returns: Json
+      }
+      handle_royal_dispute_funds_withdrawn: {
         Args: {
           _stripe_charge_id?: string
+          _stripe_dispute_id: string
+          _stripe_event_id: string
+          _stripe_invoice_id?: string
+          _stripe_payment_intent_id?: string
+        }
+        Returns: Json
+      }
+      handle_royal_dispute_lost: {
+        Args: {
+          _reason?: string
+          _stripe_charge_id?: string
+          _stripe_dispute_id: string
+          _stripe_event_id: string
+          _stripe_invoice_id?: string
+          _stripe_payment_intent_id?: string
+        }
+        Returns: Json
+      }
+      handle_royal_dispute_reinstated:
+        | {
+            Args: {
+              _stripe_charge_id?: string
+              _stripe_event_id: string
+              _stripe_invoice_id?: string
+              _stripe_payment_intent_id?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _stripe_charge_id?: string
+              _stripe_dispute_id?: string
+              _stripe_event_id: string
+              _stripe_invoice_id?: string
+              _stripe_payment_intent_id?: string
+            }
+            Returns: Json
+          }
+      handle_royal_dispute_won: {
+        Args: {
+          _stripe_charge_id?: string
+          _stripe_dispute_id: string
           _stripe_event_id: string
           _stripe_invoice_id?: string
           _stripe_payment_intent_id?: string
@@ -6541,15 +6624,27 @@ export type Database = {
         Args: { _reason: string; _stripe_invoice_id: string; _user_id: string }
         Returns: Json
       }
-      revoke_royal_founder: {
-        Args: {
-          _actor_id?: string
-          _reason: string
-          _stripe_event_id: string
-          _user_id: string
-        }
-        Returns: Json
-      }
+      revoke_royal_founder:
+        | {
+            Args: {
+              _actor_id?: string
+              _reason: string
+              _stripe_event_id: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _actor_id?: string
+              _mode?: string
+              _reason: string
+              _stripe_dispute_id?: string
+              _stripe_event_id: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       royal_entitlements: { Args: never; Returns: Json }
       royal_pass_daily_boost_status: { Args: never; Returns: Json }
       save_push_subscription: {
