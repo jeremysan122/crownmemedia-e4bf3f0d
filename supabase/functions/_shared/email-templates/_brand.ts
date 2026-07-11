@@ -63,6 +63,7 @@ export const styles = {
     padding: '36px 32px 32px',
     backgroundColor: '#ffffff',
     borderTop: `3px solid ${brand.gold}`,
+    textAlign: 'center' as const,
   } as const,
   ornament: {
     textAlign: 'center' as const,
