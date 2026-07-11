@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.get_live_battle_comments(uuid, timestamptz, integer) FROM anon, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_live_battle_comments(uuid, timestamptz, integer) TO authenticated;
