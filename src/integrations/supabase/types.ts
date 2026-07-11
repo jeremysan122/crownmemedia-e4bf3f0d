@@ -6240,14 +6240,6 @@ export type Database = {
         }
       }
       royal_pass_daily_boost_status: { Args: never; Returns: Json }
-      run_crown_score_guard_selftest: {
-        Args: never
-        Returns: {
-          check_name: string
-          detail: string
-          result: string
-        }[]
-      }
       save_push_subscription: {
         Args: {
           _auth: string

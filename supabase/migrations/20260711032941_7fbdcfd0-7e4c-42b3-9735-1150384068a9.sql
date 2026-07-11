@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.run_crown_score_guard_selftest();
