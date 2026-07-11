@@ -39,6 +39,7 @@ const LiveBattle = lazy(() => import("./pages/LiveBattle"));
 const BattleLobby = lazy(() => import("./pages/BattleLobby"));
 const Tournaments = lazy(() => import("./pages/Tournaments"));
 const TournamentDetail = lazy(() => import("./pages/TournamentDetail"));
+const BattlerAnalytics = lazy(() => import("./pages/BattlerAnalytics"));
 const Messages = lazy(() => import("./pages/Messages"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Settings = lazy(() => import("./pages/Settings"));
