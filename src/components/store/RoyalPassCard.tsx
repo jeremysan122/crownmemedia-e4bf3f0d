@@ -750,23 +750,30 @@ export default function RoyalPassCard() {
         <GoldParticles count={14} />
         <div className="relative text-center space-y-2">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/20 border border-gold/40 text-[10px] font-bold uppercase tracking-widest text-gold mb-1">
-            <Flame size={11} /> Founder pricing · Limited time
+            <Flame size={11} />
+            {founder.status?.active && founder.status.remaining > 0
+              ? `Founder window · ${founder.status.remaining.toLocaleString()} spots left`
+              : "Royal Pass · Monthly membership"}
           </div>
           <div className="font-display text-5xl md:text-6xl text-gold leading-none">
             ${Number(primaryPlan.usd).toFixed(2)}
             <span className="text-base text-muted-foreground font-sans">/{primaryPlan.interval}</span>
           </div>
           <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-            Premium status, monthly rewards, 5 Crown Shields, and founder-only perks — locked in for life when you join now.
+            Premium identity, 5 monthly Crown Shields (24h each), 500 Shekels, 3 Boost Tokens, and — during the Founder window — a Badge, Frame, and Title kept for life.
           </p>
         </div>
         <button
           onClick={() => subscribe(primaryPlan)}
-          className="group relative w-full py-4 rounded-2xl bg-gradient-gold text-primary-foreground text-base font-bold gold-shadow active:scale-[0.98] hover:scale-[1.01] transition-transform flex items-center justify-center gap-2 overflow-hidden"
+          disabled={subscribing !== null || !user}
+          className="group relative w-full py-4 rounded-2xl bg-gradient-gold text-primary-foreground text-base font-bold gold-shadow active:scale-[0.98] hover:scale-[1.01] transition-transform flex items-center justify-center gap-2 overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed"
         >
           <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-          <Crown size={18} className="relative" /> <span className="relative">Become Royal</span>
+          {subscribing === primaryPlan.id
+            ? <><Loader2 size={16} className="relative animate-spin" /> <span className="relative">Opening checkout…</span></>
+            : <><Crown size={18} className="relative" /> <span className="relative">{user ? "Become Royal" : "Sign in to join"}</span></>}
         </button>
+
         <div className="relative grid grid-cols-3 gap-2 text-[10px] text-center text-muted-foreground pt-1">
           <div className="flex flex-col items-center gap-1">
             <Shield size={14} className="text-gold" />
