@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Bell, MessageCircle, Search } from "lucide-react";
 import GlobalSearchDialog from "./GlobalSearchDialog";
