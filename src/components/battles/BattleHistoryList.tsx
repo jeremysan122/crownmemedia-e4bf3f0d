@@ -29,10 +29,10 @@ export default function BattleHistoryList({ limit }: { limit?: number }) {
           .order("ends_at", { ascending: false })
           .limit(limit ?? 40),
         supabase.from("battles")
-          .select("id,challenger_id,opponent_id,winner_id,status,ended_at,created_at")
+          .select("id,challenger_id,opponent_id,winner_id,status,ends_at,created_at")
           .or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`)
           .eq("status", "completed")
-          .order("ended_at", { ascending: false })
+          .order("ends_at", { ascending: false })
           .limit(limit ?? 40),
       ]);
 
@@ -52,7 +52,7 @@ export default function BattleHistoryList({ limit }: { limit?: number }) {
         const host = b.challenger_id === user.id;
         const otherId = host ? b.opponent_id : b.challenger_id;
         merged.push({
-          kind: "post", id: b.id, ts: b.ended_at ?? b.created_at,
+          kind: "post", id: b.id, ts: b.ends_at ?? b.created_at,
           opponent_id: otherId,
           won: b.winner_id ? b.winner_id === user.id : null,
           tied: b.winner_id === null,

@@ -53,14 +53,19 @@ export default function BattlesHub() {
         .select("id", { count: "exact", head: true })
         .eq("opponent_id", user.id).eq("status", "pending") : null;
       const winsP = user?.id ? supabase.from("profiles")
-        .select("battle_wins,battle_losses").eq("id", user.id).maybeSingle() : null;
+        .select("battle_wins").eq("id", user.id).maybeSingle() : null;
+      // profiles.battle_losses doesn't exist — derive losses from ended battles the user was in but didn't win.
+      const totalP = user?.id ? supabase.from("live_battles")
+        .select("id", { count: "exact", head: true })
+        .or(`host_id.eq.${user.id},opponent_id.eq.${user.id}`)
+        .eq("status", "ended") : null;
 
-      const [live, invites, wins] = await Promise.all([liveNowP, invitesP as any, winsP as any]);
+      const [live, invites, wins, total] = await Promise.all([liveNowP, invitesP as any, winsP as any, totalP as any]);
       if (!alive) return;
       const w = (wins?.data?.battle_wins as number) ?? 0;
-      const l = (wins?.data?.battle_losses as number) ?? 0;
+      const t = (total?.count as number) ?? w;
       setStats({
-        wins: w, total: w + l,
+        wins: w, total: Math.max(w, t),
         liveNow: live.count ?? 0,
         invites: invites?.count ?? 0,
       });
