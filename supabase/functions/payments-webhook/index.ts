@@ -272,9 +272,10 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
 
-    // Royal Pass monthly benefit grants — fires on initial paid invoice AND every renewal.
+    // Royal Pass monthly benefit grants — fires on paid invoice (initial + every renewal).
     // Idempotent by (user_id, period_start) and by stripe event id.
-    if (event.type === "invoice.paid" || event.type === "invoice.payment_succeeded") {
+    // We listen to exactly ONE successful-invoice event: invoice.paid.
+    if (event.type === "invoice.paid") {
       const invoice = event.data.object as any;
       const subId = typeof invoice.subscription === "string"
         ? invoice.subscription
@@ -288,7 +289,22 @@ Deno.serve(async (req) => {
             const line = invoice.lines?.data?.[0];
             const periodStart = line?.period?.start ?? sub.items?.data?.[0]?.current_period_start ?? sub.current_period_start;
             const periodEnd = line?.period?.end ?? sub.items?.data?.[0]?.current_period_end ?? sub.current_period_end;
-            const paidCents = Number(invoice.amount_paid ?? invoice.amount_due ?? 0);
+            const paidCents = Number(invoice.amount_paid ?? 0);
+            // Resolve Stripe reference IDs for later refund/dispute mapping.
+            const paymentIntentId = typeof invoice.payment_intent === "string"
+              ? invoice.payment_intent
+              : invoice.payment_intent?.id ?? null;
+            let chargeId: string | null = null;
+            if (paymentIntentId) {
+              try {
+                const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+                chargeId = typeof pi.latest_charge === "string"
+                  ? pi.latest_charge
+                  : (pi.latest_charge as any)?.id ?? null;
+              } catch (e) {
+                console.warn(`[stripe-webhook] could not resolve latest_charge for ${paymentIntentId}: ${(e as Error).message}`);
+              }
+            }
             if (periodStart && periodEnd && paidCents > 0) {
               const { error: grantErr } = await supabase.rpc("grant_royal_monthly_benefits", {
                 _user_id: userId,
@@ -297,6 +313,9 @@ Deno.serve(async (req) => {
                 _period_start: new Date(periodStart * 1000).toISOString(),
                 _period_end: new Date(periodEnd * 1000).toISOString(),
                 _paid_amount_cents: paidCents,
+                _stripe_payment_intent_id: paymentIntentId,
+                _stripe_charge_id: chargeId,
+                _stripe_subscription_id: subId,
               });
               if (grantErr) {
                 console.error(`[stripe-webhook] grant_royal_monthly_benefits failed for ${userId}: ${grantErr.message}`);
@@ -313,33 +332,123 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Refund / chargeback — revoke Founder cosmetics, preserve grant ledger, audit trail.
-    if (
-      event.type === "charge.refunded" ||
-      event.type === "charge.dispute.created" ||
-      event.type === "charge.dispute.funds_withdrawn"
-    ) {
-      const charge = event.data.object as any;
-      const invoiceId = typeof charge.invoice === "string" ? charge.invoice : charge.invoice?.id;
-      const isFullRefund =
-        event.type === "charge.refunded"
-          ? Number(charge.amount_refunded ?? 0) >= Number(charge.amount ?? 0)
-          : true;
-      if (invoiceId && isFullRefund) {
-        try {
-          const { error: refundErr } = await supabase.rpc("handle_royal_refund", {
+    // ------------------------------------------------------------------------
+    // charge.refunded — event.data.object IS a Charge.
+    // Full refund → reverse the matching Royal grant.
+    // ------------------------------------------------------------------------
+    if (event.type === "charge.refunded") {
+      try {
+        const charge = event.data.object as any;
+        const isFullRefund = Number(charge.amount_refunded ?? 0) >= Number(charge.amount ?? 0);
+        if (isFullRefund) {
+          const invoiceId = typeof charge.invoice === "string" ? charge.invoice : charge.invoice?.id ?? null;
+          const paymentIntentId = typeof charge.payment_intent === "string"
+            ? charge.payment_intent
+            : charge.payment_intent?.id ?? null;
+          const { error } = await supabase.rpc("handle_royal_refund", {
             _stripe_event_id: event.id,
+            _reason: "charge.refunded",
             _stripe_invoice_id: invoiceId,
-            _reason: event.type,
+            _stripe_payment_intent_id: paymentIntentId,
+            _stripe_charge_id: charge.id,
+            _new_status: "reversed",
           });
-          if (refundErr) {
-            console.error(`[stripe-webhook] handle_royal_refund failed: ${refundErr.message}`);
-          } else {
-            console.log(`[stripe-webhook] refund processed invoice=${invoiceId}`);
-          }
-        } catch (e) {
-          console.error(`[stripe-webhook] refund handler error: ${(e as Error).message}`);
+          if (error) console.error(`[stripe-webhook] handle_royal_refund failed: ${error.message}`);
+          else console.log(`[stripe-webhook] refund processed charge=${charge.id}`);
+        } else {
+          console.log(`[stripe-webhook] partial refund ignored charge=${(event.data.object as any).id}`);
         }
+      } catch (e) {
+        console.error(`[stripe-webhook] refund handler error: ${(e as Error).message}`);
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // Dispute events — event.data.object IS a Dispute, NOT a Charge.
+    //   charge.dispute.created            → suspend grant (status=disputed)
+    //   charge.dispute.funds_withdrawn    → reverse grant (status=reversed)
+    //   charge.dispute.closed             → won/lost outcome
+    //   charge.dispute.funds_reinstated   → restore prior grant
+    // ------------------------------------------------------------------------
+    if (
+      event.type === "charge.dispute.created" ||
+      event.type === "charge.dispute.funds_withdrawn" ||
+      event.type === "charge.dispute.closed" ||
+      event.type === "charge.dispute.funds_reinstated"
+    ) {
+      try {
+        const dispute = event.data.object as any;
+        const chargeId: string | null = typeof dispute.charge === "string"
+          ? dispute.charge
+          : dispute.charge?.id ?? null;
+        if (!chargeId) {
+          console.warn(`[stripe-webhook] dispute ${dispute.id} missing charge id — no-op`);
+        } else {
+          // Resolve charge → payment_intent → invoice
+          let paymentIntentId: string | null = null;
+          let invoiceId: string | null = null;
+          try {
+            const charge = await stripe.charges.retrieve(chargeId);
+            invoiceId = typeof charge.invoice === "string"
+              ? charge.invoice
+              : (charge.invoice as any)?.id ?? null;
+            paymentIntentId = typeof charge.payment_intent === "string"
+              ? charge.payment_intent
+              : (charge.payment_intent as any)?.id ?? null;
+          } catch (e) {
+            console.warn(`[stripe-webhook] could not retrieve charge ${chargeId}: ${(e as Error).message}`);
+          }
+
+          if (event.type === "charge.dispute.funds_reinstated") {
+            const { error } = await supabase.rpc("handle_royal_dispute_reinstated", {
+              _stripe_event_id: event.id,
+              _stripe_invoice_id: invoiceId,
+              _stripe_payment_intent_id: paymentIntentId,
+              _stripe_charge_id: chargeId,
+            });
+            if (error) console.error(`[stripe-webhook] handle_royal_dispute_reinstated failed: ${error.message}`);
+            else console.log(`[stripe-webhook] dispute funds reinstated charge=${chargeId}`);
+          } else {
+            // Choose status by event.
+            //   dispute.created                    → 'disputed' (suspend)
+            //   dispute.funds_withdrawn            → 'reversed' (permanent)
+            //   dispute.closed with status 'lost'  → 'reversed'
+            //   dispute.closed with status 'won'   → 'granted' via reinstate
+            let newStatus: "disputed" | "reversed" | null = null;
+            if (event.type === "charge.dispute.created") newStatus = "disputed";
+            else if (event.type === "charge.dispute.funds_withdrawn") newStatus = "reversed";
+            else if (event.type === "charge.dispute.closed") {
+              if (dispute.status === "lost") newStatus = "reversed";
+              else if (dispute.status === "won") {
+                const { error } = await supabase.rpc("handle_royal_dispute_reinstated", {
+                  _stripe_event_id: event.id,
+                  _stripe_invoice_id: invoiceId,
+                  _stripe_payment_intent_id: paymentIntentId,
+                  _stripe_charge_id: chargeId,
+                });
+                if (error) console.error(`[stripe-webhook] reinstate (dispute won) failed: ${error.message}`);
+                newStatus = null;
+              } else {
+                newStatus = null; // warning_needs_response / warning_under_review etc — no-op
+              }
+            }
+
+            if (newStatus) {
+              const { error } = await supabase.rpc("handle_royal_refund", {
+                _stripe_event_id: event.id,
+                _reason: `${event.type}${dispute.reason ? `:${dispute.reason}` : ""}`,
+                _stripe_invoice_id: invoiceId,
+                _stripe_payment_intent_id: paymentIntentId,
+                _stripe_charge_id: chargeId,
+                _new_status: newStatus,
+              });
+              if (error) console.error(`[stripe-webhook] handle_royal_refund (dispute) failed: ${error.message}`);
+              else console.log(`[stripe-webhook] dispute ${event.type} → status=${newStatus} charge=${chargeId}`);
+            }
+          }
+        }
+      } catch (e) {
+        console.error(`[stripe-webhook] dispute handler error: ${(e as Error).message}`);
       }
     }
 

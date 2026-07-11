@@ -57,7 +57,7 @@ export type Database = {
         Row: {
           action: string
           actor_email: string | null
-          actor_id: string
+          actor_id: string | null
           created_at: string
           details: Json
           id: string
@@ -67,7 +67,7 @@ export type Database = {
         Insert: {
           action: string
           actor_email?: string | null
-          actor_id: string
+          actor_id?: string | null
           created_at?: string
           details?: Json
           id?: string
@@ -77,7 +77,7 @@ export type Database = {
         Update: {
           action?: string
           actor_email?: string | null
-          actor_id?: string
+          actor_id?: string | null
           created_at?: string
           details?: Json
           id?: string
@@ -4251,10 +4251,17 @@ export type Database = {
           metadata: Json
           period_end: string
           period_start: string
+          reversal_stripe_event_id: string | null
+          reversed_at: string | null
+          reversed_reason: string | null
           shekels_granted: number
           shields_granted: number
+          status: string
+          stripe_charge_id: string | null
           stripe_event_id: string | null
           stripe_invoice_id: string | null
+          stripe_payment_intent_id: string | null
+          stripe_subscription_id: string | null
           user_id: string
         }
         Insert: {
@@ -4265,10 +4272,17 @@ export type Database = {
           metadata?: Json
           period_end: string
           period_start: string
+          reversal_stripe_event_id?: string | null
+          reversed_at?: string | null
+          reversed_reason?: string | null
           shekels_granted?: number
           shields_granted?: number
+          status?: string
+          stripe_charge_id?: string | null
           stripe_event_id?: string | null
           stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_subscription_id?: string | null
           user_id: string
         }
         Update: {
@@ -4279,10 +4293,17 @@ export type Database = {
           metadata?: Json
           period_end?: string
           period_start?: string
+          reversal_stripe_event_id?: string | null
+          reversed_at?: string | null
+          reversed_reason?: string | null
           shekels_granted?: number
           shields_granted?: number
+          status?: string
+          stripe_charge_id?: string | null
           stripe_event_id?: string | null
           stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_subscription_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -6043,20 +6064,35 @@ export type Database = {
       }
       grant_royal_monthly_benefits: {
         Args: {
-          _paid_amount_cents?: number
+          _paid_amount_cents: number
           _period_end: string
           _period_start: string
+          _stripe_charge_id?: string
           _stripe_event_id: string
           _stripe_invoice_id: string
+          _stripe_payment_intent_id?: string
+          _stripe_subscription_id?: string
           _user_id: string
+        }
+        Returns: Json
+      }
+      handle_royal_dispute_reinstated: {
+        Args: {
+          _stripe_charge_id?: string
+          _stripe_event_id: string
+          _stripe_invoice_id?: string
+          _stripe_payment_intent_id?: string
         }
         Returns: Json
       }
       handle_royal_refund: {
         Args: {
-          _reason?: string
+          _new_status?: string
+          _reason: string
+          _stripe_charge_id?: string
           _stripe_event_id: string
-          _stripe_invoice_id: string
+          _stripe_invoice_id?: string
+          _stripe_payment_intent_id?: string
         }
         Returns: Json
       }
@@ -6509,7 +6545,7 @@ export type Database = {
         Args: {
           _actor_id?: string
           _reason: string
-          _stripe_event_id?: string
+          _stripe_event_id: string
           _user_id: string
         }
         Returns: Json
