@@ -197,14 +197,21 @@ export default function RoyalPassCard() {
   }, []);
 
   const subscribe = (plan: Plan) => {
-    if (!user) return;
-    openCheckout({
-      fnName: "create-royal-pass-checkout",
-      extraBody: { plan_id: plan.id },
-      title: plan.name,
-      returnUrl: `${window.location.origin}/store/success?kind=royal_pass`,
-    });
+    if (!user || subscribing) return;
+    setSubscribing(plan.id);
+    try {
+      openCheckout({
+        fnName: "create-royal-pass-checkout",
+        extraBody: { plan_id: plan.id },
+        title: plan.name,
+        returnUrl: `${window.location.origin}/store/success?kind=royal_pass`,
+      });
+    } finally {
+      // openCheckout mounts the dialog synchronously; clear immediately after mount tick
+      setTimeout(() => setSubscribing(null), 800);
+    }
   };
+
 
   const scrollToCta = () => {
     ctaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
