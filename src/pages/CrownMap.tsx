@@ -36,8 +36,9 @@ type Row = {
     country: string | null;
     location_enabled: boolean | null;
     location_source: string | null;
-    post_lat: number | null;
-    post_lng: number | null;
+    // Exact coords intentionally excluded — column-level revoke keeps them
+    // server-side. Public pins snap to city/state/country centers.
+
     post_location_precision: string | null;
     image_url?: string | null;
     caption?: string | null;
