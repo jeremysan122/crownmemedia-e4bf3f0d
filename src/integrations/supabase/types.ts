@@ -4391,6 +4391,7 @@ export type Database = {
           id: string
           period_end: string
           period_start: string
+          royal_pass_grant_id: string | null
           shields_granted: number
           shields_used: number
           updated_at: string
@@ -4401,6 +4402,7 @@ export type Database = {
           id?: string
           period_end: string
           period_start: string
+          royal_pass_grant_id?: string | null
           shields_granted?: number
           shields_used?: number
           updated_at?: string
@@ -4411,12 +4413,20 @@ export type Database = {
           id?: string
           period_end?: string
           period_start?: string
+          royal_pass_grant_id?: string | null
           shields_granted?: number
           shields_used?: number
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "royal_pass_shield_allowances_grant_fk"
+            columns: ["royal_pass_grant_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_grants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "royal_pass_shield_allowances_user_id_fkey"
             columns: ["user_id"]
