@@ -3,7 +3,8 @@ import AppShell from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { Loader2, Activity, CreditCard, BarChart3, RefreshCcw } from "lucide-react";
+import { Loader2, Activity, CreditCard, BarChart3, RefreshCcw, Mail } from "lucide-react";
+import { toast } from "sonner";
 import { timeAgo } from "@/lib/crown";
 import AdminSessionHint from "@/components/admin/AdminSessionHint";
 
