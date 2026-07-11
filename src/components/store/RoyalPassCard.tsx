@@ -167,10 +167,19 @@ function RoyalMockPhone() {
 export default function RoyalPassCard() {
   const { user } = useAuth();
   const pass = useRoyalPass();
+  const entitlements = useRoyalEntitlements();
+  const founder = useFounderStatus();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [subscribing, setSubscribing] = useState<string | null>(null);
   const { openCheckout, checkoutElement } = useStripeCheckout();
   const ctaRef = useRef<HTMLDivElement | null>(null);
+
+  const founderEndLabel = useMemo(() => {
+    if (!founder.status?.end_at) return null;
+    return new Date(founder.status.end_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }, [founder.status?.end_at]);
+
 
   useEffect(() => {
     let cancelled = false;
