@@ -38,7 +38,7 @@ export function useMyRoyalShieldSummary() {
       setError(e.message);
       setData(ZERO);
     } else {
-      const row = Array.isArray(rows) ? rows[0] : rows;
+      const row = Array.isArray(rows) ? rows[0] : (rows as RoyalShieldSummary | null);
       if (row) {
         setData({
           shields_granted: Number(row.shields_granted ?? 0),
