@@ -80,11 +80,19 @@ Deno.serve(async (req) => {
   const stamp = Date.now();
   const email = `royal-audit+${stamp}@crownmemedia-internal.test`;
   const testPassword = crypto.randomUUID() + "!Aa1";
+  const syntheticMeta = {
+    synthetic: true,
+    purpose: "royal_runtime_audit",
+    policies_accepted: true,
+    dob: "1990-01-01",
+    first_name: "Royal",
+    last_name: "Audit",
+  };
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email,
     password: testPassword,
     email_confirm: true,
-    user_metadata: { synthetic: true, purpose: "royal_runtime_audit" },
+    user_metadata: syntheticMeta,
   });
   if (createErr || !created?.user) {
     return json(500, { error: "create_test_user_failed", detail: createErr?.message });
@@ -97,7 +105,7 @@ Deno.serve(async (req) => {
     email: recipientEmail,
     password: crypto.randomUUID() + "!Aa1",
     email_confirm: true,
-    user_metadata: { synthetic: true, purpose: "royal_runtime_audit_recipient" },
+    user_metadata: { ...syntheticMeta, purpose: "royal_runtime_audit_recipient" },
   });
   const recipientUserId = rcptCreated?.user?.id ?? null;
   if (recipientUserId) {
