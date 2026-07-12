@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
   });
   if (createErr || !created.user) {
     pathB.error = createErr?.message ?? "createUser failed";
+    pathB.error_raw = JSON.parse(JSON.stringify(createErr ?? {}));
   } else {
     const disposableId = created.user.id;
     pathB.disposable_user_id = disposableId;
