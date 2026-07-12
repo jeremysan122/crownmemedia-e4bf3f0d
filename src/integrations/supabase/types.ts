@@ -6518,29 +6518,58 @@ export type Database = {
         }
       }
       deactivate_my_account: { Args: never; Returns: undefined }
-      debit_boost_token: {
-        Args: {
-          _metadata?: Json
-          _operation_id: string
-          _reason_code: string
-          _ref_id?: string
-          _ref_table?: string
-          _user_id: string
-        }
-        Returns: Json
-      }
-      debit_shekels: {
-        Args: {
-          _amount: number
-          _metadata?: Json
-          _operation_id: string
-          _reason_code: string
-          _ref_id?: string
-          _ref_table?: string
-          _user_id: string
-        }
-        Returns: Json
-      }
+      debit_boost_token:
+        | {
+            Args: {
+              _metadata?: Json
+              _operation_id: string
+              _reason_code: string
+              _ref_id?: string
+              _ref_table?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _caller?: string
+              _metadata?: Json
+              _operation_id: string
+              _reason_code: string
+              _ref_id?: string
+              _ref_table?: string
+              _request_fingerprint?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+      debit_shekels:
+        | {
+            Args: {
+              _amount: number
+              _metadata?: Json
+              _operation_id: string
+              _reason_code: string
+              _ref_id?: string
+              _ref_table?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _amount: number
+              _caller?: string
+              _metadata?: Json
+              _operation_id: string
+              _reason_code: string
+              _ref_id?: string
+              _ref_table?: string
+              _request_fingerprint?: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       decline_battle: { Args: { _battle_id: string }; Returns: undefined }
       delete_email: {
         Args: { message_id: number; queue_name: string }
