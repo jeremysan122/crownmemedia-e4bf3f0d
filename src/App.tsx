@@ -124,6 +124,7 @@ const ComplianceCheck = lazy(() => import("./pages/admin/ComplianceCheck"));
 const CategoryHub = lazy(() => import("./pages/CategoryHub"));
 const Discover = lazy(() => import("./pages/Discover"));
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const CommandCenterRoyalShields = lazy(() => import("./pages/admin/CommandCenterRoyalShields"));
 import LegalConsentGate from "@/components/legal/LegalConsentGate";
 const Marketing = lazy(() => import("./pages/Marketing"));
 
