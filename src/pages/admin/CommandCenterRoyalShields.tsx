@@ -59,6 +59,31 @@ type RuntimeAuditResult = {
   ran_at: string;
 };
 
+type ReconciliationSnapshot = {
+  flags: Array<{ key: string; enabled: boolean; rollout_percentage: number; updated_at: string }>;
+  aggregate: {
+    grants_needing_reconciliation: number;
+    unrecovered_shekels_total: number;
+    unrecovered_boost_tokens_total: number;
+    shekel_allocation_reversals_total: number;
+    boost_token_allocation_reversals_total: number;
+    refunded_grants_total: number;
+    disputed_grants_total: number;
+  };
+  grants: Array<{
+    id: string;
+    user_id: string;
+    status: string;
+    reconciliation_reason: string | null;
+    unrecovered_promotional_shekels: number;
+    unrecovered_promotional_boost_tokens: number;
+    shekels_reversed: number;
+    boost_tokens_reversed: number;
+    active_shields_reversed: number;
+    reversed_at: string | null;
+  }>;
+  generated_at: string;
+
 export default function CommandCenterRoyalShields() {
   const { isModerator, loading } = useAuth();
   const [rows, setRows] = useState<AccountingRow[]>([]);
