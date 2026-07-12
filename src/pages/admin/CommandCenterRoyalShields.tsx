@@ -95,24 +95,29 @@ export default function CommandCenterRoyalShields() {
   const [lastCheck, setLastCheck] = useState<CheckRow[] | null>(null);
   const [runtimeBusy, setRuntimeBusy] = useState(false);
   const [runtime, setRuntime] = useState<RuntimeAuditResult | null>(null);
+  const [recon, setRecon] = useState<ReconciliationSnapshot | null>(null);
+  const [reconBusy, setReconBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setBusy(true);
+    setReconBusy(true);
     setErr(null);
-    const [acct, log] = await Promise.all([
-      // admin_royal_shield_accounting returns the full view for admins only.
+    const [acct, log, snap] = await Promise.all([
       supabase.rpc("admin_royal_shield_accounting" as never),
       supabase
         .from("royal_shield_audit_log")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(100),
+      supabase.rpc("admin_royal_pass_reconciliation_snapshot" as never),
     ]);
     if (acct.error) setErr(acct.error.message);
     setRows(((acct.data as AccountingRow[] | null) ?? []));
     setAudit(((log.data as AuditRow[] | null) ?? []));
+    setRecon((snap.data as ReconciliationSnapshot | null) ?? null);
     setBusy(false);
+    setReconBusy(false);
   }, []);
 
   useEffect(() => {
