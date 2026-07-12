@@ -79,9 +79,10 @@ Deno.serve(async (req) => {
   // Ephemeral test user
   const stamp = Date.now();
   const email = `royal-audit+${stamp}@crownmemedia-internal.test`;
+  const testPassword = crypto.randomUUID() + "!Aa1";
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email,
-    password: crypto.randomUUID() + "!Aa1",
+    password: testPassword,
     email_confirm: true,
     user_metadata: { synthetic: true, purpose: "royal_runtime_audit" },
   });
@@ -89,6 +90,23 @@ Deno.serve(async (req) => {
     return json(500, { error: "create_test_user_failed", detail: createErr?.message });
   }
   const testUserId = created.user.id;
+
+  // Ephemeral recipient for gift round-trip
+  const recipientEmail = `royal-audit-rcpt+${stamp}@crownmemedia-internal.test`;
+  const { data: rcptCreated } = await admin.auth.admin.createUser({
+    email: recipientEmail,
+    password: crypto.randomUUID() + "!Aa1",
+    email_confirm: true,
+    user_metadata: { synthetic: true, purpose: "royal_runtime_audit_recipient" },
+  });
+  const recipientUserId = rcptCreated?.user?.id ?? null;
+  if (recipientUserId) {
+    await admin.from("profiles").upsert({
+      id: recipientUserId,
+      username: `royal_audit_rcpt_${stamp}`,
+      display_name: "Royal Audit Recipient",
+    } as never, { onConflict: "id" });
+  }
 
   // Ensure profile row exists (some triggers depend on it)
   await admin.from("profiles").upsert({
@@ -381,12 +399,12 @@ Deno.serve(async (req) => {
 
       const { data: allocs } = await admin
         .from("shekel_spend_allocations")
-        .select("amount, source_ref_id")
-        .eq("debit_operation_id", opId);
-      const totalAlloc = (allocs ?? []).reduce((s, a) => s + Number((a as { amount: number }).amount ?? 0), 0);
+        .select("amount_consumed, royal_pass_grant_id")
+        .eq("operation_id", opId);
+      const totalAlloc = (allocs ?? []).reduce((s, a) => s + Number((a as { amount_consumed: number }).amount_consumed ?? 0), 0);
       steps.push({
         name: "allocations_sum_to_debit",
-        ok: totalAlloc === 100 && (allocs ?? []).some((a) => (a as { source_ref_id: string }).source_ref_id === grantId),
+        ok: totalAlloc === 100 && (allocs ?? []).some((a) => (a as { royal_pass_grant_id: string }).royal_pass_grant_id === grantId),
         data: allocs,
       });
       return steps;
@@ -424,7 +442,7 @@ Deno.serve(async (req) => {
       const { count } = await admin
         .from("shekel_spend_allocations")
         .select("id", { count: "exact", head: true })
-        .eq("debit_operation_id", opId);
+        .eq("operation_id", opId);
       steps.push({ name: "no_duplicate_allocations", ok: (count ?? 0) >= 1, data: { count } });
       return steps;
     }),
@@ -475,7 +493,7 @@ Deno.serve(async (req) => {
       const { data: alloc } = await admin
         .from("boost_token_spend_allocations")
         .select("royal_pass_grant_id, lot_id")
-        .eq("debit_operation_id", opId)
+        .eq("operation_id", opId)
         .maybeSingle();
       steps.push({ name: "boost_allocation_recorded", ok: !!alloc, data: alloc });
       return steps;
@@ -548,6 +566,125 @@ Deno.serve(async (req) => {
     _metadata: { scenarios: results, actor_id: callerId, email } as never,
   } as never);
 
+  // Signed-in client for K/L (public wrappers require auth.uid()).
+  const testUserClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+  );
+  const { data: signIn, error: signInErr } = await testUserClient.auth.signInWithPassword({
+    email,
+    password: testPassword,
+  });
+
+  // ---------- Scenario K: purchase_boost round-trip ----------
+  results.push(
+    await runScenario(admin, "K_purchase_boost_roundtrip", async () => {
+      const steps: Step[] = [];
+      steps.push({ name: "sign_in_ok", ok: !signInErr && !!signIn?.user, detail: signInErr?.message });
+      if (signInErr || !signIn?.user) return steps;
+
+      const { data, error } = await testUserClient.rpc("purchase_boost" as never, {
+        p_boost_type: "profile_glow",
+        p_duration_hours: 1,
+        p_cost_shekels: 200,
+        p_post_id: null,
+      } as never);
+      steps.push({ name: "purchase_boost_ok", ok: !error, detail: error?.message, data });
+
+      const boostId = (data as { boost_id?: string } | null)?.boost_id ?? null;
+      steps.push({ name: "boost_row_returned", ok: !!boostId, data: { boostId } });
+
+      // Verify the boost's debit routed through centralized primitives.
+      const { data: opRow } = await admin
+        .from("debit_operations")
+        .select("operation_id, amount, reason_code, ref_table, ref_id, status")
+        .eq("user_id", testUserId)
+        .eq("ref_table", "boosts")
+        .eq("ref_id", boostId)
+        .maybeSingle();
+      steps.push({
+        name: "debit_operation_recorded",
+        ok: !!opRow && (opRow as { status: string }).status === "completed"
+          && Number((opRow as { amount: number }).amount) === 200,
+        data: opRow,
+      });
+
+      const { data: allocs } = await admin
+        .from("shekel_spend_allocations")
+        .select("amount_consumed, source_type, royal_pass_grant_id")
+        .eq("operation_id", (opRow as { operation_id: string } | null)?.operation_id ?? "00000000-0000-0000-0000-000000000000");
+      const totalAlloc = (allocs ?? []).reduce((s, a) => s + Number((a as { amount_consumed: number }).amount_consumed ?? 0), 0);
+      steps.push({ name: "allocations_sum_200", ok: totalAlloc === 200, data: allocs });
+      return steps;
+    }),
+  );
+
+  // ---------- Scenario L: send_royal_gift round-trip ----------
+  results.push(
+    await runScenario(admin, "L_send_royal_gift_roundtrip", async () => {
+      const steps: Step[] = [];
+      if (!recipientUserId) {
+        steps.push({ name: "recipient_created", ok: false, detail: "recipient user missing" });
+        return steps;
+      }
+      if (!signIn?.user) {
+        steps.push({ name: "sign_in_available", ok: false, detail: "sender not signed in" });
+        return steps;
+      }
+
+      const dedupe = crypto.randomUUID();
+      const { data, error } = await testUserClient.rpc("send_royal_gift" as never, {
+        p_gift_id: "flower_daisy",
+        p_recipient_id: recipientUserId,
+        p_post_id: null,
+        p_quantity: 1,
+        p_dedupe_key: dedupe,
+      } as never);
+      steps.push({ name: "gift_rpc_ok", ok: !error, detail: error?.message, data });
+
+      const txId = (data as { transaction_id?: string } | null)?.transaction_id ?? null;
+      steps.push({ name: "gift_tx_returned", ok: !!txId, data: { txId } });
+
+      // Confirm debit routed through primitives with ref_table=gift_transactions
+      const { data: opRow } = await admin
+        .from("debit_operations")
+        .select("operation_id, amount, ref_table, ref_id, status")
+        .eq("user_id", testUserId)
+        .eq("ref_table", "gift_transactions")
+        .eq("ref_id", txId)
+        .maybeSingle();
+      steps.push({
+        name: "gift_debit_recorded",
+        ok: !!opRow && (opRow as { status: string }).status === "completed"
+          && Number((opRow as { amount: number }).amount) === 10,
+        data: opRow,
+      });
+
+      // Dedupe replay must return the same transaction and NOT create a second debit op.
+      const { data: replay } = await testUserClient.rpc("send_royal_gift" as never, {
+        p_gift_id: "flower_daisy",
+        p_recipient_id: recipientUserId,
+        p_post_id: null,
+        p_quantity: 1,
+        p_dedupe_key: dedupe,
+      } as never);
+      const dedupedOk = (replay as { deduped?: boolean; transaction_id?: string } | null)?.deduped === true
+        && (replay as { transaction_id: string }).transaction_id === txId;
+      steps.push({ name: "dedupe_replay_returns_same_tx", ok: dedupedOk, data: replay });
+
+      const { count: opCount } = await admin
+        .from("debit_operations")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", testUserId)
+        .eq("ref_table", "gift_transactions")
+        .eq("ref_id", txId);
+      steps.push({ name: "no_duplicate_debit_op", ok: (opCount ?? 0) === 1, data: { opCount } });
+      return steps;
+    }),
+  );
+
+  await testUserClient.auth.signOut();
+
   // Cleanup: remove test user (cascades grants/allowances/reversals via FKs where set)
   // Explicitly delete rows without ON DELETE CASCADE first for safety.
   await admin.from("shekel_spend_allocations").delete().eq("user_id", testUserId);
@@ -556,12 +693,20 @@ Deno.serve(async (req) => {
   await admin.from("debit_operations").delete().eq("user_id", testUserId);
   await admin.from("shekel_ledger").delete().eq("user_id", testUserId);
   await admin.from("boost_tokens_ledger").delete().eq("user_id", testUserId);
+  await admin.from("gift_transactions").delete().eq("sender_id", testUserId);
+  await admin.from("boosts").delete().eq("user_id", testUserId);
   await admin.from("royal_pass_reversals").delete().eq("user_id", testUserId);
   await admin.from("royal_pass_shield_allowances").delete().eq("user_id", testUserId);
   await admin.from("royal_pass_grants").delete().eq("user_id", testUserId);
   await admin.from("wallets").delete().eq("user_id", testUserId);
   await admin.from("profiles").delete().eq("id", testUserId);
   await admin.auth.admin.deleteUser(testUserId);
+  if (recipientUserId) {
+    await admin.from("gift_transactions").delete().eq("receiver_id", recipientUserId);
+    await admin.from("wallets").delete().eq("user_id", recipientUserId);
+    await admin.from("profiles").delete().eq("id", recipientUserId);
+    await admin.auth.admin.deleteUser(recipientUserId);
+  }
 
   return json(200, {
     ok: passCount === results.length,
