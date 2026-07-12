@@ -550,6 +550,12 @@ Deno.serve(async (req) => {
 
   // Cleanup: remove test user (cascades grants/allowances/reversals via FKs where set)
   // Explicitly delete rows without ON DELETE CASCADE first for safety.
+  await admin.from("shekel_spend_allocations").delete().eq("user_id", testUserId);
+  await admin.from("boost_token_spend_allocations").delete().eq("user_id", testUserId);
+  await admin.from("boost_token_lots").delete().eq("user_id", testUserId);
+  await admin.from("debit_operations").delete().eq("user_id", testUserId);
+  await admin.from("shekel_ledger").delete().eq("user_id", testUserId);
+  await admin.from("boost_tokens_ledger").delete().eq("user_id", testUserId);
   await admin.from("royal_pass_reversals").delete().eq("user_id", testUserId);
   await admin.from("royal_pass_shield_allowances").delete().eq("user_id", testUserId);
   await admin.from("royal_pass_grants").delete().eq("user_id", testUserId);
