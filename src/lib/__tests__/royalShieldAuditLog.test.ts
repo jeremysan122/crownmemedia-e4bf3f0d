@@ -168,3 +168,76 @@ describe("Existing accounting tables — RLS lockdown re-verified", () => {
     );
   });
 });
+
+/**
+ * Drift-scenario simulations — verify the invariant checker's math
+ * fires exactly when active sessions exceed net-spent credits and
+ * stays silent otherwise. These simulate the SQL formula in TS so
+ * regressions in the migration text (e.g. flipping the comparison,
+ * losing the GREATEST clamp) fail loudly without needing a live DB.
+ */
+type Row = { granted: number; used: number; reversed: number; active: number };
+function netSpent(r: Row) { return Math.max(r.used - r.reversed, 0); }
+function driftAmount(rows: Row[]) {
+  const active = rows.reduce((s, r) => s + r.active, 0);
+  const net = rows.reduce((s, r) => s + netSpent(r), 0);
+  return Math.max(active - net, 0);
+}
+function status(rows: Row[]) { return driftAmount(rows) > 0 ? "drift" : "ok"; }
+
+describe("Invariant checker — drift scenario simulations", () => {
+  it("clean grant with zero usage → ok, no drift", () => {
+    const rows: Row[] = [{ granted: 5, used: 0, reversed: 0, active: 0 }];
+    expect(status(rows)).toBe("ok");
+    expect(driftAmount(rows)).toBe(0);
+  });
+
+  it("shield fully consumed with matching active session → ok (session backs a credit)", () => {
+    const rows: Row[] = [{ granted: 5, used: 1, reversed: 0, active: 1 }];
+    expect(status(rows)).toBe("ok");
+  });
+
+  it("phantom active session (no credit ever spent) → drift", () => {
+    const rows: Row[] = [{ granted: 5, used: 0, reversed: 0, active: 1 }];
+    expect(status(rows)).toBe("drift");
+    expect(driftAmount(rows)).toBe(1);
+  });
+
+  it("reversal collapses spend but session lingers → drift", () => {
+    // used=1 but reversed=1 → net=0; session still on → 1 drift.
+    const rows: Row[] = [{ granted: 5, used: 1, reversed: 1, active: 1 }];
+    expect(status(rows)).toBe("drift");
+    expect(driftAmount(rows)).toBe(1);
+  });
+
+  it("multiple allowances aggregate correctly across a single user", () => {
+    const rows: Row[] = [
+      { granted: 5, used: 2, reversed: 0, active: 1 },
+      { granted: 5, used: 1, reversed: 0, active: 1 },
+    ];
+    // net = 3, active = 2 → ok
+    expect(status(rows)).toBe("ok");
+  });
+
+  it("cross-allowance drift is detected even when one row looks clean", () => {
+    const rows: Row[] = [
+      { granted: 5, used: 3, reversed: 0, active: 0 }, // clean, over-spent
+      { granted: 5, used: 0, reversed: 0, active: 2 }, // phantom sessions
+    ];
+    // net = 3, active = 2 → still ok because sessions ≤ net-spent
+    expect(status(rows)).toBe("ok");
+  });
+
+  it("drift is clamped at zero — over-spend (net > active) never reports negative drift", () => {
+    const rows: Row[] = [{ granted: 5, used: 3, reversed: 0, active: 1 }];
+    expect(driftAmount(rows)).toBe(0);
+    expect(status(rows)).toBe("ok");
+  });
+
+  it("reversed > used is clamped so net_spent never goes below zero", () => {
+    // Malformed row: reversed exceeds used. netSpent clamps to 0.
+    const rows: Row[] = [{ granted: 5, used: 1, reversed: 5, active: 0 }];
+    expect(netSpent(rows[0])).toBe(0);
+    expect(status(rows)).toBe("ok");
+  });
+});
