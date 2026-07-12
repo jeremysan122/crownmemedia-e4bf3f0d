@@ -87,7 +87,7 @@ describe("Wave 8.2a — use_royal_shield enforces grant status", () => {
   it("rejects BEFORE incrementing shields_used (no credit consumed on failed activation)", () => {
     const suspendIdx = latestFn.indexOf("royal_benefits_temporarily_suspended");
     const unlinkedIdx = latestFn.indexOf("royal_allowance_not_linked");
-    const usedIdx = latestFn.indexOf("shields_used = shields_used + 1");
+    const usedIdx = latestFn.search(/shields_used\s*=\s*[a-z_.]*shields_used\s*\+\s*1/);
     expect(suspendIdx).toBeGreaterThan(0);
     expect(unlinkedIdx).toBeGreaterThan(0);
     expect(usedIdx).toBeGreaterThan(suspendIdx);
