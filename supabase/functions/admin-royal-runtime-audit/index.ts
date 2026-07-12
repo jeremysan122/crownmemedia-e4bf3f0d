@@ -399,12 +399,12 @@ Deno.serve(async (req) => {
 
       const { data: allocs } = await admin
         .from("shekel_spend_allocations")
-        .select("amount, source_ref_id")
-        .eq("debit_operation_id", opId);
-      const totalAlloc = (allocs ?? []).reduce((s, a) => s + Number((a as { amount: number }).amount ?? 0), 0);
+        .select("amount_consumed, royal_pass_grant_id")
+        .eq("operation_id", opId);
+      const totalAlloc = (allocs ?? []).reduce((s, a) => s + Number((a as { amount_consumed: number }).amount_consumed ?? 0), 0);
       steps.push({
         name: "allocations_sum_to_debit",
-        ok: totalAlloc === 100 && (allocs ?? []).some((a) => (a as { source_ref_id: string }).source_ref_id === grantId),
+        ok: totalAlloc === 100 && (allocs ?? []).some((a) => (a as { royal_pass_grant_id: string }).royal_pass_grant_id === grantId),
         data: allocs,
       });
       return steps;
@@ -442,7 +442,7 @@ Deno.serve(async (req) => {
       const { count } = await admin
         .from("shekel_spend_allocations")
         .select("id", { count: "exact", head: true })
-        .eq("debit_operation_id", opId);
+        .eq("operation_id", opId);
       steps.push({ name: "no_duplicate_allocations", ok: (count ?? 0) >= 1, data: { count } });
       return steps;
     }),
@@ -493,7 +493,7 @@ Deno.serve(async (req) => {
       const { data: alloc } = await admin
         .from("boost_token_spend_allocations")
         .select("royal_pass_grant_id, lot_id")
-        .eq("debit_operation_id", opId)
+        .eq("operation_id", opId)
         .maybeSingle();
       steps.push({ name: "boost_allocation_recorded", ok: !!alloc, data: alloc });
       return steps;
@@ -613,7 +613,7 @@ Deno.serve(async (req) => {
         .from("shekel_spend_allocations")
         .select("amount, source_kind")
         .eq("debit_operation_id", (opRow as { id: string } | null)?.id ?? "00000000-0000-0000-0000-000000000000");
-      const totalAlloc = (allocs ?? []).reduce((s, a) => s + Number((a as { amount: number }).amount ?? 0), 0);
+      const totalAlloc = (allocs ?? []).reduce((s, a) => s + Number((a as { amount_consumed: number }).amount_consumed ?? 0), 0);
       steps.push({ name: "allocations_sum_200", ok: totalAlloc === 200, data: allocs });
       return steps;
     }),
