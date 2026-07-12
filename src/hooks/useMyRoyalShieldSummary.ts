@@ -38,7 +38,11 @@ export function useMyRoyalShieldSummary() {
       setError(e.message);
       setData(ZERO);
     } else {
-      const row = Array.isArray(rows) ? rows[0] : (rows as RoyalShieldSummary | null);
+      const rowsUnknown = rows as unknown;
+      const row = (Array.isArray(rowsUnknown) ? rowsUnknown[0] : rowsUnknown) as
+        | Partial<RoyalShieldSummary>
+        | null
+        | undefined;
       if (row) {
         setData({
           shields_granted: Number(row.shields_granted ?? 0),
