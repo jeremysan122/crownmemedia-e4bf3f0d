@@ -326,6 +326,213 @@ Deno.serve(async (req) => {
     }),
   );
 
+  // Reusable grant for debit scenarios (F–J). Uses stamp_F to avoid collision.
+  const debitInv = `in_audit_${stamp}_debit`;
+  await admin.rpc("grant_royal_monthly_benefits" as never, {
+    _user_id: testUserId,
+    _stripe_event_id: `evt_audit_${stamp}_debit_grant`,
+    _stripe_invoice_id: debitInv,
+    _period_start: new Date(periodStart.getTime() - 1000 * 60 * 60 * 4).toISOString(),
+    _period_end: new Date(periodEnd.getTime() - 1000 * 60 * 60 * 4).toISOString(),
+    _paid_amount_cents: 999,
+    _stripe_payment_intent_id: `pi_audit_${stamp}_debit`,
+    _stripe_charge_id: `ch_audit_${stamp}_debit`,
+    _stripe_subscription_id: `sub_audit_${stamp}_debit`,
+  } as never);
+
+  // ---------- Scenario F: debit_shekels FIFO from promo grant ----------
+  results.push(
+    await runScenario(admin, "F_debit_shekels_fifo_promo", async () => {
+      const steps: Step[] = [];
+      const opId = crypto.randomUUID();
+      const { data: before } = await admin
+        .from("royal_pass_grants")
+        .select("id, promo_shekels_remaining")
+        .eq("stripe_invoice_id", debitInv)
+        .maybeSingle();
+      const grantId = (before as { id: string } | null)?.id;
+      const startPromo = Number((before as { promo_shekels_remaining: number } | null)?.promo_shekels_remaining ?? 0);
+      steps.push({ name: "grant_has_promo_shekels", ok: startPromo >= 100, data: before });
+
+      const { data, error } = await admin.rpc("debit_shekels" as never, {
+        _user_id: testUserId,
+        _amount: 100,
+        _reason_code: "audit_debit_shekels",
+        _operation_id: opId,
+        _ref_table: "royal_audit",
+        _ref_id: null,
+        _metadata: { scenario: "F" } as never,
+        _caller: "admin_runtime_audit",
+        _request_fingerprint: `audit-F-${stamp}`,
+      } as never);
+      steps.push({ name: "debit_ok", ok: !error, detail: error?.message, data });
+
+      const { data: after } = await admin
+        .from("royal_pass_grants")
+        .select("promo_shekels_remaining")
+        .eq("stripe_invoice_id", debitInv)
+        .maybeSingle();
+      const endPromo = Number((after as { promo_shekels_remaining: number } | null)?.promo_shekels_remaining ?? 0);
+      steps.push({
+        name: "promo_decremented_by_100",
+        ok: startPromo - endPromo === 100,
+        data: { startPromo, endPromo },
+      });
+
+      const { data: allocs } = await admin
+        .from("shekel_spend_allocations")
+        .select("amount, source_ref_id")
+        .eq("debit_operation_id", opId);
+      const totalAlloc = (allocs ?? []).reduce((s, a) => s + Number((a as { amount: number }).amount ?? 0), 0);
+      steps.push({
+        name: "allocations_sum_to_debit",
+        ok: totalAlloc === 100 && (allocs ?? []).some((a) => (a as { source_ref_id: string }).source_ref_id === grantId),
+        data: allocs,
+      });
+      return steps;
+    }),
+  );
+
+  // ---------- Scenario G: debit_shekels idempotent replay ----------
+  results.push(
+    await runScenario(admin, "G_debit_shekels_idempotent", async () => {
+      const steps: Step[] = [];
+      const opId = crypto.randomUUID();
+      const params = {
+        _user_id: testUserId,
+        _amount: 25,
+        _reason_code: "audit_idempotent",
+        _operation_id: opId,
+        _ref_table: null,
+        _ref_id: null,
+        _metadata: { scenario: "G" } as never,
+        _caller: "admin_runtime_audit",
+        _request_fingerprint: `audit-G-${stamp}`,
+      };
+      const r1 = await admin.rpc("debit_shekels" as never, params as never);
+      steps.push({ name: "first_call_ok", ok: !r1.error, detail: r1.error?.message });
+      const r2 = await admin.rpc("debit_shekels" as never, params as never);
+      steps.push({ name: "replay_no_error", ok: !r2.error, detail: r2.error?.message });
+
+      const { data: opRow } = await admin
+        .from("debit_operations")
+        .select("status, amount, operation_id")
+        .eq("operation_id", opId)
+        .maybeSingle();
+      steps.push({ name: "single_op_row_completed", ok: (opRow as { status: string } | null)?.status === "completed", data: opRow });
+
+      const { count } = await admin
+        .from("shekel_spend_allocations")
+        .select("id", { count: "exact", head: true })
+        .eq("debit_operation_id", opId);
+      steps.push({ name: "no_duplicate_allocations", ok: (count ?? 0) >= 1, data: { count } });
+      return steps;
+    }),
+  );
+
+  // ---------- Scenario H: debit_shekels insufficient balance raises ----------
+  results.push(
+    await runScenario(admin, "H_debit_shekels_insufficient", async () => {
+      const steps: Step[] = [];
+      const r = await admin.rpc("debit_shekels" as never, {
+        _user_id: testUserId,
+        _amount: 9_999_999,
+        _reason_code: "audit_overdraw",
+        _operation_id: crypto.randomUUID(),
+        _ref_table: null,
+        _ref_id: null,
+        _metadata: {} as never,
+        _caller: "admin_runtime_audit",
+        _request_fingerprint: `audit-H-${stamp}`,
+      } as never);
+      const msg = r.error?.message ?? "";
+      steps.push({
+        name: "raises_insufficient",
+        ok: !!r.error && /insufficient/i.test(msg),
+        detail: msg || "expected an error",
+      });
+      return steps;
+    }),
+  );
+
+  // ---------- Scenario I: debit_boost_token FIFO ----------
+  results.push(
+    await runScenario(admin, "I_debit_boost_token_fifo", async () => {
+      const steps: Step[] = [];
+      const opId = crypto.randomUUID();
+      const { data: r, error } = await admin.rpc("debit_boost_token" as never, {
+        _user_id: testUserId,
+        _reason_code: "audit_debit_boost",
+        _operation_id: opId,
+        _ref_table: "royal_audit",
+        _ref_id: null,
+        _metadata: { scenario: "I" } as never,
+        _caller: "admin_runtime_audit",
+        _request_fingerprint: `audit-I-${stamp}`,
+      } as never);
+      steps.push({ name: "debit_boost_ok", ok: !error, detail: error?.message, data: r });
+
+      const { data: alloc } = await admin
+        .from("boost_token_spend_allocations")
+        .select("royal_pass_grant_id, lot_id")
+        .eq("debit_operation_id", opId)
+        .maybeSingle();
+      steps.push({ name: "boost_allocation_recorded", ok: !!alloc, data: alloc });
+      return steps;
+    }),
+  );
+
+  // ---------- Scenario J: kill-switch enforcement ----------
+  results.push(
+    await runScenario(admin, "J_kill_switch_blocks_debits", async () => {
+      const steps: Step[] = [];
+      // Flip flag on
+      const flipOn = await admin
+        .from("feature_flags")
+        .update({ enabled: true, rollout_percentage: 100 } as never)
+        .eq("key", "royal_pass_debits_paused");
+      steps.push({ name: "kill_switch_on", ok: !flipOn.error, detail: flipOn.error?.message });
+
+      const blocked = await admin.rpc("debit_shekels" as never, {
+        _user_id: testUserId,
+        _amount: 10,
+        _reason_code: "audit_kill",
+        _operation_id: crypto.randomUUID(),
+        _ref_table: null,
+        _ref_id: null,
+        _metadata: {} as never,
+        _caller: "admin_runtime_audit",
+        _request_fingerprint: `audit-J-${stamp}`,
+      } as never);
+      steps.push({
+        name: "debit_blocked_when_paused",
+        ok: !!blocked.error && /pause/i.test(blocked.error?.message ?? ""),
+        detail: blocked.error?.message,
+      });
+
+      // Flip flag back off
+      const flipOff = await admin
+        .from("feature_flags")
+        .update({ enabled: false, rollout_percentage: 0 } as never)
+        .eq("key", "royal_pass_debits_paused");
+      steps.push({ name: "kill_switch_off", ok: !flipOff.error, detail: flipOff.error?.message });
+
+      const allowed = await admin.rpc("debit_shekels" as never, {
+        _user_id: testUserId,
+        _amount: 10,
+        _reason_code: "audit_kill_recover",
+        _operation_id: crypto.randomUUID(),
+        _ref_table: null,
+        _ref_id: null,
+        _metadata: {} as never,
+        _caller: "admin_runtime_audit",
+        _request_fingerprint: `audit-J2-${stamp}`,
+      } as never);
+      steps.push({ name: "debit_recovers_when_off", ok: !allowed.error, detail: allowed.error?.message });
+      return steps;
+    }),
+  );
+
   // Log summary into royal_shield_audit_log
   const passCount = results.filter((r) => r.ok).length;
   await admin.rpc("log_royal_shield_event" as never, {
@@ -343,6 +550,12 @@ Deno.serve(async (req) => {
 
   // Cleanup: remove test user (cascades grants/allowances/reversals via FKs where set)
   // Explicitly delete rows without ON DELETE CASCADE first for safety.
+  await admin.from("shekel_spend_allocations").delete().eq("user_id", testUserId);
+  await admin.from("boost_token_spend_allocations").delete().eq("user_id", testUserId);
+  await admin.from("boost_token_lots").delete().eq("user_id", testUserId);
+  await admin.from("debit_operations").delete().eq("user_id", testUserId);
+  await admin.from("shekel_ledger").delete().eq("user_id", testUserId);
+  await admin.from("boost_tokens_ledger").delete().eq("user_id", testUserId);
   await admin.from("royal_pass_reversals").delete().eq("user_id", testUserId);
   await admin.from("royal_pass_shield_allowances").delete().eq("user_id", testUserId);
   await admin.from("royal_pass_grants").delete().eq("user_id", testUserId);
