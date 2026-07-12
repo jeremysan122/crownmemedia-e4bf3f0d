@@ -468,6 +468,51 @@ export type Database = {
         }
         Relationships: []
       }
+      boost_token_spend_allocations: {
+        Row: {
+          created_at: string
+          id: string
+          ledger_id: string
+          operation_id: string | null
+          royal_pass_grant_id: string | null
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ledger_id: string
+          operation_id?: string | null
+          royal_pass_grant_id?: string | null
+          source: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ledger_id?: string
+          operation_id?: string | null
+          royal_pass_grant_id?: string | null
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boost_token_spend_allocations_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "boost_tokens_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boost_token_spend_allocations_royal_pass_grant_id_fkey"
+            columns: ["royal_pass_grant_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_grants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boost_tokens_ledger: {
         Row: {
           created_at: string
@@ -1526,6 +1571,45 @@ export type Database = {
           rollbacks?: number
           rollbacks_delta?: number
           wal_size_bytes?: number
+        }
+        Relationships: []
+      }
+      debit_operations: {
+        Row: {
+          amount: number
+          created_at: string
+          kind: string
+          ledger_id: string | null
+          operation_id: string
+          reason_code: string
+          ref_id: string | null
+          ref_table: string | null
+          result: Json
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          kind: string
+          ledger_id?: string | null
+          operation_id: string
+          reason_code: string
+          ref_id?: string | null
+          ref_table?: string | null
+          result?: Json
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          kind?: string
+          ledger_id?: string | null
+          operation_id?: string
+          reason_code?: string
+          ref_id?: string | null
+          ref_table?: string | null
+          result?: Json
+          user_id?: string
         }
         Relationships: []
       }
@@ -6271,6 +6355,7 @@ export type Database = {
       debit_boost_token: {
         Args: {
           _metadata?: Json
+          _operation_id: string
           _reason_code: string
           _ref_id?: string
           _ref_table?: string
@@ -6282,6 +6367,7 @@ export type Database = {
         Args: {
           _amount: number
           _metadata?: Json
+          _operation_id: string
           _reason_code: string
           _ref_id?: string
           _ref_table?: string
@@ -7143,8 +7229,14 @@ export type Database = {
         }
         Returns: Json
       }
+      royal_debits_paused: { Args: never; Returns: boolean }
       royal_entitlements: { Args: never; Returns: Json }
+      royal_locked_promo_shekels: {
+        Args: { _user_id: string }
+        Returns: number
+      }
       royal_pass_daily_boost_status: { Args: never; Returns: Json }
+      royal_spendable_shekels: { Args: { _user_id: string }; Returns: number }
       save_push_subscription: {
         Args: {
           _auth: string
