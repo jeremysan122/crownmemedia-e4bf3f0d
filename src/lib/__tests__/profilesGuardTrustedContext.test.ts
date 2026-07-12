@@ -43,7 +43,6 @@ describe("profiles_guard_protected_fields — trusted context recognition", () =
   });
 
   it("recognises the service_role claim inside the JSON JWT claims", () => {
-    // Must parse request.jwt.claims as jsonb and read the 'role' key.
     expect(latestGuard).toMatch(/current_setting\('request\.jwt\.claims',\s*true\)/);
     expect(latestGuard).toMatch(/::jsonb\s*\)\s*->>\s*'role'/);
     expect(latestGuard).toMatch(/jwt_role\s*=\s*'service_role'/);
@@ -53,6 +52,25 @@ describe("profiles_guard_protected_fields — trusted context recognition", () =
     expect(latestGuard).toMatch(
       /current_setting\('request\.jwt\.claim\.role',\s*true\)\s*=\s*'service_role'/,
     );
+  });
+
+  it("requires MATCHED context: DB role GUC AND a service_role JWT claim (neither alone is trusted)", () => {
+    // Extract service_role_context assignment block.
+    const m = latestGuard.match(
+      /service_role_context\s*:=\s*\(([\s\S]+?)\);/,
+    );
+    expect(m, "service_role_context assignment must exist").not.toBeNull();
+    const body = m![1];
+    // Must contain the DB role GUC check AND'd with the JWT claim disjunction.
+    expect(body).toMatch(/role_guc\s*=\s*'service_role'/);
+    expect(body).toMatch(/\bAND\b/);
+    expect(body).toMatch(/jwt_role\s*=\s*'service_role'/);
+    expect(body).toMatch(
+      /current_setting\('request\.jwt\.claim\.role',\s*true\)\s*=\s*'service_role'/,
+    );
+    // Must NOT be a bare OR chain that treats jwt_role alone as trusted.
+    // Sanity: there is no top-level OR immediately joining role_guc to jwt_role.
+    expect(body).not.toMatch(/role_guc\s*=\s*'service_role'\s*OR\s+jwt_role/);
   });
 
   it("preserves admin/moderator bypass", () => {
