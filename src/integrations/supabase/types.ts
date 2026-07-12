@@ -4291,11 +4291,13 @@ export type Database = {
           id: string
           legacy_unreconciled: boolean
           metadata: Json
+          needs_reconciliation: boolean
           period_end: string
           period_start: string
           pre_dispute_status: string | null
           promo_boost_tokens_remaining: number
           promo_shekels_remaining: number
+          reconciliation_reason: string | null
           restoration_completed_at: string | null
           restoration_source_event_id: string | null
           reversal_completed_at: string | null
@@ -4331,11 +4333,13 @@ export type Database = {
           id?: string
           legacy_unreconciled?: boolean
           metadata?: Json
+          needs_reconciliation?: boolean
           period_end: string
           period_start: string
           pre_dispute_status?: string | null
           promo_boost_tokens_remaining?: number
           promo_shekels_remaining?: number
+          reconciliation_reason?: string | null
           restoration_completed_at?: string | null
           restoration_source_event_id?: string | null
           reversal_completed_at?: string | null
@@ -4371,11 +4375,13 @@ export type Database = {
           id?: string
           legacy_unreconciled?: boolean
           metadata?: Json
+          needs_reconciliation?: boolean
           period_end?: string
           period_start?: string
           pre_dispute_status?: string | null
           promo_boost_tokens_remaining?: number
           promo_shekels_remaining?: number
+          reconciliation_reason?: string | null
           restoration_completed_at?: string | null
           restoration_source_event_id?: string | null
           reversal_completed_at?: string | null
@@ -5628,6 +5634,41 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "royal_pass_plans"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      admin_list_royal_pass_reversals: {
+        Args: {
+          _grant_id?: string
+          _limit?: number
+          _offset?: number
+          _user_id?: string
+        }
+        Returns: {
+          active_shields_delta: number
+          boost_ids: string[]
+          boost_tokens_delta: number
+          created_at: string
+          details: Json
+          event_kind: string
+          founder_touched: boolean
+          id: string
+          reason: string | null
+          royal_pass_grant_id: string
+          shekels_delta: number
+          shields_delta: number
+          source_reversal_id: string | null
+          stripe_dispute_id: string | null
+          stripe_event_id: string
+          stripe_event_type: string | null
+          unrecovered_promotional_boost_tokens: number
+          unrecovered_promotional_shekels: number
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "royal_pass_reversals"
           isOneToOne: false
           isSetofReturn: true
         }
