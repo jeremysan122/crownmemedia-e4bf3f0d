@@ -648,7 +648,7 @@ Deno.serve(async (req) => {
       // Confirm debit routed through primitives with ref_table=gift_transactions
       const { data: opRow } = await admin
         .from("debit_operations")
-        .select("id, amount, ref_table, ref_id, status")
+        .select("operation_id, amount, ref_table, ref_id, status")
         .eq("user_id", testUserId)
         .eq("ref_table", "gift_transactions")
         .eq("ref_id", txId)
