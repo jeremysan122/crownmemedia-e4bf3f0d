@@ -79,9 +79,10 @@ Deno.serve(async (req) => {
   // Ephemeral test user
   const stamp = Date.now();
   const email = `royal-audit+${stamp}@crownmemedia-internal.test`;
+  const testPassword = crypto.randomUUID() + "!Aa1";
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email,
-    password: crypto.randomUUID() + "!Aa1",
+    password: testPassword,
     email_confirm: true,
     user_metadata: { synthetic: true, purpose: "royal_runtime_audit" },
   });
@@ -89,6 +90,23 @@ Deno.serve(async (req) => {
     return json(500, { error: "create_test_user_failed", detail: createErr?.message });
   }
   const testUserId = created.user.id;
+
+  // Ephemeral recipient for gift round-trip
+  const recipientEmail = `royal-audit-rcpt+${stamp}@crownmemedia-internal.test`;
+  const { data: rcptCreated } = await admin.auth.admin.createUser({
+    email: recipientEmail,
+    password: crypto.randomUUID() + "!Aa1",
+    email_confirm: true,
+    user_metadata: { synthetic: true, purpose: "royal_runtime_audit_recipient" },
+  });
+  const recipientUserId = rcptCreated?.user?.id ?? null;
+  if (recipientUserId) {
+    await admin.from("profiles").upsert({
+      id: recipientUserId,
+      username: `royal_audit_rcpt_${stamp}`,
+      display_name: "Royal Audit Recipient",
+    } as never, { onConflict: "id" });
+  }
 
   // Ensure profile row exists (some triggers depend on it)
   await admin.from("profiles").upsert({
