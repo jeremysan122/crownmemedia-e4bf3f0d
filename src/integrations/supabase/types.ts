@@ -6398,26 +6398,16 @@ export type Database = {
         }
         Returns: Json
       }
-      handle_royal_dispute_reinstated:
-        | {
-            Args: {
-              _stripe_charge_id?: string
-              _stripe_dispute_id: string
-              _stripe_event_id: string
-              _stripe_payment_intent_id?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _stripe_charge_id?: string
-              _stripe_dispute_id?: string
-              _stripe_event_id: string
-              _stripe_invoice_id?: string
-              _stripe_payment_intent_id?: string
-            }
-            Returns: Json
-          }
+      handle_royal_dispute_reinstated: {
+        Args: {
+          _stripe_charge_id?: string
+          _stripe_dispute_id?: string
+          _stripe_event_id: string
+          _stripe_invoice_id?: string
+          _stripe_payment_intent_id?: string
+        }
+        Returns: Json
+      }
       handle_royal_dispute_won: {
         Args: {
           _stripe_charge_id?: string
@@ -6736,6 +6726,8 @@ export type Database = {
           status_summary: string
         }[]
       }
+      my_spendable_boost_tokens: { Args: never; Returns: number }
+      my_spendable_shekels: { Args: never; Returns: number }
       normalize_repost_category_pair: {
         Args: { p_main: string; p_sub: string }
         Returns: {
