@@ -5553,6 +5553,10 @@ export type Database = {
       }
     }
     Functions: {
+      _lovable_probe_profile_guard_context: {
+        Args: { _user_id: string }
+        Returns: Json
+      }
       _notify_live_battle: {
         Args: {
           _battle_id: string
