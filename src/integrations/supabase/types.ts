@@ -6640,6 +6640,7 @@ export type Database = {
       royal_wave82a_dispute_match_selftest: {
         Args: never
         Returns: {
+          grant_status_after: string
           ok: boolean
           result: Json
           scenario: string
