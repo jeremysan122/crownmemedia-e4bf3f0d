@@ -559,6 +559,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "boosts_royal_allowance_fk"
+            columns: ["royal_pass_shield_allowance_id"]
+            isOneToOne: false
+            referencedRelation: "royal_shield_accounting"
+            referencedColumns: ["allowance_id"]
+          },
+          {
             foreignKeyName: "boosts_royal_grant_fk"
             columns: ["royal_pass_grant_id"]
             isOneToOne: false
@@ -5542,6 +5549,38 @@ export type Database = {
           },
         ]
       }
+      royal_shield_accounting: {
+        Row: {
+          active_shield_sessions: number | null
+          active_shields_reversed: number | null
+          allowance_id: string | null
+          grant_id: string | null
+          grant_status: string | null
+          net_spent_credits: number | null
+          period_end: string | null
+          period_start: string | null
+          shields_granted: number | null
+          shields_reversed: number | null
+          shields_used: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "royal_pass_shield_allowances_grant_fk"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_grants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "royal_pass_shield_allowances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trending_hashtags: {
         Row: {
           last_used_at: string | null
@@ -5778,6 +5817,29 @@ export type Database = {
         Returns: undefined
       }
       admin_platform_health_summary: { Args: never; Returns: Json }
+      admin_royal_shield_accounting: {
+        Args: never
+        Returns: {
+          active_shield_sessions: number | null
+          active_shields_reversed: number | null
+          allowance_id: string | null
+          grant_id: string | null
+          grant_status: string | null
+          net_spent_credits: number | null
+          period_end: string | null
+          period_start: string | null
+          shields_granted: number | null
+          shields_reversed: number | null
+          shields_used: number | null
+          user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "royal_shield_accounting"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       admin_set_creator_reward: {
         Args: { _reward_id: string; _status: string }
         Returns: {
@@ -5907,6 +5969,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      assert_royal_shield_invariants: {
+        Args: { _user_id?: string }
+        Returns: {
+          active_shield_sessions: number
+          allowance_id: string
+          drift: number
+          net_spent_credits: number
+          user_id: string
+        }[]
       }
       assert_security_invariants: { Args: never; Returns: undefined }
       assumption: { Args: { _default?: number; _key: string }; Returns: number }
@@ -6724,6 +6796,22 @@ export type Database = {
           shekels_changed: number
           shields_changed: number
           status_summary: string
+        }[]
+      }
+      my_royal_shield_accounting: {
+        Args: never
+        Returns: {
+          active_shield_sessions: number
+          active_shields_reversed: number
+          allowance_id: string
+          grant_id: string
+          grant_status: string
+          net_spent_credits: number
+          period_end: string
+          period_start: string
+          shields_granted: number
+          shields_reversed: number
+          shields_used: number
         }[]
       }
       my_spendable_boost_tokens: { Args: never; Returns: number }
