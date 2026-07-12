@@ -597,7 +597,7 @@ Deno.serve(async (req) => {
       // Verify the boost's debit routed through centralized primitives.
       const { data: opRow } = await admin
         .from("debit_operations")
-        .select("id, amount, reason_code, ref_table, ref_id, status")
+        .select("operation_id, amount, reason_code, ref_table, ref_id, status")
         .eq("user_id", testUserId)
         .eq("ref_table", "boosts")
         .eq("ref_id", boostId)
@@ -611,8 +611,8 @@ Deno.serve(async (req) => {
 
       const { data: allocs } = await admin
         .from("shekel_spend_allocations")
-        .select("amount, source_kind")
-        .eq("debit_operation_id", (opRow as { id: string } | null)?.id ?? "00000000-0000-0000-0000-000000000000");
+        .select("amount_consumed, source_type, royal_pass_grant_id")
+        .eq("operation_id", (opRow as { operation_id: string } | null)?.operation_id ?? "00000000-0000-0000-0000-000000000000");
       const totalAlloc = (allocs ?? []).reduce((s, a) => s + Number((a as { amount_consumed: number }).amount_consumed ?? 0), 0);
       steps.push({ name: "allocations_sum_200", ok: totalAlloc === 200, data: allocs });
       return steps;
