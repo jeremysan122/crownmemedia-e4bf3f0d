@@ -4391,7 +4391,7 @@ export type Database = {
           id: string
           period_end: string
           period_start: string
-          royal_pass_grant_id: string | null
+          royal_pass_grant_id: string
           shields_granted: number
           shields_used: number
           updated_at: string
@@ -4402,7 +4402,7 @@ export type Database = {
           id?: string
           period_end: string
           period_start: string
-          royal_pass_grant_id?: string | null
+          royal_pass_grant_id: string
           shields_granted?: number
           shields_used?: number
           updated_at?: string
@@ -4413,7 +4413,7 @@ export type Database = {
           id?: string
           period_end?: string
           period_start?: string
-          royal_pass_grant_id?: string | null
+          royal_pass_grant_id?: string
           shields_granted?: number
           shields_used?: number
           updated_at?: string
