@@ -51,6 +51,14 @@ type AuditRow = {
   created_at: string;
 };
 
+type RuntimeAuditResult = {
+  ok: boolean;
+  passed: number;
+  total: number;
+  results: Array<{ scenario: string; ok: boolean; steps: Array<{ name: string; ok: boolean; detail?: string }> }>;
+  ran_at: string;
+};
+
 export default function CommandCenterRoyalShields() {
   const { isModerator, loading } = useAuth();
   const [rows, setRows] = useState<AccountingRow[]>([]);
