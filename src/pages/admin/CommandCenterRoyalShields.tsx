@@ -106,6 +106,16 @@ export default function CommandCenterRoyalShields() {
     void load();
   }, [load]);
 
+  const runRuntimeAudit = useCallback(async () => {
+    setRuntimeBusy(true);
+    setErr(null);
+    const { data, error } = await supabase.functions.invoke("admin-royal-runtime-audit", { body: {} });
+    if (error) setErr(error.message);
+    setRuntime((data as RuntimeAuditResult | null) ?? null);
+    setRuntimeBusy(false);
+    void load();
+  }, [load]);
+
   const summary = useMemo(() => {
     const byUser = new Map<string, { granted: number; net: number; active: number; drift: number }>();
     for (const r of rows) {
