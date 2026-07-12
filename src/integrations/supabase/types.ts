@@ -4289,6 +4289,7 @@ export type Database = {
           founder_granted: boolean
           founder_reversed: boolean
           id: string
+          legacy_unreconciled: boolean
           metadata: Json
           period_end: string
           period_start: string
@@ -4313,6 +4314,8 @@ export type Database = {
           stripe_invoice_id: string | null
           stripe_payment_intent_id: string | null
           stripe_subscription_id: string | null
+          unrecovered_promotional_boost_tokens: number
+          unrecovered_promotional_shekels: number
           user_id: string
         }
         Insert: {
@@ -4326,6 +4329,7 @@ export type Database = {
           founder_granted?: boolean
           founder_reversed?: boolean
           id?: string
+          legacy_unreconciled?: boolean
           metadata?: Json
           period_end: string
           period_start: string
@@ -4350,6 +4354,8 @@ export type Database = {
           stripe_invoice_id?: string | null
           stripe_payment_intent_id?: string | null
           stripe_subscription_id?: string | null
+          unrecovered_promotional_boost_tokens?: number
+          unrecovered_promotional_shekels?: number
           user_id: string
         }
         Update: {
@@ -4363,6 +4369,7 @@ export type Database = {
           founder_granted?: boolean
           founder_reversed?: boolean
           id?: string
+          legacy_unreconciled?: boolean
           metadata?: Json
           period_end?: string
           period_start?: string
@@ -4387,6 +4394,8 @@ export type Database = {
           stripe_invoice_id?: string | null
           stripe_payment_intent_id?: string | null
           stripe_subscription_id?: string | null
+          unrecovered_promotional_boost_tokens?: number
+          unrecovered_promotional_shekels?: number
           user_id?: string
         }
         Relationships: [
@@ -4452,9 +4461,12 @@ export type Database = {
           royal_pass_grant_id: string
           shekels_delta: number
           shields_delta: number
+          source_reversal_id: string | null
           stripe_dispute_id: string | null
           stripe_event_id: string
           stripe_event_type: string | null
+          unrecovered_promotional_boost_tokens: number
+          unrecovered_promotional_shekels: number
           user_id: string
         }
         Insert: {
@@ -4470,9 +4482,12 @@ export type Database = {
           royal_pass_grant_id: string
           shekels_delta?: number
           shields_delta?: number
+          source_reversal_id?: string | null
           stripe_dispute_id?: string | null
           stripe_event_id: string
           stripe_event_type?: string | null
+          unrecovered_promotional_boost_tokens?: number
+          unrecovered_promotional_shekels?: number
           user_id: string
         }
         Update: {
@@ -4488,9 +4503,12 @@ export type Database = {
           royal_pass_grant_id?: string
           shekels_delta?: number
           shields_delta?: number
+          source_reversal_id?: string | null
           stripe_dispute_id?: string | null
           stripe_event_id?: string
           stripe_event_type?: string | null
+          unrecovered_promotional_boost_tokens?: number
+          unrecovered_promotional_shekels?: number
           user_id?: string
         }
         Relationships: [
@@ -4499,6 +4517,20 @@ export type Database = {
             columns: ["royal_pass_grant_id"]
             isOneToOne: false
             referencedRelation: "royal_pass_grants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "royal_pass_reversals_source_reversal_id_fkey"
+            columns: ["source_reversal_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_reversals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "royal_pass_reversals_user_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -6582,6 +6614,17 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      my_royal_benefit_history: {
+        Args: { _limit?: number }
+        Returns: {
+          boost_tokens_changed: number
+          event_kind: string
+          occurred_at: string
+          shekels_changed: number
+          shields_changed: number
+          status_summary: string
+        }[]
       }
       normalize_repost_category_pair: {
         Args: { p_main: string; p_sub: string }
