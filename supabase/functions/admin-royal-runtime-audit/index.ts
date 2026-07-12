@@ -693,12 +693,20 @@ Deno.serve(async (req) => {
   await admin.from("debit_operations").delete().eq("user_id", testUserId);
   await admin.from("shekel_ledger").delete().eq("user_id", testUserId);
   await admin.from("boost_tokens_ledger").delete().eq("user_id", testUserId);
+  await admin.from("gift_transactions").delete().eq("sender_id", testUserId);
+  await admin.from("boosts").delete().eq("user_id", testUserId);
   await admin.from("royal_pass_reversals").delete().eq("user_id", testUserId);
   await admin.from("royal_pass_shield_allowances").delete().eq("user_id", testUserId);
   await admin.from("royal_pass_grants").delete().eq("user_id", testUserId);
   await admin.from("wallets").delete().eq("user_id", testUserId);
   await admin.from("profiles").delete().eq("id", testUserId);
   await admin.auth.admin.deleteUser(testUserId);
+  if (recipientUserId) {
+    await admin.from("gift_transactions").delete().eq("receiver_id", recipientUserId);
+    await admin.from("wallets").delete().eq("user_id", recipientUserId);
+    await admin.from("profiles").delete().eq("id", recipientUserId);
+    await admin.auth.admin.deleteUser(recipientUserId);
+  }
 
   return json(200, {
     ok: passCount === results.length,
