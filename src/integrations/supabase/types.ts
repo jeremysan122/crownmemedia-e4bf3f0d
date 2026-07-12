@@ -6271,6 +6271,7 @@ export type Database = {
         Returns: undefined
       }
       admin_platform_health_summary: { Args: never; Returns: Json }
+      admin_royal_pass_reconciliation_snapshot: { Args: never; Returns: Json }
       admin_royal_shield_accounting: {
         Args: never
         Returns: {
