@@ -220,6 +220,7 @@ const App = () => (
               <Route path="/admin/audit-log" element={<ProtectedRoute><AdminRoute><AdminAuditLog /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/system-audit" element={<ProtectedRoute><AdminRoute><AdminSystemAudit /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/race-audit" element={<ProtectedRoute><AdminRoute><AdminRaceAudit /></AdminRoute></ProtectedRoute>} />
+              <Route path="/admin/royal-shields" element={<ProtectedRoute><AdminRoute><CommandCenterRoyalShields /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/command-center" element={<ProtectedRoute><AdminRoute><CommandCenterLayout /></AdminRoute></ProtectedRoute>}>
                 <Route index element={<CommandCenterOverview />} />
                 <Route path="realtime" element={<CommandCenterRealtime />} />
