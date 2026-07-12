@@ -59,6 +59,44 @@ type RuntimeAuditResult = {
   ran_at: string;
 };
 
+type ReconciliationSnapshot = {
+  flags: Array<{ key: string; enabled: boolean; rollout_percentage: number; updated_at: string }>;
+  aggregate: {
+    grants_needing_reconciliation: number;
+    unrecovered_shekels_total: number;
+    unrecovered_boost_tokens_total: number;
+    shekel_allocation_reversals_total: number;
+    boost_token_allocation_reversals_total: number;
+    refunded_grants_total: number;
+    disputed_grants_total: number;
+  };
+  grants: Array<{
+    id: string;
+    user_id: string;
+    status: string;
+    reconciliation_reason: string | null;
+    unrecovered_promotional_shekels: number;
+    unrecovered_promotional_boost_tokens: number;
+    shekels_reversed: number;
+    boost_tokens_reversed: number;
+    active_shields_reversed: number;
+    reversed_at: string | null;
+  }>;
+  generated_at: string;
+};
+
+function Stat({ label, value, tone }: { label: string; value: number; tone?: "ok" | "danger" }) {
+  return (
+    <div className={`royal-card p-2 ${tone === "danger" ? "border-destructive/60" : ""}`}>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`text-sm font-bold ${tone === "danger" ? "text-destructive" : "text-foreground"}`}>
+        {value.toLocaleString()}
+      </div>
+    </div>
+  );
+}
+
+
 export default function CommandCenterRoyalShields() {
   const { isModerator, loading } = useAuth();
   const [rows, setRows] = useState<AccountingRow[]>([]);
@@ -68,24 +106,29 @@ export default function CommandCenterRoyalShields() {
   const [lastCheck, setLastCheck] = useState<CheckRow[] | null>(null);
   const [runtimeBusy, setRuntimeBusy] = useState(false);
   const [runtime, setRuntime] = useState<RuntimeAuditResult | null>(null);
+  const [recon, setRecon] = useState<ReconciliationSnapshot | null>(null);
+  const [reconBusy, setReconBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setBusy(true);
+    setReconBusy(true);
     setErr(null);
-    const [acct, log] = await Promise.all([
-      // admin_royal_shield_accounting returns the full view for admins only.
+    const [acct, log, snap] = await Promise.all([
       supabase.rpc("admin_royal_shield_accounting" as never),
       supabase
         .from("royal_shield_audit_log")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(100),
+      supabase.rpc("admin_royal_pass_reconciliation_snapshot" as never),
     ]);
     if (acct.error) setErr(acct.error.message);
     setRows(((acct.data as AccountingRow[] | null) ?? []));
     setAudit(((log.data as AuditRow[] | null) ?? []));
+    setRecon((snap.data as ReconciliationSnapshot | null) ?? null);
     setBusy(false);
+    setReconBusy(false);
   }, []);
 
   useEffect(() => {
@@ -210,6 +253,68 @@ export default function CommandCenterRoyalShields() {
             )}
           </div>
         </div>
+
+        <section className="royal-card p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-display text-lg text-foreground/90 flex items-center gap-2">
+              <ShieldCheck size={16} className="text-gold" /> Reconciliation snapshot
+            </h2>
+            {reconBusy && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
+          </div>
+          {recon && (
+            <>
+              <div className="flex flex-wrap gap-2 text-xs">
+                {recon.flags.map((f) => (
+                  <span
+                    key={f.key}
+                    className={`px-2 py-1 rounded-md border ${
+                      f.key === "royal_pass_debits_paused" && f.enabled
+                        ? "border-destructive/60 bg-destructive/10 text-destructive"
+                        : f.enabled
+                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+                        : "border-border/60 text-muted-foreground"
+                    }`}
+                  >
+                    <code>{f.key}</code> · {f.enabled ? "ON" : "off"} · {f.rollout_percentage}%
+                  </span>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <Stat label="Needs recon" value={recon.aggregate.grants_needing_reconciliation} tone={recon.aggregate.grants_needing_reconciliation > 0 ? "danger" : "ok"} />
+                <Stat label="Unrec. shekels" value={recon.aggregate.unrecovered_shekels_total} tone={recon.aggregate.unrecovered_shekels_total > 0 ? "danger" : "ok"} />
+                <Stat label="Unrec. tokens" value={recon.aggregate.unrecovered_boost_tokens_total} tone={recon.aggregate.unrecovered_boost_tokens_total > 0 ? "danger" : "ok"} />
+                <Stat label="Refunded grants" value={recon.aggregate.refunded_grants_total} />
+                <Stat label="Disputed grants" value={recon.aggregate.disputed_grants_total} />
+                <Stat label="Shekel alloc. reversals" value={recon.aggregate.shekel_allocation_reversals_total} />
+                <Stat label="Boost alloc. reversals" value={recon.aggregate.boost_token_allocation_reversals_total} />
+              </div>
+              {recon.grants.length > 0 && (
+                <div className="pt-2 border-t border-border/50 space-y-1.5">
+                  <div className="text-xs text-muted-foreground">
+                    Grants needing manual reconciliation ({recon.grants.length}):
+                  </div>
+                  {recon.grants.map((g) => (
+                    <div key={g.id} className="royal-card p-2 text-[11px] border-destructive/50">
+                      <div className="flex items-center justify-between gap-2">
+                        <code className="truncate text-foreground/80">{g.id.slice(0, 8)} · user {g.user_id.slice(0, 8)}</code>
+                        <span className="text-destructive font-medium">{g.status}</span>
+                      </div>
+                      <div className="text-muted-foreground mt-0.5">
+                        unrec shekels <b className="text-destructive">{g.unrecovered_promotional_shekels}</b>
+                        {" · "}unrec tokens <b className="text-destructive">{g.unrecovered_promotional_boost_tokens}</b>
+                        {" · "}shields reversed <b className="text-foreground">{g.active_shields_reversed}</b>
+                        {g.reconciliation_reason && <> · <code>{g.reconciliation_reason}</code></>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-[10px] text-muted-foreground">
+                Generated {timeAgo(recon.generated_at)}
+              </p>
+            </>
+          )}
+        </section>
 
         <section className="space-y-2">
           <h2 className="font-display text-lg text-foreground/90">Per-user balances</h2>
