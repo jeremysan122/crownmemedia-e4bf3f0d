@@ -80,14 +80,14 @@ describe("Wave 8.2a — use_royal_shield enforces grant status", () => {
     expect(latestFn).toMatch(/royal_allowance_not_linked/);
   });
   it("resolves the linked grant status and rejects non-granted", () => {
-    expect(latestFn).toMatch(/SELECT status INTO linked_grant_status[\s\S]+?FROM public\.royal_pass_grants[\s\S]+?WHERE id = allow\.royal_pass_grant_id/);
+    expect(latestFn).toMatch(/SELECT [a-z_.]*status INTO linked_grant_status[\s\S]+?FROM public\.royal_pass_grants[\s\S]+?WHERE [a-z_.]*id\s*=\s*allow\.royal_pass_grant_id/);
     expect(latestFn).toMatch(/linked_grant_status\s*<>\s*'granted'/);
     expect(latestFn).toMatch(/royal_benefits_temporarily_suspended/);
   });
   it("rejects BEFORE incrementing shields_used (no credit consumed on failed activation)", () => {
     const suspendIdx = latestFn.indexOf("royal_benefits_temporarily_suspended");
     const unlinkedIdx = latestFn.indexOf("royal_allowance_not_linked");
-    const usedIdx = latestFn.indexOf("shields_used = shields_used + 1");
+    const usedIdx = latestFn.search(/shields_used\s*=\s*[a-z_.]*shields_used\s*\+\s*1/);
     expect(suspendIdx).toBeGreaterThan(0);
     expect(unlinkedIdx).toBeGreaterThan(0);
     expect(usedIdx).toBeGreaterThan(suspendIdx);
