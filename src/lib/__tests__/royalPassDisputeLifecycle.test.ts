@@ -80,7 +80,7 @@ describe("Wave 8.2a — use_royal_shield enforces grant status", () => {
     expect(latestFn).toMatch(/royal_allowance_not_linked/);
   });
   it("resolves the linked grant status and rejects non-granted", () => {
-    expect(latestFn).toMatch(/SELECT status INTO linked_grant_status[\s\S]+?FROM public\.royal_pass_grants[\s\S]+?WHERE id = allow\.royal_pass_grant_id/);
+    expect(latestFn).toMatch(/SELECT [a-z_.]*status INTO linked_grant_status[\s\S]+?FROM public\.royal_pass_grants[\s\S]+?WHERE [a-z_.]*id\s*=\s*allow\.royal_pass_grant_id/);
     expect(latestFn).toMatch(/linked_grant_status\s*<>\s*'granted'/);
     expect(latestFn).toMatch(/royal_benefits_temporarily_suspended/);
   });
