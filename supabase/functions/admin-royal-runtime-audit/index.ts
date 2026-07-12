@@ -566,6 +566,125 @@ Deno.serve(async (req) => {
     _metadata: { scenarios: results, actor_id: callerId, email } as never,
   } as never);
 
+  // Signed-in client for K/L (public wrappers require auth.uid()).
+  const testUserClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+  );
+  const { data: signIn, error: signInErr } = await testUserClient.auth.signInWithPassword({
+    email,
+    password: testPassword,
+  });
+
+  // ---------- Scenario K: purchase_boost round-trip ----------
+  results.push(
+    await runScenario(admin, "K_purchase_boost_roundtrip", async () => {
+      const steps: Step[] = [];
+      steps.push({ name: "sign_in_ok", ok: !signInErr && !!signIn?.user, detail: signInErr?.message });
+      if (signInErr || !signIn?.user) return steps;
+
+      const { data, error } = await testUserClient.rpc("purchase_boost" as never, {
+        p_boost_type: "profile_glow",
+        p_duration_hours: 1,
+        p_cost_shekels: 200,
+        p_post_id: null,
+      } as never);
+      steps.push({ name: "purchase_boost_ok", ok: !error, detail: error?.message, data });
+
+      const boostId = (data as { boost_id?: string } | null)?.boost_id ?? null;
+      steps.push({ name: "boost_row_returned", ok: !!boostId, data: { boostId } });
+
+      // Verify the boost's debit routed through centralized primitives.
+      const { data: opRow } = await admin
+        .from("debit_operations")
+        .select("id, amount, reason_code, ref_table, ref_id, status")
+        .eq("user_id", testUserId)
+        .eq("ref_table", "boosts")
+        .eq("ref_id", boostId)
+        .maybeSingle();
+      steps.push({
+        name: "debit_operation_recorded",
+        ok: !!opRow && (opRow as { status: string }).status === "completed"
+          && Number((opRow as { amount: number }).amount) === 200,
+        data: opRow,
+      });
+
+      const { data: allocs } = await admin
+        .from("shekel_spend_allocations")
+        .select("amount, source_kind")
+        .eq("debit_operation_id", (opRow as { id: string } | null)?.id ?? "00000000-0000-0000-0000-000000000000");
+      const totalAlloc = (allocs ?? []).reduce((s, a) => s + Number((a as { amount: number }).amount ?? 0), 0);
+      steps.push({ name: "allocations_sum_200", ok: totalAlloc === 200, data: allocs });
+      return steps;
+    }),
+  );
+
+  // ---------- Scenario L: send_royal_gift round-trip ----------
+  results.push(
+    await runScenario(admin, "L_send_royal_gift_roundtrip", async () => {
+      const steps: Step[] = [];
+      if (!recipientUserId) {
+        steps.push({ name: "recipient_created", ok: false, detail: "recipient user missing" });
+        return steps;
+      }
+      if (!signIn?.user) {
+        steps.push({ name: "sign_in_available", ok: false, detail: "sender not signed in" });
+        return steps;
+      }
+
+      const dedupe = crypto.randomUUID();
+      const { data, error } = await testUserClient.rpc("send_royal_gift" as never, {
+        p_gift_id: "flower_daisy",
+        p_recipient_id: recipientUserId,
+        p_post_id: null,
+        p_quantity: 1,
+        p_dedupe_key: dedupe,
+      } as never);
+      steps.push({ name: "gift_rpc_ok", ok: !error, detail: error?.message, data });
+
+      const txId = (data as { transaction_id?: string } | null)?.transaction_id ?? null;
+      steps.push({ name: "gift_tx_returned", ok: !!txId, data: { txId } });
+
+      // Confirm debit routed through primitives with ref_table=gift_transactions
+      const { data: opRow } = await admin
+        .from("debit_operations")
+        .select("id, amount, ref_table, ref_id, status")
+        .eq("user_id", testUserId)
+        .eq("ref_table", "gift_transactions")
+        .eq("ref_id", txId)
+        .maybeSingle();
+      steps.push({
+        name: "gift_debit_recorded",
+        ok: !!opRow && (opRow as { status: string }).status === "completed"
+          && Number((opRow as { amount: number }).amount) === 10,
+        data: opRow,
+      });
+
+      // Dedupe replay must return the same transaction and NOT create a second debit op.
+      const { data: replay } = await testUserClient.rpc("send_royal_gift" as never, {
+        p_gift_id: "flower_daisy",
+        p_recipient_id: recipientUserId,
+        p_post_id: null,
+        p_quantity: 1,
+        p_dedupe_key: dedupe,
+      } as never);
+      const dedupedOk = (replay as { deduped?: boolean; transaction_id?: string } | null)?.deduped === true
+        && (replay as { transaction_id: string }).transaction_id === txId;
+      steps.push({ name: "dedupe_replay_returns_same_tx", ok: dedupedOk, data: replay });
+
+      const { count: opCount } = await admin
+        .from("debit_operations")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", testUserId)
+        .eq("ref_table", "gift_transactions")
+        .eq("ref_id", txId);
+      steps.push({ name: "no_duplicate_debit_op", ok: (opCount ?? 0) === 1, data: { opCount } });
+      return steps;
+    }),
+  );
+
+  await testUserClient.auth.signOut();
+
   // Cleanup: remove test user (cascades grants/allowances/reversals via FKs where set)
   // Explicitly delete rows without ON DELETE CASCADE first for safety.
   await admin.from("shekel_spend_allocations").delete().eq("user_id", testUserId);
