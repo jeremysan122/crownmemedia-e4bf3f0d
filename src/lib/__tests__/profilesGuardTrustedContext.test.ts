@@ -37,9 +37,9 @@ describe("profiles_guard_protected_fields — trusted context recognition", () =
   });
 
   it("recognises the modern PostgREST role GUC", () => {
-    expect(latestGuard).toMatch(
-      /current_setting\('role',\s*true\)\s*=\s*'service_role'/,
-    );
+    // Either a direct comparison or via an intermediate variable assigned from current_setting('role', true).
+    expect(latestGuard).toMatch(/current_setting\('role',\s*true\)/);
+    expect(latestGuard).toMatch(/role_guc\s*=\s*'service_role'|current_setting\('role',\s*true\)\s*=\s*'service_role'/);
   });
 
   it("recognises the service_role claim inside the JSON JWT claims", () => {
