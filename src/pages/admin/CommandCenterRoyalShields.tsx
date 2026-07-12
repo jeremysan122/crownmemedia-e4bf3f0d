@@ -83,6 +83,8 @@ type ReconciliationSnapshot = {
     reversed_at: string | null;
   }>;
   generated_at: string;
+};
+
 
 export default function CommandCenterRoyalShields() {
   const { isModerator, loading } = useAuth();
