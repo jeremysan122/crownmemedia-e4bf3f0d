@@ -6646,6 +6646,7 @@ export type Database = {
           scenario: string
         }[]
       }
+      royal_wave82a_founder_claimed: { Args: never; Returns: number }
       royal_wave82a_race_call:
         | {
             Args: {
@@ -6669,6 +6670,10 @@ export type Database = {
       royal_wave82a_race_cleanup: { Args: { _uid: string }; Returns: undefined }
       royal_wave82a_race_seed: { Args: never; Returns: string }
       royal_wave82a_race_setup: { Args: { _uid: string }; Returns: undefined }
+      royal_wave82a_set_founder_cap: {
+        Args: { _cap: number }
+        Returns: undefined
+      }
       royal_wave82a_shield_selftest: {
         Args: never
         Returns: {
