@@ -468,29 +468,95 @@ export type Database = {
         }
         Relationships: []
       }
+      boost_token_lots: {
+        Row: {
+          available_quantity: number | null
+          granted_at: string
+          id: string
+          metadata: Json
+          quantity_consumed: number
+          quantity_granted: number
+          quantity_reversed: number
+          royal_pass_grant_id: string | null
+          source_credit_ledger_id: string | null
+          source_type: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          available_quantity?: number | null
+          granted_at?: string
+          id?: string
+          metadata?: Json
+          quantity_consumed?: number
+          quantity_granted: number
+          quantity_reversed?: number
+          royal_pass_grant_id?: string | null
+          source_credit_ledger_id?: string | null
+          source_type: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          available_quantity?: number | null
+          granted_at?: string
+          id?: string
+          metadata?: Json
+          quantity_consumed?: number
+          quantity_granted?: number
+          quantity_reversed?: number
+          royal_pass_grant_id?: string | null
+          source_credit_ledger_id?: string | null
+          source_type?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boost_token_lots_royal_pass_grant_id_fkey"
+            columns: ["royal_pass_grant_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_grants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boost_token_lots_source_credit_ledger_id_fkey"
+            columns: ["source_credit_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "boost_tokens_ledger"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boost_token_spend_allocations: {
         Row: {
+          amount_consumed: number
           created_at: string
           id: string
           ledger_id: string
+          lot_id: string | null
           operation_id: string | null
           royal_pass_grant_id: string | null
           source: string
           user_id: string
         }
         Insert: {
+          amount_consumed?: number
           created_at?: string
           id?: string
           ledger_id: string
+          lot_id?: string | null
           operation_id?: string | null
           royal_pass_grant_id?: string | null
           source: string
           user_id: string
         }
         Update: {
+          amount_consumed?: number
           created_at?: string
           id?: string
           ledger_id?: string
+          lot_id?: string | null
           operation_id?: string | null
           royal_pass_grant_id?: string | null
           source?: string
@@ -502,6 +568,13 @@ export type Database = {
             columns: ["ledger_id"]
             isOneToOne: false
             referencedRelation: "boost_tokens_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boost_token_spend_allocations_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "boost_token_lots"
             referencedColumns: ["id"]
           },
           {
@@ -1577,38 +1650,62 @@ export type Database = {
       debit_operations: {
         Row: {
           amount: number
+          asset_type: string | null
+          caller: string | null
+          completed_at: string | null
           created_at: string
+          error_category: string | null
+          error_message: string | null
+          failed_at: string | null
           kind: string
           ledger_id: string | null
           operation_id: string
           reason_code: string
           ref_id: string | null
           ref_table: string | null
+          request_fingerprint: string | null
           result: Json
+          status: string
           user_id: string
         }
         Insert: {
           amount?: number
+          asset_type?: string | null
+          caller?: string | null
+          completed_at?: string | null
           created_at?: string
+          error_category?: string | null
+          error_message?: string | null
+          failed_at?: string | null
           kind: string
           ledger_id?: string | null
           operation_id: string
           reason_code: string
           ref_id?: string | null
           ref_table?: string | null
+          request_fingerprint?: string | null
           result?: Json
+          status?: string
           user_id: string
         }
         Update: {
           amount?: number
+          asset_type?: string | null
+          caller?: string | null
+          completed_at?: string | null
           created_at?: string
+          error_category?: string | null
+          error_message?: string | null
+          failed_at?: string | null
           kind?: string
           ledger_id?: string | null
           operation_id?: string
           reason_code?: string
           ref_id?: string | null
           ref_table?: string | null
+          request_fingerprint?: string | null
           result?: Json
+          status?: string
           user_id?: string
         }
         Relationships: []
@@ -5082,6 +5179,74 @@ export type Database = {
         }
         Relationships: []
       }
+      shekel_spend_allocations: {
+        Row: {
+          amount_consumed: number
+          created_at: string
+          debit_ledger_id: string
+          id: string
+          metadata: Json
+          operation_id: string
+          royal_pass_grant_id: string | null
+          source_credit_ledger_id: string | null
+          source_type: string
+          user_id: string
+        }
+        Insert: {
+          amount_consumed: number
+          created_at?: string
+          debit_ledger_id: string
+          id?: string
+          metadata?: Json
+          operation_id: string
+          royal_pass_grant_id?: string | null
+          source_credit_ledger_id?: string | null
+          source_type: string
+          user_id: string
+        }
+        Update: {
+          amount_consumed?: number
+          created_at?: string
+          debit_ledger_id?: string
+          id?: string
+          metadata?: Json
+          operation_id?: string
+          royal_pass_grant_id?: string | null
+          source_credit_ledger_id?: string | null
+          source_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shekel_spend_alloc_grant_fk"
+            columns: ["royal_pass_grant_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_grants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shekel_spend_alloc_ledger_fk"
+            columns: ["debit_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "shekel_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shekel_spend_alloc_op_fk"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "debit_operations"
+            referencedColumns: ["operation_id"]
+          },
+          {
+            foreignKeyName: "shekel_spend_alloc_source_ledger_fk"
+            columns: ["source_credit_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "shekel_ledger"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spin_wheel_prizes: {
         Row: {
           active: boolean
@@ -5830,6 +5995,7 @@ export type Database = {
         Args: { _comment_id: string; _hide: boolean; _reason?: string }
         Returns: undefined
       }
+      admin_inspect_debit_stack: { Args: never; Returns: Json }
       admin_list_boost_bundles: {
         Args: never
         Returns: {
