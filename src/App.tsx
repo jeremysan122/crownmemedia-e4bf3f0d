@@ -124,6 +124,7 @@ const ComplianceCheck = lazy(() => import("./pages/admin/ComplianceCheck"));
 const CategoryHub = lazy(() => import("./pages/CategoryHub"));
 const Discover = lazy(() => import("./pages/Discover"));
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const CommandCenterRoyalShields = lazy(() => import("./pages/admin/CommandCenterRoyalShields"));
 import LegalConsentGate from "@/components/legal/LegalConsentGate";
 const Marketing = lazy(() => import("./pages/Marketing"));
 
@@ -219,6 +220,7 @@ const App = () => (
               <Route path="/admin/audit-log" element={<ProtectedRoute><AdminRoute><AdminAuditLog /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/system-audit" element={<ProtectedRoute><AdminRoute><AdminSystemAudit /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/race-audit" element={<ProtectedRoute><AdminRoute><AdminRaceAudit /></AdminRoute></ProtectedRoute>} />
+              <Route path="/admin/royal-shields" element={<ProtectedRoute><AdminRoute><CommandCenterRoyalShields /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/command-center" element={<ProtectedRoute><AdminRoute><CommandCenterLayout /></AdminRoute></ProtectedRoute>}>
                 <Route index element={<CommandCenterOverview />} />
                 <Route path="realtime" element={<CommandCenterRealtime />} />

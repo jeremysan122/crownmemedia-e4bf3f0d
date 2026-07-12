@@ -4708,6 +4708,102 @@ export type Database = {
           },
         ]
       }
+      royal_shield_audit_log: {
+        Row: {
+          active_shield_sessions: number | null
+          actor_id: string | null
+          battle_id: string | null
+          boost_id: string | null
+          created_at: string
+          delta: number
+          drift_amount: number | null
+          event_type: string
+          id: string
+          metadata: Json
+          net_spent_credits: number | null
+          post_id: string | null
+          reason_code: string
+          royal_pass_grant_id: string | null
+          shield_allowance_id: string | null
+          shields_granted: number | null
+          user_id: string
+        }
+        Insert: {
+          active_shield_sessions?: number | null
+          actor_id?: string | null
+          battle_id?: string | null
+          boost_id?: string | null
+          created_at?: string
+          delta?: number
+          drift_amount?: number | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          net_spent_credits?: number | null
+          post_id?: string | null
+          reason_code: string
+          royal_pass_grant_id?: string | null
+          shield_allowance_id?: string | null
+          shields_granted?: number | null
+          user_id: string
+        }
+        Update: {
+          active_shield_sessions?: number | null
+          actor_id?: string | null
+          battle_id?: string | null
+          boost_id?: string | null
+          created_at?: string
+          delta?: number
+          drift_amount?: number | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          net_spent_credits?: number | null
+          post_id?: string | null
+          reason_code?: string
+          royal_pass_grant_id?: string | null
+          shield_allowance_id?: string | null
+          shields_granted?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "royal_shield_audit_log_boost_id_fkey"
+            columns: ["boost_id"]
+            isOneToOne: false
+            referencedRelation: "boosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "royal_shield_audit_log_royal_pass_grant_id_fkey"
+            columns: ["royal_pass_grant_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_grants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "royal_shield_audit_log_shield_allowance_id_fkey"
+            columns: ["shield_allowance_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_shield_allowances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "royal_shield_audit_log_shield_allowance_id_fkey"
+            columns: ["shield_allowance_id"]
+            isOneToOne: false
+            referencedRelation: "royal_shield_accounting"
+            referencedColumns: ["allowance_id"]
+          },
+          {
+            foreignKeyName: "royal_shield_audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sensitive_appeals: {
         Row: {
           created_at: string
@@ -5840,6 +5936,17 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      admin_run_royal_shield_integrity_check: {
+        Args: { _reason?: string }
+        Returns: {
+          active_shield_sessions: number
+          drift_amount: number
+          net_spent_credits: number
+          shields_granted: number
+          status: string
+          user_id: string
+        }[]
+      }
       admin_set_creator_reward: {
         Args: { _reward_id: string; _status: string }
         Returns: {
@@ -6766,6 +6873,21 @@ export type Database = {
         Args: { _battle_id: string; _choice: string }
         Returns: undefined
       }
+      log_royal_shield_event: {
+        Args: {
+          _allowance_id?: string
+          _battle_id?: string
+          _boost_id?: string
+          _delta?: number
+          _event_type: string
+          _grant_id?: string
+          _metadata?: Json
+          _post_id?: string
+          _reason_code: string
+          _user_id: string
+        }
+        Returns: string
+      }
       log_upload_monitoring_event: {
         Args: {
           _context?: Json
@@ -6812,6 +6934,16 @@ export type Database = {
           shields_granted: number
           shields_reversed: number
           shields_used: number
+        }[]
+      }
+      my_royal_shield_summary: {
+        Args: never
+        Returns: {
+          active_shield_sessions: number
+          has_drift: boolean
+          net_spent_credits: number
+          remaining_credits: number
+          shields_granted: number
         }[]
       }
       my_spendable_boost_tokens: { Args: never; Returns: number }
