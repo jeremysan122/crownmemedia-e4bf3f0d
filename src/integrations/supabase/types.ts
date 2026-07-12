@@ -2022,6 +2022,58 @@ export type Database = {
         }
         Relationships: []
       }
+      gift_spend_allocations: {
+        Row: {
+          created_at: string
+          gift_transaction_id: string
+          id: string
+          promo_shekels_consumed: number
+          purchased_shekels_consumed: number
+          royal_pass_grant_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gift_transaction_id: string
+          id?: string
+          promo_shekels_consumed?: number
+          purchased_shekels_consumed?: number
+          royal_pass_grant_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gift_transaction_id?: string
+          id?: string
+          promo_shekels_consumed?: number
+          purchased_shekels_consumed?: number
+          royal_pass_grant_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gift_spend_allocations_gift_transaction_id_fkey"
+            columns: ["gift_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "gift_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gift_spend_allocations_gift_transaction_id_fkey"
+            columns: ["gift_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "gift_transactions_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gift_spend_allocations_royal_pass_grant_id_fkey"
+            columns: ["royal_pass_grant_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_grants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gift_transactions: {
         Row: {
           client_dedupe_key: string | null
@@ -6346,16 +6398,26 @@ export type Database = {
         }
         Returns: Json
       }
-      handle_royal_dispute_reinstated: {
-        Args: {
-          _stripe_charge_id?: string
-          _stripe_dispute_id?: string
-          _stripe_event_id: string
-          _stripe_invoice_id?: string
-          _stripe_payment_intent_id?: string
-        }
-        Returns: Json
-      }
+      handle_royal_dispute_reinstated:
+        | {
+            Args: {
+              _stripe_charge_id?: string
+              _stripe_dispute_id: string
+              _stripe_event_id: string
+              _stripe_payment_intent_id?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _stripe_charge_id?: string
+              _stripe_dispute_id?: string
+              _stripe_event_id: string
+              _stripe_invoice_id?: string
+              _stripe_payment_intent_id?: string
+            }
+            Returns: Json
+          }
       handle_royal_dispute_won: {
         Args: {
           _stripe_charge_id?: string
@@ -6793,6 +6855,10 @@ export type Database = {
       }
       recalc_post_score: { Args: { _post_id: string }; Returns: undefined }
       recalculate_all_repost_counts: { Args: never; Returns: number }
+      recalculate_post_crown_shield_until: {
+        Args: { _post_id: string }
+        Returns: undefined
+      }
       recalculate_repost_count: { Args: { _post_id: string }; Returns: number }
       record_profile_visit: {
         Args: { _profile_id: string }
@@ -7046,6 +7112,8 @@ export type Database = {
       }
       snapshot_category_ranks: { Args: never; Returns: undefined }
       snapshot_post_ranks: { Args: never; Returns: undefined }
+      spendable_boost_tokens: { Args: { _user_id: string }; Returns: number }
+      spendable_shekels: { Args: { _user_id: string }; Returns: number }
       spin_daily_wheel: { Args: never; Returns: Json }
       start_battle_from_lobby: {
         Args: { _battle_id: string }
@@ -7143,6 +7211,11 @@ export type Database = {
         }
         Returns: string
       }
+      suspended_royal_boost_tokens: {
+        Args: { _user_id: string }
+        Returns: number
+      }
+      suspended_royal_shekels: { Args: { _user_id: string }; Returns: number }
       undo_repost: { Args: { p_repost_id: string }; Returns: Json }
       update_my_dob: { Args: { _dob: string }; Returns: undefined }
       update_my_preferences: { Args: { _prefs: Json }; Returns: undefined }
