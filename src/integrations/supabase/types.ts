@@ -586,6 +586,60 @@ export type Database = {
           },
         ]
       }
+      boost_token_spend_reversals: {
+        Row: {
+          allocation_id: string
+          amount_reversed: number
+          created_at: string
+          id: string
+          metadata: Json
+          reason_code: string
+          reversal_event_kind: string
+          royal_pass_grant_id: string
+          stripe_event_id: string | null
+          user_id: string
+        }
+        Insert: {
+          allocation_id: string
+          amount_reversed: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          reason_code: string
+          reversal_event_kind?: string
+          royal_pass_grant_id: string
+          stripe_event_id?: string | null
+          user_id: string
+        }
+        Update: {
+          allocation_id?: string
+          amount_reversed?: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          reason_code?: string
+          reversal_event_kind?: string
+          royal_pass_grant_id?: string
+          stripe_event_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boost_token_spend_reversals_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "boost_token_spend_allocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boost_token_spend_reversals_royal_pass_grant_id_fkey"
+            columns: ["royal_pass_grant_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_grants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boost_tokens_ledger: {
         Row: {
           created_at: string
@@ -5243,6 +5297,60 @@ export type Database = {
             columns: ["source_credit_ledger_id"]
             isOneToOne: false
             referencedRelation: "shekel_ledger"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shekel_spend_reversals: {
+        Row: {
+          allocation_id: string
+          amount_reversed: number
+          created_at: string
+          id: string
+          metadata: Json
+          reason_code: string
+          reversal_event_kind: string
+          royal_pass_grant_id: string
+          stripe_event_id: string | null
+          user_id: string
+        }
+        Insert: {
+          allocation_id: string
+          amount_reversed: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          reason_code: string
+          reversal_event_kind?: string
+          royal_pass_grant_id: string
+          stripe_event_id?: string | null
+          user_id: string
+        }
+        Update: {
+          allocation_id?: string
+          amount_reversed?: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          reason_code?: string
+          reversal_event_kind?: string
+          royal_pass_grant_id?: string
+          stripe_event_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shekel_spend_reversals_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "shekel_spend_allocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shekel_spend_reversals_royal_pass_grant_id_fkey"
+            columns: ["royal_pass_grant_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_grants"
             referencedColumns: ["id"]
           },
         ]
