@@ -66,6 +66,8 @@ export default function CommandCenterRoyalShields() {
   const [busy, setBusy] = useState(true);
   const [checking, setChecking] = useState(false);
   const [lastCheck, setLastCheck] = useState<CheckRow[] | null>(null);
+  const [runtimeBusy, setRuntimeBusy] = useState(false);
+  const [runtime, setRuntime] = useState<RuntimeAuditResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
