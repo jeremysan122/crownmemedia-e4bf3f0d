@@ -75,17 +75,53 @@ describe("Wave 8.2a — shield allowance ↔ grant link", () => {
 describe("Wave 8.2a — use_royal_shield enforces grant status", () => {
   const latestFn =
     allSql.match(/CREATE OR REPLACE FUNCTION public\.use_royal_shield[\s\S]+?\$function\$;/g)?.slice(-1)[0] ?? "";
+  it("rejects null allowance→grant linkage with royal_allowance_not_linked", () => {
+    expect(latestFn).toMatch(/allow\.royal_pass_grant_id IS NULL/);
+    expect(latestFn).toMatch(/royal_allowance_not_linked/);
+  });
   it("resolves the linked grant status and rejects non-granted", () => {
-    expect(latestFn).toMatch(/allow\.royal_pass_grant_id IS NOT NULL/);
     expect(latestFn).toMatch(/SELECT status INTO linked_grant_status[\s\S]+?FROM public\.royal_pass_grants[\s\S]+?WHERE id = allow\.royal_pass_grant_id/);
     expect(latestFn).toMatch(/linked_grant_status\s*<>\s*'granted'/);
     expect(latestFn).toMatch(/royal_benefits_temporarily_suspended/);
   });
   it("rejects BEFORE incrementing shields_used (no credit consumed on failed activation)", () => {
-    const gateIdx = latestFn.indexOf("royal_benefits_temporarily_suspended");
+    const suspendIdx = latestFn.indexOf("royal_benefits_temporarily_suspended");
+    const unlinkedIdx = latestFn.indexOf("royal_allowance_not_linked");
     const usedIdx = latestFn.indexOf("shields_used = shields_used + 1");
-    expect(gateIdx).toBeGreaterThan(0);
-    expect(usedIdx).toBeGreaterThan(gateIdx);
+    expect(suspendIdx).toBeGreaterThan(0);
+    expect(unlinkedIdx).toBeGreaterThan(0);
+    expect(usedIdx).toBeGreaterThan(suspendIdx);
+    expect(usedIdx).toBeGreaterThan(unlinkedIdx);
+  });
+});
+
+describe("Wave 8.2a — shield allowance NOT NULL grant link", () => {
+  it("enforces NOT NULL on royal_pass_grant_id", () => {
+    expect(allSql).toMatch(
+      /ALTER TABLE public\.royal_pass_shield_allowances[\s\S]+?ALTER COLUMN royal_pass_grant_id SET NOT NULL/,
+    );
+  });
+});
+
+describe("Wave 8.2a — reinstated enforces strict dispute-ID match", () => {
+  const fn =
+    allSql.match(/CREATE OR REPLACE FUNCTION public\.handle_royal_dispute_reinstated[\s\S]+?\$function\$;/g)?.slice(-1)[0] ?? "";
+  it("mismatch check triggers whenever grant.stripe_dispute_id IS NOT NULL (all lifecycle states)", () => {
+    // The strict block must gate on the grant having a dispute id, not just the current status.
+    expect(fn).toMatch(
+      /IF grant_row\.stripe_dispute_id IS NOT NULL THEN[\s\S]+?_stripe_dispute_id IS NULL OR _stripe_dispute_id <> grant_row\.stripe_dispute_id[\s\S]+?dispute_mismatch/,
+    );
+  });
+  it("refunded rows are never auto-restored", () => {
+    expect(fn).toMatch(/grant_row\.status = 'refunded'[\s\S]+?skipped_refunded/);
+  });
+});
+
+describe("Wave 8.2a — grant RPC concurrency safety", () => {
+  const latest =
+    allSql.match(/CREATE OR REPLACE FUNCTION public\.grant_royal_monthly_benefits[\s\S]+?\$function\$;/g)?.slice(-1)[0] ?? "";
+  it("catches unique_violation and returns already_processed", () => {
+    expect(latest).toMatch(/EXCEPTION WHEN unique_violation THEN[\s\S]+?already_processed[\s\S]+?concurrent/);
   });
 });
 
