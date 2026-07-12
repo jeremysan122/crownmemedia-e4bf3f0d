@@ -85,6 +85,17 @@ type ReconciliationSnapshot = {
   generated_at: string;
 };
 
+function Stat({ label, value, tone }: { label: string; value: number; tone?: "ok" | "danger" }) {
+  return (
+    <div className={`royal-card p-2 ${tone === "danger" ? "border-destructive/60" : ""}`}>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`text-sm font-bold ${tone === "danger" ? "text-destructive" : "text-foreground"}`}>
+        {value.toLocaleString()}
+      </div>
+    </div>
+  );
+}
+
 
 export default function CommandCenterRoyalShields() {
   const { isModerator, loading } = useAuth();
