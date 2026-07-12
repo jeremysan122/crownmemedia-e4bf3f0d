@@ -51,6 +51,14 @@ type AuditRow = {
   created_at: string;
 };
 
+type RuntimeAuditResult = {
+  ok: boolean;
+  passed: number;
+  total: number;
+  results: Array<{ scenario: string; ok: boolean; steps: Array<{ name: string; ok: boolean; detail?: string }> }>;
+  ran_at: string;
+};
+
 export default function CommandCenterRoyalShields() {
   const { isModerator, loading } = useAuth();
   const [rows, setRows] = useState<AccountingRow[]>([]);
@@ -58,6 +66,8 @@ export default function CommandCenterRoyalShields() {
   const [busy, setBusy] = useState(true);
   const [checking, setChecking] = useState(false);
   const [lastCheck, setLastCheck] = useState<CheckRow[] | null>(null);
+  const [runtimeBusy, setRuntimeBusy] = useState(false);
+  const [runtime, setRuntime] = useState<RuntimeAuditResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -93,6 +103,16 @@ export default function CommandCenterRoyalShields() {
     setLastCheck((data as CheckRow[] | null) ?? []);
     setChecking(false);
     // Refresh audit log so the new invariant_* rows appear.
+    void load();
+  }, [load]);
+
+  const runRuntimeAudit = useCallback(async () => {
+    setRuntimeBusy(true);
+    setErr(null);
+    const { data, error } = await supabase.functions.invoke("admin-royal-runtime-audit", { body: {} });
+    if (error) setErr(error.message);
+    setRuntime((data as RuntimeAuditResult | null) ?? null);
+    setRuntimeBusy(false);
     void load();
   }, [load]);
 
@@ -151,6 +171,44 @@ export default function CommandCenterRoyalShields() {
               Last run: {lastCheck.length} rows · {lastCheck.filter((r) => r.status === "drift").length} drift
             </p>
           )}
+
+          <div className="pt-3 border-t border-border/50 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-xs text-muted-foreground">
+                Lifecycle runtime audit — creates an ephemeral test user and exercises every Royal Pass RPC (grant, refund, dispute created/won/reinstated/lost, shield invariants), then cleans up.
+              </div>
+              <button
+                onClick={runRuntimeAudit}
+                disabled={runtimeBusy}
+                className="inline-flex items-center gap-2 rounded-lg border border-gold/40 text-gold px-3 py-1.5 text-sm font-medium disabled:opacity-60 shrink-0"
+              >
+                {runtimeBusy ? <Loader2 size={14} className="animate-spin" /> : <PlayCircle size={14} />}
+                Run runtime audit
+              </button>
+            </div>
+            {runtime && (
+              <div className={`text-xs rounded-lg p-2 ${runtime.ok ? "bg-emerald-500/10 text-emerald-500" : "bg-destructive/10 text-destructive"}`}>
+                <div className="font-medium mb-1">
+                  Runtime audit: {runtime.passed}/{runtime.total} scenarios passed
+                </div>
+                <ul className="space-y-0.5">
+                  {runtime.results.map((r) => (
+                    <li key={r.scenario} className="flex items-start gap-2">
+                      <span>{r.ok ? "✓" : "✗"}</span>
+                      <span className="flex-1">
+                        <code>{r.scenario}</code>
+                        {!r.ok && (
+                          <span className="ml-2 opacity-80">
+                            — {r.steps.filter((s) => !s.ok).map((s) => `${s.name}: ${s.detail ?? "fail"}`).join(", ")}
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
 
         <section className="space-y-2">
