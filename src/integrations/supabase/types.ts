@@ -513,6 +513,8 @@ export type Database = {
           expires_at: string | null
           id: string
           post_id: string | null
+          royal_pass_grant_id: string | null
+          royal_pass_shield_allowance_id: string | null
           source: string | null
           started_at: string
           user_id: string
@@ -523,6 +525,8 @@ export type Database = {
           expires_at?: string | null
           id?: string
           post_id?: string | null
+          royal_pass_grant_id?: string | null
+          royal_pass_shield_allowance_id?: string | null
           source?: string | null
           started_at?: string
           user_id: string
@@ -533,6 +537,8 @@ export type Database = {
           expires_at?: string | null
           id?: string
           post_id?: string | null
+          royal_pass_grant_id?: string | null
+          royal_pass_shield_allowance_id?: string | null
           source?: string | null
           started_at?: string
           user_id?: string
@@ -543,6 +549,20 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boosts_royal_allowance_fk"
+            columns: ["royal_pass_shield_allowance_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_shield_allowances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boosts_royal_grant_fk"
+            columns: ["royal_pass_grant_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_grants"
             referencedColumns: ["id"]
           },
           {
@@ -4259,22 +4279,33 @@ export type Database = {
       }
       royal_pass_grants: {
         Row: {
+          active_shields_reversed: number
           boost_tokens_granted: number
+          boost_tokens_reversed: number
           created_at: string
           dispute_resolved_at: string | null
           dispute_status: string | null
           disputed_at: string | null
           founder_granted: boolean
+          founder_reversed: boolean
           id: string
           metadata: Json
           period_end: string
           period_start: string
           pre_dispute_status: string | null
+          promo_boost_tokens_remaining: number
+          promo_shekels_remaining: number
+          restoration_completed_at: string | null
+          restoration_source_event_id: string | null
+          reversal_completed_at: string | null
+          reversal_source_event_id: string | null
           reversal_stripe_event_id: string | null
           reversed_at: string | null
           reversed_reason: string | null
           shekels_granted: number
+          shekels_reversed: number
           shields_granted: number
+          shields_reversed: number
           status: string
           stripe_charge_id: string | null
           stripe_dispute_id: string | null
@@ -4285,22 +4316,33 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          active_shields_reversed?: number
           boost_tokens_granted?: number
+          boost_tokens_reversed?: number
           created_at?: string
           dispute_resolved_at?: string | null
           dispute_status?: string | null
           disputed_at?: string | null
           founder_granted?: boolean
+          founder_reversed?: boolean
           id?: string
           metadata?: Json
           period_end: string
           period_start: string
           pre_dispute_status?: string | null
+          promo_boost_tokens_remaining?: number
+          promo_shekels_remaining?: number
+          restoration_completed_at?: string | null
+          restoration_source_event_id?: string | null
+          reversal_completed_at?: string | null
+          reversal_source_event_id?: string | null
           reversal_stripe_event_id?: string | null
           reversed_at?: string | null
           reversed_reason?: string | null
           shekels_granted?: number
+          shekels_reversed?: number
           shields_granted?: number
+          shields_reversed?: number
           status?: string
           stripe_charge_id?: string | null
           stripe_dispute_id?: string | null
@@ -4311,22 +4353,33 @@ export type Database = {
           user_id: string
         }
         Update: {
+          active_shields_reversed?: number
           boost_tokens_granted?: number
+          boost_tokens_reversed?: number
           created_at?: string
           dispute_resolved_at?: string | null
           dispute_status?: string | null
           disputed_at?: string | null
           founder_granted?: boolean
+          founder_reversed?: boolean
           id?: string
           metadata?: Json
           period_end?: string
           period_start?: string
           pre_dispute_status?: string | null
+          promo_boost_tokens_remaining?: number
+          promo_shekels_remaining?: number
+          restoration_completed_at?: string | null
+          restoration_source_event_id?: string | null
+          reversal_completed_at?: string | null
+          reversal_source_event_id?: string | null
           reversal_stripe_event_id?: string | null
           reversed_at?: string | null
           reversed_reason?: string | null
           shekels_granted?: number
+          shekels_reversed?: number
           shields_granted?: number
+          shields_reversed?: number
           status?: string
           stripe_charge_id?: string | null
           stripe_dispute_id?: string | null
@@ -4384,6 +4437,71 @@ export type Database = {
           usd?: number
         }
         Relationships: []
+      }
+      royal_pass_reversals: {
+        Row: {
+          active_shields_delta: number
+          boost_ids: string[]
+          boost_tokens_delta: number
+          created_at: string
+          details: Json
+          event_kind: string
+          founder_touched: boolean
+          id: string
+          reason: string | null
+          royal_pass_grant_id: string
+          shekels_delta: number
+          shields_delta: number
+          stripe_dispute_id: string | null
+          stripe_event_id: string
+          stripe_event_type: string | null
+          user_id: string
+        }
+        Insert: {
+          active_shields_delta?: number
+          boost_ids?: string[]
+          boost_tokens_delta?: number
+          created_at?: string
+          details?: Json
+          event_kind: string
+          founder_touched?: boolean
+          id?: string
+          reason?: string | null
+          royal_pass_grant_id: string
+          shekels_delta?: number
+          shields_delta?: number
+          stripe_dispute_id?: string | null
+          stripe_event_id: string
+          stripe_event_type?: string | null
+          user_id: string
+        }
+        Update: {
+          active_shields_delta?: number
+          boost_ids?: string[]
+          boost_tokens_delta?: number
+          created_at?: string
+          details?: Json
+          event_kind?: string
+          founder_touched?: boolean
+          id?: string
+          reason?: string | null
+          royal_pass_grant_id?: string
+          shekels_delta?: number
+          shields_delta?: number
+          stripe_dispute_id?: string | null
+          stripe_event_id?: string
+          stripe_event_type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "royal_pass_reversals_royal_pass_grant_id_fkey"
+            columns: ["royal_pass_grant_id"]
+            isOneToOne: false
+            referencedRelation: "royal_pass_grants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       royal_pass_shield_allowances: {
         Row: {
