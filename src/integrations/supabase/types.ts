@@ -6637,17 +6637,6 @@ export type Database = {
       }
       royal_entitlements: { Args: never; Returns: Json }
       royal_pass_daily_boost_status: { Args: never; Returns: Json }
-      royal_wave82a_race_call: {
-        Args: {
-          _barrier_key: number
-          _event_id: string
-          _period_end: string
-          _period_start: string
-          _user_id: string
-        }
-        Returns: Json
-      }
-      royal_wave82a_race_seed: { Args: never; Returns: string }
       save_push_subscription: {
         Args: {
           _auth: string
