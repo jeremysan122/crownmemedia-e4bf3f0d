@@ -6637,6 +6637,40 @@ export type Database = {
       }
       royal_entitlements: { Args: never; Returns: Json }
       royal_pass_daily_boost_status: { Args: never; Returns: Json }
+      royal_wave82a_dispute_match_selftest: {
+        Args: never
+        Returns: {
+          grant_status_after: string
+          has_audit_restoration: boolean
+          result: Json
+          scenario: string
+        }[]
+      }
+      royal_wave82a_race_call: {
+        Args: {
+          _barrier_key: number
+          _event_id: string
+          _period_end: string
+          _period_start: string
+          _user_id: string
+        }
+        Returns: Json
+      }
+      royal_wave82a_race_cleanup: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
+      royal_wave82a_race_seed: { Args: never; Returns: string }
+      royal_wave82a_shield_selftest: {
+        Args: never
+        Returns: {
+          boost_created: boolean
+          boost_source: string
+          result: Json
+          scenario: string
+          shields_used_after: number
+        }[]
+      }
       save_push_subscription: {
         Args: {
           _auth: string
