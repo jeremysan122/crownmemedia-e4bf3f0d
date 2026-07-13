@@ -29,31 +29,6 @@ interface BoostRow {
   error?: string;
 }
 
-const FAILED_BOOSTS_KEY = "royal_pass_failed_boosts_v1";
-function loadFailedBoosts(userId: string): BoostRow[] {
-  try {
-    const raw = localStorage.getItem(`${FAILED_BOOSTS_KEY}:${userId}`);
-    if (!raw) return [];
-    const arr = JSON.parse(raw) as BoostRow[];
-    return Array.isArray(arr) ? arr : [];
-  } catch { return []; }
-}
-function recordFailedBoost(userId: string, err: string) {
-  try {
-    const existing = loadFailedBoosts(userId);
-    const next: BoostRow = {
-      id: `fail-${Date.now()}`,
-      post_id: null,
-      started_at: new Date().toISOString(),
-      expires_at: null,
-      active: false,
-      status: "failed",
-      error: err.slice(0, 200),
-    };
-    const trimmed = [next, ...existing].slice(0, 30);
-    localStorage.setItem(`${FAILED_BOOSTS_KEY}:${userId}`, JSON.stringify(trimmed));
-  } catch { /* ignore */ }
-}
 
 
 
