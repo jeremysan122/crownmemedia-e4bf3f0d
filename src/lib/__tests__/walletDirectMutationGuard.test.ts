@@ -60,8 +60,11 @@ describe("Direct wallet debit guard (effective definitions only)", () => {
       for (const fn of fns) latest.set(fn.key, { file, body: fn.body });
 
       // Detect debits outside any function body (would run at migration time).
+      // Splice from last to first so earlier start/end offsets stay valid.
       let outside = sql;
-      for (const fn of fns) outside = outside.slice(0, fn.start) + outside.slice(fn.end);
+      for (let i = fns.length - 1; i >= 0; i--) {
+        outside = outside.slice(0, fns[i].start) + outside.slice(fns[i].end);
+      }
       if (DEBIT_RE.test(outside)) topLevelOffenders.push({ file });
     }
 
