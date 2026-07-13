@@ -76,6 +76,8 @@ export default function RoyalPassSettings() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [boostHistory, setBoostHistory] = useState<BoostRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
+
 
 
   useEffect(() => {
