@@ -251,6 +251,64 @@ export default function RoyalPassSettings() {
               </dl>
             </div>
 
+            {/* Active perks */}
+            <div className="royal-card p-4 space-y-3">
+              <h2 className="font-display text-sm tracking-widest text-gold flex items-center gap-2">
+                <Sparkles size={14} /> Active Perks
+              </h2>
+              <ul className="grid gap-2">
+                {activePerks.map((p) => {
+                  const Icon = p.icon;
+                  return (
+                    <li key={p.label} className="flex items-center gap-3 text-sm">
+                      <div className="size-8 rounded-lg bg-gold/10 text-gold flex items-center justify-center shrink-0">
+                        <Icon size={14} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold truncate">{p.label}</div>
+                        <div className="text-[11px] text-muted-foreground">{p.status}</div>
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                        On
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            {/* Crown Shields allowance */}
+            <div className="royal-card p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-gold/15 text-gold flex items-center justify-center">
+                  <ShieldCheck size={18} />
+                </div>
+                <div className="flex-1">
+                  <div className="font-display text-base text-gold leading-none">Crown Shields</div>
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    Protect a crowned post from being dethroned for 24h. Resets monthly.
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-display text-2xl text-gold tabular-nums leading-none">
+                    {entitlements.shields_remaining}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    of {shieldTotal} left
+                  </div>
+                </div>
+              </div>
+              <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                <div className="h-full bg-gradient-gold" style={{ width: `${shieldPct}%` }} />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {entitlements.shields_used} used this period
+                {shieldResets && <> · Resets {shieldResets}</>}
+              </p>
+            </div>
+
+
+
             <div className="royal-card p-5 space-y-3 relative overflow-hidden">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-gold/15 text-gold flex items-center justify-center">
