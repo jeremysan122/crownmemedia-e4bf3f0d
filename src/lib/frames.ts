@@ -68,3 +68,35 @@ export function getFrameInsetPct(key?: string | null): number {
   if (!key) return DEFAULT_FRAME_INSET_PCT;
   return FRAME_MAP[key as FrameKey]?.insetPct ?? DEFAULT_FRAME_INSET_PCT;
 }
+
+/**
+ * Render config used by <AvatarFrame />. All values are percentages of the
+ * outer wrapper size. The frame is always 100% (fills the wrapper); the
+ * avatar photo is sized to fit inside the frame's inner opening, and the
+ * glow overflows slightly outside the wrapper.
+ */
+export interface FrameRenderConfig {
+  /** Avatar photo diameter as % of outer wrapper. */
+  avatarPct: number;
+  /** Glow diameter as % of outer wrapper. */
+  glowPct: number;
+}
+
+const DEFAULT_RENDER_CONFIG: FrameRenderConfig = {
+  avatarPct: 72,
+  glowPct: 118,
+};
+
+/** Per-frame render config with sensible defaults for unknown/missing frames. */
+export function getFrameRenderConfig(key?: string | null): FrameRenderConfig {
+  if (!key) return DEFAULT_RENDER_CONFIG;
+  const def = FRAME_MAP[key as FrameKey];
+  if (!def) return DEFAULT_RENDER_CONFIG;
+  // Derive avatar % from the calibrated inset when present (inset is
+  // per-side %, so avatar = 100 - 2*inset).
+  const avatarPct = def.insetPct != null
+    ? Math.max(50, Math.min(85, 100 - 2 * def.insetPct))
+    : DEFAULT_RENDER_CONFIG.avatarPct;
+  return { avatarPct, glowPct: DEFAULT_RENDER_CONFIG.glowPct };
+}
+
