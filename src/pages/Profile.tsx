@@ -34,7 +34,6 @@ import RoleBadges from "@/components/profile/RoleBadges";
 import ChallengeDialog from "@/components/battles/ChallengeDialog";
 import ReportDialog from "@/components/ReportDialog";
 import RoyalPassBadge from "@/components/store/RoyalPassBadge";
-import RoyalShieldBalanceCard from "@/components/store/RoyalShieldBalanceCard";
 import { useIsRoyalPassUser } from "@/hooks/useIsRoyalPassUser";
 
 import { useActiveBoost } from "@/hooks/useActiveBoost";
