@@ -125,6 +125,7 @@ export default function Achievements() {
     description: "Track your progress across 81 CrownMe achievements and unlock ornate avatar frames.",
   });
   const { rows, loading } = useMyAchievements();
+  const { map: rarityMap } = useAchievementRarity();
   const [filter, setFilter] = useState<"all" | "in_progress" | "completed" | "locked">("all");
 
   const filtered = useMemo(() => {
@@ -202,7 +203,7 @@ export default function Achievements() {
                   {collection.replace(/-/g, " ")}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {items.map((a) => <AchievementCard key={a.achievement_id} a={a} />)}
+                  {items.map((a) => <AchievementCard key={a.achievement_id} a={a} rarityPct={rarityMap[a.achievement_id]?.rarity_pct} />)}
                 </div>
               </section>
             ))}
