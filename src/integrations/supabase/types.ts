@@ -14,6 +14,158 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievement_definitions: {
+        Row: {
+          achievement_type: string
+          avatar_frame_id: string | null
+          checkpoint_rewards: Json
+          collection_id: string | null
+          created_at: string
+          description: string
+          display_order: number
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          is_founder_only: boolean
+          is_repeatable: boolean
+          is_secret: boolean
+          minimum_account_age_days: number
+          minimum_distinct_active_weeks: number
+          minimum_qualified_active_days: number
+          name: string
+          rarity: string
+          requirement_logic: Json
+          slug: string
+          starts_at: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          achievement_type?: string
+          avatar_frame_id?: string | null
+          checkpoint_rewards?: Json
+          collection_id?: string | null
+          created_at?: string
+          description: string
+          display_order?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_founder_only?: boolean
+          is_repeatable?: boolean
+          is_secret?: boolean
+          minimum_account_age_days?: number
+          minimum_distinct_active_weeks?: number
+          minimum_qualified_active_days?: number
+          name: string
+          rarity?: string
+          requirement_logic?: Json
+          slug: string
+          starts_at?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          achievement_type?: string
+          avatar_frame_id?: string | null
+          checkpoint_rewards?: Json
+          collection_id?: string | null
+          created_at?: string
+          description?: string
+          display_order?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_founder_only?: boolean
+          is_repeatable?: boolean
+          is_secret?: boolean
+          minimum_account_age_days?: number
+          minimum_distinct_active_weeks?: number
+          minimum_qualified_active_days?: number
+          name?: string
+          rarity?: string
+          requirement_logic?: Json
+          slug?: string
+          starts_at?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "achievement_definitions_avatar_frame_id_fkey"
+            columns: ["avatar_frame_id"]
+            isOneToOne: false
+            referencedRelation: "avatar_frames"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "achievement_definitions_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "avatar_frame_collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      achievement_progress_events: {
+        Row: {
+          achievement_id: string | null
+          created_at: string
+          delta: Json
+          error_message: string | null
+          event_key: string
+          event_type: string
+          id: string
+          occurred_at: string
+          processed_at: string | null
+          processing_status: string
+          retry_count: number
+          source_id: string | null
+          source_table: string | null
+          user_id: string
+        }
+        Insert: {
+          achievement_id?: string | null
+          created_at?: string
+          delta?: Json
+          error_message?: string | null
+          event_key: string
+          event_type: string
+          id?: string
+          occurred_at?: string
+          processed_at?: string | null
+          processing_status?: string
+          retry_count?: number
+          source_id?: string | null
+          source_table?: string | null
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string | null
+          created_at?: string
+          delta?: Json
+          error_message?: string | null
+          event_key?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          processed_at?: string | null
+          processing_status?: string
+          retry_count?: number
+          source_id?: string | null
+          source_table?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "achievement_progress_events_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_alerts: {
         Row: {
           acknowledged: boolean
@@ -185,6 +337,45 @@ export type Database = {
         }
         Relationships: []
       }
+      avatar_frame_collections: {
+        Row: {
+          collection_type: string
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          is_founder_only: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          collection_type?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_founder_only?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          collection_type?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_founder_only?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       avatar_frame_unlocks: {
         Row: {
           frame_key: string
@@ -205,6 +396,86 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      avatar_frames: {
+        Row: {
+          active_animation_required_days: number | null
+          animated_asset_url: string | null
+          asset_status: string
+          collection_id: string
+          created_at: string
+          description: string | null
+          display_order: number
+          ends_at: string | null
+          id: string
+          is_animated: boolean
+          is_founder_only: boolean
+          is_limited_time: boolean
+          is_secret: boolean
+          name: string
+          ownership_type: string
+          rarity: string
+          slug: string
+          starts_at: string | null
+          static_asset_url: string | null
+          thumbnail_asset_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          active_animation_required_days?: number | null
+          animated_asset_url?: string | null
+          asset_status?: string
+          collection_id: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          ends_at?: string | null
+          id?: string
+          is_animated?: boolean
+          is_founder_only?: boolean
+          is_limited_time?: boolean
+          is_secret?: boolean
+          name: string
+          ownership_type?: string
+          rarity?: string
+          slug: string
+          starts_at?: string | null
+          static_asset_url?: string | null
+          thumbnail_asset_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active_animation_required_days?: number | null
+          animated_asset_url?: string | null
+          asset_status?: string
+          collection_id?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          ends_at?: string | null
+          id?: string
+          is_animated?: boolean
+          is_founder_only?: boolean
+          is_limited_time?: boolean
+          is_secret?: boolean
+          name?: string
+          ownership_type?: string
+          rarity?: string
+          slug?: string
+          starts_at?: string | null
+          static_asset_url?: string | null
+          thumbnail_asset_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatar_frames_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "avatar_frame_collections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       battle_tickets: {
         Row: {
@@ -4041,6 +4312,7 @@ export type Database = {
           default_post_visibility: string
           default_race_scope: string
           deletion_requested_at: string | null
+          equipped_avatar_frame_id: string | null
           equipped_frame_key: string | null
           first_name: string | null
           followers_count: number
@@ -4117,6 +4389,7 @@ export type Database = {
           default_post_visibility?: string
           default_race_scope?: string
           deletion_requested_at?: string | null
+          equipped_avatar_frame_id?: string | null
           equipped_frame_key?: string | null
           first_name?: string | null
           followers_count?: number
@@ -4193,6 +4466,7 @@ export type Database = {
           default_post_visibility?: string
           default_race_scope?: string
           deletion_requested_at?: string | null
+          equipped_avatar_frame_id?: string | null
           equipped_frame_key?: string | null
           first_name?: string | null
           followers_count?: number
@@ -4242,7 +4516,15 @@ export type Database = {
           who_can_mention?: string
           who_can_tag?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_equipped_avatar_frame_id_fkey"
+            columns: ["equipped_avatar_frame_id"]
+            isOneToOne: false
+            referencedRelation: "avatar_frames"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles_private: {
         Row: {
@@ -5787,6 +6069,213 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievement_progress: {
+        Row: {
+          achievement_id: string
+          claimed_at: string | null
+          completed_at: string | null
+          completion_percent: number
+          created_at: string
+          highest_checkpoint: number
+          id: string
+          last_progress_at: string | null
+          metadata: Json
+          progress: Json
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          achievement_id: string
+          claimed_at?: string | null
+          completed_at?: string | null
+          completion_percent?: number
+          created_at?: string
+          highest_checkpoint?: number
+          id?: string
+          last_progress_at?: string | null
+          metadata?: Json
+          progress?: Json
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          achievement_id?: string
+          claimed_at?: string | null
+          completed_at?: string | null
+          completion_percent?: number
+          created_at?: string
+          highest_checkpoint?: number
+          id?: string
+          last_progress_at?: string | null
+          metadata?: Json
+          progress?: Json
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievement_progress_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_achievement_rewards: {
+        Row: {
+          achievement_id: string
+          checkpoint: number
+          created_at: string
+          expires_at: string | null
+          granted_at: string
+          id: string
+          is_revoked: boolean
+          metadata: Json
+          reward_id: string | null
+          reward_type: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          checkpoint: number
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          is_revoked?: boolean
+          metadata?: Json
+          reward_id?: string | null
+          reward_type: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          checkpoint?: number
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          is_revoked?: boolean
+          metadata?: Json
+          reward_id?: string | null
+          reward_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievement_rewards_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_active_days: {
+        Row: {
+          activity_date: string
+          created_at: string
+          first_qualifying_event_id: string | null
+          first_qualifying_event_type: string | null
+          id: string
+          qualifying_action_count: number
+          user_id: string
+        }
+        Insert: {
+          activity_date: string
+          created_at?: string
+          first_qualifying_event_id?: string | null
+          first_qualifying_event_type?: string | null
+          id?: string
+          qualifying_action_count?: number
+          user_id: string
+        }
+        Update: {
+          activity_date?: string
+          created_at?: string
+          first_qualifying_event_id?: string | null
+          first_qualifying_event_type?: string | null
+          id?: string
+          qualifying_action_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_avatar_frames: {
+        Row: {
+          achievement_id: string | null
+          avatar_frame_id: string
+          created_at: string
+          expires_at: string | null
+          grant_source: string
+          grant_source_id: string | null
+          granted_at: string
+          id: string
+          is_permanent: boolean
+          is_revoked: boolean
+          metadata: Json
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id?: string | null
+          avatar_frame_id: string
+          created_at?: string
+          expires_at?: string | null
+          grant_source?: string
+          grant_source_id?: string | null
+          granted_at?: string
+          id?: string
+          is_permanent?: boolean
+          is_revoked?: boolean
+          metadata?: Json
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string | null
+          avatar_frame_id?: string
+          created_at?: string
+          expires_at?: string | null
+          grant_source?: string
+          grant_source_id?: string | null
+          granted_at?: string
+          id?: string
+          is_permanent?: boolean
+          is_revoked?: boolean
+          metadata?: Json
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_avatar_frames_avatar_frame_id_fkey"
+            columns: ["avatar_frame_id"]
+            isOneToOne: false
+            referencedRelation: "avatar_frames"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_legal_acceptances: {
         Row: {
           accepted_at: string
@@ -5873,6 +6362,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_weekly_quests: {
+        Row: {
+          completed_at: string | null
+          completion_percent: number
+          created_at: string
+          id: string
+          progress: Json
+          quest_id: string
+          status: string
+          updated_at: string
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completion_percent?: number
+          created_at?: string
+          id?: string
+          progress?: Json
+          quest_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          completed_at?: string | null
+          completion_percent?: number
+          created_at?: string
+          id?: string
+          progress?: Json
+          quest_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_weekly_quests_quest_id_fkey"
+            columns: ["quest_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_quest_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       verification_requests: {
         Row: {
@@ -6033,6 +6569,45 @@ export type Database = {
           updated_at?: string
           usd_balance?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      weekly_quest_definitions: {
+        Row: {
+          created_at: string
+          description: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          requirement_logic: Json
+          rewards: Json
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          requirement_logic?: Json
+          rewards?: Json
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          requirement_logic?: Json
+          rewards?: Json
+          slug?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -6953,6 +7528,7 @@ export type Database = {
           default_post_visibility: string
           default_race_scope: string
           deletion_requested_at: string | null
+          equipped_avatar_frame_id: string | null
           equipped_frame_key: string | null
           first_name: string | null
           followers_count: number
