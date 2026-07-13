@@ -280,23 +280,43 @@ export default function CommandCenterRoyalShields() {
             </div>
             {runtime && (
               <div className={`text-xs rounded-lg p-2 ${runtime.ok ? "bg-emerald-500/10 text-emerald-500" : "bg-destructive/10 text-destructive"}`}>
-                <div className="font-medium mb-1">
-                  Runtime audit: {runtime.passed}/{runtime.total} scenarios passed
+                <div className="font-medium mb-1 flex items-center justify-between gap-2">
+                  <span>Runtime audit: {runtime.passed}/{runtime.total} scenarios passed</span>
+                  <span className="text-[10px] opacity-70">{new Date(runtime.ran_at).toLocaleTimeString()}</span>
                 </div>
-                <ul className="space-y-0.5">
-                  {runtime.results.map((r) => (
-                    <li key={r.scenario} className="flex items-start gap-2">
-                      <span>{r.ok ? "✓" : "✗"}</span>
-                      <span className="flex-1">
-                        <code>{r.scenario}</code>
-                        {!r.ok && (
-                          <span className="ml-2 opacity-80">
-                            — {r.steps.filter((s) => !s.ok).map((s) => `${s.name}: ${s.detail ?? "fail"}`).join(", ")}
+                <ul className="space-y-1">
+                  {runtime.results.map((r) => {
+                    const open = !!expanded[r.scenario];
+                    return (
+                      <li key={r.scenario} className="border-t border-current/10 pt-1 first:border-0 first:pt-0">
+                        <button
+                          type="button"
+                          onClick={() => setExpanded((e) => ({ ...e, [r.scenario]: !open }))}
+                          className="w-full flex items-start gap-2 text-left hover:opacity-90"
+                        >
+                          {open ? <ChevronDown size={12} className="mt-0.5 shrink-0" /> : <ChevronRight size={12} className="mt-0.5 shrink-0" />}
+                          <span className="shrink-0">{r.ok ? "✓" : "✗"}</span>
+                          <span className="flex-1">
+                            <code>{r.scenario}</code>
+                            <span className="ml-2 opacity-70">{r.steps.filter((s) => s.ok).length}/{r.steps.length} steps</span>
                           </span>
+                        </button>
+                        {open && (
+                          <ul className="mt-1 ml-6 space-y-0.5 text-foreground/80">
+                            {r.steps.map((s, i) => (
+                              <li key={`${r.scenario}-${i}`} className="flex items-start gap-2">
+                                <span className={s.ok ? "text-emerald-500" : "text-destructive"}>{s.ok ? "✓" : "✗"}</span>
+                                <span className="flex-1">
+                                  <code className="text-foreground/90">{s.name}</code>
+                                  {s.detail && <span className="ml-2 opacity-70">— {s.detail}</span>}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
                         )}
-                      </span>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
