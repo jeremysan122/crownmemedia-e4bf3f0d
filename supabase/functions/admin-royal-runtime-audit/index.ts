@@ -225,11 +225,15 @@ Deno.serve(async (req) => {
         data: grant,
       });
 
-      const { data: rev } = await admin
-        .from("royal_pass_reversals")
-        .select("id, reason")
-        .eq("stripe_invoice_id", inv)
-        .limit(1);
+      const grantId = (grant as { id?: string } | null)?.id ?? null;
+      const { data: rev } = grantId
+        ? await admin
+            .from("royal_pass_reversals")
+            .select("id, reason, event_kind")
+            .eq("royal_pass_grant_id", grantId)
+            .eq("event_kind", "reversal")
+            .limit(1)
+        : { data: null as unknown as Array<{ id: string }> };
       steps.push({ name: "reversal_row_written", ok: Array.isArray(rev) && rev.length > 0, data: rev });
       return steps;
     }),
