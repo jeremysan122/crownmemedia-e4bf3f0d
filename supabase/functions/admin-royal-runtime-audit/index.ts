@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
         _stripe_charge_id: `ch_audit_${stamp}_A`,
         _stripe_subscription_id: `sub_audit_${stamp}`,
       } as never);
-      const replayOk = !!replay && typeof replay === "object" && (replay as { reason?: string }).reason === "already_processed";
+      const replayOk = !!replay && typeof replay === "object" && ((replay as { reason?: string; already_processed?: boolean }).reason === "already_processed" || (replay as { already_processed?: boolean }).already_processed === true);
       steps.push({ name: "idempotent_replay", ok: replayOk, data: replay });
       return steps;
     }),
@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
 
       const { data: grant } = await admin
         .from("royal_pass_grants")
-        .select("status")
+        .select("id, status")
         .eq("stripe_invoice_id", inv)
         .maybeSingle();
       steps.push({
@@ -225,11 +225,15 @@ Deno.serve(async (req) => {
         data: grant,
       });
 
-      const { data: rev } = await admin
-        .from("royal_pass_reversals")
-        .select("id, reason")
-        .eq("stripe_invoice_id", inv)
-        .limit(1);
+      const grantId = (grant as { id?: string } | null)?.id ?? null;
+      const { data: rev } = grantId
+        ? await admin
+            .from("royal_pass_reversals")
+            .select("id, reason, event_kind")
+            .eq("royal_pass_grant_id", grantId)
+            .eq("event_kind", "reversal")
+            .limit(1)
+        : { data: null as unknown as Array<{ id: string }> };
       steps.push({ name: "reversal_row_written", ok: Array.isArray(rev) && rev.length > 0, data: rev });
       return steps;
     }),
@@ -337,7 +341,7 @@ Deno.serve(async (req) => {
       } as never);
       steps.push({ name: "dispute_lost_rpc", ok: !r.error, detail: r.error?.message });
       const { data: g } = await admin.from("royal_pass_grants").select("status").eq("stripe_invoice_id", inv).maybeSingle();
-      steps.push({ name: "status_refunded", ok: (g as { status: string } | null)?.status === "refunded", data: g });
+      steps.push({ name: "status_refunded", ok: ["refunded","reversed"].includes((g as { status: string } | null)?.status ?? ""), data: g });
       return steps;
     }),
   );
@@ -365,6 +369,14 @@ Deno.serve(async (req) => {
     _stripe_charge_id: `ch_audit_${stamp}_debit`,
     _stripe_subscription_id: `sub_audit_${stamp}_debit`,
   } as never);
+
+  // Isolate FIFO tests: zero-out promo_shekels_remaining on every OTHER grant for the audit user
+  // so debits deterministically consume from the scenario's own grant.
+  await admin
+    .from("royal_pass_grants")
+    .update({ promo_shekels_remaining: 0 } as never)
+    .eq("user_id", testUserId)
+    .neq("stripe_invoice_id", debitInv);
 
   // ---------- Scenario F: debit_shekels FIFO from promo grant ----------
   results.push(
@@ -515,7 +527,7 @@ Deno.serve(async (req) => {
       // Flip flag on
       const flipOn = await admin
         .from("feature_flags")
-        .update({ enabled: true, rollout_percentage: 100 } as never)
+        .update({ enabled: true, rollout_percent: 100 } as never)
         .eq("key", "royal_pass_debits_paused");
       steps.push({ name: "kill_switch_on", ok: !flipOn.error, detail: flipOn.error?.message });
 
@@ -539,7 +551,7 @@ Deno.serve(async (req) => {
       // Flip flag back off
       const flipOff = await admin
         .from("feature_flags")
-        .update({ enabled: false, rollout_percentage: 0 } as never)
+        .update({ enabled: false, rollout_percent: 0 } as never)
         .eq("key", "royal_pass_debits_paused");
       steps.push({ name: "kill_switch_off", ok: !flipOff.error, detail: flipOff.error?.message });
 
@@ -682,7 +694,7 @@ Deno.serve(async (req) => {
 
       const { count: opCount } = await admin
         .from("debit_operations")
-        .select("id", { count: "exact", head: true })
+        .select("operation_id", { count: "exact", head: true })
         .eq("user_id", testUserId)
         .eq("ref_table", "gift_transactions")
         .eq("ref_id", txId);

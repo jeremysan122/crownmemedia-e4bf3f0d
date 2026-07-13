@@ -6045,6 +6045,19 @@ export type Database = {
       }
     }
     Functions: {
+      __grant_royal_create_lot: {
+        Args: {
+          _grant_id: string
+          _ledger_id: string
+          _qty: number
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      __reinstate_status_only: {
+        Args: { _event_id: string; _grant_id: string }
+        Returns: undefined
+      }
       _notify_live_battle: {
         Args: {
           _battle_id: string
