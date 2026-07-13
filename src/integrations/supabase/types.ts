@@ -164,6 +164,13 @@ export type Database = {
             referencedRelation: "achievement_definitions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "achievement_progress_events_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_rarity_stats"
+            referencedColumns: ["achievement_id"]
+          },
         ]
       }
       admin_alerts: {
@@ -6132,6 +6139,13 @@ export type Database = {
             referencedRelation: "achievement_definitions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_achievement_progress_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_rarity_stats"
+            referencedColumns: ["achievement_id"]
+          },
         ]
       }
       user_achievement_rewards: {
@@ -6181,6 +6195,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "achievement_definitions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_achievement_rewards_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_rarity_stats"
+            referencedColumns: ["achievement_id"]
           },
         ]
       }
@@ -6616,6 +6637,15 @@ export type Database = {
       }
     }
     Views: {
+      achievement_rarity_stats: {
+        Row: {
+          achievement_id: string | null
+          active_players: number | null
+          completed_count: number | null
+          slug: string | null
+        }
+        Relationships: []
+      }
       gift_transactions_public: {
         Row: {
           created_at: string | null
@@ -6748,6 +6778,16 @@ export type Database = {
       accept_battle: {
         Args: { _battle_id: string; _opponent_post_id: string }
         Returns: undefined
+      }
+      achievement_rarity: {
+        Args: never
+        Returns: {
+          achievement_id: string
+          active_players: number
+          completed_count: number
+          rarity_pct: number
+          slug: string
+        }[]
       }
       admin_achievement_stats: { Args: never; Returns: Json }
       admin_broadcast_notification: {
@@ -8168,6 +8208,19 @@ export type Database = {
         Args: { p_change_type: string; p_max_per_hour?: number }
         Returns: boolean
       }
+      profile_showcased_achievements: {
+        Args: { _limit?: number; _user_id: string }
+        Returns: {
+          achievement_id: string
+          avatar_frame_id: string
+          completed_at: string
+          description: string
+          name: string
+          rarity: string
+          rarity_pct: number
+          slug: string
+        }[]
+      }
       prune_logs_retention: { Args: never; Returns: Json }
       prune_rank_snapshots: { Args: never; Returns: undefined }
       publish_post_idempotent: {
@@ -8295,6 +8348,7 @@ export type Database = {
         Returns: undefined
       }
       redeem_invite_code: { Args: { _code: string }; Returns: Json }
+      refresh_achievement_rarity: { Args: never; Returns: undefined }
       refresh_crown_map_points: { Args: never; Returns: number }
       refresh_crowns_for_post: {
         Args: { _post_id: string }
