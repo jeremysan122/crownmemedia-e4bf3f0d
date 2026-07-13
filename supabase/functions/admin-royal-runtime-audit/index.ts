@@ -515,7 +515,7 @@ Deno.serve(async (req) => {
       // Flip flag on
       const flipOn = await admin
         .from("feature_flags")
-        .update({ enabled: true, rollout_percentage: 100 } as never)
+        .update({ enabled: true, rollout_percent: 100 } as never)
         .eq("key", "royal_pass_debits_paused");
       steps.push({ name: "kill_switch_on", ok: !flipOn.error, detail: flipOn.error?.message });
 
