@@ -673,11 +673,6 @@ export default function Profile() {
 
               <RoleBadges roles={roles} crownsHeld={prof.crowns_held} />
             </div>
-            {isFounder && (
-              <div className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold text-gold">
-                <Crown size={13} fill="currentColor" /> {founderTitle} · Exclusive Founder Frame
-              </div>
-            )}
             <p className="text-xs lg:text-sm text-muted-foreground">
               {locationLabel(prof)} · Member since {joinedLabel}
               {(prof as any).pronouns && (
