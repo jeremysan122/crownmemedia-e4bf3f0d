@@ -643,31 +643,17 @@ export default function Profile() {
                 </div>
               </>
             ) : (
-              <div
-                className="rounded-full overflow-hidden bg-muted ring-2 ring-border relative"
-                style={{ width: "var(--profile-avatar-size, 112px)", height: "var(--profile-avatar-size, 112px)" }}
-              >
-                {/* Locked sizing: unframed matches framed avatar diameter exactly (112 mobile / 160 desktop). */}
-                <div className="lg:hidden absolute inset-0">
-                  {prof.profile_photo_url && (
-                    <img
-                      src={prof.profile_photo_url}
-                      className="w-[112px] h-[112px] object-cover"
-                      alt=""
-                      style={{ objectPosition: `center ${prof.avatar_position_y ?? 50}%` }}
-                    />
-                  )}
-                </div>
-                <div className="hidden lg:block w-[160px] h-[160px]">
-                  {prof.profile_photo_url && (
-                    <img
-                      src={prof.profile_photo_url}
-                      className="w-[160px] h-[160px] object-cover"
-                      alt=""
-                      style={{ objectPosition: `center ${prof.avatar_position_y ?? 50}%` }}
-                    />
-                  )}
-                </div>
+              // Locked sizing contract: unframed avatar diameter matches framed
+              // avatar photo diameter exactly (112 mobile / 160 desktop).
+              <div className="w-28 h-28 lg:w-40 lg:h-40 rounded-full overflow-hidden bg-muted ring-2 ring-border relative">
+                {prof.profile_photo_url && (
+                  <img
+                    src={prof.profile_photo_url}
+                    className="w-full h-full object-cover"
+                    alt=""
+                    style={{ objectPosition: `center ${prof.avatar_position_y ?? 50}%` }}
+                  />
+                )}
               </div>
             )}
           </div>
