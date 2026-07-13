@@ -161,6 +161,53 @@ export default function CommandCenterRoyalShields() {
     void load();
   }, [load]);
 
+  const runReconciliation = useCallback(async () => {
+    setReconRunning(true);
+    setErr(null);
+    const { error } = await supabase.rpc(
+      "admin_run_royal_shield_integrity_check" as never,
+      { _reason: "manual_reconciliation" } as never,
+    );
+    if (error) setErr(error.message);
+    await load();
+    setReconRunning(false);
+  }, [load]);
+
+  const downloadAudit = useCallback((format: "json" | "csv") => {
+    const payload = { generated_at: new Date().toISOString(), runtime, recon, audit };
+    let blob: Blob;
+    let filename: string;
+    if (format === "json") {
+      blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      filename = `royal-shield-audit-${Date.now()}.json`;
+    } else {
+      const headers = [
+        "id","user_id","event_type","reason_code","delta",
+        "shields_granted","net_spent_credits","active_shield_sessions",
+        "drift_amount","battle_id","post_id","created_at",
+      ];
+      const escape = (v: unknown) => {
+        if (v == null) return "";
+        const s = typeof v === "string" ? v : JSON.stringify(v);
+        return `"${s.replace(/"/g, '""')}"`;
+      };
+      const lines = [
+        headers.join(","),
+        ...audit.map((r) => headers.map((h) => escape((r as Record<string, unknown>)[h])).join(",")),
+      ];
+      blob = new Blob([lines.join("\n")], { type: "text/csv" });
+      filename = `royal-shield-audit-${Date.now()}.csv`;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [audit, runtime, recon]);
+
   const summary = useMemo(() => {
     const byUser = new Map<string, { granted: number; net: number; active: number; drift: number }>();
     for (const r of rows) {
