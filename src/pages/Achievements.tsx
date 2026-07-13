@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
 import { Crown, Lock, CheckCircle2, Clock, Sparkles, Trophy } from "lucide-react";
 import { useMyAchievements, type AchievementRow } from "@/hooks/useMyAchievements";
+import { useAchievementRarity, rarityLabel } from "@/hooks/useAchievementRarity";
 import CrownLoader from "@/components/CrownLoader";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { Link } from "react-router-dom";
@@ -17,7 +18,7 @@ const RARITY_COLOR: Record<string, string> = {
 
 const CHECKPOINTS = [25, 50, 75, 100];
 
-function AchievementCard({ a }: { a: AchievementRow }) {
+function AchievementCard({ a, rarityPct }: { a: AchievementRow; rarityPct?: number }) {
   const pct = Math.max(0, Math.min(100, Math.round(a.completion_percent || 0)));
   const done = a.status === "completed" || pct >= 100;
   const gatesOk = a.gates?.gates_ok !== false;
@@ -35,9 +36,16 @@ function AchievementCard({ a }: { a: AchievementRow }) {
           <h3 className="font-display text-sm text-gold leading-tight truncate">{a.name}</h3>
           <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{a.description}</p>
         </div>
-        <span className={`shrink-0 text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${RARITY_COLOR[a.rarity] || RARITY_COLOR.common}`}>
-          {a.rarity}
-        </span>
+        <div className="shrink-0 flex flex-col items-end gap-1">
+          <span className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${RARITY_COLOR[a.rarity] || RARITY_COLOR.common}`}>
+            {a.rarity}
+          </span>
+          {typeof rarityPct === "number" && (
+            <span className="text-[9px] text-muted-foreground tabular-nums" title="Global unlock rate">
+              {rarityLabel(rarityPct)} · {rarityPct}%
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-2">
@@ -117,6 +125,7 @@ export default function Achievements() {
     description: "Track your progress across 81 CrownMe achievements and unlock ornate avatar frames.",
   });
   const { rows, loading } = useMyAchievements();
+  const { map: rarityMap } = useAchievementRarity();
   const [filter, setFilter] = useState<"all" | "in_progress" | "completed" | "locked">("all");
 
   const filtered = useMemo(() => {
@@ -194,7 +203,7 @@ export default function Achievements() {
                   {collection.replace(/-/g, " ")}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {items.map((a) => <AchievementCard key={a.achievement_id} a={a} />)}
+                  {items.map((a) => <AchievementCard key={a.achievement_id} a={a} rarityPct={rarityMap[a.achievement_id]?.rarity_pct} />)}
                 </div>
               </section>
             ))}
