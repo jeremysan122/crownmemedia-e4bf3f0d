@@ -42,6 +42,7 @@ import { useIsRoyalPassUser } from "@/hooks/useIsRoyalPassUser";
 
 import { useActiveBoost } from "@/hooks/useActiveBoost";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import ProfileAchievementsShowcase from "@/components/profile/ProfileAchievementsShowcase";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
