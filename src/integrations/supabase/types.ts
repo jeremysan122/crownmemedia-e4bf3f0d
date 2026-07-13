@@ -185,6 +185,27 @@ export type Database = {
         }
         Relationships: []
       }
+      avatar_frame_unlocks: {
+        Row: {
+          frame_key: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          frame_key: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          frame_key?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       battle_tickets: {
         Row: {
           balance: number
@@ -4020,6 +4041,7 @@ export type Database = {
           default_post_visibility: string
           default_race_scope: string
           deletion_requested_at: string | null
+          equipped_frame_key: string | null
           first_name: string | null
           followers_count: number
           following_count: number
@@ -4095,6 +4117,7 @@ export type Database = {
           default_post_visibility?: string
           default_race_scope?: string
           deletion_requested_at?: string | null
+          equipped_frame_key?: string | null
           first_name?: string | null
           followers_count?: number
           following_count?: number
@@ -4170,6 +4193,7 @@ export type Database = {
           default_post_visibility?: string
           default_race_scope?: string
           deletion_requested_at?: string | null
+          equipped_frame_key?: string | null
           first_name?: string | null
           followers_count?: number
           following_count?: number
@@ -6574,6 +6598,7 @@ export type Database = {
       can_view_posts_of: { Args: { _owner: string }; Returns: boolean }
       cancel_account_deletion: { Args: never; Returns: undefined }
       capture_db_health_snapshot: { Args: never; Returns: string }
+      check_and_award_frames: { Args: never; Returns: Json }
       check_repost_eligibility: {
         Args: { p_parent_post_id: string }
         Returns: Json
@@ -6772,12 +6797,14 @@ export type Database = {
         Returns: number
       }
       ensure_my_wallet: { Args: never; Returns: undefined }
+      equip_frame: { Args: { _frame_key: string }; Returns: Json }
       evaluate_cost_alerts: { Args: never; Returns: number }
       evaluate_creator_milestones: {
         Args: { _creator_id: string }
         Returns: undefined
       }
       founder_program_public_status: { Args: never; Returns: Json }
+      frame_reward_stats: { Args: { _user_id: string }; Returns: Json }
       get_battle_official_result: {
         Args: { _battle_id: string }
         Returns: Json
@@ -6926,6 +6953,7 @@ export type Database = {
           default_post_visibility: string
           default_race_scope: string
           deletion_requested_at: string | null
+          equipped_frame_key: string | null
           first_name: string | null
           followers_count: number
           following_count: number
@@ -7392,6 +7420,7 @@ export type Database = {
         }
         Returns: number
       }
+      my_frame_progress: { Args: never; Returns: Json }
       my_royal_benefit_history: {
         Args: { _limit?: number }
         Returns: {

@@ -30,6 +30,8 @@ import { useFeedFilters } from "@/hooks/useFeedFilters";
 import { fetchPostById, hydrateParents } from "@/lib/postQuery";
 import founderFrameImg from "@/assets/founder-frame.png";
 import founderBadgeImg from "@/assets/founder-badge.png";
+import AvatarFrame from "@/components/frames/AvatarFrame";
+import { getFrameUrl } from "@/lib/frames";
 import UserListDialog from "@/components/profile/UserListDialog";
 import ShareProfileDialog from "@/components/profile/ShareProfileDialog";
 import RoleBadges from "@/components/profile/RoleBadges";
@@ -63,6 +65,7 @@ interface ProfileFull {
   is_founder?: boolean | null;
   founder_title?: string | null;
   royal_frame_variant?: string | null;
+  equipped_frame_key?: string | null;
 }
 
 interface BattleRow {
@@ -149,7 +152,7 @@ export default function Profile() {
     const load = async () => {
       const { data: p, error: pErr } = await supabase
         .from("profiles")
-        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public, is_founder, founder_title, royal_frame_variant")
+        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public, is_founder, founder_title, royal_frame_variant, equipped_frame_key")
         .eq("username", targetUsername)
         .maybeSingle();
       if (cancelled) return;
@@ -602,26 +605,28 @@ export default function Profile() {
 
       <div className="px-4 lg:px-6 py-4 lg:relative">
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-          <div data-testid="profile-avatar" className={`self-start w-fit ${prof.crowns_held > 0 ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${!isFounder && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5" : ""} ${(profileGlowActive || royalPassActive || isFounder) ? "profile-glow" : ""}`}>
-            {isFounder ? (
-              <div className="relative size-28 lg:size-40">
-                <div className="absolute inset-[14%] rounded-full overflow-hidden bg-muted">
-                  {prof.profile_photo_url && (
-                    <img
-                      src={prof.profile_photo_url}
-                      className="w-full h-full object-cover"
-                      alt=""
-                      style={{ objectPosition: `center ${prof.avatar_position_y ?? 50}%` }}
-                    />
-                  )}
+          <div data-testid="profile-avatar" className={`self-start w-fit ${prof.crowns_held > 0 ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${!isFounder && !prof.equipped_frame_key && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5" : ""} ${(profileGlowActive || royalPassActive || isFounder) ? "profile-glow" : ""}`}>
+            {(prof.equipped_frame_key && getFrameUrl(prof.equipped_frame_key)) || isFounder ? (
+              <>
+                <div className="lg:hidden">
+                  <AvatarFrame
+                    photoUrl={prof.profile_photo_url}
+                    frameKey={prof.equipped_frame_key}
+                    founderFallbackUrl={isFounder ? founderFrameImg : null}
+                    size={112}
+                    positionY={prof.avatar_position_y ?? 50}
+                  />
                 </div>
-                <img
-                  src={founderFrameImg}
-                  alt="Founding Royal frame"
-                  loading="lazy"
-                  className="absolute inset-0 w-full h-full pointer-events-none select-none drop-shadow-[0_0_18px_hsl(var(--gold)/0.55)]"
-                />
-              </div>
+                <div className="hidden lg:block">
+                  <AvatarFrame
+                    photoUrl={prof.profile_photo_url}
+                    frameKey={prof.equipped_frame_key}
+                    founderFallbackUrl={isFounder ? founderFrameImg : null}
+                    size={160}
+                    positionY={prof.avatar_position_y ?? 50}
+                  />
+                </div>
+              </>
             ) : (
               <div className="size-20 lg:size-32 rounded-full overflow-hidden bg-muted ring-2 ring-border relative">
                 {prof.profile_photo_url && (
@@ -635,6 +640,7 @@ export default function Profile() {
               </div>
             )}
           </div>
+
           <div className="flex-1 lg:pb-2">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="font-display text-xl lg:text-3xl">@{prof.username}</h1>
