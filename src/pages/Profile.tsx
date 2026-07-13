@@ -28,6 +28,8 @@ import type { FeedPost } from "@/components/PostCard";
 import SensitiveThumb from "@/components/SensitiveThumb";
 import { useFeedFilters } from "@/hooks/useFeedFilters";
 import { fetchPostById, hydrateParents } from "@/lib/postQuery";
+import founderFrameImg from "@/assets/founder-frame.png";
+import founderBadgeImg from "@/assets/founder-badge.png";
 import UserListDialog from "@/components/profile/UserListDialog";
 import ShareProfileDialog from "@/components/profile/ShareProfileDialog";
 import RoleBadges from "@/components/profile/RoleBadges";
