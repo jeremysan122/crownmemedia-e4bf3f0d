@@ -283,6 +283,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .avatar-frame-glow-layer,
   .avatar-frame-glow {
     animation: none;
     opacity: 0.85;
