@@ -31,7 +31,16 @@ export interface FrameDef {
   url: string;
   /** True if progress is a binary flag (0/1) rather than an accumulating count. */
   binary?: boolean;
+  /**
+   * Percentage inset (per-side) of the avatar photo within the frame's
+   * bounding box. Tuned per-frame so the avatar aligns to the frame's
+   * inner circular opening across every render surface.
+   */
+  insetPct?: number;
 }
+
+/** Fallback avatar inset (per-side, %) when a frame doesn't override it. */
+export const DEFAULT_FRAME_INSET_PCT = 14;
 
 export const FRAMES: FrameDef[] = [
   { key: "crown-prestige",  label: "Crown Prestige",  tagline: "Five hundred crowns strong.",    requirement: "Earn 500 crowns",              target: 500,   url: crownPrestige.url },
