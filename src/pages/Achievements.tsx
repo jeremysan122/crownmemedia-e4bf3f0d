@@ -5,6 +5,7 @@ import { useMyAchievements, type AchievementRow } from "@/hooks/useMyAchievement
 import CrownLoader from "@/components/CrownLoader";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { Link } from "react-router-dom";
+import WeeklyQuestsPanel from "@/components/achievements/WeeklyQuestsPanel";
 
 const RARITY_COLOR: Record<string, string> = {
   common:    "border-border text-muted-foreground",
@@ -158,6 +159,9 @@ export default function Achievements() {
             <Link to="/frames" className="text-gold hover:underline">View my frames →</Link>
           </div>
         </header>
+
+        <WeeklyQuestsPanel />
+
 
         <div className="mb-5 flex flex-wrap gap-2 justify-center">
           {(["all", "in_progress", "completed", "locked"] as const).map((f) => (
