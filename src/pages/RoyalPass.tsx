@@ -128,13 +128,20 @@ export default function RoyalPassSettings() {
       await Promise.all([loadDaily(), loadBoostHistory(), entitlements.refresh()]);
     } catch (e) {
       const msg = (e as Error).message || "Could not claim daily boost";
-      if (user?.id) recordFailedBoost(user.id, msg);
+      // Persist failure to the database so it's visible across devices/sessions.
+      try {
+        await (supabase as any).rpc("record_failed_royal_boost", {
+          p_reason: msg,
+          p_post_id: postId,
+        });
+      } catch { /* best-effort */ }
       toast.error(msg, { id: claimToast });
-      await loadBoostHistory();
+      await Promise.all([loadBoostHistory(), entitlements.refresh()]);
     } finally {
       setWorking(null);
     }
   };
+
 
   const loadBoostHistory = useCallback(async () => {
     if (!user || !pass.active) { setBoostHistory([]); setHistoryLoading(false); return; }
