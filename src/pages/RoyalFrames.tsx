@@ -221,7 +221,7 @@ export default function RoyalFrames() {
           </>
         )}
 
-        {catalogHealthy ? null : null}
+        {catalogHealthy ? null : null /* placeholder retained for future admin diagnostics */}
       </div>
     </AppShell>
   );
