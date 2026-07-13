@@ -8,11 +8,33 @@ import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { useFrameGallery, type FrameGalleryItem } from "@/hooks/useFrameGallery";
 import { equipAvatarFrame } from "@/hooks/useMyAchievements";
 import { extractRequirements, formatRequirementLine } from "@/lib/frameUnlockText";
+import FrameArtwork from "@/components/frames/FrameArtwork";
+import FrameDetailDialog from "@/components/frames/FrameDetailDialog";
 
 const PAGE_SIZE = 9;
 const EXPECTED_TOTAL = 81;
 
 type Filter = "all" | "locked" | "unlocked" | "equipped" | string; // string = collection id
+
+/**
+ * Deterministic sort: equipped → unlocked → locked, then by display_order.
+ * Keeps the gallery layout stable across renders and refreshes.
+ */
+export function sortFramesByStatus(items: FrameGalleryItem[]): FrameGalleryItem[] {
+  const rank = (i: FrameGalleryItem) => {
+    if (i.ownership?.equipped) return 0;
+    if (i.ownership) return 1;
+    return 2;
+  };
+  return [...items].sort((a, b) => {
+    const r = rank(a) - rank(b);
+    if (r !== 0) return r;
+    const ao = a.frame.display_order ?? 0;
+    const bo = b.frame.display_order ?? 0;
+    if (ao !== bo) return ao - bo;
+    return a.frame.name.localeCompare(b.frame.name);
+  });
+}
 
 export default function RoyalFrames() {
   useSeoMeta({
@@ -26,15 +48,17 @@ export default function RoyalFrames() {
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [detail, setDetail] = useState<FrameGalleryItem | null>(null);
+  const [jumpValue, setJumpValue] = useState("");
 
-  const filtered = useMemo(() => filterItems(items, filter, query), [items, filter, query]);
+  const sorted = useMemo(() => sortFramesByStatus(items), [items]);
+  const filtered = useMemo(() => filterItems(sorted, filter, query), [sorted, filter, query]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const rawPage = parseInt(searchParams.get("page") ?? "1", 10);
   const page = Number.isFinite(rawPage) ? Math.min(Math.max(1, rawPage), totalPages) : 1;
 
   useEffect(() => {
-    // Snap invalid page numbers to a valid one without stomping the query string.
     const current = parseInt(searchParams.get("page") ?? "1", 10);
     if (!Number.isFinite(current) || current < 1 || current > totalPages) {
       const next = new URLSearchParams(searchParams);
@@ -47,14 +71,12 @@ export default function RoyalFrames() {
   const pageItems = filtered.slice(start, start + PAGE_SIZE);
 
   const percent = Math.round((ownedCount / EXPECTED_TOTAL) * 100);
-  const catalogHealthy = !loading && !error && totalCount === EXPECTED_TOTAL;
 
   function goToPage(next: number) {
     const clamped = Math.min(Math.max(1, next), totalPages);
     const params = new URLSearchParams(searchParams);
     params.set("page", String(clamped));
     setSearchParams(params);
-    // Scroll the header into view without slamming to the top of the app.
     document.getElementById("royal-frames-heading")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -63,6 +85,13 @@ export default function RoyalFrames() {
     const params = new URLSearchParams(searchParams);
     params.set("page", "1");
     setSearchParams(params, { replace: true });
+  }
+
+  function submitJump(e: React.FormEvent) {
+    e.preventDefault();
+    const n = parseInt(jumpValue, 10);
+    if (Number.isFinite(n)) goToPage(n);
+    setJumpValue("");
   }
 
   async function onEquip(item: FrameGalleryItem, unequip: boolean) {
@@ -124,7 +153,6 @@ export default function RoyalFrames() {
           )}
         </header>
 
-        {/* Filters + search */}
         <div className="mb-5 space-y-3">
           <div className="relative max-w-md mx-auto">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -157,7 +185,9 @@ export default function RoyalFrames() {
         </div>
 
         {loading ? (
-          <CrownLoader fullscreen={false} label="Loading royal frames…" />
+          <div data-testid="frames-loading">
+            <CrownLoader fullscreen={false} label="Loading royal frames…" />
+          </div>
         ) : error ? (
           <div className="text-center py-12">
             <p className="text-sm text-destructive mb-3">The Royal Frames catalog is temporarily unavailable.</p>
@@ -177,6 +207,7 @@ export default function RoyalFrames() {
                   onEquip={onEquip}
                   busy={busy === item.frame.id}
                   disabled={busy !== null}
+                  onOpen={() => setDetail(item)}
                 />
               ))}
             </div>
@@ -217,11 +248,47 @@ export default function RoyalFrames() {
                 </PageButton>
                 <PageButton onClick={() => goToPage(totalPages)} disabled={page === totalPages} label="Last">»</PageButton>
               </div>
+
+              {totalPages > 1 && (
+                <form
+                  onSubmit={submitJump}
+                  className="mt-2 inline-flex items-center gap-2 text-[11px] text-muted-foreground"
+                  data-testid="pagination-jump"
+                >
+                  <label htmlFor="page-jump" className="uppercase tracking-wider">
+                    Jump to
+                  </label>
+                  <input
+                    id="page-jump"
+                    type="number"
+                    min={1}
+                    max={totalPages}
+                    value={jumpValue}
+                    onChange={(e) => setJumpValue(e.target.value)}
+                    aria-label="Jump to page number"
+                    placeholder={`1–${totalPages}`}
+                    className="w-16 h-7 px-2 rounded-md bg-background border border-border text-xs text-foreground focus:outline-none focus:border-gold/60"
+                  />
+                  <button
+                    type="submit"
+                    className="h-7 px-2 rounded-md border border-gold/40 text-gold text-[11px] font-bold hover:bg-gold/10"
+                  >
+                    Go
+                  </button>
+                </form>
+              )}
             </nav>
           </>
         )}
 
-        {catalogHealthy ? null : null /* placeholder retained for future admin diagnostics */}
+        <FrameDetailDialog
+          item={detail}
+          open={!!detail}
+          onOpenChange={(o) => !o && setDetail(null)}
+          onEquip={onEquip}
+          busy={detail ? busy === detail.frame.id : false}
+          disabled={busy !== null}
+        />
       </div>
     </AppShell>
   );
@@ -282,24 +349,17 @@ function FrameCard({
   onEquip,
   busy,
   disabled,
+  onOpen,
 }: {
   item: FrameGalleryItem;
   onEquip: (item: FrameGalleryItem, unequip: boolean) => void;
   busy: boolean;
   disabled: boolean;
+  onOpen: () => void;
 }) {
   const { frame, collection, achievement, ownership } = item;
   const unlocked = !!ownership;
   const equipped = !!ownership?.equipped;
-
-  // Deterministic fallback chain: animated → static → thumbnail. Each broken
-  // source is skipped exactly once — no infinite onError loops.
-  const sources = [frame.animated_asset_url, frame.static_asset_url, frame.thumbnail_asset_url].filter(
-    (s): s is string => !!s,
-  );
-  const [srcIdx, setSrcIdx] = useState(0);
-  const [broken, setBroken] = useState(false);
-  const artwork = sources[srcIdx];
   const requirements = achievement ? extractRequirements(achievement.requirement_logic) : [];
 
   return (
@@ -307,30 +367,17 @@ function FrameCard({
       className={`royal-card flex flex-col text-center overflow-hidden transition ${
         equipped ? "ring-2 ring-gold shadow-[0_0_28px_hsl(var(--gold)/0.35)]" : ""
       }`}
+      data-frame-id={frame.id}
     >
-      {/* Artwork stage — square, contain, generous padding, never cropped. */}
-      <div className="relative w-full" style={{ aspectRatio: "1 / 1" }}>
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`View ${frame.name} details`}
+        className="relative w-full block focus:outline-none focus:ring-2 focus:ring-gold/60"
+        style={{ aspectRatio: "1 / 1" }}
+      >
         <div className="absolute inset-0 flex items-center justify-center p-4">
-          {artwork && !broken ? (
-            <img
-              src={artwork}
-              alt={frame.name}
-              loading="lazy"
-              onError={() => {
-                if (srcIdx + 1 < sources.length) setSrcIdx(srcIdx + 1);
-                else setBroken(true);
-              }}
-              className={`w-full h-full object-contain drop-shadow-[0_0_18px_hsl(var(--gold)/0.45)] ${
-                !unlocked ? "grayscale opacity-60" : ""
-              }`}
-              style={{ objectPosition: "center" }}
-            />
-
-          ) : (
-            <div className="w-full h-full rounded-full bg-muted/40 flex items-center justify-center text-muted-foreground text-[10px] uppercase tracking-wider">
-              Artwork unavailable
-            </div>
-          )}
+          <FrameArtwork frame={frame} name={frame.name} locked={!unlocked} contain />
         </div>
         {!unlocked && (
           <div className="absolute inset-0 flex items-end justify-center p-3 pointer-events-none">
@@ -353,7 +400,7 @@ function FrameCard({
         >
           {unlocked ? "Unlocked" : "Locked"}
         </span>
-      </div>
+      </button>
 
       <div className="px-4 pb-4 pt-2 flex-1 flex flex-col">
         <h3 className="font-display text-base text-gold leading-tight">{frame.name}</h3>
@@ -394,13 +441,19 @@ function FrameCard({
           )}
         </div>
 
-        <div className="w-full mt-3">
+        <div className="w-full mt-3 flex gap-2">
+          <button
+            onClick={onOpen}
+            className="flex-1 text-[11px] font-bold py-1.5 rounded-md border border-border text-muted-foreground hover:border-gold/40 hover:text-gold"
+          >
+            View
+          </button>
           {unlocked ? (
             equipped ? (
               <button
                 onClick={() => onEquip(item, true)}
                 disabled={disabled}
-                className="w-full text-[11px] font-bold py-1.5 rounded-md border border-gold/40 text-gold hover:bg-gold/10 disabled:opacity-50"
+                className="flex-1 text-[11px] font-bold py-1.5 rounded-md border border-gold/40 text-gold hover:bg-gold/10 disabled:opacity-50"
               >
                 {busy ? "Working…" : "Unequip"}
               </button>
@@ -408,13 +461,13 @@ function FrameCard({
               <button
                 onClick={() => onEquip(item, false)}
                 disabled={disabled}
-                className="w-full text-[11px] font-bold py-1.5 rounded-md bg-gradient-gold text-black hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-1"
+                className="flex-1 text-[11px] font-bold py-1.5 rounded-md bg-gradient-gold text-black hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-1"
               >
                 <Sparkles size={11} /> {busy ? "Working…" : "Equip"}
               </button>
             )
           ) : (
-            <div className="w-full text-[11px] py-1.5 rounded-md border border-border text-muted-foreground text-center">
+            <div className="flex-1 text-[11px] py-1.5 rounded-md border border-border text-muted-foreground text-center">
               Locked
             </div>
           )}
