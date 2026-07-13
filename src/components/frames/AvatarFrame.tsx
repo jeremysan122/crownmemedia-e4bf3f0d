@@ -5,6 +5,8 @@ interface Props {
   frameKey?: string | null;
   /** Fallback for legacy founder styling when no achievement frame is equipped. */
   founderFallbackUrl?: string | null;
+  /** Calibrated circular aura behind the frame. */
+  glow?: boolean;
   size?: number;
   className?: string;
   positionY?: number | null;
@@ -20,6 +22,7 @@ export default function AvatarFrame({
   photoUrl,
   frameKey,
   founderFallbackUrl,
+  glow = false,
   size = 112,
   className = "",
   positionY = 50,
@@ -35,30 +38,35 @@ export default function AvatarFrame({
       : DEFAULT_FRAME_INSET_PCT;
 
   if (frameUrl) {
+    const frameInset = glow ? "7%" : "0px";
+
     return (
       <div
-        className={`relative ${className}`}
+        className={`avatar-frame-shell ${className}`}
         style={{ width: size, height: size }}
       >
-        <div
-          className="absolute rounded-full overflow-hidden bg-muted"
-          style={{ inset: `${insetPct}%` }}
-        >
-          {photoUrl && (
-            <img
-              src={photoUrl}
-              className="w-full h-full object-cover"
-              alt={alt}
-              style={{ objectPosition: `center ${positionY ?? 50}%` }}
-            />
-          )}
+        {glow && <span aria-hidden="true" className="avatar-frame-halo" />}
+        <div className="avatar-frame-inner" style={{ inset: frameInset }}>
+          <div
+            className="avatar-frame-photo"
+            style={{ inset: `${insetPct}%` }}
+          >
+            {photoUrl && (
+              <img
+                src={photoUrl}
+                className="w-full h-full object-cover"
+                alt={alt}
+                style={{ objectPosition: `center ${positionY ?? 50}%` }}
+              />
+            )}
+          </div>
+          <img
+            src={frameUrl}
+            alt=""
+            loading="lazy"
+            className="avatar-frame-art"
+          />
         </div>
-        <img
-          src={frameUrl}
-          alt=""
-          loading="lazy"
-          className="absolute inset-0 w-full h-full pointer-events-none select-none drop-shadow-[0_0_18px_hsl(var(--gold)/0.55)]"
-        />
       </div>
     );
   }
