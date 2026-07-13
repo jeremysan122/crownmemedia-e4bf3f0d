@@ -383,6 +383,7 @@ export default function Settings() {
             { to: "/archived", label: "Archived posts", Icon: Archive },
             { to: "/store", label: "Royal Store", Icon: Store },
             { to: "/royal-pass", label: "Royal Pass", Icon: Crown },
+            { to: "/settings/frames", label: "Achievement Frames", Icon: Trophy },
             { to: "/wallet", label: "Wallet & Billing", Icon: Coins },
             { to: "/notifications", label: "Notifications", Icon: Bell },
             { to: "/privacy", label: "Privacy & Data", Icon: Lock },
