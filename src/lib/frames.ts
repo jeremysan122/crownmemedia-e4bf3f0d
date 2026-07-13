@@ -70,33 +70,47 @@ export function getFrameInsetPct(key?: string | null): number {
 }
 
 /**
- * Render config used by <AvatarFrame />. All values are percentages of the
- * outer wrapper size. The frame is always 100% (fills the wrapper); the
- * avatar photo is sized to fit inside the frame's inner opening, and the
- * glow overflows slightly outside the wrapper.
+ * Render config for <AvatarFrame />. All scale values are multipliers relative
+ * to the normal avatar photo diameter (the `size` prop). The avatar photo
+ * itself is ALWAYS rendered at 1.0 — the frame and glow enlarge around it.
  */
 export interface FrameRenderConfig {
-  /** Avatar photo diameter as % of outer wrapper. */
-  avatarPct: number;
-  /** Glow diameter as % of outer wrapper. */
-  glowPct: number;
+  /** Multiplier relative to the normal avatar photo diameter. */
+  frameScale: number;
+  /** Multiplier relative to the normal avatar photo diameter. */
+  glowScale: number;
+  /** Horizontal adjustment as a percentage of the avatar diameter. */
+  offsetX: number;
+  /** Vertical adjustment as a percentage of the avatar diameter. */
+  offsetY: number;
 }
 
-const DEFAULT_RENDER_CONFIG: FrameRenderConfig = {
-  avatarPct: 72,
-  glowPct: 118,
+const FRAME_RENDER_OVERRIDES: Partial<Record<FrameKey, Partial<FrameRenderConfig>>> = {
+  "imperial-glow": {
+    offsetX: 0,
+    offsetY: 0,
+  },
+  // Add individual overrides only when a specific PNG needs calibration.
 };
 
-/** Per-frame render config with sensible defaults for unknown/missing frames. */
 export function getFrameRenderConfig(key?: string | null): FrameRenderConfig {
-  if (!key) return DEFAULT_RENDER_CONFIG;
-  const def = FRAME_MAP[key as FrameKey];
-  if (!def) return DEFAULT_RENDER_CONFIG;
-  // Derive avatar % from the calibrated inset when present (inset is
-  // per-side %, so avatar = 100 - 2*inset).
-  const avatarPct = def.insetPct != null
-    ? Math.max(50, Math.min(85, 100 - 2 * def.insetPct))
-    : DEFAULT_RENDER_CONFIG.avatarPct;
-  return { avatarPct, glowPct: DEFAULT_RENDER_CONFIG.glowPct };
+  const insetPct = getFrameInsetPct(key);
+
+  // The frame artwork's inner opening as a percentage of its PNG canvas.
+  const openingPct = Math.max(40, Math.min(95, 100 - insetPct * 2));
+
+  // Expand the frame until its inner opening equals the normal avatar size.
+  const derivedFrameScale = 100 / openingPct;
+
+  const override = key ? FRAME_RENDER_OVERRIDES[key as FrameKey] : undefined;
+  const frameScale = override?.frameScale ?? derivedFrameScale;
+
+  return {
+    frameScale,
+    glowScale: override?.glowScale ?? frameScale * 1.12,
+    offsetX: override?.offsetX ?? 0,
+    offsetY: override?.offsetY ?? 0,
+  };
 }
+
 
