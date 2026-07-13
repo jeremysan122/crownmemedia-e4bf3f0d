@@ -69,6 +69,8 @@ const Rewards = lazy(() => import("./pages/Rewards"));
 const RewardHistory = lazy(() => import("./pages/RewardHistory"));
 const AdminRewards = lazy(() => import("./pages/AdminRewards"));
 const RoyalFrames = lazy(() => import("./pages/RoyalFrames"));
+const Achievements = lazy(() => import("./pages/Achievements"));
+const AchievementFrames = lazy(() => import("./pages/AchievementFrames"));
 const AdminBroadcast = lazy(() => import("./pages/AdminBroadcast"));
 const Verification = lazy(() => import("./pages/Verification"));
 const AdminVerification = lazy(() => import("./pages/AdminVerification"));
@@ -271,6 +273,8 @@ const App = () => (
               <Route path="/rewards/history" element={<ProtectedRoute><RewardHistory /></ProtectedRoute>} />
               <Route path="/rewards/frames" element={<ProtectedRoute><RoyalFrames /></ProtectedRoute>} />
               <Route path="/settings/frames" element={<ProtectedRoute><RoyalFrames /></ProtectedRoute>} />
+              <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+              <Route path="/frames" element={<ProtectedRoute><AchievementFrames /></ProtectedRoute>} />
               <Route path="/admin/rewards" element={<ProtectedRoute><AdminRoute><AdminRewards /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/broadcast" element={<ProtectedRoute><AdminRoute><AdminBroadcast /></AdminRoute></ProtectedRoute>} />
               <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
