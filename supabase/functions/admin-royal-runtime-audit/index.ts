@@ -370,6 +370,14 @@ Deno.serve(async (req) => {
     _stripe_subscription_id: `sub_audit_${stamp}_debit`,
   } as never);
 
+  // Isolate FIFO tests: zero-out promo_shekels_remaining on every OTHER grant for the audit user
+  // so debits deterministically consume from the scenario's own grant.
+  await admin
+    .from("royal_pass_grants")
+    .update({ promo_shekels_remaining: 0 } as never)
+    .eq("user_id", testUserId)
+    .neq("stripe_invoice_id", debitInv);
+
   // ---------- Scenario F: debit_shekels FIFO from promo grant ----------
   results.push(
     await runScenario(admin, "F_debit_shekels_fifo_promo", async () => {
