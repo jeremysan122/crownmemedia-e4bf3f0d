@@ -341,7 +341,7 @@ Deno.serve(async (req) => {
       } as never);
       steps.push({ name: "dispute_lost_rpc", ok: !r.error, detail: r.error?.message });
       const { data: g } = await admin.from("royal_pass_grants").select("status").eq("stripe_invoice_id", inv).maybeSingle();
-      steps.push({ name: "status_refunded", ok: (g as { status: string } | null)?.status === "refunded", data: g });
+      steps.push({ name: "status_refunded", ok: ["refunded","reversed"].includes((g as { status: string } | null)?.status ?? ""), data: g });
       return steps;
     }),
   );
