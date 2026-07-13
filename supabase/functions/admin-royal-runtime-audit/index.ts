@@ -682,7 +682,7 @@ Deno.serve(async (req) => {
 
       const { count: opCount } = await admin
         .from("debit_operations")
-        .select("id", { count: "exact", head: true })
+        .select("operation_id", { count: "exact", head: true })
         .eq("user_id", testUserId)
         .eq("ref_table", "gift_transactions")
         .eq("ref_id", txId);
