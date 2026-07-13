@@ -10,6 +10,10 @@ import { useAuth } from "@/context/AuthContext";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
 import { useRoyalEntitlements, useFounderStatus } from "@/hooks/useRoyalEntitlements";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
+import { isFeatureEnabled } from "@/lib/featureFlags";
+import { useAdminRoles } from "@/hooks/useAdminRoles";
+
+
 
 
 interface Plan {
@@ -169,11 +173,15 @@ export default function RoyalPassCard() {
   const pass = useRoyalPass();
   const entitlements = useRoyalEntitlements();
   const founder = useFounderStatus();
+  const { roles } = useAdminRoles();
+  const isAdmin = roles.length > 0;
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const [publicLaunch, setPublicLaunch] = useState<boolean | null>(null);
   const { openCheckout, checkoutElement } = useStripeCheckout();
   const ctaRef = useRef<HTMLDivElement | null>(null);
+
 
   const founderEndLabel = useMemo(() => {
     if (!founder.status?.end_at) return null;
@@ -196,8 +204,20 @@ export default function RoyalPassCard() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    isFeatureEnabled("royal_pass_public_launch").then((v) => {
+      if (!cancelled) setPublicLaunch(v);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const ctaLocked = publicLaunch === false && !isAdmin;
+
+
   const subscribe = (plan: Plan) => {
-    if (!user || subscribing) return;
+    if (!user || subscribing || ctaLocked) return;
+
     setSubscribing(plan.id);
     try {
       openCheckout({
@@ -765,14 +785,22 @@ export default function RoyalPassCard() {
         </div>
         <button
           onClick={() => subscribe(primaryPlan)}
-          disabled={subscribing !== null || !user}
+          disabled={subscribing !== null || !user || ctaLocked}
           className="group relative w-full py-4 rounded-2xl bg-gradient-gold text-primary-foreground text-base font-bold gold-shadow active:scale-[0.98] hover:scale-[1.01] transition-transform flex items-center justify-center gap-2 overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed"
         >
           <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-          {subscribing === primaryPlan.id
-            ? <><Loader2 size={16} className="relative animate-spin" /> <span className="relative">Opening checkout…</span></>
-            : <><Crown size={18} className="relative" /> <span className="relative">{user ? "Become Royal" : "Sign in to join"}</span></>}
+          {ctaLocked
+            ? <><Lock size={16} className="relative" /> <span className="relative">Launching soon — join the waitlist</span></>
+            : subscribing === primaryPlan.id
+              ? <><Loader2 size={16} className="relative animate-spin" /> <span className="relative">Opening checkout…</span></>
+              : <><Crown size={18} className="relative" /> <span className="relative">{user ? "Become Royal" : "Sign in to join"}</span></>}
         </button>
+        {ctaLocked && (
+          <p className="relative text-center text-[10px] text-muted-foreground/80">
+            Royal Pass is finishing final launch checks. Members-only preview — public rollout coming soon.
+          </p>
+        )}
+
 
         <div className="relative grid grid-cols-3 gap-2 text-[10px] text-center text-muted-foreground pt-1">
           <div className="flex flex-col items-center gap-1">
@@ -804,10 +832,12 @@ export default function RoyalPassCard() {
               </div>
               <button
                 onClick={() => subscribe(plan)}
-                className="px-4 py-2 rounded-full bg-muted/40 border border-gold/30 text-xs font-bold uppercase tracking-wider hover:bg-muted/60"
+                disabled={ctaLocked}
+                className="px-4 py-2 rounded-full bg-muted/40 border border-gold/30 text-xs font-bold uppercase tracking-wider hover:bg-muted/60 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Choose
+                {ctaLocked ? "Soon" : "Choose"}
               </button>
+
             </div>
           ))}
         </div>
