@@ -51,7 +51,7 @@ export const FRAMES: FrameDef[] = [
   { key: "royal-sovereign", label: "Royal Sovereign", tagline: "Apex of the leaderboard.",       requirement: "Earn 50,000 crowns",           target: 50000, url: royalSovereign.url },
   { key: "midnight-royal",  label: "Midnight Royal",  tagline: "A full year, night after night.",requirement: "365-day login streak",         target: 365,   url: midnightRoyal.url },
   { key: "royal-shield",    label: "Royal Shield",    tagline: "Defender of the crown.",         requirement: "Use 500 Crown Shields",        target: 500,   url: royalShield.url },
-  { key: "imperial-glow",   label: "Imperial Glow",   tagline: "For the founding royals.",       requirement: "Founding Royal Member",        target: 1,     url: imperialGlow.url, binary: true, insetPct: 21 },
+  { key: "imperial-glow",   label: "Imperial Glow",   tagline: "For the founding royals.",       requirement: "Founding Royal Member",        target: 1,     url: imperialGlow.url, binary: true, insetPct: 22 },
 ];
 
 export const FRAME_MAP: Record<FrameKey, FrameDef> = Object.fromEntries(
