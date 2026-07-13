@@ -2,7 +2,7 @@ import LegalShell, { H2, P, UL } from "@/components/legal/LegalShell";
 
 export default function AcceptableUse() {
   return (
-    <LegalShell title="Acceptable Use Policy" effectiveDate="May 2, 2026" lastUpdated="July 4, 2026" version="1.2">
+    <LegalShell title="Acceptable Use Policy" effectiveDate="July 13, 2026" lastUpdated="July 13, 2026" version="1.3">
       <P>
         This Acceptable Use Policy ("AUP") supplements our{" "}
         <a className="underline text-primary" href="/terms">Terms of Service</a> and{" "}
@@ -18,26 +18,38 @@ export default function AcceptableUse() {
         <li>Content that promotes self-harm, suicide, or eating disorders.</li>
         <li>Content that incites violence or hatred against protected groups.</li>
         <li>Content infringing intellectual-property or privacy rights of others.</li>
+        <li>Non-consensual intimate imagery (including deepfakes) and non-consensual recordings of Live Sessions or DMs.</li>
       </UL>
 
       <H2>Prohibited Behavior</H2>
       <UL>
-        <li>Harassment, threats, stalking, doxxing, or coordinated attacks.</li>
+        <li>Harassment, threats, stalking, doxxing, or coordinated attacks — in posts, comments, DMs, emotes, or Live Sessions.</li>
         <li>Impersonation or misrepresentation of identity, affiliation, or expertise.</li>
-        <li>Spam, mass messaging, unsolicited promotion, or pyramid/MLM schemes.</li>
-        <li>Vote manipulation, gaming the crown ranking, or coordinated battle rigging.</li>
+        <li>Spam, mass messaging, unsolicited promotion, or pyramid / MLM schemes.</li>
+        <li>Vote manipulation, gaming the crown ranking, coordinated battle rigging, or tournament collusion.</li>
         <li>Use of bots, scrapers, scripts, or automation without our written permission.</li>
         <li>Creating multiple accounts to evade bans or rate limits.</li>
-        <li>Buying or selling accounts, votes, crowns, or in-app items for real money.</li>
+        <li>Buying or selling accounts, votes, crowns, Crown Shields, Founder status, or other Virtual Items for real money.</li>
+        <li>Off-platform coordination to brigade, harass, or manipulate battles, tournaments, or reporting flows.</li>
+      </UL>
+
+      <H2>Live Battles &amp; Real-Time Media</H2>
+      <UL>
+        <li>Do not stream nudity, sexual acts, minors, graphic violence, self-harm, or illegal activity in Live Sessions.</li>
+        <li>Do not record, screen-capture, rebroadcast, mirror, or repost another user's Live Session without their consent, except through in-app features we provide.</li>
+        <li>Do not include third parties (including minors and bystanders) in a Live Session without their prior consent.</li>
+        <li>Do not use Live Sessions to dox, threaten, or harass another user, on- or off-platform.</li>
+        <li>Do not attempt to bypass moderator kicks, mutes, or Live Session bans.</li>
       </UL>
 
       <H2>Prohibited Technical Activity</H2>
       <UL>
         <li>Probing, scanning, or testing the vulnerability of the Service without authorization.</li>
-        <li>Bypassing or circumventing security, access controls, or rate limits.</li>
+        <li>Bypassing or circumventing security, access controls, rate limits, or feature flags.</li>
         <li>Uploading malware, viruses, or harmful code.</li>
-        <li>Interfering with the Service's operation, including denial-of-service attacks.</li>
+        <li>Interfering with the Service's operation, including denial-of-service or signalling-server attacks.</li>
         <li>Scraping, harvesting, or replicating substantial portions of the Service or user data.</li>
+        <li>Tampering with financial-integrity systems, Crown Shield ledgers, Founder audit logs, or entitlement records.</li>
       </UL>
 
       <H2>Sensitive Content &amp; Moderation Bypass</H2>
@@ -57,8 +69,9 @@ export default function AcceptableUse() {
       <H2>Reporting & Enforcement</H2>
       <P>
         Violations may result in content removal, feature restriction, suspension,
-        termination, IP/device blocking, forfeiture of in-app items, and referral to law
-        enforcement. Report violations via the in-app Report button or to{" "}
+        termination, IP / device blocking, forfeiture of in-app items, and referral to
+        law enforcement. EU users receive a statement of reasons and appeal rights under
+        the Digital Services Act. Report violations via the in-app Report button or to{" "}
         <a className="underline text-primary" href="mailto:support@crownmemedia.com">support@crownmemedia.com</a>.
       </P>
 

@@ -2,16 +2,16 @@ import LegalShell, { H2, P } from "@/components/legal/LegalShell";
 
 export default function ContactLegal() {
   return (
-    <LegalShell title="Legal Contact & DPO" effectiveDate="May 2, 2026" lastUpdated="July 4, 2026" version="1.2">
+    <LegalShell title="Legal Contact & DPO" effectiveDate="July 13, 2026" lastUpdated="July 13, 2026" version="1.3">
       <P>
-        CrownMe Media, is the
-        controller of personal information processed through the Service. The official site is
-        <a className="underline text-primary" href="https://www.crownmemedia.com"> crownmemedia.com</a>.
+        CrownMe Media, LLC (a Wisconsin limited liability company) is the controller of
+        personal information processed through the Service. The official site is{" "}
+        <a className="underline text-primary" href="https://www.crownmemedia.com">crownmemedia.com</a>.
       </P>
 
       <H2>Mailing Address</H2>
       <P>
-        CrownMe Media<br />
+        CrownMe Media, LLC<br />
         Wisconsin, USA<br />
         (Full mailing address available on request for verified legal process.)
       </P>
@@ -24,7 +24,14 @@ export default function ContactLegal() {
       <H2>Privacy / Data Protection Officer</H2>
       <P>
         Subject line: "Privacy Request" — for access, deletion, correction, portability,
-        opt-out, or other privacy rights.
+        opt-out, or other privacy rights under GDPR, UK GDPR, CCPA/CPRA, LGPD, PIPEDA,
+        and equivalent laws.
+      </P>
+
+      <H2>EU Digital Services Act (DSA) Point of Contact</H2>
+      <P>
+        Subject line: "DSA Notice" — for illegal content notices, statements of reasons,
+        and communications from EU authorities and users.
       </P>
 
       <H2>Copyright (DMCA) Agent</H2>
@@ -42,10 +49,17 @@ export default function ContactLegal() {
 
       <H2>Law Enforcement Requests</H2>
       <P>
-        Subject line: "Law Enforcement Request." Include your agency, badge or ID number,
-        a return email at your agency domain, and the legal process (subpoena, court
-        order, search warrant). Emergency disclosure requests must include facts
-        supporting reasonable belief of imminent danger of death or serious bodily injury.
+        Subject line: "Law Enforcement Request." Include your agency, badge or ID
+        number, a return email at your agency domain, and the legal process (subpoena,
+        court order, search warrant). Emergency disclosure requests must include facts
+        supporting reasonable belief of imminent danger of death or serious bodily
+        injury.
+      </P>
+
+      <H2>Billing & Subscription Disputes</H2>
+      <P>
+        Subject line: "Billing." For Apple / Google purchases, please also open a
+        refund request via the respective app store.
       </P>
 
       <H2>Press</H2>
