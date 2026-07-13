@@ -39,8 +39,8 @@ export default function FrameDetailDialog({ item, open, onOpenChange, onEquip, b
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
           {/* Left: uncropped artwork stage */}
-          <div className="relative aspect-square bg-gradient-to-br from-black/60 to-black/20 flex items-center justify-center p-6 border-b md:border-b-0 md:border-r border-gold/20">
-            <div className="w-full h-full max-w-md max-h-md">
+          <div className="relative aspect-square bg-gradient-to-br from-black/60 to-black/20 flex items-center justify-center p-[10%] border-b md:border-b-0 md:border-r border-gold/20 overflow-hidden">
+            <div className="relative w-full h-full">
               <FrameArtwork frame={frame} name={frame.name} locked={!unlocked} contain />
             </div>
             {equipped && (

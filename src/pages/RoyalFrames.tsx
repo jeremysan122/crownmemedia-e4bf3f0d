@@ -375,13 +375,15 @@ function FrameCard({
         className="relative w-full block focus:outline-none focus:ring-2 focus:ring-gold/60"
         style={{ aspectRatio: "1 / 1" }}
       >
-        <div className="absolute inset-0 flex items-center justify-center p-4">
-          <FrameArtwork frame={frame} name={frame.name} locked={!unlocked} contain />
+        <div className="absolute inset-0 flex items-center justify-center p-[8%] pointer-events-none">
+          <div className="relative w-full h-full">
+            <FrameArtwork frame={frame} name={frame.name} locked={!unlocked} contain />
+          </div>
         </div>
         {!unlocked && (
-          <div className="absolute inset-0 flex items-end justify-center p-3 pointer-events-none">
-            <div className="rounded-full bg-background/80 p-2 backdrop-blur-sm border border-border">
-              <Lock size={16} className="text-muted-foreground" />
+          <div className="absolute bottom-2 right-2 pointer-events-none">
+            <div className="rounded-full bg-background/80 p-1.5 backdrop-blur-sm border border-border">
+              <Lock size={12} className="text-muted-foreground" />
             </div>
           </div>
         )}
