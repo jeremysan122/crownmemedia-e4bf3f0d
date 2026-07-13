@@ -38,31 +38,35 @@ export default function AvatarFrame({
       : DEFAULT_FRAME_INSET_PCT;
 
   if (frameUrl) {
+    const frameInset = glow ? "7%" : "0px";
+
     return (
       <div
         className={`avatar-frame-shell ${className}`}
         style={{ width: size, height: size }}
       >
         {glow && <span aria-hidden="true" className="avatar-frame-halo" />}
-        <div
-          className="avatar-frame-photo"
-          style={{ inset: `${insetPct}%` }}
-        >
-          {photoUrl && (
-            <img
-              src={photoUrl}
-              className="w-full h-full object-cover"
-              alt={alt}
-              style={{ objectPosition: `center ${positionY ?? 50}%` }}
-            />
-          )}
+        <div className="avatar-frame-inner" style={{ inset: frameInset }}>
+          <div
+            className="avatar-frame-photo"
+            style={{ inset: `${insetPct}%` }}
+          >
+            {photoUrl && (
+              <img
+                src={photoUrl}
+                className="w-full h-full object-cover"
+                alt={alt}
+                style={{ objectPosition: `center ${positionY ?? 50}%` }}
+              />
+            )}
+          </div>
+          <img
+            src={frameUrl}
+            alt=""
+            loading="lazy"
+            className="avatar-frame-art"
+          />
         </div>
-        <img
-          src={frameUrl}
-          alt=""
-          loading="lazy"
-          className="avatar-frame-art"
-        />
       </div>
     );
   }
