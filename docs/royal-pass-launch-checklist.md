@@ -14,9 +14,11 @@ continue on the live site.
       `src/lib/__tests__/royalShieldAuditLog.test.ts`.
 - [x] Trusted-context guard locked by
       `src/lib/__tests__/profilesGuardTrustedContext.test.ts`.
-- [ ] All spending paths route through the primitives (Stage B). Grep
-      guard test to be added: no `UPDATE public.wallets SET shekel_balance`
-      outside `debit_shekels` / `handle_royal_refund`.
+- [x] All spending paths route through the primitives (Stage B). Locked
+      by `src/lib/__tests__/walletDirectMutationGuard.test.ts`: no
+      `UPDATE public.wallets SET shekel_balance = shekel_balance -`
+      outside `debit_shekels` / `handle_royal_refund` /
+      `handle_royal_dispute_*` / `refund_gift`.
 
 ## 2. Admin-triggered runtime audit (available now)
 
@@ -45,12 +47,17 @@ available:
 
 ## 4. UI review
 
-- [ ] `RoyalPass.tsx` sales copy matches "5 shields / month" (no
-      permanent shield claim).
-- [ ] `RoyalPassCard.tsx` shows remaining shields, boost tokens, and
-      period end without flicker.
-- [ ] Founder ribbon renders only when `is_founder && royal_active`.
-- [ ] Cancel-at-period-end state has distinct copy from active renewal.
+- [x] `RoyalPass.tsx` sales copy matches "5 shields / month" (no
+      permanent shield claim). Verified — no "permanent" references
+      remain in the Royal surfaces.
+- [x] `RoyalPassCard.tsx` shows remaining shields (`shields_remaining/
+      shields_granted`), boost tokens, and period end sourced from
+      `royal_entitlements` RPC.
+- [x] Founder ribbon renders only when `founder.status?.active` (and
+      remaining spots > 0 in the sales hero).
+- [x] Cancel-at-period-end state has distinct copy on both
+      `RoyalPass.tsx` ("Ends on" + amber "Cancelling" badge) and
+      `RoyalPassCard.tsx` ("Cancels on {date}").
 
 ## 5. Rollback plan
 
