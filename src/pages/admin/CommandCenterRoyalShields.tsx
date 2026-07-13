@@ -144,6 +144,7 @@ export default function CommandCenterRoyalShields() {
     setRows(((acct.data as AccountingRow[] | null) ?? []));
     setAudit(((log.data as AuditRow[] | null) ?? []));
     setRecon((snap.data as ReconciliationSnapshot | null) ?? null);
+    setSyncAudit(((sync.data as SyncAuditRow[] | null) ?? []));
     setBusy(false);
     setReconBusy(false);
   }, []);
