@@ -126,6 +126,66 @@ export default function RoyalPassSettings() {
     }
   };
 
+  const loadBoostHistory = useCallback(async () => {
+    if (!user || !pass.active) { setBoostHistory([]); setHistoryLoading(false); return; }
+    setHistoryLoading(true);
+    const { data } = await supabase
+      .from("boosts")
+      .select("id, post_id, started_at, expires_at, active")
+      .eq("user_id", user.id)
+      .eq("source", "royal_pass_daily")
+      .order("started_at", { ascending: false })
+      .limit(30);
+    setBoostHistory((data as BoostRow[]) ?? []);
+    setHistoryLoading(false);
+  }, [user?.id, pass.active]);
+
+  useEffect(() => { void loadBoostHistory(); }, [loadBoostHistory]);
+
+  const refreshEntitlements = async () => {
+    setWorking("sync");
+    try {
+      const { data, error } = await supabase.functions.invoke("royal-pass-sync", {
+        body: { environment: getStripeEnvironment() },
+      });
+      if (error) throw error;
+      const errMsg = (data as { error?: string })?.error;
+      if (errMsg) throw new Error(errMsg);
+      toast.success("Entitlements refreshed from Stripe");
+      await Promise.all([pass.refresh(), entitlements.refresh(), loadDaily(), loadBoostHistory()]);
+    } catch (e) {
+      toast.error((e as Error).message || "Refresh failed");
+    } finally {
+      setWorking(null);
+    }
+  };
+
+  const activePerks = useMemo(() => ([
+    {
+      icon: Zap, label: "Daily 1.5× Royal Boost",
+      status: daily?.claimed_today ? "Claimed today" : "Available",
+      ok: true,
+    },
+    {
+      icon: ShieldCheck, label: "5 Crown Shields / month",
+      status: `${entitlements.shields_remaining} / ${entitlements.shields_granted || 5} remaining`,
+      ok: true,
+    },
+    { icon: Sparkles, label: "Royal Profile Glow", status: "Active", ok: true },
+    { icon: TrendingUp, label: "Priority Feed Placement", status: "Active", ok: true },
+    { icon: Star, label: "Royal Crown Badge", status: "Active", ok: true },
+  ]), [daily?.claimed_today, entitlements.shields_remaining, entitlements.shields_granted]);
+
+  const shieldTotal = entitlements.shields_granted || 5;
+  const shieldPct = shieldTotal > 0
+    ? Math.min(100, (entitlements.shields_used / shieldTotal) * 100)
+    : 0;
+  const shieldResets = entitlements.period_end
+    ? new Date(entitlements.period_end).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })
+    : null;
+
+
+
 
   return (
     <AppShell title="ROYAL PASS">
