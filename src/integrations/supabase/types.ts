@@ -7421,6 +7421,7 @@ export type Database = {
         Returns: number
       }
       my_frame_progress: { Args: never; Returns: Json }
+      my_frame_reward_stats: { Args: never; Returns: Json }
       my_royal_benefit_history: {
         Args: { _limit?: number }
         Returns: {
