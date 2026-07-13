@@ -262,7 +262,6 @@ export default function RoyalFrames() {
                     id="page-jump"
                     type="number"
                     min={1}
-                    max={totalPages}
                     value={jumpValue}
                     onChange={(e) => setJumpValue(e.target.value)}
                     aria-label="Jump to page number"
