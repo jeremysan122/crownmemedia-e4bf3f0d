@@ -22,14 +22,14 @@ export type FrameKey =
   | "imperial-glow";
 
 export const FRAME_THRESHOLDS: Record<FrameKey, (s: FrameRewardStats) => boolean> = {
-  "crown-prestige":  (s) => s.crowns >= 100,
+  "crown-prestige":  (s) => s.crowns >= 500,
   "royal-purple":    (s) => !!s.is_royal,
-  "golden-majesty":  (s) => s.battles_won >= 100,
-  "royal-laurel":    (s) => s.battles_won >= 500,
-  "diamond-royal":   (s) => s.crowns >= 1000,
-  "royal-sovereign": (s) => s.crowns >= 10000,
-  "midnight-royal":  (s) => s.longest_streak >= 100,
-  "royal-shield":    (s) => s.shields_used >= 100,
+  "golden-majesty":  (s) => s.battles_won >= 250,
+  "royal-laurel":    (s) => s.battles_won >= 1000,
+  "diamond-royal":   (s) => s.crowns >= 5000,
+  "royal-sovereign": (s) => s.crowns >= 50000,
+  "midnight-royal":  (s) => s.longest_streak >= 365,
+  "royal-shield":    (s) => s.shields_used >= 500,
   "imperial-glow":   (s) => !!s.is_founder,
 };
 
