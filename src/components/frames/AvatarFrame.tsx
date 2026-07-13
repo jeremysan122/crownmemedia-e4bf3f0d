@@ -26,6 +26,7 @@ export default function AvatarFrame({
   alt = "",
 }: Props) {
   const frameUrl = getFrameUrl(frameKey) || founderFallbackUrl || null;
+  const insetPct = frameKey ? getFrameInsetPct(frameKey) : DEFAULT_FRAME_INSET_PCT;
 
   if (frameUrl) {
     return (
@@ -35,7 +36,7 @@ export default function AvatarFrame({
       >
         <div
           className="absolute rounded-full overflow-hidden bg-muted"
-          style={{ inset: "14%" }}
+          style={{ inset: `${insetPct}%` }}
         >
           {photoUrl && (
             <img
