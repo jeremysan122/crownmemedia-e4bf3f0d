@@ -668,20 +668,6 @@ export default function Rewards() {
             )}
           </section>
 
-          {/* Avatar frames entry */}
-          <Link
-            to="/rewards/frames"
-            className="block p-4 rounded-2xl bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 hover:border-amber-500/60 transition"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.24em] text-amber-400/80">Achievement Rewards</p>
-                <h3 className="font-display text-lg text-amber-300 mt-0.5">Royal Avatar Frames</h3>
-                <p className="text-xs text-white/60 mt-1">Unlock 9 ornate frames by winning battles, earning crowns, and hitting royal milestones.</p>
-              </div>
-              <span className="text-amber-400 text-lg">→</span>
-            </div>
-          </Link>
 
           {/* Prize odds */}
           <section className="relative bg-white/5 rounded-2xl p-4 border border-white/10" aria-label="Prize odds">

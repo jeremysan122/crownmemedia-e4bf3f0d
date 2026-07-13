@@ -8,10 +8,10 @@ import CrownLoader from "@/components/CrownLoader";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 
 /** Milestone tiers used for the summary progress bars up top. */
-const CROWN_TIERS   = [100, 1000, 10000];
-const BATTLE_TIERS  = [100, 500];
-const STREAK_TIERS  = [100];
-const SHIELD_TIERS  = [100];
+const CROWN_TIERS   = [500, 5000, 50000];
+const BATTLE_TIERS  = [250, 1000];
+const STREAK_TIERS  = [365];
+const SHIELD_TIERS  = [500];
 
 function nextTier(current: number, tiers: number[]): number {
   return tiers.find((t) => t > current) ?? tiers[tiers.length - 1];
