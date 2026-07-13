@@ -1,13 +1,14 @@
-import LegalShell, { H2, H3, P, UL } from "@/components/legal/LegalShell";
+import LegalShell, { H2, P, UL } from "@/components/legal/LegalShell";
 
 export default function CommunityGuidelines() {
   return (
-    <LegalShell title="Community Guidelines" effectiveDate="May 2, 2026" lastUpdated="July 4, 2026" version="1.2" shellTitle="Conduct" pdfSlug="crownme-community-guidelines">
+    <LegalShell title="Community Guidelines" effectiveDate="July 13, 2026" lastUpdated="July 13, 2026" version="1.3" shellTitle="Conduct" pdfSlug="crownme-community-guidelines">
       <P>
-        CrownMe Media is an 18+ social photo-sharing community where members earn crowns through
-        positive engagement. These Community Guidelines explain what is and is not allowed.
-        Violating them may result in content removal, feature restrictions, account
-        suspension, or permanent ban — even on first offense for severe violations.
+        CrownMe Media is an 18+ social photo-sharing and live competition community where
+        members earn crowns through positive engagement. These Community Guidelines
+        explain what is and is not allowed. Violating them may result in content
+        removal, feature restrictions, account suspension, or permanent ban — even on
+        first offense for severe violations.
       </P>
 
       <H2>1. Be Kind. Be Real.</H2>
@@ -20,7 +21,7 @@ export default function CommunityGuidelines() {
       <H2>2. Zero Tolerance — Immediate Permanent Ban</H2>
       <UL>
         <li><strong>Child sexual abuse and exploitation (CSAE)</strong>: any sexualized content involving minors, grooming, or solicitation. We report to NCMEC and law enforcement. See our <a className="underline text-primary" href="/csae-policy">Child Safety Policy</a>.</li>
-        <li><strong>Non-consensual intimate imagery</strong> (revenge porn, deepfakes).</li>
+        <li><strong>Non-consensual intimate imagery</strong> (revenge porn, deepfakes, non-consensual Live Session recordings).</li>
         <li><strong>Threats of violence</strong>, terrorism, promotion of violent extremism.</li>
         <li><strong>Doxxing</strong> or sharing another person's private information without consent.</li>
         <li><strong>Sale of regulated/illegal goods</strong> (drugs, weapons, stolen items, fake IDs).</li>
@@ -29,57 +30,70 @@ export default function CommunityGuidelines() {
 
       <H2>3. Not Allowed</H2>
       <UL>
-        <li><strong>Nudity & sexually explicit content</strong>. CrownMe Media is 18+ but is not an adult-content platform. No genitalia, sex acts, or porn.</li>
+        <li><strong>Nudity &amp; sexually explicit content</strong>. CrownMe Media is 18+ but is not an adult-content platform. No genitalia, sex acts, or porn.</li>
         <li><strong>Hate speech</strong> attacking people based on race, ethnicity, national origin, religion, caste, sexual orientation, gender, gender identity, disability, or serious disease.</li>
-        <li><strong>Harassment & bullying</strong>: targeted insults, slurs, threats, or unwanted sexual advances.</li>
-        <li><strong>Self-harm & suicide</strong> content that promotes, glorifies, or provides instructions. We surface help resources when topics arise.</li>
+        <li><strong>Harassment &amp; bullying</strong>: targeted insults, slurs, threats, or unwanted sexual advances.</li>
+        <li><strong>Self-harm &amp; suicide</strong> content that promotes, glorifies, or provides instructions. We surface help resources when topics arise.</li>
         <li><strong>Graphic violence or gore</strong> shared for shock value.</li>
-        <li><strong>Spam, scams, vote manipulation</strong>, automated activity, fake accounts, or buying/selling accounts.</li>
+        <li><strong>Spam, scams, vote manipulation</strong>, tournament collusion, automated activity, fake accounts, or buying / selling accounts.</li>
         <li><strong>Misinformation</strong> that could cause real-world harm (e.g., dangerous health hoaxes).</li>
         <li><strong>Intellectual-property infringement</strong> (see our <a className="underline text-primary" href="/dmca">DMCA Policy</a>).</li>
       </UL>
 
-      <H2>4. Crowns, Voting & Battles</H2>
+      <H2>4. Crowns, Voting, Battles & Tournaments</H2>
       <UL>
         <li>One vote per person, per post, per allowed window.</li>
         <li>No coordinating vote swaps, bots, scripts, or multi-account voting.</li>
-        <li>Battles are for fun. Don't use them to target a real-world rival or harass.</li>
+        <li>Battles and tournaments are for fun. Don't use them to target a real-world rival or harass.</li>
+        <li>No tournament collusion, match-fixing, or intentional no-shows to manipulate brackets.</li>
       </UL>
 
-      <H2>5. Direct Messages</H2>
+      <H2>5. Live Battle Arena</H2>
+      <UL>
+        <li>You must be 18+ and have completed the AV pre-check before going live.</li>
+        <li>Only you (and any participants who have consented) may appear on camera or mic. Do not stream minors, bystanders, or third parties without consent.</li>
+        <li>No nudity, sexual content, drug use on-camera, weapons, self-harm, or illegal activity.</li>
+        <li>Recording, screen-capturing, or rebroadcasting another user's Live Session without consent is prohibited.</li>
+        <li>Moderators and admins may mute, kick, or ban participants and spectators from a session at any time to protect the community.</li>
+      </UL>
+
+      <H2>6. Direct Messages</H2>
       <UL>
         <li>No unsolicited sexual content or nude imagery, ever.</li>
         <li>No commercial spam or unsolicited promotion.</li>
         <li>Block and report aggressive or abusive senders — we review every report.</li>
       </UL>
 
-      <H2>5A. Sensitive Content Labels</H2>
+      <H2>6A. Sensitive Content Labels</H2>
       <P>
         Posts may carry a sensitive label and a content rating (<em>safe</em>,{" "}
-        <em>suggestive</em>, <em>mature</em>, <em>explicit</em>). You must label honestly,
-        respect viewers' Content Filter preferences, and accept that moderators can change
-        labels and that those changes cannot be reversed by the author. Full rules,
-        including what is gated, blurred, hidden, or removed, are in the{" "}
+        <em>suggestive</em>, <em>mature</em>, <em>explicit</em>). You must label
+        honestly, respect viewers' Content Filter preferences, and accept that
+        moderators can change labels and that those changes cannot be reversed by the
+        author. Full rules are in the{" "}
         <a className="underline text-primary" href="/sensitive-content">Sensitive Content Policy</a>.
       </P>
 
-      <H2>6. Reporting</H2>
+      <H2>7. Reporting</H2>
       <P>
-        Use the Report button on any post, comment, message, or profile. Provide details
-        and any evidence. Reports are confidential. Urgent safety threats can be emailed
-        to <a className="underline text-primary" href="mailto:support@crownmemedia.com">support@crownmemedia.com</a>{" "}
+        Use the Report button on any post, comment, message, Live Session, or profile.
+        Provide details and any evidence. Reports are confidential. Urgent safety
+        threats can be emailed to{" "}
+        <a className="underline text-primary" href="mailto:support@crownmemedia.com">support@crownmemedia.com</a>{" "}
         with subject "URGENT SAFETY."
       </P>
 
-      <H2>7. Enforcement</H2>
+      <H2>8. Enforcement</H2>
       <P>
         Our moderation team reviews reports using a combination of automated systems and
-        human review. Actions range from a warning, content removal, or feature restriction
-        (e.g., temporary mute), to suspension or permanent ban. We may also withhold or
-        revoke crowns and other in-app items earned through violating activity.
+        human review. Actions range from a warning, content removal, or feature
+        restriction (e.g., temporary mute, Live Session ban), to suspension or permanent
+        ban. We may also withhold or revoke crowns, Crown Shields, and other in-app
+        items earned through violating activity. Where required by the EU Digital
+        Services Act, we provide a statement of reasons and information about appeals.
       </P>
 
-      <H2>8. Appeals</H2>
+      <H2>9. Appeals</H2>
       <P>
         If you believe an enforcement action was made in error, email{" "}
         <a className="underline text-primary" href="mailto:support@crownmemedia.com">support@crownmemedia.com</a>{" "}
