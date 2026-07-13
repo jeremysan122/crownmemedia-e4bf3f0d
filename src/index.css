@@ -286,7 +286,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .avatar-frame-inner--glow::before {
+  .avatar-frame-glow {
     animation: none;
     opacity: 0.85;
   }
