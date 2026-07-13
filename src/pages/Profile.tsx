@@ -66,6 +66,7 @@ interface ProfileFull {
   founder_title?: string | null;
   royal_frame_variant?: string | null;
   equipped_frame_key?: string | null;
+  frames_hidden?: boolean | null;
 }
 
 interface BattleRow {
@@ -152,7 +153,7 @@ export default function Profile() {
     const load = async () => {
       const { data: p, error: pErr } = await supabase
         .from("profiles")
-        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public, is_founder, founder_title, royal_frame_variant, equipped_frame_key")
+        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public, is_founder, founder_title, royal_frame_variant, equipped_frame_key, frames_hidden")
         .eq("username", targetUsername)
         .maybeSingle();
       if (cancelled) return;
@@ -617,7 +618,7 @@ export default function Profile() {
       <div className="px-4 lg:px-6 py-4 lg:relative">
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
           <div data-testid="profile-avatar" className={`self-start w-fit ${prof.crowns_held > 0 && !prof.equipped_frame_key && !isFounder ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${!isFounder && !prof.equipped_frame_key && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5 profile-glow" : ""}`}>
-            {(prof.equipped_frame_key && getFrameUrl(prof.equipped_frame_key)) || isFounder ? (
+            {!prof.frames_hidden && ((prof.equipped_frame_key && getFrameUrl(prof.equipped_frame_key)) || isFounder) ? (
               <>
                 <div className="lg:hidden">
                   <AvatarFrame

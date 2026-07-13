@@ -4319,6 +4319,7 @@ export type Database = {
           following_count: number
           founder_granted_at: string | null
           founder_title: string | null
+          frames_hidden: boolean
           gender: Database["public"]["Enums"]["gender_type"] | null
           hide_comments: boolean
           hide_likes: boolean
@@ -4396,6 +4397,7 @@ export type Database = {
           following_count?: number
           founder_granted_at?: string | null
           founder_title?: string | null
+          frames_hidden?: boolean
           gender?: Database["public"]["Enums"]["gender_type"] | null
           hide_comments?: boolean
           hide_likes?: boolean
@@ -4473,6 +4475,7 @@ export type Database = {
           following_count?: number
           founder_granted_at?: string | null
           founder_title?: string | null
+          frames_hidden?: boolean
           gender?: Database["public"]["Enums"]["gender_type"] | null
           hide_comments?: boolean
           hide_likes?: boolean
@@ -7564,6 +7567,7 @@ export type Database = {
           following_count: number
           founder_granted_at: string | null
           founder_title: string | null
+          frames_hidden: boolean
           gender: Database["public"]["Enums"]["gender_type"] | null
           hide_comments: boolean
           hide_likes: boolean
@@ -8481,6 +8485,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_frames_hidden: { Args: { _hidden: boolean }; Returns: undefined }
       set_lobby_ready: {
         Args: { _battle_id: string; _ready: boolean }
         Returns: {
