@@ -11,7 +11,7 @@ import AppShell from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { Loader2, ShieldCheck, AlertTriangle, PlayCircle, ScrollText } from "lucide-react";
+import { Loader2, ShieldCheck, AlertTriangle, PlayCircle, ScrollText, ChevronDown, ChevronRight, Download, RefreshCw } from "lucide-react";
 import { timeAgo } from "@/lib/crown";
 
 type AccountingRow = {
