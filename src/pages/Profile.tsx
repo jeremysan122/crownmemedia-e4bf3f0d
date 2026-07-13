@@ -664,8 +664,8 @@ export default function Profile() {
               {(prof as any).verified && <VerifiedBadge size={20} />}
               {prof.crowns_held > 0 && <Crown size={18} className="text-primary" fill="currentColor" />}
               {isFounder && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/60 bg-gradient-to-r from-gold/25 via-gold/15 to-gold/25 pl-1 pr-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gold shadow-[0_0_18px_hsl(var(--gold)/0.35)]">
-                  <img src={founderBadgeImg} alt="" loading="lazy" className="size-5 -my-0.5 drop-shadow-[0_0_4px_hsl(var(--gold)/0.6)]" />
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gradient-gold text-primary-foreground text-[10px] font-bold uppercase tracking-wider gold-shadow">
+                  <img src={founderBadgeImg} alt="" loading="lazy" className="size-3.5 drop-shadow-[0_0_4px_hsl(var(--gold)/0.6)]" />
                   Founder
                 </span>
               )}
