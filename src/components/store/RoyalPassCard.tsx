@@ -832,10 +832,12 @@ export default function RoyalPassCard() {
               </div>
               <button
                 onClick={() => subscribe(plan)}
-                className="px-4 py-2 rounded-full bg-muted/40 border border-gold/30 text-xs font-bold uppercase tracking-wider hover:bg-muted/60"
+                disabled={ctaLocked}
+                className="px-4 py-2 rounded-full bg-muted/40 border border-gold/30 text-xs font-bold uppercase tracking-wider hover:bg-muted/60 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Choose
+                {ctaLocked ? "Soon" : "Choose"}
               </button>
+
             </div>
           ))}
         </div>
