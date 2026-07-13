@@ -206,31 +206,21 @@
   }
 
   /*
-   * Outer layout wrapper. Reserves the visible frame diameter in the page
-   * layout so surrounding text/content is pushed clear of the decoration.
-   */
-  .avatar-frame-layout {
-    position: relative;
-    display: grid;
-    place-items: center;
-    overflow: visible;
-    flex-shrink: 0;
-    isolation: isolate;
-  }
-
-  /*
-   * Shell = exact `size` px (normal avatar photo footprint). Centered inside
-   * the layout wrapper. Frame & glow overflow visually beyond this box.
+   * The shell's box = the normal avatar photo footprint. Frame & glow are
+   * absolutely positioned overlays sized in px by the component so they
+   * visually overflow OUTSIDE the shell while the photo stays 1:1 with size.
    */
   .avatar-frame-shell {
     position: relative;
-    grid-area: 1 / 1;
+    isolation: isolate;
     overflow: visible;
     border-radius: 9999px;
-    isolation: isolate;
   }
 
-  /* Photo always fills the full size prop. */
+  /*
+   * The photo is always the complete size prop.
+   * Never apply a reduced percentage to this element.
+   */
   .avatar-frame-photo {
     position: absolute;
     inset: 0;
@@ -250,7 +240,10 @@
     object-fit: cover;
   }
 
-  /* Frame art centered on the shell, scaled larger via inline width/height. */
+  /*
+   * The frame is centered on the normal-sized avatar and enlarged based on
+   * its calibrated inner opening. It visually overflows beyond the shell.
+   */
   .avatar-frame-art {
     position: absolute;
     z-index: 3;
@@ -263,7 +256,7 @@
     transform-origin: center;
   }
 
-  /* Glow centered behind everything. */
+  /* Glow is centered behind the full avatar/frame unit. */
   .avatar-frame-glow-layer {
     position: absolute;
     left: 50%;
@@ -283,7 +276,6 @@
     animation: avatar-frame-glow-pulse 2.8s ease-in-out infinite;
   }
 }
-
 
 @keyframes avatar-frame-glow-pulse {
   0%, 100% { opacity: 0.72; }
