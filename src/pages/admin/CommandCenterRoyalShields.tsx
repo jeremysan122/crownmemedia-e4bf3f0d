@@ -490,6 +490,53 @@ export default function CommandCenterRoyalShields() {
             ))}
           </div>
         </section>
+
+        <section className="space-y-2" data-admin-only="royal-pass-sync-audit">
+          <div className="flex items-center gap-2">
+            <RefreshCw size={16} className="text-gold" />
+            <h2 className="font-display text-lg text-foreground/90">
+              Refresh Entitlements audit (last 50)
+            </h2>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Every call to <code>royal-pass-sync</code> is logged here for traceability —
+            who ran it, against which user, when, and whether it succeeded.
+          </p>
+          {syncAudit.length === 0 && !busy && (
+            <p className="text-center text-sm text-muted-foreground py-6">
+              No entitlement refreshes yet.
+            </p>
+          )}
+          <div className="space-y-1.5">
+            {syncAudit.map((r) => (
+              <div
+                key={r.id}
+                className={`royal-card p-2.5 text-[11px] space-y-1 ${
+                  r.success ? "" : "border-destructive/60"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`font-bold ${r.success ? "text-emerald-500" : "text-destructive"}`}>
+                    {r.success ? "success" : "failed"}
+                    <span className="ml-2 text-muted-foreground font-normal">
+                      env: <code>{r.environment}</code>
+                    </span>
+                  </span>
+                  <span className="text-muted-foreground">{timeAgo(r.created_at)}</span>
+                </div>
+                <div className="text-muted-foreground">
+                  actor <code className="text-foreground/80">{r.actor_user_id.slice(0, 8)}</code>
+                  {" · "}target <code className="text-foreground/80">{r.target_user_id.slice(0, 8)}</code>
+                  {r.status && <> · status <code>{r.status}</code></>}
+                  {r.stripe_subscription_id && <> · sub <code>{r.stripe_subscription_id.slice(0, 14)}</code></>}
+                </div>
+                {r.error && (
+                  <div className="text-destructive break-words">error: {r.error}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </AppShell>
   );
