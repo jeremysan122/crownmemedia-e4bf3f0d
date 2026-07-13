@@ -181,9 +181,10 @@ export default function PurchaseSuccess() {
           </p>
         </div>
 
-        {/* 4-step verification timeline — admin/debug only */}
+        {/* Internal verification timeline — admin/debug only, never rendered for customers */}
         {isAdminView && (
-        <div className="royal-card p-4 space-y-1">
+        <div className="royal-card p-4 space-y-1 border border-dashed border-gold/40" data-admin-only="verification-timeline">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-gold mb-1">Admin · verification</div>
           <StepRow
             state={stripeStep}
             title="Stripe payment received"
@@ -218,6 +219,7 @@ export default function PurchaseSuccess() {
           )}
         </div>
         )}
+
 
 
         {!ledgerConfirmed && timedOut && (

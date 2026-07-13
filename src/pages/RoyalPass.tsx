@@ -25,7 +25,36 @@ interface BoostRow {
   started_at: string;
   expires_at: string | null;
   active: boolean;
+  status: "succeeded" | "failed";
+  error?: string;
 }
+
+const FAILED_BOOSTS_KEY = "royal_pass_failed_boosts_v1";
+function loadFailedBoosts(userId: string): BoostRow[] {
+  try {
+    const raw = localStorage.getItem(`${FAILED_BOOSTS_KEY}:${userId}`);
+    if (!raw) return [];
+    const arr = JSON.parse(raw) as BoostRow[];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+function recordFailedBoost(userId: string, err: string) {
+  try {
+    const existing = loadFailedBoosts(userId);
+    const next: BoostRow = {
+      id: `fail-${Date.now()}`,
+      post_id: null,
+      started_at: new Date().toISOString(),
+      expires_at: null,
+      active: false,
+      status: "failed",
+      error: err.slice(0, 200),
+    };
+    const trimmed = [next, ...existing].slice(0, 30);
+    localStorage.setItem(`${FAILED_BOOSTS_KEY}:${userId}`, JSON.stringify(trimmed));
+  } catch { /* ignore */ }
+}
+
 
 
 interface PlanInfo { name: string; usd: number; interval: string }
@@ -47,6 +76,8 @@ export default function RoyalPassSettings() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [boostHistory, setBoostHistory] = useState<BoostRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
+
 
 
   useEffect(() => {
@@ -112,15 +143,19 @@ export default function RoyalPassSettings() {
   const claimDaily = async (postId: string) => {
     setPickerOpen(false);
     setWorking("claim");
+    const claimToast = toast.loading("Claiming today's Royal Boost…");
     try {
       const { data, error } = await (supabase as any).rpc("claim_daily_royal_boost", { p_post_id: postId });
       if (error) throw error;
       const errMsg = (data as { error?: string })?.error;
       if (errMsg) throw new Error(errMsg);
-      toast.success("Daily Royal Boost claimed — 1.5× score for 24h");
-      await loadDaily();
+      toast.success("Daily Royal Boost claimed — 1.5× score for 24h", { id: claimToast });
+      await Promise.all([loadDaily(), loadBoostHistory(), entitlements.refresh()]);
     } catch (e) {
-      toast.error((e as Error).message || "Could not claim daily boost");
+      const msg = (e as Error).message || "Could not claim daily boost";
+      if (user?.id) recordFailedBoost(user.id, msg);
+      toast.error(msg, { id: claimToast });
+      await loadBoostHistory();
     } finally {
       setWorking(null);
     }
@@ -136,7 +171,15 @@ export default function RoyalPassSettings() {
       .eq("source", "royal_pass_daily")
       .order("started_at", { ascending: false })
       .limit(30);
-    setBoostHistory((data as BoostRow[]) ?? []);
+    const succeeded: BoostRow[] = ((data as Omit<BoostRow, "status">[]) ?? []).map((b) => ({
+      ...b,
+      status: "succeeded" as const,
+    }));
+    const failed = loadFailedBoosts(user.id);
+    const merged = [...succeeded, ...failed]
+      .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
+      .slice(0, 30);
+    setBoostHistory(merged);
     setHistoryLoading(false);
   }, [user?.id, pass.active]);
 
@@ -144,6 +187,7 @@ export default function RoyalPassSettings() {
 
   const refreshEntitlements = async () => {
     setWorking("sync");
+    const syncToast = toast.loading("Re-checking Stripe & Royal Pass entitlements…");
     try {
       const { data, error } = await supabase.functions.invoke("royal-pass-sync", {
         body: { environment: getStripeEnvironment() },
@@ -151,14 +195,16 @@ export default function RoyalPassSettings() {
       if (error) throw error;
       const errMsg = (data as { error?: string })?.error;
       if (errMsg) throw new Error(errMsg);
-      toast.success("Entitlements refreshed from Stripe");
       await Promise.all([pass.refresh(), entitlements.refresh(), loadDaily(), loadBoostHistory()]);
+      setLastRefreshedAt(Date.now());
+      toast.success("Entitlements refreshed from Stripe", { id: syncToast });
     } catch (e) {
-      toast.error((e as Error).message || "Refresh failed");
+      toast.error((e as Error).message || "Refresh failed", { id: syncToast });
     } finally {
       setWorking(null);
     }
   };
+
 
   const activePerks = useMemo(() => ([
     {
@@ -363,12 +409,21 @@ export default function RoyalPassSettings() {
                   {boostHistory.map((b) => {
                     const started = new Date(b.started_at);
                     const expires = b.expires_at ? new Date(b.expires_at) : null;
-                    const stillActive = b.active && expires && expires.getTime() > Date.now();
+                    const failed = b.status === "failed";
+                    const stillActive = !failed && b.active && expires && expires.getTime() > Date.now();
+                    const iconTone = failed
+                      ? "bg-destructive/15 text-destructive"
+                      : stillActive
+                        ? "bg-emerald-500/15 text-emerald-500"
+                        : "bg-muted/40 text-muted-foreground";
+                    const pillTone = failed
+                      ? "bg-destructive/10 text-destructive border-destructive/20"
+                      : stillActive
+                        ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                        : "bg-muted/30 text-muted-foreground border-border/40";
                     return (
                       <li key={b.id} className="py-2 flex items-center gap-3 text-xs">
-                        <div className={`size-7 rounded-lg flex items-center justify-center shrink-0 ${
-                          stillActive ? "bg-emerald-500/15 text-emerald-500" : "bg-muted/40 text-muted-foreground"
-                        }`}>
+                        <div className={`size-7 rounded-lg flex items-center justify-center shrink-0 ${iconTone}`}>
                           <Zap size={12} />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -377,28 +432,28 @@ export default function RoyalPassSettings() {
                             <span className="text-muted-foreground font-normal">
                               {" "}· {started.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
                             </span>
+                            <span className="text-muted-foreground font-normal"> · 1.5×</span>
                           </div>
                           <div className="text-[10px] text-muted-foreground truncate">
-                            {b.post_id ? (
-                              <Link to={`/post/${b.post_id}`} className="hover:text-primary hover:underline">
-                                View boosted post
-                              </Link>
-                            ) : "Post unavailable"}
-                            {expires && (
+                            {failed
+                              ? (b.error || "Claim failed")
+                              : b.post_id ? (
+                                <Link to={`/post/${b.post_id}`} className="hover:text-primary hover:underline">
+                                  View boosted post
+                                </Link>
+                              ) : "Post unavailable"}
+                            {!failed && expires && (
                               <> · {stillActive ? "expires" : "expired"} {expires.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</>
                             )}
                           </div>
                         </div>
-                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                          stillActive
-                            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                            : "bg-muted/30 text-muted-foreground border-border/40"
-                        }`}>
-                          {stillActive ? "Active" : "Claimed"}
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${pillTone}`}>
+                          {failed ? "Failed" : stillActive ? "Active" : "Claimed"}
                         </span>
                       </li>
                     );
                   })}
+
                 </ul>
               )}
             </div>
@@ -423,8 +478,16 @@ export default function RoyalPassSettings() {
                     : <RotateCw size={14} className="mr-2" />}
                   Refresh Entitlements from Stripe
                 </Button>
+                {lastRefreshedAt && (
+                  <p className="text-[10px] text-muted-foreground text-center">
+                    Last refreshed {new Date(lastRefreshedAt).toLocaleTimeString(undefined, {
+                      hour: "numeric", minute: "2-digit", second: "2-digit",
+                    })}
+                  </p>
+                )}
               </div>
             )}
+
 
             <div className="royal-card p-4 space-y-2">
 
