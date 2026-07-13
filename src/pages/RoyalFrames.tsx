@@ -221,7 +221,7 @@ export default function RoyalFrames() {
           </>
         )}
 
-        {catalogHealthy ? null : null}
+        {catalogHealthy ? null : null /* placeholder retained for future admin diagnostics */}
       </div>
     </AppShell>
   );
@@ -292,7 +292,14 @@ function FrameCard({
   const unlocked = !!ownership;
   const equipped = !!ownership?.equipped;
 
-  const artwork = frame.animated_asset_url || frame.static_asset_url || frame.thumbnail_asset_url;
+  // Deterministic fallback chain: animated → static → thumbnail. Each broken
+  // source is skipped exactly once — no infinite onError loops.
+  const sources = [frame.animated_asset_url, frame.static_asset_url, frame.thumbnail_asset_url].filter(
+    (s): s is string => !!s,
+  );
+  const [srcIdx, setSrcIdx] = useState(0);
+  const [broken, setBroken] = useState(false);
+  const artwork = sources[srcIdx];
   const requirements = achievement ? extractRequirements(achievement.requirement_logic) : [];
 
   return (
@@ -304,24 +311,21 @@ function FrameCard({
       {/* Artwork stage — square, contain, generous padding, never cropped. */}
       <div className="relative w-full" style={{ aspectRatio: "1 / 1" }}>
         <div className="absolute inset-0 flex items-center justify-center p-4">
-          {artwork ? (
+          {artwork && !broken ? (
             <img
               src={artwork}
               alt={frame.name}
               loading="lazy"
-              onError={(e) => {
-                const el = e.currentTarget;
-                if (frame.thumbnail_asset_url && el.src !== frame.thumbnail_asset_url) {
-                  el.src = frame.thumbnail_asset_url;
-                } else {
-                  el.style.visibility = "hidden";
-                }
+              onError={() => {
+                if (srcIdx + 1 < sources.length) setSrcIdx(srcIdx + 1);
+                else setBroken(true);
               }}
               className={`w-full h-full object-contain drop-shadow-[0_0_18px_hsl(var(--gold)/0.45)] ${
                 !unlocked ? "grayscale opacity-60" : ""
               }`}
               style={{ objectPosition: "center" }}
             />
+
           ) : (
             <div className="w-full h-full rounded-full bg-muted/40 flex items-center justify-center text-muted-foreground text-[10px] uppercase tracking-wider">
               Artwork unavailable
