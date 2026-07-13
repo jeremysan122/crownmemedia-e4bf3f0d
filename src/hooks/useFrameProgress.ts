@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import type { FrameRewardStats } from "@/lib/frameEligibility";
@@ -25,7 +25,6 @@ export function useFrameProgress(): UseFrameProgress {
   const [rows, setRows] = useState<FrameProgressRow[]>([]);
   const [stats, setStats] = useState<FrameRewardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const firstRun = useRef(true);
 
   const refresh = useCallback(async () => {
     if (!user) {
