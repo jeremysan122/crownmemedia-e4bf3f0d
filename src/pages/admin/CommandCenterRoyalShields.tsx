@@ -11,7 +11,7 @@ import AppShell from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { Loader2, ShieldCheck, AlertTriangle, PlayCircle, ScrollText } from "lucide-react";
+import { Loader2, ShieldCheck, AlertTriangle, PlayCircle, ScrollText, ChevronDown, ChevronRight, Download, RefreshCw } from "lucide-react";
 import { timeAgo } from "@/lib/crown";
 
 type AccountingRow = {
@@ -106,8 +106,10 @@ export default function CommandCenterRoyalShields() {
   const [lastCheck, setLastCheck] = useState<CheckRow[] | null>(null);
   const [runtimeBusy, setRuntimeBusy] = useState(false);
   const [runtime, setRuntime] = useState<RuntimeAuditResult | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [recon, setRecon] = useState<ReconciliationSnapshot | null>(null);
   const [reconBusy, setReconBusy] = useState(false);
+  const [reconRunning, setReconRunning] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -158,6 +160,53 @@ export default function CommandCenterRoyalShields() {
     setRuntimeBusy(false);
     void load();
   }, [load]);
+
+  const runReconciliation = useCallback(async () => {
+    setReconRunning(true);
+    setErr(null);
+    const { error } = await supabase.rpc(
+      "admin_run_royal_shield_integrity_check" as never,
+      { _reason: "manual_reconciliation" } as never,
+    );
+    if (error) setErr(error.message);
+    await load();
+    setReconRunning(false);
+  }, [load]);
+
+  const downloadAudit = useCallback((format: "json" | "csv") => {
+    const payload = { generated_at: new Date().toISOString(), runtime, recon, audit };
+    let blob: Blob;
+    let filename: string;
+    if (format === "json") {
+      blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      filename = `royal-shield-audit-${Date.now()}.json`;
+    } else {
+      const headers = [
+        "id","user_id","event_type","reason_code","delta",
+        "shields_granted","net_spent_credits","active_shield_sessions",
+        "drift_amount","battle_id","post_id","created_at",
+      ];
+      const escape = (v: unknown) => {
+        if (v == null) return "";
+        const s = typeof v === "string" ? v : JSON.stringify(v);
+        return `"${s.replace(/"/g, '""')}"`;
+      };
+      const lines = [
+        headers.join(","),
+        ...audit.map((r) => headers.map((h) => escape((r as Record<string, unknown>)[h])).join(",")),
+      ];
+      blob = new Blob([lines.join("\n")], { type: "text/csv" });
+      filename = `royal-shield-audit-${Date.now()}.csv`;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [audit, runtime, recon]);
 
   const summary = useMemo(() => {
     const byUser = new Map<string, { granted: number; net: number; active: number; drift: number }>();
@@ -231,23 +280,43 @@ export default function CommandCenterRoyalShields() {
             </div>
             {runtime && (
               <div className={`text-xs rounded-lg p-2 ${runtime.ok ? "bg-emerald-500/10 text-emerald-500" : "bg-destructive/10 text-destructive"}`}>
-                <div className="font-medium mb-1">
-                  Runtime audit: {runtime.passed}/{runtime.total} scenarios passed
+                <div className="font-medium mb-1 flex items-center justify-between gap-2">
+                  <span>Runtime audit: {runtime.passed}/{runtime.total} scenarios passed</span>
+                  <span className="text-[10px] opacity-70">{new Date(runtime.ran_at).toLocaleTimeString()}</span>
                 </div>
-                <ul className="space-y-0.5">
-                  {runtime.results.map((r) => (
-                    <li key={r.scenario} className="flex items-start gap-2">
-                      <span>{r.ok ? "✓" : "✗"}</span>
-                      <span className="flex-1">
-                        <code>{r.scenario}</code>
-                        {!r.ok && (
-                          <span className="ml-2 opacity-80">
-                            — {r.steps.filter((s) => !s.ok).map((s) => `${s.name}: ${s.detail ?? "fail"}`).join(", ")}
+                <ul className="space-y-1">
+                  {runtime.results.map((r) => {
+                    const open = !!expanded[r.scenario];
+                    return (
+                      <li key={r.scenario} className="border-t border-current/10 pt-1 first:border-0 first:pt-0">
+                        <button
+                          type="button"
+                          onClick={() => setExpanded((e) => ({ ...e, [r.scenario]: !open }))}
+                          className="w-full flex items-start gap-2 text-left hover:opacity-90"
+                        >
+                          {open ? <ChevronDown size={12} className="mt-0.5 shrink-0" /> : <ChevronRight size={12} className="mt-0.5 shrink-0" />}
+                          <span className="shrink-0">{r.ok ? "✓" : "✗"}</span>
+                          <span className="flex-1">
+                            <code>{r.scenario}</code>
+                            <span className="ml-2 opacity-70">{r.steps.filter((s) => s.ok).length}/{r.steps.length} steps</span>
                           </span>
+                        </button>
+                        {open && (
+                          <ul className="mt-1 ml-6 space-y-0.5 text-foreground/80">
+                            {r.steps.map((s, i) => (
+                              <li key={`${r.scenario}-${i}`} className="flex items-start gap-2">
+                                <span className={s.ok ? "text-emerald-500" : "text-destructive"}>{s.ok ? "✓" : "✗"}</span>
+                                <span className="flex-1">
+                                  <code className="text-foreground/90">{s.name}</code>
+                                  {s.detail && <span className="ml-2 opacity-70">— {s.detail}</span>}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
                         )}
-                      </span>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
@@ -255,11 +324,33 @@ export default function CommandCenterRoyalShields() {
         </div>
 
         <section className="royal-card p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <h2 className="font-display text-lg text-foreground/90 flex items-center gap-2">
               <ShieldCheck size={16} className="text-gold" /> Reconciliation snapshot
             </h2>
-            {reconBusy && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
+            <div className="flex items-center gap-2">
+              {reconBusy && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
+              <button
+                onClick={runReconciliation}
+                disabled={reconRunning}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-2.5 py-1 text-xs font-medium disabled:opacity-60"
+              >
+                {reconRunning ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                Run reconciliation
+              </button>
+              <button
+                onClick={() => downloadAudit("json")}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gold/40 text-gold px-2.5 py-1 text-xs font-medium"
+              >
+                <Download size={12} /> JSON
+              </button>
+              <button
+                onClick={() => downloadAudit("csv")}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gold/40 text-gold px-2.5 py-1 text-xs font-medium"
+              >
+                <Download size={12} /> CSV
+              </button>
+            </div>
           </div>
           {recon && (
             <>

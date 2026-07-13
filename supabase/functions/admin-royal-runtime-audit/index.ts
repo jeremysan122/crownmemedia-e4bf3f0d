@@ -728,9 +728,10 @@ Deno.serve(async (req) => {
     await admin.auth.admin.deleteUser(recipientUserId);
   }
 
+  const finalPassCount = results.filter((r) => r.ok).length;
   return json(200, {
-    ok: passCount === results.length,
-    passed: passCount,
+    ok: finalPassCount === results.length,
+    passed: finalPassCount,
     total: results.length,
     results,
     test_user_id: testUserId,
