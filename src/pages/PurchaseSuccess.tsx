@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/hooks/useWallet";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
+import { useAdminRoles } from "@/hooks/useAdminRoles";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2, Receipt, Coins, Zap, Crown, Circle, AlertTriangle, RefreshCw } from "lucide-react";
 import { SHEKEL, formatShekels } from "@/lib/gifts";
@@ -50,6 +51,8 @@ export default function PurchaseSuccess() {
   const { user } = useAuth();
   const { wallet, refreshWallet } = useWallet();
   const royalPass = useRoyalPass();
+  const { roles } = useAdminRoles();
+  const isAdminView = roles.length > 0;
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [walletCreditedAt, setWalletCreditedAt] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -178,7 +181,8 @@ export default function PurchaseSuccess() {
           </p>
         </div>
 
-        {/* 4-step verification timeline */}
+        {/* 4-step verification timeline — admin/debug only */}
+        {isAdminView && (
         <div className="royal-card p-4 space-y-1">
           <StepRow
             state={stripeStep}
@@ -213,6 +217,8 @@ export default function PurchaseSuccess() {
             </div>
           )}
         </div>
+        )}
+
 
         {!ledgerConfirmed && timedOut && (
           <div className="royal-card p-4 space-y-3">
