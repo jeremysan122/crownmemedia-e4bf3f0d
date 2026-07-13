@@ -34,15 +34,15 @@ export interface FrameDef {
 }
 
 export const FRAMES: FrameDef[] = [
-  { key: "crown-prestige",  label: "Crown Prestige",  tagline: "First taste of the throne.",   requirement: "Win your first crown",  target: 1,  url: crownPrestige.url },
-  { key: "royal-purple",    label: "Royal Purple",    tagline: "Reserved for pass holders.",   requirement: "Activate Royal Pass",   target: 1,  url: royalPurple.url, binary: true },
-  { key: "golden-majesty",  label: "Golden Majesty",  tagline: "A proven battler.",            requirement: "Win 10 battles",        target: 10, url: goldenMajesty.url },
-  { key: "royal-laurel",    label: "Royal Laurel",    tagline: "Decorated in victory.",        requirement: "Win 25 battles",        target: 25, url: royalLaurel.url },
-  { key: "diamond-royal",   label: "Diamond Royal",   tagline: "A collector of crowns.",       requirement: "Earn 5 crowns",         target: 5,  url: diamondRoyal.url },
-  { key: "royal-sovereign", label: "Royal Sovereign", tagline: "Sovereign of the leaderboard.", requirement: "Earn 15 crowns",       target: 15, url: royalSovereign.url },
-  { key: "midnight-royal",  label: "Midnight Royal",  tagline: "Never misses a night.",        requirement: "30-day login streak",   target: 30, url: midnightRoyal.url },
-  { key: "royal-shield",    label: "Royal Shield",    tagline: "Defender of the crown.",       requirement: "Use 10 Crown Shields",  target: 10, url: royalShield.url },
-  { key: "imperial-glow",   label: "Imperial Glow",   tagline: "For the founding royals.",     requirement: "Founding Royal Member", target: 1,  url: imperialGlow.url, binary: true },
+  { key: "crown-prestige",  label: "Crown Prestige",  tagline: "Century of crowns.",             requirement: "Earn 100 crowns",              target: 100,   url: crownPrestige.url },
+  { key: "royal-purple",    label: "Royal Purple",    tagline: "Reserved for pass holders.",     requirement: "Activate Royal Pass",          target: 1,     url: royalPurple.url, binary: true },
+  { key: "golden-majesty",  label: "Golden Majesty",  tagline: "A proven battler.",              requirement: "Win 100 battles",              target: 100,   url: goldenMajesty.url },
+  { key: "royal-laurel",    label: "Royal Laurel",    tagline: "Decorated in victory.",          requirement: "Win 500 battles",              target: 500,   url: royalLaurel.url },
+  { key: "diamond-royal",   label: "Diamond Royal",   tagline: "A thousand-crown legend.",       requirement: "Earn 1,000 crowns",            target: 1000,  url: diamondRoyal.url },
+  { key: "royal-sovereign", label: "Royal Sovereign", tagline: "Elite of the leaderboard.",      requirement: "Earn 10,000 crowns",           target: 10000, url: royalSovereign.url },
+  { key: "midnight-royal",  label: "Midnight Royal",  tagline: "One hundred nights in a row.",   requirement: "100-day login streak",         target: 100,   url: midnightRoyal.url },
+  { key: "royal-shield",    label: "Royal Shield",    tagline: "Defender of the crown.",         requirement: "Use 100 Crown Shields",        target: 100,   url: royalShield.url },
+  { key: "imperial-glow",   label: "Imperial Glow",   tagline: "For the founding royals.",       requirement: "Founding Royal Member",        target: 1,     url: imperialGlow.url, binary: true },
 ];
 
 export const FRAME_MAP: Record<FrameKey, FrameDef> = Object.fromEntries(
