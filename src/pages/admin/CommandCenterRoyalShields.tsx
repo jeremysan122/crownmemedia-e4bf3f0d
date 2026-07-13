@@ -51,6 +51,19 @@ type AuditRow = {
   created_at: string;
 };
 
+type SyncAuditRow = {
+  id: string;
+  actor_user_id: string;
+  target_user_id: string;
+  environment: "sandbox" | "live";
+  success: boolean;
+  status: string | null;
+  stripe_subscription_id: string | null;
+  current_period_end: string | null;
+  error: string | null;
+  created_at: string;
+};
+
 type RuntimeAuditResult = {
   ok: boolean;
   passed: number;
