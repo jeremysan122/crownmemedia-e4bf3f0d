@@ -14,9 +14,9 @@ export type LegalDoc = {
   required: boolean;     // signup must accept these; renewed consent triggers on bump
 };
 
-const V = "1.2";
-const UP = "July 4, 2026";
-const EFF = "May 2, 2026";
+const V = "1.3";
+const UP = "July 13, 2026";
+const EFF = "July 13, 2026";
 
 export const LEGAL_DOCS: LegalDoc[] = [
   { slug: "terms",                route: "/terms",                label: "Terms of Service",                desc: "The contract between you and CrownMe Media.",                                          version: V,     effectiveDate: EFF,         lastUpdated: UP, pdfSlug: "crownme-terms",                required: true  },
