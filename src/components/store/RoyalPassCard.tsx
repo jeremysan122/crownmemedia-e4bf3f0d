@@ -204,6 +204,17 @@ export default function RoyalPassCard() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    isFeatureEnabled("royal_pass_public_launch").then((v) => {
+      if (!cancelled) setPublicLaunch(v);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const ctaLocked = publicLaunch === false && !isAdmin;
+
+
   const subscribe = (plan: Plan) => {
     if (!user || subscribing) return;
     setSubscribing(plan.id);
