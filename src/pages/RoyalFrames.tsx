@@ -1,19 +1,86 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
-import { Crown, Lock, Sparkles, Check } from "lucide-react";
+import { Crown, Lock, Sparkles, Check, ShieldCheck, Trophy, Flame, Star } from "lucide-react";
 import { toast } from "sonner";
 import { FRAME_MAP, FRAMES } from "@/lib/frames";
 import { useFrameProgress, equipFrame } from "@/hooks/useFrameProgress";
 import CrownLoader from "@/components/CrownLoader";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 
+/** Milestone tiers used for the summary progress bars up top. */
+const CROWN_TIERS   = [100, 1000, 10000];
+const BATTLE_TIERS  = [100, 500];
+const STREAK_TIERS  = [100];
+const SHIELD_TIERS  = [100];
+
+function nextTier(current: number, tiers: number[]): number {
+  return tiers.find((t) => t > current) ?? tiers[tiers.length - 1];
+}
+
+function StatBar({
+  icon, label, value, tiers, accent = "gold",
+}: { icon: React.ReactNode; label: string; value: number; tiers: number[]; accent?: "gold" | "royal" }) {
+  const target = nextTier(value, tiers);
+  const pct = Math.min(100, Math.round((value / Math.max(1, target)) * 100));
+  const maxed = value >= tiers[tiers.length - 1];
+  return (
+    <div className="rounded-xl border border-gold/20 bg-background/40 p-3">
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-gold/80">
+          <span className="text-gold">{icon}</span> {label}
+        </div>
+        <div className="text-[11px] tabular-nums font-bold text-foreground">
+          {value.toLocaleString()}
+          {!maxed && <span className="text-muted-foreground font-normal"> / {target.toLocaleString()}</span>}
+        </div>
+      </div>
+      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+        <div
+          className={accent === "royal" ? "h-full bg-gradient-royal" : "h-full bg-gradient-gold"}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <div className="mt-1.5 flex gap-1 text-[9px] font-bold uppercase tracking-wider">
+        {tiers.map((t) => (
+          <span
+            key={t}
+            className={`px-1.5 py-0.5 rounded-full border ${
+              value >= t ? "border-gold/60 bg-gold/15 text-gold" : "border-border text-muted-foreground"
+            }`}
+          >
+            {t.toLocaleString()}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function RoyalFrames() {
   useSeoMeta({
     title: "Royal Avatar Frames · CrownMe",
     description: "Unlock 9 exclusive avatar frames by earning crowns, winning battles, and reaching royal milestones.",
   });
-  const { rows, loading, refresh } = useFrameProgress();
+  const { rows, stats, loading, refresh } = useFrameProgress();
   const [busy, setBusy] = useState<string | null>(null);
+
+  // Announce any newly-awarded frames from the initial or manual refresh.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { awarded } = await refresh();
+      if (cancelled) return;
+      awarded.forEach((key) => {
+        const def = FRAME_MAP[key as keyof typeof FRAME_MAP];
+        toast.success(`New frame unlocked: ${def?.label ?? key}`, {
+          description: def?.requirement,
+          duration: 6000,
+        });
+      });
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function onEquip(key: string | null, label: string) {
     setBusy(key ?? "__clear__");
