@@ -643,7 +643,9 @@ export default function Profile() {
                 </div>
               </>
             ) : (
-              <div className="size-20 lg:size-32 rounded-full overflow-hidden bg-muted ring-2 ring-border relative">
+              // Locked sizing contract: unframed avatar diameter matches framed
+              // avatar photo diameter exactly (112 mobile / 160 desktop).
+              <div className="w-28 h-28 lg:w-40 lg:h-40 rounded-full overflow-hidden bg-muted ring-2 ring-border relative">
                 {prof.profile_photo_url && (
                   <img
                     src={prof.profile_photo_url}
