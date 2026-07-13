@@ -6723,6 +6723,17 @@ export type Database = {
         Args: { _event_id: string; _grant_id: string }
         Returns: undefined
       }
+      _ach_emit: {
+        Args: {
+          _delta: Json
+          _event_type: string
+          _source_id: string
+          _source_table: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      _current_week_start: { Args: never; Returns: string }
       _notify_live_battle: {
         Args: {
           _battle_id: string
@@ -6738,6 +6749,7 @@ export type Database = {
         Args: { _battle_id: string; _opponent_post_id: string }
         Returns: undefined
       }
+      admin_achievement_stats: { Args: never; Returns: Json }
       admin_broadcast_notification: {
         Args: {
           _body: string
@@ -8118,6 +8130,21 @@ export type Database = {
       }
       my_spendable_boost_tokens: { Args: never; Returns: number }
       my_spendable_shekels: { Args: never; Returns: number }
+      my_weekly_quests: {
+        Args: never
+        Returns: {
+          completion_percent: number
+          description: string
+          name: string
+          progress: number
+          quest_id: string
+          rewards: Json
+          slug: string
+          status: string
+          target: number
+          week_start: string
+        }[]
+      }
       normalize_repost_category_pair: {
         Args: { p_main: string; p_sub: string }
         Returns: {
@@ -8630,6 +8657,10 @@ export type Database = {
         Returns: number
       }
       suspended_royal_shekels: { Args: { _user_id: string }; Returns: number }
+      tick_weekly_quests: {
+        Args: { _amount: number; _slug: string; _user_id: string }
+        Returns: undefined
+      }
       undo_repost: { Args: { p_repost_id: string }; Returns: Json }
       update_my_dob: { Args: { _dob: string }; Returns: undefined }
       update_my_preferences: { Args: { _prefs: Json }; Returns: undefined }
