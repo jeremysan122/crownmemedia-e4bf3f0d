@@ -35,11 +35,19 @@ export default function RoyalPassSettings() {
   const { user } = useAuth();
   const nav = useNavigate();
   const pass = useRoyalPass();
+  const entitlements = useRoyalEntitlements();
+  const { roles } = useAdminRoles();
+  const isAdmin = roles.length > 0;
   const [plan, setPlan] = useState<PlanInfo | null>(null);
-  const [working, setWorking] = useState<"portal" | "cancel" | "resume" | "claim" | null>(null);
+  const [working, setWorking] = useState<
+    "portal" | "cancel" | "resume" | "claim" | "sync" | null
+  >(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [daily, setDaily] = useState<DailyStatus | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [boostHistory, setBoostHistory] = useState<BoostRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+
 
   useEffect(() => {
     if (!pass.planId) { setPlan(null); return; }
