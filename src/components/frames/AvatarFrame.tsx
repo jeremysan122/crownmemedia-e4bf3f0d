@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { getFrameRenderConfig, getFrameUrl } from "@/lib/frames";
 
 interface Props {
@@ -7,8 +8,9 @@ interface Props {
   alt?: string;
   glow?: boolean;
   /**
-   * Diameter of the normal avatar photo and layout footprint (px).
-   * The frame and glow visually overflow outside this measurement.
+   * Diameter of the normal avatar photo (px). A framed and unframed avatar
+   * with the same `size` have the exact same photo width. The decorative
+   * frame and glow are absolute overlays that scale OUTWARD beyond the photo.
    */
   size?: number;
   className?: string;
@@ -18,10 +20,13 @@ interface Props {
 /**
  * Framed avatar.
  *
- * Contract: `size` is ALWAYS the normal avatar photo diameter. A framed avatar
- * and an unframed avatar with the same `size` have the exact same photo width.
- * The decorative frame and glow are absolutely positioned overlays that scale
- * OUTWARD beyond the photo — they never shrink it.
+ * Layout contract:
+ *  - Outer `.avatar-frame-layout` reserves the full visible frame diameter
+ *    (size * frameScale) in the page flow so surrounding content is not
+ *    overlapped by the decorative frame.
+ *  - Inner `.avatar-frame-shell` is exactly `size` × `size` — the photo's
+ *    normal footprint — centered inside the layout wrapper.
+ *  - Photo is always 1:1 with `size`. Frame/glow scale outward.
  */
 export default function AvatarFrame({
   photoUrl,
@@ -33,73 +38,78 @@ export default function AvatarFrame({
   className = "",
   positionY = 50,
 }: Props) {
+  const [imgLoaded, setImgLoaded] = useState(false);
   const frameUrl =
     (frameKey ? getFrameUrl(frameKey) : null) || founderFallbackUrl || null;
 
-  // Bare avatar — no frame, no glow.
-  if (!frameUrl) {
-    return (
-      <div
-        className={`rounded-full overflow-hidden bg-muted ring-2 ring-border ${className}`}
-        style={{ width: size, height: size }}
-      >
-        {photoUrl && (
-          <img
-            src={photoUrl}
-            alt={alt}
-            className="w-full h-full object-cover"
-            style={{ objectPosition: `center ${positionY ?? 50}%` }}
-          />
-        )}
-      </div>
-    );
-  }
-
-  const { frameScale, glowScale, offsetX, offsetY } = getFrameRenderConfig(frameKey);
-  const framePx = size * frameScale;
-  const glowPx = size * glowScale;
+  const config = getFrameRenderConfig(frameKey);
+  const visualSize = frameUrl ? Math.ceil(size * config.frameScale) : size;
 
   return (
     <div
-      className={`avatar-frame-shell ${className}`}
-      style={{ width: size, height: size }}
+      className={`avatar-frame-layout ${className}`}
+      style={{
+        width: visualSize,
+        height: visualSize,
+        flex: `0 0 ${visualSize}px`,
+      }}
     >
-      {glow && (
-        <div
-          aria-hidden="true"
-          className="avatar-frame-glow-layer"
-          style={{
-            width: glowPx,
-            height: glowPx,
-            marginLeft: `${offsetX}%`,
-            marginTop: `${offsetY}%`,
-          }}
-        />
-      )}
+      <div
+        className="avatar-frame-shell"
+        style={{ width: size, height: size }}
+      >
+        {frameUrl && glow && (
+          <div
+            aria-hidden="true"
+            className="avatar-frame-glow-layer"
+            style={{
+              width: size * config.glowScale,
+              height: size * config.glowScale,
+            }}
+          />
+        )}
 
-      <div className="avatar-frame-photo">
-        {photoUrl && (
+        <div
+          className={`avatar-frame-photo ${
+            !frameUrl ? "ring-2 ring-border" : ""
+          }`}
+        >
+          {photoUrl && (
+            <img
+              src={photoUrl}
+              alt={alt}
+              onLoad={() => setImgLoaded(true)}
+              style={{
+                objectPosition: `center ${positionY ?? 50}%`,
+                opacity: imgLoaded ? 1 : 0,
+                transition: "opacity 220ms ease-out",
+              }}
+            />
+          )}
+          {photoUrl && !imgLoaded && (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 animate-pulse bg-muted"
+            />
+          )}
+        </div>
+
+        {frameUrl && (
           <img
-            src={photoUrl}
-            alt={alt}
-            style={{ objectPosition: `center ${positionY ?? 50}%` }}
+            src={frameUrl}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            className="avatar-frame-art"
+            style={{
+              width: size * config.frameScale,
+              height: size * config.frameScale,
+              left: `calc(50% + ${config.offsetX}%)`,
+              top: `calc(50% + ${config.offsetY}%)`,
+            }}
           />
         )}
       </div>
-
-      <img
-        src={frameUrl}
-        alt=""
-        aria-hidden="true"
-        loading="lazy"
-        className="avatar-frame-art"
-        style={{
-          width: framePx,
-          height: framePx,
-          left: `calc(50% + ${offsetX}%)`,
-          top: `calc(50% + ${offsetY}%)`,
-        }}
-      />
     </div>
   );
 }
