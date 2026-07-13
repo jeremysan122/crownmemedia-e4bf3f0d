@@ -7384,6 +7384,7 @@ export type Database = {
         Returns: number
       }
       ensure_my_wallet: { Args: never; Returns: undefined }
+      equip_avatar_frame: { Args: { _frame_id: string }; Returns: undefined }
       equip_frame: { Args: { _frame_key: string }; Returns: Json }
       evaluate_cost_alerts: { Args: never; Returns: number }
       evaluate_creator_milestones: {
@@ -7641,6 +7642,14 @@ export type Database = {
           created_at: string
           post_id: string
         }[]
+      }
+      grant_achievement_checkpoint_rewards: {
+        Args: {
+          _achievement_id: string
+          _reached_checkpoint: number
+          _user_id: string
+        }
+        Returns: number
       }
       grant_pass_invite_bonus: {
         Args: { _user_id: string }
@@ -8024,8 +8033,48 @@ export type Database = {
         }
         Returns: number
       }
+      my_achievements: {
+        Args: never
+        Returns: {
+          achievement_id: string
+          avatar_frame_id: string
+          checkpoint_rewards: Json
+          collection_id: string
+          collection_slug: string
+          completed_at: string
+          completion_percent: number
+          description: string
+          gates: Json
+          highest_checkpoint: number
+          is_founder_only: boolean
+          is_secret: boolean
+          name: string
+          progress: Json
+          rarity: string
+          requirement_logic: Json
+          rewards: Json
+          slug: string
+          started_at: string
+          status: string
+        }[]
+      }
       my_frame_progress: { Args: never; Returns: Json }
       my_frame_reward_stats: { Args: never; Returns: Json }
+      my_owned_avatar_frames: {
+        Args: never
+        Returns: {
+          achievement_id: string
+          asset_url: string
+          collection_slug: string
+          equipped: boolean
+          expires_at: string
+          frame_id: string
+          granted_at: string
+          is_permanent: boolean
+          name: string
+          slug: string
+        }[]
+      }
       my_royal_benefit_history: {
         Args: { _limit?: number }
         Returns: {
