@@ -4,6 +4,8 @@ import { Crown, Swords, Gift, UserPlus, Store } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatScore, locationLabel } from "@/lib/crown";
 import { useAuth } from "@/context/AuthContext";
+import RoyalShieldBalanceCard from "@/components/store/RoyalShieldBalanceCard";
+
 
 type CrownHolder = { region_name: string; region_type: string; profile: { username: string; profile_photo_url: string | null } | null };
 type TopUser = { id: string; username: string; profile_photo_url: string | null; crown_score: number; city: string | null; state: string | null; country: string | null; crowns_held: number };
@@ -117,6 +119,10 @@ export default function FeedRightRail() {
 
   return (
     <aside className="hidden xl:flex sticky top-[84px] h-[calc(100vh-100px)] w-[320px] shrink-0 flex-col gap-4 overflow-y-auto pl-2 pb-6 scrollbar-none">
+
+      <RoyalShieldBalanceCard variant="rail" />
+
+
 
       <Card title="Current Crown Holders" icon={Crown} action={<Link to="/map" className="text-[11px] text-primary hover:underline">Map</Link>}>
         <div className="space-y-0.5">
