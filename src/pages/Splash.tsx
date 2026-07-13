@@ -1,6 +1,7 @@
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/crownme-logo.webp";
+import splashBg from "@/assets/splash-bg.mp4.asset.json";
 import { useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
