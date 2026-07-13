@@ -51,6 +51,8 @@ export default function PurchaseSuccess() {
   const { user } = useAuth();
   const { wallet, refreshWallet } = useWallet();
   const royalPass = useRoyalPass();
+  const { roles } = useAdminRoles();
+  const isAdminView = roles.length > 0;
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [walletCreditedAt, setWalletCreditedAt] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
