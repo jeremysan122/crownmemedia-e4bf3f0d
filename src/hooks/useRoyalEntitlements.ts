@@ -68,6 +68,10 @@ export function useRoyalEntitlements() {
     const ch = supabase
       .channel(`royal-entitlements-${user.id}-${crypto.randomUUID()}`)
       .on("postgres_changes", {
+        event: "*", schema: "public", table: "profiles",
+        filter: `id=eq.${user.id}`,
+      }, () => { void refresh(); })
+      .on("postgres_changes", {
         event: "*", schema: "public", table: "royal_pass_shield_allowances",
         filter: `user_id=eq.${user.id}`,
       }, () => { void refresh(); })

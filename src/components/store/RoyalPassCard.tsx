@@ -293,6 +293,45 @@ export default function RoyalPassCard() {
           </p>
         )}
 
+        {entitlements.is_founder && (
+          <div className="relative rounded-2xl border-2 border-gold/60 bg-background/70 p-4 space-y-3 shadow-[0_0_34px_-10px_hsl(var(--gold)/0.65)] overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-gold opacity-[0.08] pointer-events-none" />
+            <div className="relative flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="size-10 rounded-xl bg-gradient-gold text-primary-foreground flex items-center justify-center gold-shadow shrink-0">
+                  <BadgeCheck size={17} />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] uppercase tracking-[0.24em] text-gold/80 font-bold">
+                    Founding Royal · Exclusive
+                  </div>
+                  <div className="font-display text-lg text-gold leading-tight truncate">
+                    {entitlements.founder_title || "Founding Royal"}
+                  </div>
+                </div>
+              </div>
+              <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-gold bg-gold/15 border border-gold/40 px-2 py-0.5 rounded-full">
+                For life
+              </span>
+            </div>
+            <div className="relative grid grid-cols-2 gap-2">
+              {[
+                { icon: Crown, label: "Founder Badge" },
+                { icon: Sparkles, label: "Founder Frame" },
+                { icon: Trophy, label: "Founder Title" },
+                { icon: Star, label: "Early Supporter" },
+              ].map((p) => {
+                const Icon = p.icon;
+                return (
+                  <div key={p.label} className="rounded-xl bg-gold/10 border border-gold/25 p-2.5 flex items-center gap-2 text-xs font-bold text-gold">
+                    <Icon size={13} className="shrink-0" /> {p.label}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="relative flex gap-2 pt-2 border-t border-border/50">
           <Link to="/wallet" className="flex-1 h-9 rounded-full bg-muted/40 border border-border text-xs font-bold uppercase tracking-wider flex items-center justify-center hover:bg-muted/60">
             View billing

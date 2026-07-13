@@ -58,6 +58,9 @@ interface ProfileFull {
   votes_received: number; votes_given: number;
   crowns_held: number; crowns_total: number; battle_wins: number;
   created_at: string;
+  is_founder?: boolean | null;
+  founder_title?: string | null;
+  royal_frame_variant?: string | null;
 }
 
 interface BattleRow {
@@ -144,7 +147,7 @@ export default function Profile() {
     const load = async () => {
       const { data: p, error: pErr } = await supabase
         .from("profiles")
-        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public")
+        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public, is_founder, founder_title, royal_frame_variant")
         .eq("username", targetUsername)
         .maybeSingle();
       if (cancelled) return;
@@ -459,6 +462,8 @@ export default function Profile() {
   }
 
   const joinedLabel = new Date(prof.created_at).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const isFounder = !!prof.is_founder;
+  const founderTitle = prof.founder_title || "Founding Royal";
 
   return (
     <AppShell>
@@ -595,7 +600,7 @@ export default function Profile() {
 
       <div className="px-4 lg:px-6 py-4 lg:relative">
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-          <div data-testid="profile-avatar" className={`self-start w-fit ${prof.crowns_held > 0 ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${royalPassActive ? "ring-2 ring-gold rounded-full p-0.5" : ""} ${(profileGlowActive || royalPassActive) ? "profile-glow" : ""}`}>
+          <div data-testid="profile-avatar" className={`self-start w-fit ${prof.crowns_held > 0 ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${isFounder ? "rounded-full p-1 bg-gradient-gold shadow-[0_0_28px_hsl(var(--gold)/0.45)]" : royalPassActive ? "ring-2 ring-gold rounded-full p-0.5" : ""} ${(profileGlowActive || royalPassActive || isFounder) ? "profile-glow" : ""}`}>
             <div className="size-20 lg:size-32 rounded-full overflow-hidden bg-muted ring-2 ring-border relative">
               {prof.profile_photo_url && (
                 <img
@@ -612,10 +617,20 @@ export default function Profile() {
               <h1 className="font-display text-xl lg:text-3xl">@{prof.username}</h1>
               {(prof as any).verified && <VerifiedBadge size={20} />}
               {prof.crowns_held > 0 && <Crown size={18} className="text-primary" fill="currentColor" />}
+              {isFounder && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-gold/50 bg-gold/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-gold shadow-[0_0_18px_hsl(var(--gold)/0.25)]">
+                  <Sparkles size={12} /> Founder
+                </span>
+              )}
               {royalPassActive && <RoyalPassBadge showLabel />}
 
               <RoleBadges roles={roles} crownsHeld={prof.crowns_held} />
             </div>
+            {isFounder && (
+              <div className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold text-gold">
+                <Crown size={13} fill="currentColor" /> {founderTitle} · Exclusive Founder Frame
+              </div>
+            )}
             <p className="text-xs lg:text-sm text-muted-foreground">
               {locationLabel(prof)} · Member since {joinedLabel}
               {(prof as any).pronouns && (
