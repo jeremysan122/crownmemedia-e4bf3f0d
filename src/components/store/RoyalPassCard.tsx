@@ -10,6 +10,10 @@ import { useAuth } from "@/context/AuthContext";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
 import { useRoyalEntitlements, useFounderStatus } from "@/hooks/useRoyalEntitlements";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
+import { isFeatureEnabled } from "@/lib/featureFlags";
+import { useAdminRoles } from "@/hooks/useAdminRoles";
+
+
 
 
 interface Plan {
