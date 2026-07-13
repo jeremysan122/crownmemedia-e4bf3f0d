@@ -345,7 +345,90 @@ export default function RoyalPassSettings() {
               )}
             </div>
 
+            {/* Daily Royal Boost history */}
+            <div className="royal-card p-4 space-y-3">
+              <h2 className="font-display text-sm tracking-widest text-gold flex items-center gap-2">
+                <History size={14} /> Boost claim history
+              </h2>
+              {historyLoading ? (
+                <div className="flex items-center justify-center py-4 text-muted-foreground text-xs">
+                  <Loader2 size={14} className="animate-spin mr-2" /> Loading…
+                </div>
+              ) : boostHistory.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">
+                  No Royal Boosts claimed yet. Claim today's above.
+                </p>
+              ) : (
+                <ul className="divide-y divide-border/50">
+                  {boostHistory.map((b) => {
+                    const started = new Date(b.started_at);
+                    const expires = b.expires_at ? new Date(b.expires_at) : null;
+                    const stillActive = b.active && expires && expires.getTime() > Date.now();
+                    return (
+                      <li key={b.id} className="py-2 flex items-center gap-3 text-xs">
+                        <div className={`size-7 rounded-lg flex items-center justify-center shrink-0 ${
+                          stillActive ? "bg-emerald-500/15 text-emerald-500" : "bg-muted/40 text-muted-foreground"
+                        }`}>
+                          <Zap size={12} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold">
+                            {started.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                            <span className="text-muted-foreground font-normal">
+                              {" "}· {started.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-muted-foreground truncate">
+                            {b.post_id ? (
+                              <Link to={`/post/${b.post_id}`} className="hover:text-primary hover:underline">
+                                View boosted post
+                              </Link>
+                            ) : "Post unavailable"}
+                            {expires && (
+                              <> · {stillActive ? "expires" : "expired"} {expires.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</>
+                            )}
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                          stillActive
+                            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                            : "bg-muted/30 text-muted-foreground border-border/40"
+                        }`}>
+                          {stillActive ? "Active" : "Claimed"}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            {isAdmin && (
+              <div className="royal-card p-4 space-y-2 border-2 border-dashed border-gold/40">
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gold font-bold">
+                  <Star size={12} /> Admin tools
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Re-hydrate the Royal Pass subscription row directly from Stripe.
+                  Useful for testing without waiting for a webhook retry.
+                </p>
+                <Button
+                  onClick={refreshEntitlements}
+                  disabled={working !== null}
+                  variant="outline"
+                  className="w-full border-gold/40 text-gold hover:bg-gold/10"
+                >
+                  {working === "sync"
+                    ? <Loader2 size={14} className="animate-spin mr-2" />
+                    : <RotateCw size={14} className="mr-2" />}
+                  Refresh Entitlements from Stripe
+                </Button>
+              </div>
+            )}
+
             <div className="royal-card p-4 space-y-2">
+
+
 
               <Button onClick={openPortal} disabled={working !== null} className="w-full bg-gradient-gold text-primary-foreground">
                 {working === "portal" ? <Loader2 size={14} className="animate-spin mr-2" /> : <ExternalLink size={14} className="mr-2" />}
