@@ -86,3 +86,41 @@ export function useRoyalEntitlements() {
 
   return { ...data, loading, refresh };
 }
+
+export interface FounderStatus {
+  active: boolean;
+  granted: number;
+  cap: number;
+  remaining: number;
+  end_at: string | null;
+  title: string | null;
+}
+
+/** Public founder-program status via founder_program_public_status(). */
+export function useFounderStatus() {
+  const [status, setStatus] = useState<FounderStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await (supabase as any).rpc("founder_program_public_status");
+    if (!error && data && typeof data === "object") {
+      setStatus({
+        active: !!data.active,
+        granted: Number(data.granted ?? 0),
+        cap: Number(data.cap ?? 0),
+        remaining: Number(data.remaining ?? 0),
+        end_at: data.end_at ?? null,
+        title: data.title ?? null,
+      });
+    } else {
+      setStatus(null);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  return { status, loading, refresh };
+}
+
