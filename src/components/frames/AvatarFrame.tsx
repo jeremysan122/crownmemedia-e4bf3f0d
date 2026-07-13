@@ -1,4 +1,4 @@
-import { getFrameUrl } from "@/lib/frames";
+import { getFrameUrl, getFrameInsetPct, DEFAULT_FRAME_INSET_PCT } from "@/lib/frames";
 
 interface Props {
   photoUrl?: string | null;
