@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
 
       const { data: grant } = await admin
         .from("royal_pass_grants")
-        .select("status")
+        .select("id, status")
         .eq("stripe_invoice_id", inv)
         .maybeSingle();
       steps.push({
