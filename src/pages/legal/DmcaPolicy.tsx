@@ -2,7 +2,7 @@ import LegalShell, { H2, P, UL } from "@/components/legal/LegalShell";
 
 export default function DmcaPolicy() {
   return (
-    <LegalShell title="DMCA & Copyright Policy" effectiveDate="May 2, 2026" lastUpdated="July 4, 2026" version="1.2">
+    <LegalShell title="DMCA & Copyright Policy" effectiveDate="July 13, 2026" lastUpdated="July 13, 2026" version="1.3">
       <P>
         CrownMe Media respects the intellectual-property rights of others. We respond to clear
         notices of alleged copyright infringement that comply with the U.S. Digital
