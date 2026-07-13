@@ -124,12 +124,13 @@ export default function CommandCenterRoyalShields() {
   const [reconBusy, setReconBusy] = useState(false);
   const [reconRunning, setReconRunning] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [syncAudit, setSyncAudit] = useState<SyncAuditRow[]>([]);
 
   const load = useCallback(async () => {
     setBusy(true);
     setReconBusy(true);
     setErr(null);
-    const [acct, log, snap] = await Promise.all([
+    const [acct, log, snap, sync] = await Promise.all([
       supabase.rpc("admin_royal_shield_accounting" as never),
       supabase
         .from("royal_shield_audit_log")
@@ -137,6 +138,7 @@ export default function CommandCenterRoyalShields() {
         .order("created_at", { ascending: false })
         .limit(100),
       supabase.rpc("admin_royal_pass_reconciliation_snapshot" as never),
+      supabase.rpc("admin_list_royal_pass_sync_audit" as never, { p_limit: 50 } as never),
     ]);
     if (acct.error) setErr(acct.error.message);
     setRows(((acct.data as AccountingRow[] | null) ?? []));
