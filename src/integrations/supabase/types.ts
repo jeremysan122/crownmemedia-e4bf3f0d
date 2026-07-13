@@ -7359,6 +7359,18 @@ export type Database = {
       dm_pair_folder: { Args: { _a: string; _b: string }; Returns: string }
       dm_typing_topic_allowed: { Args: { _topic: string }; Returns: boolean }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      emit_achievement_event: {
+        Args: {
+          _delta?: Json
+          _event_key?: string
+          _event_type: string
+          _occurred_at?: string
+          _source_id?: string
+          _source_table?: string
+          _user_id: string
+        }
+        Returns: string
+      }
       enforce_rate_limit: {
         Args: {
           _action_key: string
@@ -7377,6 +7389,22 @@ export type Database = {
       evaluate_creator_milestones: {
         Args: { _creator_id: string }
         Returns: undefined
+      }
+      evaluate_time_based_achievements: {
+        Args: { _limit?: number }
+        Returns: {
+          reevaluated: number
+          unlocked: number
+        }[]
+      }
+      evaluate_user_achievement: {
+        Args: { _achievement_id: string; _user_id: string }
+        Returns: {
+          completion_percent: number
+          gates_ok: boolean
+          highest_checkpoint: number
+          status: string
+        }[]
       }
       founder_program_public_status: { Args: never; Returns: Json }
       frame_reward_stats: { Args: { _user_id: string }; Returns: Json }
@@ -8048,6 +8076,14 @@ export type Database = {
         Args: { _kind: string; _user_id: string }
         Returns: boolean
       }
+      process_achievement_events_batch: {
+        Args: { _batch_size?: number }
+        Returns: {
+          affected_progress: number
+          failed: number
+          processed: number
+        }[]
+      }
       profile_change_allowed: {
         Args: { p_change_type: string; p_max_per_hour?: number }
         Returns: boolean
@@ -8169,6 +8205,15 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: undefined
       }
+      record_qualified_active_day: {
+        Args: {
+          _event_id?: string
+          _event_type: string
+          _occurred_at?: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       redeem_invite_code: { Args: { _code: string }; Returns: Json }
       refresh_crown_map_points: { Args: never; Returns: number }
       refresh_crowns_for_post: {
@@ -8223,6 +8268,10 @@ export type Database = {
       }
       royal_pass_daily_boost_status: { Args: never; Returns: Json }
       royal_spendable_shekels: { Args: { _user_id: string }; Returns: number }
+      run_achievement_pipeline: {
+        Args: { _batch_size?: number; _time_limit?: number }
+        Returns: Json
+      }
       save_push_subscription: {
         Args: {
           _auth: string
