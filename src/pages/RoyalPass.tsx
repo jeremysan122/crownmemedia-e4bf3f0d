@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { useAuth } from "@/context/AuthContext";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
-import { Crown, Loader2, ExternalLink, Receipt, RefreshCw, ShieldCheck, X, Zap } from "lucide-react";
+import { useRoyalEntitlements } from "@/hooks/useRoyalEntitlements";
+import { useAdminRoles } from "@/hooks/useAdminRoles";
+import {
+  Crown, Loader2, ExternalLink, Receipt, RefreshCw, ShieldCheck, X, Zap,
+  Sparkles, Star, TrendingUp, History, RotateCw,
+} from "lucide-react";
 import { toast } from "sonner";
 import BoostPostPicker from "@/components/store/BoostPostPicker";
+
+interface BoostRow {
+  id: string;
+  post_id: string | null;
+  started_at: string;
+  expires_at: string | null;
+  active: boolean;
+}
+
 
 interface PlanInfo { name: string; usd: number; interval: string }
 interface DailyStatus { eligible: boolean; claimed_today?: boolean; post_id?: string | null; expires_at?: string | null }
