@@ -539,7 +539,7 @@ Deno.serve(async (req) => {
       // Flip flag back off
       const flipOff = await admin
         .from("feature_flags")
-        .update({ enabled: false, rollout_percentage: 0 } as never)
+        .update({ enabled: false, rollout_percent: 0 } as never)
         .eq("key", "royal_pass_debits_paused");
       steps.push({ name: "kill_switch_off", ok: !flipOff.error, detail: flipOff.error?.message });
 
