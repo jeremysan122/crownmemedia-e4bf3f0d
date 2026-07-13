@@ -173,11 +173,15 @@ export default function RoyalPassCard() {
   const pass = useRoyalPass();
   const entitlements = useRoyalEntitlements();
   const founder = useFounderStatus();
+  const { roles } = useAdminRoles();
+  const isAdmin = roles.length > 0;
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const [publicLaunch, setPublicLaunch] = useState<boolean | null>(null);
   const { openCheckout, checkoutElement } = useStripeCheckout();
   const ctaRef = useRef<HTMLDivElement | null>(null);
+
 
   const founderEndLabel = useMemo(() => {
     if (!founder.status?.end_at) return null;
