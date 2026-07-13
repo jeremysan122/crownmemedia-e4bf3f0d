@@ -181,7 +181,8 @@ export default function PurchaseSuccess() {
           </p>
         </div>
 
-        {/* 4-step verification timeline */}
+        {/* 4-step verification timeline — admin/debug only */}
+        {isAdminView && (
         <div className="royal-card p-4 space-y-1">
           <StepRow
             state={stripeStep}
@@ -216,6 +217,8 @@ export default function PurchaseSuccess() {
             </div>
           )}
         </div>
+        )}
+
 
         {!ledgerConfirmed && timedOut && (
           <div className="royal-card p-4 space-y-3">
