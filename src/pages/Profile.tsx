@@ -659,10 +659,12 @@ export default function Profile() {
           </div>
 
           <div className="flex-1 lg:pb-2">
-            <h1 className="font-display text-xl lg:text-3xl">@{prof.username}</h1>
-            <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="font-display text-xl lg:text-3xl">@{prof.username}</h1>
               {(prof as any).verified && <VerifiedBadge size={20} />}
               {prof.crowns_held > 0 && <Crown size={18} className="text-primary" fill="currentColor" />}
+            </div>
+            <div className="mt-1.5 flex items-center gap-2 flex-wrap">
               {isFounder && (
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gradient-gold text-primary-foreground text-[10px] font-bold uppercase tracking-wider gold-shadow">
                   <img src={founderBadgeImg} alt="" loading="lazy" className="size-3.5 drop-shadow-[0_0_4px_hsl(var(--gold)/0.6)]" />
