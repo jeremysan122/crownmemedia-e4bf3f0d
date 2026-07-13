@@ -324,11 +324,33 @@ export default function CommandCenterRoyalShields() {
         </div>
 
         <section className="royal-card p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <h2 className="font-display text-lg text-foreground/90 flex items-center gap-2">
               <ShieldCheck size={16} className="text-gold" /> Reconciliation snapshot
             </h2>
-            {reconBusy && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
+            <div className="flex items-center gap-2">
+              {reconBusy && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
+              <button
+                onClick={runReconciliation}
+                disabled={reconRunning}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-2.5 py-1 text-xs font-medium disabled:opacity-60"
+              >
+                {reconRunning ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                Run reconciliation
+              </button>
+              <button
+                onClick={() => downloadAudit("json")}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gold/40 text-gold px-2.5 py-1 text-xs font-medium"
+              >
+                <Download size={12} /> JSON
+              </button>
+              <button
+                onClick={() => downloadAudit("csv")}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gold/40 text-gold px-2.5 py-1 text-xs font-medium"
+              >
+                <Download size={12} /> CSV
+              </button>
+            </div>
           </div>
           {recon && (
             <>
