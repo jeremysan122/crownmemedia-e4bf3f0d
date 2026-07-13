@@ -66,6 +66,7 @@ interface ProfileFull {
   founder_title?: string | null;
   royal_frame_variant?: string | null;
   equipped_frame_key?: string | null;
+  frames_hidden?: boolean | null;
 }
 
 interface BattleRow {
