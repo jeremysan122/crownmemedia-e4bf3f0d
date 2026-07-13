@@ -1,30 +1,27 @@
-import { getFrameUrl, getFrameRenderConfig } from "@/lib/frames";
+import { getFrameRenderConfig, getFrameUrl } from "@/lib/frames";
 
 interface Props {
   photoUrl?: string | null;
-  /** Fallback frame artwork (legacy founder styling) when no key is equipped. */
   founderFallbackUrl?: string | null;
   frameKey?: string | null;
   alt?: string;
   glow?: boolean;
-  /** Full framed-avatar diameter (outer wrapper) in px. */
+  /**
+   * Diameter of the normal avatar photo and layout footprint (px).
+   * The frame and glow visually overflow outside this measurement.
+   */
   size?: number;
   className?: string;
   positionY?: number | null;
 }
 
 /**
- * Framed avatar renderer.
+ * Framed avatar.
  *
- * Layout structure (all layers absolutely positioned inside a relative wrapper
- * with overflow visible):
- *   1. Glow      — behind everything, ~118% of wrapper, overflows outward.
- *   2. Avatar    — clipped circle, ~72% of wrapper, centered inside the frame's
- *                  inner opening. NOT the same clipped container as the frame.
- *   3. Frame art — 100% of wrapper, absolute overlay, pointer-events: none.
- *
- * `size` is the total framed avatar diameter, so the photo never appears
- * shrunken relative to a bare avatar of the same visual footprint.
+ * Contract: `size` is ALWAYS the normal avatar photo diameter. A framed avatar
+ * and an unframed avatar with the same `size` have the exact same photo width.
+ * The decorative frame and glow are absolutely positioned overlays that scale
+ * OUTWARD beyond the photo — they never shrink it.
  */
 export default function AvatarFrame({
   photoUrl,
@@ -37,9 +34,7 @@ export default function AvatarFrame({
   positionY = 50,
 }: Props) {
   const frameUrl =
-    (frameKey ? getFrameUrl(frameKey) : null) ||
-    founderFallbackUrl ||
-    null;
+    (frameKey ? getFrameUrl(frameKey) : null) || founderFallbackUrl || null;
 
   // Bare avatar — no frame, no glow.
   if (!frameUrl) {
@@ -60,59 +55,50 @@ export default function AvatarFrame({
     );
   }
 
-  const { avatarPct, glowPct } = getFrameRenderConfig(frameKey);
-  const avatarInsetPct = (100 - avatarPct) / 2;
-  const glowInsetPct = (100 - glowPct) / 2;
+  const { frameScale, glowScale, offsetX, offsetY } = getFrameRenderConfig(frameKey);
+  const framePx = size * frameScale;
+  const glowPx = size * glowScale;
 
   return (
     <div
-      className={`relative isolate ${className}`}
-      style={{ width: size, height: size, overflow: "visible" }}
+      className={`avatar-frame-shell ${className}`}
+      style={{ width: size, height: size }}
     >
-      {/* Glow — largest layer, sits behind avatar + frame */}
       {glow && (
         <div
           aria-hidden="true"
-          className="avatar-frame-glow-layer absolute rounded-full pointer-events-none"
+          className="avatar-frame-glow-layer"
           style={{
-            top: `${glowInsetPct}%`,
-            left: `${glowInsetPct}%`,
-            width: `${glowPct}%`,
-            height: `${glowPct}%`,
-            zIndex: 0,
+            width: glowPx,
+            height: glowPx,
+            marginLeft: `${offsetX}%`,
+            marginTop: `${offsetY}%`,
           }}
         />
       )}
 
-      {/* Avatar photo — clipped circle inside the frame's inner opening */}
-      <div
-        className="absolute rounded-full overflow-hidden bg-muted"
-        style={{
-          top: `${avatarInsetPct}%`,
-          left: `${avatarInsetPct}%`,
-          width: `${avatarPct}%`,
-          height: `${avatarPct}%`,
-          zIndex: 1,
-        }}
-      >
+      <div className="avatar-frame-photo">
         {photoUrl && (
           <img
             src={photoUrl}
             alt={alt}
-            className="w-full h-full object-cover"
             style={{ objectPosition: `center ${positionY ?? 50}%` }}
           />
         )}
       </div>
 
-      {/* Frame decoration — full wrapper size, overlaid on top */}
       <img
         src={frameUrl}
         alt=""
-        loading="lazy"
         aria-hidden="true"
-        className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
-        style={{ zIndex: 2 }}
+        loading="lazy"
+        className="avatar-frame-art"
+        style={{
+          width: framePx,
+          height: framePx,
+          left: `calc(50% + ${offsetX}%)`,
+          top: `calc(50% + ${offsetY}%)`,
+        }}
       />
     </div>
   );
