@@ -1,6 +1,7 @@
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/crownme-logo.webp";
+import splashBg from "@/assets/splash-bg.mp4.asset.json";
 import { useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
@@ -29,8 +30,18 @@ export default function Splash() {
   if (loading) return <CrownLoader label="Preparing your throne…" />;
 
   return (
-    <main className="min-h-[100svh] flex flex-col items-center justify-center px-6 py-8 bg-gradient-royal">
-      <div className="flex flex-col items-center text-center w-full max-w-sm">
+    <main className="relative min-h-[100svh] flex flex-col items-center justify-center px-6 py-8 bg-gradient-royal overflow-hidden">
+      <video
+        src={splashBg.url}
+        autoPlay
+        loop
+        muted
+        playsInline
+        aria-hidden
+        className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/20 to-background/70 pointer-events-none" aria-hidden />
+      <div className="relative flex flex-col items-center text-center w-full max-w-sm">
         <div className="relative animate-scale-in size-56 sm:size-64">
           <img
             src={logo}
