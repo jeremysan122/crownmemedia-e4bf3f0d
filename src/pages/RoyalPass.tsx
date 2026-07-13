@@ -157,7 +157,23 @@ export default function RoyalPassSettings() {
       ...b,
       status: "succeeded" as const,
     }));
-    const failed = loadFailedBoosts(user.id);
+    const { data: failRows } = await supabase
+      .from("royal_pass_boost_claim_failures")
+      .select("id, post_id, reason, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    const failed: BoostRow[] = ((failRows as Array<{
+      id: string; post_id: string | null; reason: string; created_at: string;
+    }>) ?? []).map((f) => ({
+      id: f.id,
+      post_id: f.post_id,
+      started_at: f.created_at,
+      expires_at: null,
+      active: false,
+      status: "failed" as const,
+      error: f.reason,
+    }));
     const merged = [...succeeded, ...failed]
       .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
       .slice(0, 30);
