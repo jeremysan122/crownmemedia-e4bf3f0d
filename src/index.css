@@ -217,13 +217,9 @@
     overflow: visible;
   }
 
-  /* Glow: ~50% larger than the avatar, sits behind everything. */
+  /* Glow layer used by <AvatarFrame /> — sits behind avatar + frame. */
+  .avatar-frame-glow-layer,
   .avatar-frame-glow {
-    position: absolute;
-    inset: -25%;
-    z-index: 0;
-    border-radius: 9999px;
-    pointer-events: none;
     background: radial-gradient(
       circle,
       hsl(var(--primary) / 0.55) 42%,
@@ -233,6 +229,7 @@
     filter: blur(14px);
     animation: avatar-frame-glow-pulse 2.8s ease-in-out infinite;
   }
+
 
   /* Avatar photo: exactly the shell size, clipped to a circle. */
   .avatar-frame-photo {
