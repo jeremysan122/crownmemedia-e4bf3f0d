@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/hooks/useWallet";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
+import { useAdminRoles } from "@/hooks/useAdminRoles";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2, Receipt, Coins, Zap, Crown, Circle, AlertTriangle, RefreshCw } from "lucide-react";
 import { SHEKEL, formatShekels } from "@/lib/gifts";
