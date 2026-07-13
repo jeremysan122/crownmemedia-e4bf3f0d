@@ -28,6 +28,8 @@ import type { FeedPost } from "@/components/PostCard";
 import SensitiveThumb from "@/components/SensitiveThumb";
 import { useFeedFilters } from "@/hooks/useFeedFilters";
 import { fetchPostById, hydrateParents } from "@/lib/postQuery";
+import founderFrameImg from "@/assets/founder-frame.png";
+import founderBadgeImg from "@/assets/founder-badge.png";
 import UserListDialog from "@/components/profile/UserListDialog";
 import ShareProfileDialog from "@/components/profile/ShareProfileDialog";
 import RoleBadges from "@/components/profile/RoleBadges";
@@ -600,17 +602,38 @@ export default function Profile() {
 
       <div className="px-4 lg:px-6 py-4 lg:relative">
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-          <div data-testid="profile-avatar" className={`self-start w-fit ${prof.crowns_held > 0 ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${isFounder ? "rounded-full p-1 bg-gradient-gold shadow-[0_0_28px_hsl(var(--gold)/0.45)]" : royalPassActive ? "ring-2 ring-gold rounded-full p-0.5" : ""} ${(profileGlowActive || royalPassActive || isFounder) ? "profile-glow" : ""}`}>
-            <div className="size-20 lg:size-32 rounded-full overflow-hidden bg-muted ring-2 ring-border relative">
-              {prof.profile_photo_url && (
+          <div data-testid="profile-avatar" className={`self-start w-fit ${prof.crowns_held > 0 ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${!isFounder && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5" : ""} ${(profileGlowActive || royalPassActive || isFounder) ? "profile-glow" : ""}`}>
+            {isFounder ? (
+              <div className="relative size-28 lg:size-40">
+                <div className="absolute inset-[14%] rounded-full overflow-hidden bg-muted">
+                  {prof.profile_photo_url && (
+                    <img
+                      src={prof.profile_photo_url}
+                      className="w-full h-full object-cover"
+                      alt=""
+                      style={{ objectPosition: `center ${prof.avatar_position_y ?? 50}%` }}
+                    />
+                  )}
+                </div>
                 <img
-                  src={prof.profile_photo_url}
-                  className="w-full h-full object-cover"
-                  alt=""
-                  style={{ objectPosition: `center ${prof.avatar_position_y ?? 50}%` }}
+                  src={founderFrameImg}
+                  alt="Founding Royal frame"
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full pointer-events-none select-none drop-shadow-[0_0_18px_hsl(var(--gold)/0.55)]"
                 />
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="size-20 lg:size-32 rounded-full overflow-hidden bg-muted ring-2 ring-border relative">
+                {prof.profile_photo_url && (
+                  <img
+                    src={prof.profile_photo_url}
+                    className="w-full h-full object-cover"
+                    alt=""
+                    style={{ objectPosition: `center ${prof.avatar_position_y ?? 50}%` }}
+                  />
+                )}
+              </div>
+            )}
           </div>
           <div className="flex-1 lg:pb-2">
             <div className="flex items-center gap-2 flex-wrap">
@@ -618,8 +641,9 @@ export default function Profile() {
               {(prof as any).verified && <VerifiedBadge size={20} />}
               {prof.crowns_held > 0 && <Crown size={18} className="text-primary" fill="currentColor" />}
               {isFounder && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-gold/50 bg-gold/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-gold shadow-[0_0_18px_hsl(var(--gold)/0.25)]">
-                  <Sparkles size={12} /> Founder
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/60 bg-gradient-to-r from-gold/25 via-gold/15 to-gold/25 pl-1 pr-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gold shadow-[0_0_18px_hsl(var(--gold)/0.35)]">
+                  <img src={founderBadgeImg} alt="" loading="lazy" className="size-5 -my-0.5 drop-shadow-[0_0_4px_hsl(var(--gold)/0.6)]" />
+                  Founder
                 </span>
               )}
               {royalPassActive && <RoyalPassBadge showLabel />}
