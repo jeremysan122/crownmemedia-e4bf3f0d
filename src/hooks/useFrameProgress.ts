@@ -42,9 +42,6 @@ export function useFrameProgress(): UseFrameProgress {
     const { data, error } = await (supabase as any).rpc("my_frame_progress");
     if (!error && Array.isArray(data)) setRows(data as FrameProgressRow[]);
     setLoading(false);
-    // Only surface awards after the initial mount so we don't spam users who
-    // hit the page and legitimately had no new unlocks.
-    if (firstRun.current) { firstRun.current = false; return { awarded: [] }; }
     return { awarded };
   }, [user?.id]);
 
