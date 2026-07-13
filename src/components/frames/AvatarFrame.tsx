@@ -1,79 +1,119 @@
-import { getFrameUrl } from "@/lib/frames";
+import { getFrameUrl, getFrameRenderConfig } from "@/lib/frames";
 
 interface Props {
   photoUrl?: string | null;
-  frameKey?: string | null;
-  /** Fallback for legacy founder styling when no achievement frame is equipped. */
+  /** Fallback frame artwork (legacy founder styling) when no key is equipped. */
   founderFallbackUrl?: string | null;
-  /** Calibrated circular aura behind the frame. */
+  frameKey?: string | null;
+  alt?: string;
   glow?: boolean;
-  /**
-   * Diameter (px) of the avatar photo circle. This is the layout footprint.
-   * The decorative frame and glow overflow outside this size so the framed
-   * avatar visually renders larger without shrinking the photo.
-   */
+  /** Full framed-avatar diameter (outer wrapper) in px. */
   size?: number;
   className?: string;
   positionY?: number | null;
-  alt?: string;
 }
 
 /**
- * Renders a circular avatar with the decorative frame and glow overflowing
- * outside the avatar photo's bounds. `size` sizes the avatar photo (the
- * layout footprint); the frame extends ~35% beyond it and the glow ~50%.
+ * Framed avatar renderer.
+ *
+ * Layout structure (all layers absolutely positioned inside a relative wrapper
+ * with overflow visible):
+ *   1. Glow      — behind everything, ~118% of wrapper, overflows outward.
+ *   2. Avatar    — clipped circle, ~72% of wrapper, centered inside the frame's
+ *                  inner opening. NOT the same clipped container as the frame.
+ *   3. Frame art — 100% of wrapper, absolute overlay, pointer-events: none.
+ *
+ * `size` is the total framed avatar diameter, so the photo never appears
+ * shrunken relative to a bare avatar of the same visual footprint.
  */
 export default function AvatarFrame({
   photoUrl,
-  frameKey,
   founderFallbackUrl,
-  glow = false,
-  size = 112,
+  frameKey,
+  alt = "",
+  glow = true,
+  size = 96,
   className = "",
   positionY = 50,
-  alt = "",
 }: Props) {
-  const frameUrl = getFrameUrl(frameKey) || founderFallbackUrl || null;
+  const frameUrl =
+    (frameKey ? getFrameUrl(frameKey) : null) ||
+    founderFallbackUrl ||
+    null;
 
-  if (frameUrl) {
+  // Bare avatar — no frame, no glow.
+  if (!frameUrl) {
     return (
       <div
-        className={`avatar-frame-shell ${className}`}
+        className={`rounded-full overflow-hidden bg-muted ring-2 ring-border ${className}`}
         style={{ width: size, height: size }}
       >
-        {glow && <div className="avatar-frame-glow" aria-hidden="true" />}
-        <div className="avatar-frame-photo">
-          {photoUrl && (
-            <img
-              src={photoUrl}
-              alt={alt}
-              style={{ objectPosition: `center ${positionY ?? 50}%` }}
-            />
-          )}
-        </div>
-        <img
-          src={frameUrl}
-          alt=""
-          loading="lazy"
-          className={`avatar-frame-art${glow ? " avatar-frame-art--glow" : ""}`}
-        />
+        {photoUrl && (
+          <img
+            src={photoUrl}
+            alt={alt}
+            className="w-full h-full object-cover"
+            style={{ objectPosition: `center ${positionY ?? 50}%` }}
+          />
+        )}
       </div>
     );
   }
 
+  const { avatarPct, glowPct } = getFrameRenderConfig(frameKey);
+  const avatarInsetPct = (100 - avatarPct) / 2;
+  const glowInsetPct = (100 - glowPct) / 2;
+
   return (
     <div
-      className={`rounded-full overflow-hidden bg-muted ring-2 ring-border ${className}`}
-      style={{ width: size, height: size }}
+      className={`relative isolate ${className}`}
+      style={{ width: size, height: size, overflow: "visible" }}
     >
-      {photoUrl && (
-        <img
-          src={photoUrl}
-          className="w-full h-full object-cover"
-          alt={alt}
-          style={{ objectPosition: `center ${positionY ?? 50}%` }}
+      {/* Glow — largest layer, sits behind avatar + frame */}
+      {glow && (
+        <div
+          aria-hidden="true"
+          className="avatar-frame-glow-layer absolute rounded-full pointer-events-none"
+          style={{
+            top: `${glowInsetPct}%`,
+            left: `${glowInsetPct}%`,
+            width: `${glowPct}%`,
+            height: `${glowPct}%`,
+            zIndex: 0,
+          }}
         />
       )}
+
+      {/* Avatar photo — clipped circle inside the frame's inner opening */}
+      <div
+        className="absolute rounded-full overflow-hidden bg-muted"
+        style={{
+          top: `${avatarInsetPct}%`,
+          left: `${avatarInsetPct}%`,
+          width: `${avatarPct}%`,
+          height: `${avatarPct}%`,
+          zIndex: 1,
+        }}
+      >
+        {photoUrl && (
+          <img
+            src={photoUrl}
+            alt={alt}
+            className="w-full h-full object-cover"
+            style={{ objectPosition: `center ${positionY ?? 50}%` }}
+          />
+        )}
+      </div>
+
+      {/* Frame decoration — full wrapper size, overlaid on top */}
+      <img
+        src={frameUrl}
+        alt=""
+        loading="lazy"
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+        style={{ zIndex: 2 }}
+      />
     </div>
   );
 }
