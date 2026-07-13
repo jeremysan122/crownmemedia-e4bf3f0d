@@ -29,31 +29,6 @@ interface BoostRow {
   error?: string;
 }
 
-const FAILED_BOOSTS_KEY = "royal_pass_failed_boosts_v1";
-function loadFailedBoosts(userId: string): BoostRow[] {
-  try {
-    const raw = localStorage.getItem(`${FAILED_BOOSTS_KEY}:${userId}`);
-    if (!raw) return [];
-    const arr = JSON.parse(raw) as BoostRow[];
-    return Array.isArray(arr) ? arr : [];
-  } catch { return []; }
-}
-function recordFailedBoost(userId: string, err: string) {
-  try {
-    const existing = loadFailedBoosts(userId);
-    const next: BoostRow = {
-      id: `fail-${Date.now()}`,
-      post_id: null,
-      started_at: new Date().toISOString(),
-      expires_at: null,
-      active: false,
-      status: "failed",
-      error: err.slice(0, 200),
-    };
-    const trimmed = [next, ...existing].slice(0, 30);
-    localStorage.setItem(`${FAILED_BOOSTS_KEY}:${userId}`, JSON.stringify(trimmed));
-  } catch { /* ignore */ }
-}
 
 
 
@@ -153,13 +128,20 @@ export default function RoyalPassSettings() {
       await Promise.all([loadDaily(), loadBoostHistory(), entitlements.refresh()]);
     } catch (e) {
       const msg = (e as Error).message || "Could not claim daily boost";
-      if (user?.id) recordFailedBoost(user.id, msg);
+      // Persist failure to the database so it's visible across devices/sessions.
+      try {
+        await (supabase as any).rpc("record_failed_royal_boost", {
+          p_reason: msg,
+          p_post_id: postId,
+        });
+      } catch { /* best-effort */ }
       toast.error(msg, { id: claimToast });
-      await loadBoostHistory();
+      await Promise.all([loadBoostHistory(), entitlements.refresh()]);
     } finally {
       setWorking(null);
     }
   };
+
 
   const loadBoostHistory = useCallback(async () => {
     if (!user || !pass.active) { setBoostHistory([]); setHistoryLoading(false); return; }
@@ -175,7 +157,23 @@ export default function RoyalPassSettings() {
       ...b,
       status: "succeeded" as const,
     }));
-    const failed = loadFailedBoosts(user.id);
+    const { data: failRows } = await supabase
+      .from("royal_pass_boost_claim_failures")
+      .select("id, post_id, reason, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    const failed: BoostRow[] = ((failRows as Array<{
+      id: string; post_id: string | null; reason: string; created_at: string;
+    }>) ?? []).map((f) => ({
+      id: f.id,
+      post_id: f.post_id,
+      started_at: f.created_at,
+      expires_at: null,
+      active: false,
+      status: "failed" as const,
+      error: f.reason,
+    }));
     const merged = [...succeeded, ...failed]
       .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
       .slice(0, 30);

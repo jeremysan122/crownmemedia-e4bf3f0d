@@ -4571,6 +4571,30 @@ export type Database = {
         }
         Relationships: []
       }
+      royal_pass_boost_claim_failures: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string | null
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          reason: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          reason?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       royal_pass_grants: {
         Row: {
           active_shields_reversed: number
@@ -4942,6 +4966,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      royal_pass_sync_audit: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          current_period_end: string | null
+          environment: string
+          error: string | null
+          id: string
+          status: string | null
+          stripe_subscription_id: string | null
+          success: boolean
+          target_user_id: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          current_period_end?: string | null
+          environment: string
+          error?: string | null
+          id?: string
+          status?: string | null
+          stripe_subscription_id?: string | null
+          success: boolean
+          target_user_id: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          current_period_end?: string | null
+          environment?: string
+          error?: string | null
+          id?: string
+          status?: string | null
+          stripe_subscription_id?: string | null
+          success?: boolean
+          target_user_id?: string
+        }
+        Relationships: []
       }
       royal_shield_audit_log: {
         Row: {
@@ -6231,6 +6294,27 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      admin_list_royal_pass_sync_audit: {
+        Args: { p_limit?: number }
+        Returns: {
+          actor_user_id: string
+          created_at: string
+          current_period_end: string | null
+          environment: string
+          error: string | null
+          id: string
+          status: string | null
+          stripe_subscription_id: string | null
+          success: boolean
+          target_user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "royal_pass_sync_audit"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       admin_list_shekel_bundles: {
         Args: never
         Returns: {
@@ -7471,6 +7555,10 @@ export type Database = {
         Returns: undefined
       }
       recalculate_repost_count: { Args: { _post_id: string }; Returns: number }
+      record_failed_royal_boost: {
+        Args: { p_post_id?: string; p_reason: string }
+        Returns: string
+      }
       record_profile_visit: {
         Args: { _profile_id: string }
         Returns: undefined

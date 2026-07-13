@@ -51,6 +51,19 @@ type AuditRow = {
   created_at: string;
 };
 
+type SyncAuditRow = {
+  id: string;
+  actor_user_id: string;
+  target_user_id: string;
+  environment: "sandbox" | "live";
+  success: boolean;
+  status: string | null;
+  stripe_subscription_id: string | null;
+  current_period_end: string | null;
+  error: string | null;
+  created_at: string;
+};
+
 type RuntimeAuditResult = {
   ok: boolean;
   passed: number;
@@ -111,12 +124,13 @@ export default function CommandCenterRoyalShields() {
   const [reconBusy, setReconBusy] = useState(false);
   const [reconRunning, setReconRunning] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [syncAudit, setSyncAudit] = useState<SyncAuditRow[]>([]);
 
   const load = useCallback(async () => {
     setBusy(true);
     setReconBusy(true);
     setErr(null);
-    const [acct, log, snap] = await Promise.all([
+    const [acct, log, snap, sync] = await Promise.all([
       supabase.rpc("admin_royal_shield_accounting" as never),
       supabase
         .from("royal_shield_audit_log")
@@ -124,11 +138,13 @@ export default function CommandCenterRoyalShields() {
         .order("created_at", { ascending: false })
         .limit(100),
       supabase.rpc("admin_royal_pass_reconciliation_snapshot" as never),
+      supabase.rpc("admin_list_royal_pass_sync_audit" as never, { p_limit: 50 } as never),
     ]);
     if (acct.error) setErr(acct.error.message);
     setRows(((acct.data as AccountingRow[] | null) ?? []));
     setAudit(((log.data as AuditRow[] | null) ?? []));
     setRecon((snap.data as ReconciliationSnapshot | null) ?? null);
+    setSyncAudit(((sync.data as SyncAuditRow[] | null) ?? []));
     setBusy(false);
     setReconBusy(false);
   }, []);
@@ -470,6 +486,53 @@ export default function CommandCenterRoyalShields() {
                   {r.post_id && <> · post <code>{r.post_id.slice(0, 8)}</code></>}
                 </div>
                 <code className="text-foreground/60 block truncate">user {r.user_id}</code>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-2" data-admin-only="royal-pass-sync-audit">
+          <div className="flex items-center gap-2">
+            <RefreshCw size={16} className="text-gold" />
+            <h2 className="font-display text-lg text-foreground/90">
+              Refresh Entitlements audit (last 50)
+            </h2>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Every call to <code>royal-pass-sync</code> is logged here for traceability —
+            who ran it, against which user, when, and whether it succeeded.
+          </p>
+          {syncAudit.length === 0 && !busy && (
+            <p className="text-center text-sm text-muted-foreground py-6">
+              No entitlement refreshes yet.
+            </p>
+          )}
+          <div className="space-y-1.5">
+            {syncAudit.map((r) => (
+              <div
+                key={r.id}
+                className={`royal-card p-2.5 text-[11px] space-y-1 ${
+                  r.success ? "" : "border-destructive/60"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`font-bold ${r.success ? "text-emerald-500" : "text-destructive"}`}>
+                    {r.success ? "success" : "failed"}
+                    <span className="ml-2 text-muted-foreground font-normal">
+                      env: <code>{r.environment}</code>
+                    </span>
+                  </span>
+                  <span className="text-muted-foreground">{timeAgo(r.created_at)}</span>
+                </div>
+                <div className="text-muted-foreground">
+                  actor <code className="text-foreground/80">{r.actor_user_id.slice(0, 8)}</code>
+                  {" · "}target <code className="text-foreground/80">{r.target_user_id.slice(0, 8)}</code>
+                  {r.status && <> · status <code>{r.status}</code></>}
+                  {r.stripe_subscription_id && <> · sub <code>{r.stripe_subscription_id.slice(0, 14)}</code></>}
+                </div>
+                {r.error && (
+                  <div className="text-destructive break-words">error: {r.error}</div>
+                )}
               </div>
             ))}
           </div>
