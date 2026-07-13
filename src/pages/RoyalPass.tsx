@@ -321,6 +321,59 @@ export default function RoyalPassSettings() {
               </ul>
             </div>
 
+            {/* Founder-only exclusive perks — visually distinct from Royal Pass perks */}
+            {entitlements.is_founder && (
+              <div className="relative overflow-hidden rounded-2xl border-2 border-gold/60 bg-gradient-to-br from-amber-950/40 via-background to-yellow-900/20 p-5 space-y-4 shadow-[0_0_40px_-10px_hsl(var(--gold)/0.5)]">
+                <div className="absolute inset-0 bg-gradient-gold opacity-[0.06] pointer-events-none" />
+                <div className="relative flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="size-9 rounded-xl bg-gradient-gold text-primary-foreground flex items-center justify-center gold-shadow">
+                      <Gem size={16} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.3em] text-gold/80 font-bold">
+                        Founding Royal · Exclusive
+                      </div>
+                      <div className="font-display text-lg text-gold leading-tight">
+                        {entitlements.founder_title || "Founding Royal"} Perks
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gold bg-gold/15 border border-gold/40 px-2 py-0.5 rounded-full">
+                    For Life
+                  </span>
+                </div>
+                <p className="relative text-[11px] text-muted-foreground">
+                  These perks are separate from the standard Royal Pass — kept forever, even if your subscription lapses.
+                </p>
+                <ul className="relative grid gap-2">
+                  {[
+                    { icon: Crown, label: "Founding Royal Badge", sub: "Displays on your profile & posts" },
+                    { icon: Sparkles, label: "Exclusive Founder Frame", sub: entitlements.royal_frame_variant ? `Variant: ${entitlements.royal_frame_variant}` : "Animated gold frame" },
+                    { icon: BadgeCheck, label: `"${entitlements.founder_title || "Founding Royal"}" Title`, sub: "Permanent title next to your name" },
+                    { icon: Trophy, label: "Early Supporter Recognition", sub: "Listed in the Hall of Founders" },
+                  ].map((p) => {
+                    const Icon = p.icon;
+                    return (
+                      <li key={p.label} className="flex items-center gap-3 text-sm">
+                        <div className="size-8 rounded-lg bg-gradient-gold text-primary-foreground flex items-center justify-center shrink-0">
+                          <Icon size={14} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold truncate text-gold">{p.label}</div>
+                          <div className="text-[11px] text-muted-foreground truncate">{p.sub}</div>
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gold bg-gold/10 border border-gold/30 px-2 py-0.5 rounded-full">
+                          Owned
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
+
             {/* Crown Shields allowance */}
             <div className="royal-card p-5 space-y-3">
               <div className="flex items-center gap-3">
