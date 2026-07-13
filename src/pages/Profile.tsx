@@ -767,6 +767,7 @@ export default function Profile() {
 
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-6 mt-2">
           <div>
+            <ProfileAchievementsShowcase userId={prof.id} isMe={isMe} />
             <ProfileCategoryRankings userId={prof.id} />
 
 
