@@ -672,14 +672,16 @@ export default function Profile() {
               {royalPassActive && <RoyalPassBadge showLabel />}
               <RoleBadges roles={roles} crownsHeld={prof.crowns_held} />
             </div>
-            <p className="text-xs lg:text-sm text-muted-foreground">
+            <p className="mt-2 text-xs lg:text-sm text-muted-foreground">
               {locationLabel(prof)} · Member since {joinedLabel}
               {(prof as any).pronouns && (
                 <> · <span className="text-foreground/80">{(prof as any).pronouns}</span></>
               )}
             </p>
-            {prof.bio && <p className="text-sm mt-1 max-w-xl">{prof.bio}</p>}
-            <ProfileLinks links={(prof as any).links} />
+            {prof.bio && <p className="text-sm mt-2 max-w-xl">{prof.bio}</p>}
+            <div className="mt-3">
+              <ProfileLinks links={(prof as any).links} />
+            </div>
           </div>
 
           {/* Desktop action buttons */}
