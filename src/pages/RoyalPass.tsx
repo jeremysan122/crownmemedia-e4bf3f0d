@@ -143,15 +143,19 @@ export default function RoyalPassSettings() {
   const claimDaily = async (postId: string) => {
     setPickerOpen(false);
     setWorking("claim");
+    const claimToast = toast.loading("Claiming today's Royal Boost…");
     try {
       const { data, error } = await (supabase as any).rpc("claim_daily_royal_boost", { p_post_id: postId });
       if (error) throw error;
       const errMsg = (data as { error?: string })?.error;
       if (errMsg) throw new Error(errMsg);
-      toast.success("Daily Royal Boost claimed — 1.5× score for 24h");
-      await loadDaily();
+      toast.success("Daily Royal Boost claimed — 1.5× score for 24h", { id: claimToast });
+      await Promise.all([loadDaily(), loadBoostHistory(), entitlements.refresh()]);
     } catch (e) {
-      toast.error((e as Error).message || "Could not claim daily boost");
+      const msg = (e as Error).message || "Could not claim daily boost";
+      if (user?.id) recordFailedBoost(user.id, msg);
+      toast.error(msg, { id: claimToast });
+      await loadBoostHistory();
     } finally {
       setWorking(null);
     }
@@ -167,7 +171,15 @@ export default function RoyalPassSettings() {
       .eq("source", "royal_pass_daily")
       .order("started_at", { ascending: false })
       .limit(30);
-    setBoostHistory((data as BoostRow[]) ?? []);
+    const succeeded: BoostRow[] = ((data as Omit<BoostRow, "status">[]) ?? []).map((b) => ({
+      ...b,
+      status: "succeeded" as const,
+    }));
+    const failed = loadFailedBoosts(user.id);
+    const merged = [...succeeded, ...failed]
+      .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
+      .slice(0, 30);
+    setBoostHistory(merged);
     setHistoryLoading(false);
   }, [user?.id, pass.active]);
 
@@ -175,6 +187,7 @@ export default function RoyalPassSettings() {
 
   const refreshEntitlements = async () => {
     setWorking("sync");
+    const syncToast = toast.loading("Re-checking Stripe & Royal Pass entitlements…");
     try {
       const { data, error } = await supabase.functions.invoke("royal-pass-sync", {
         body: { environment: getStripeEnvironment() },
@@ -182,14 +195,16 @@ export default function RoyalPassSettings() {
       if (error) throw error;
       const errMsg = (data as { error?: string })?.error;
       if (errMsg) throw new Error(errMsg);
-      toast.success("Entitlements refreshed from Stripe");
       await Promise.all([pass.refresh(), entitlements.refresh(), loadDaily(), loadBoostHistory()]);
+      setLastRefreshedAt(Date.now());
+      toast.success("Entitlements refreshed from Stripe", { id: syncToast });
     } catch (e) {
-      toast.error((e as Error).message || "Refresh failed");
+      toast.error((e as Error).message || "Refresh failed", { id: syncToast });
     } finally {
       setWorking(null);
     }
   };
+
 
   const activePerks = useMemo(() => ([
     {
