@@ -209,25 +209,39 @@
     position: relative;
     isolation: isolate;
     border-radius: 9999px;
-  }
-
-  .avatar-frame-halo {
-    position: absolute;
-    inset: 0;
-    border-radius: 9999px;
-    z-index: 0;
-    pointer-events: none;
-    background: transparent;
-    box-shadow:
-      0 0 26px 4px hsl(var(--primary) / 0.7),
-      0 0 60px 16px hsl(var(--accent) / 0.45);
-    animation: profile-glow-pulse 2.8s ease-in-out infinite;
+    overflow: visible;
   }
 
   .avatar-frame-inner {
     position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     z-index: 1;
     border-radius: 9999px;
+    overflow: visible;
+  }
+
+  /*
+   * The glow belongs to the complete frame/avatar unit.
+   * It must not appear as a separate outer ring.
+   */
+  .avatar-frame-inner--glow::before {
+    content: "";
+    position: absolute;
+    inset: -1%;
+    z-index: -1;
+    border-radius: 9999px;
+    pointer-events: none;
+    background: radial-gradient(
+      circle,
+      hsl(var(--primary) / 0.55) 46%,
+      hsl(var(--accent) / 0.30) 64%,
+      transparent 78%
+    );
+    filter: blur(10px);
+    transform: scale(1.025);
+    animation: avatar-frame-glow-pulse 2.8s ease-in-out infinite;
   }
 
   .avatar-frame-photo {
@@ -238,15 +252,49 @@
     background: hsl(var(--muted));
   }
 
+  .avatar-frame-photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
   .avatar-frame-art {
     position: absolute;
     inset: 0;
     z-index: 2;
+    display: block;
     width: 100%;
     height: 100%;
+    object-fit: contain;
     pointer-events: none;
     user-select: none;
-    filter: drop-shadow(0 0 18px hsl(var(--primary) / 0.55));
+  }
+
+  .avatar-frame-inner--glow .avatar-frame-art {
+    filter:
+      drop-shadow(0 0 5px hsl(var(--primary) / 0.9))
+      drop-shadow(0 0 13px hsl(var(--accent) / 0.65));
+  }
+}
+
+@keyframes avatar-frame-glow-pulse {
+  0%, 100% {
+    opacity: 0.72;
+    transform: scale(1.015);
+    filter: blur(9px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.045);
+    filter: blur(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-frame-inner--glow::before {
+    animation: none;
+    opacity: 0.85;
   }
 }
 
