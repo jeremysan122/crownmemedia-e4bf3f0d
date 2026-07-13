@@ -27,12 +27,22 @@ export default function RoyalShieldBalanceCard({ variant = "rail", className = "
     return (
       <Link
         to="/royal-pass"
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold text-xs font-semibold hover:bg-gold/15 transition ${className}`}
-        title={`${remaining} of ${total} Crown Shields remaining this month`}
+        aria-label={`Crown Shields: ${remaining} of ${total} remaining this month`}
+        title={`Crown Shields — ${remaining} of ${total} remaining this month`}
+        className={`inline-flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full bg-gold/10 border border-gold/30 text-gold hover:bg-gold/15 transition ${className}`}
       >
-        <ShieldCheck size={12} />
-        <span className="tabular-nums">{remaining}<span className="opacity-60">/{total}</span></span>
-        <span className="text-[10px] uppercase tracking-wider opacity-80">Shields</span>
+        <span className="size-6 rounded-full bg-gold/20 flex items-center justify-center shrink-0">
+          <ShieldCheck size={13} />
+        </span>
+        <span className="flex flex-col leading-tight">
+          <span className="text-[9px] uppercase tracking-[0.14em] opacity-80 font-semibold">
+            Crown Shields
+          </span>
+          <span className="text-[12px] font-bold tabular-nums">
+            {remaining}<span className="opacity-60">/{total}</span>
+            <span className="ml-1 text-[10px] font-medium opacity-70">this month</span>
+          </span>
+        </span>
       </Link>
     );
   }
