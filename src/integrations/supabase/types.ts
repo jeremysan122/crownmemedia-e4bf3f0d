@@ -6054,6 +6054,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      __reinstate_status_only: {
+        Args: { _event_id: string; _grant_id: string }
+        Returns: undefined
+      }
       _notify_live_battle: {
         Args: {
           _battle_id: string
