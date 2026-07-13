@@ -38,7 +38,7 @@ export default function AvatarFrame({
       : DEFAULT_FRAME_INSET_PCT;
 
   if (frameUrl) {
-    const frameInset = glow ? "7%" : "0px";
+    const frameInset = "0px";
 
     return (
       <div
