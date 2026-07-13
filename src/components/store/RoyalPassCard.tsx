@@ -216,7 +216,8 @@ export default function RoyalPassCard() {
 
 
   const subscribe = (plan: Plan) => {
-    if (!user || subscribing) return;
+    if (!user || subscribing || ctaLocked) return;
+
     setSubscribing(plan.id);
     try {
       openCheckout({
