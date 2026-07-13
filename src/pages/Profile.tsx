@@ -613,7 +613,6 @@ export default function Profile() {
               {(prof as any).verified && <VerifiedBadge size={20} />}
               {prof.crowns_held > 0 && <Crown size={18} className="text-primary" fill="currentColor" />}
               {royalPassActive && <RoyalPassBadge showLabel />}
-              {isMe && royalPassActive && <RoyalShieldBalanceCard variant="compact" />}
 
               <RoleBadges roles={roles} crownsHeld={prof.crowns_held} />
             </div>
