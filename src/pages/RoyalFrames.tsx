@@ -126,6 +126,33 @@ export default function RoyalFrames() {
           </div>
         </header>
 
+        {/* Overall progress toward the four numeric milestone tracks. */}
+        {stats && (
+          <section aria-label="Your progress toward frame milestones" className="mb-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+              <StatBar icon={<Crown size={12} />}       label="Crowns"       value={stats.crowns}         tiers={CROWN_TIERS} />
+              <StatBar icon={<Trophy size={12} />}      label="Battle Wins"  value={stats.battles_won}    tiers={BATTLE_TIERS} />
+              <StatBar icon={<Flame size={12} />}       label="Best Streak"  value={stats.longest_streak} tiers={STREAK_TIERS} />
+              <StatBar icon={<ShieldCheck size={12} />} label="Shields Used" value={stats.shields_used}   tiers={SHIELD_TIERS} />
+            </div>
+            {(stats.is_royal || stats.is_founder) && (
+              <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-wider">
+                {stats.is_royal && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold/10 text-gold px-2.5 py-1">
+                    <Star size={10} /> Royal Pass · Royal Purple unlocked
+                  </span>
+                )}
+                {stats.is_founder && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gradient-to-r from-gold/20 via-gold/10 to-gold/20 text-gold px-2.5 py-1">
+                    <Crown size={10} /> Founder · Imperial Glow unlocked
+                  </span>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+
         {loading ? (
           <CrownLoader fullscreen={false} label="Loading your royal frames…" />
         ) : (
