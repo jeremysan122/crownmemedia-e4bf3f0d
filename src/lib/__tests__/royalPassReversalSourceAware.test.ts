@@ -110,8 +110,9 @@ describe("Wave 8.2b — source-aware spend triggers", () => {
 describe("Wave 8.2b — handle_royal_refund is source-aware", () => {
   const fn = latestFn("handle_royal_refund");
   it("only debits the promotional remaining portion", () => {
-    expect(fn).toMatch(/shekels_to_debit := grant_row\.promo_shekels_remaining/);
-    expect(fn).toMatch(/tokens_to_debit\s*:=\s*grant_row\.promo_boost_tokens_remaining/);
+    // Current contract: intent captured from promo_*_remaining, then bounded by wallet balance
+    expect(fn).toMatch(/shekels_intended\s*:=\s*COALESCE\(grant_row\.promo_shekels_remaining, 0\)/);
+    expect(fn).toMatch(/tokens_intended\s*:=\s*COALESCE\(grant_row\.promo_boost_tokens_remaining, 0\)/);
   });
   it("only deactivates Royal shields tied to the grant (not paid crown shields)", () => {
     expect(fn).toMatch(/FROM public\.boosts[\s\S]+?WHERE royal_pass_grant_id = grant_row\.id[\s\S]+?boost_type = 'crown_shield'/);
@@ -120,11 +121,12 @@ describe("Wave 8.2b — handle_royal_refund is source-aware", () => {
     expect(fn).toMatch(/INSERT INTO public\.royal_pass_reversals[\s\S]+?'reversal'/);
   });
   it("is idempotent by (grant_id, stripe_event_id)", () => {
-    expect(fn).toMatch(/SELECT 1 FROM public\.royal_pass_reversals[\s\S]+?event_kind = 'reversal'[\s\S]+?stripe_event_id = _stripe_event_id/);
+    // Idempotency now enforced via unique upsert on (grant_id, event_kind, stripe_event_id)
+    expect(fn).toMatch(/ON CONFLICT \(royal_pass_grant_id, event_kind, stripe_event_id\) DO NOTHING/);
   });
   it("decrements promo remaining by exactly the amount debited", () => {
-    expect(fn).toMatch(/promo_shekels_remaining = promo_shekels_remaining - shekels_to_debit/);
-    expect(fn).toMatch(/promo_boost_tokens_remaining = promo_boost_tokens_remaining - tokens_to_debit/);
+    expect(fn).toMatch(/promo_shekels_remaining = GREATEST\(promo_shekels_remaining - shekels_actual, 0\)/);
+    expect(fn).toMatch(/promo_boost_tokens_remaining = GREATEST\(promo_boost_tokens_remaining - tokens_actual, 0\)/);
   });
 });
 
@@ -132,12 +134,13 @@ describe("Wave 8.2b — handle_royal_dispute_reinstated restores exactly what wa
   const fn = latestFn("handle_royal_dispute_reinstated");
   it("reads amounts from the reversal ledger, not from granted totals", () => {
     expect(fn).toMatch(/SELECT \* INTO reversal_row FROM public\.royal_pass_reversals[\s\S]+?event_kind = 'reversal'/);
-    expect(fn).toMatch(/shields_to_restore := reversal_row\.shields_delta/);
-    expect(fn).toMatch(/shekels_to_restore := reversal_row\.shekels_delta/);
-    expect(fn).toMatch(/tokens_to_restore\s*:=\s*reversal_row\.boost_tokens_delta/);
+    // shields_delta and active_shields_delta store the same reversed count in the reversal row
+    expect(fn).toMatch(/shields_to_restore\s*:=\s*COALESCE\(reversal_row\.(?:active_)?shields_delta, 0\)/);
+    expect(fn).toMatch(/shekels_to_restore\s*:=\s*COALESCE\(reversal_row\.shekels_delta, 0\)/);
+    expect(fn).toMatch(/tokens_to_restore\s*:=\s*COALESCE\(reversal_row\.boost_tokens_delta, 0\)/);
   });
   it("reactivates previously-active shields still within their window", () => {
-    expect(fn).toMatch(/b\.expires_at IS NOT NULL AND b\.expires_at > now\(\)[\s\S]+?UPDATE public\.boosts SET active = true/);
+    expect(fn).toMatch(/expires_at IS NOT NULL AND[\s\S]{0,40}expires_at > now\(\)[\s\S]+?UPDATE public\.boosts SET active = true/);
   });
   it("converts expired reactivations into allowance credits (not fresh 24h shields)", () => {
     expect(fn).toMatch(/shields_used = GREATEST\(shields_used - 1, 0\)[\s\S]+?allowance_credits_restored/);
