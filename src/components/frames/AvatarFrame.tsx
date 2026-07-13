@@ -26,7 +26,13 @@ export default function AvatarFrame({
   alt = "",
 }: Props) {
   const frameUrl = getFrameUrl(frameKey) || founderFallbackUrl || null;
-  const insetPct = frameKey ? getFrameInsetPct(frameKey) : DEFAULT_FRAME_INSET_PCT;
+  // Legacy founder fallback shares the Imperial Glow artwork — reuse its inset
+  // so the avatar aligns to the inner circle even when no frame is equipped.
+  const insetPct = frameKey
+    ? getFrameInsetPct(frameKey)
+    : founderFallbackUrl
+      ? getFrameInsetPct("imperial-glow")
+      : DEFAULT_FRAME_INSET_PCT;
 
   if (frameUrl) {
     return (
