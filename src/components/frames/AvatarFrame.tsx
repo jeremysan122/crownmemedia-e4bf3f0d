@@ -1,4 +1,4 @@
-import { getFrameUrl, getFrameInsetPct, DEFAULT_FRAME_INSET_PCT } from "@/lib/frames";
+import { getFrameUrl } from "@/lib/frames";
 
 interface Props {
   photoUrl?: string | null;
@@ -7,6 +7,11 @@ interface Props {
   founderFallbackUrl?: string | null;
   /** Calibrated circular aura behind the frame. */
   glow?: boolean;
+  /**
+   * Diameter (px) of the avatar photo circle. This is the layout footprint.
+   * The decorative frame and glow overflow outside this size so the framed
+   * avatar visually renders larger without shrinking the photo.
+   */
   size?: number;
   className?: string;
   positionY?: number | null;
@@ -14,9 +19,9 @@ interface Props {
 }
 
 /**
- * Renders a circular avatar wrapped in the given achievement frame. When no
- * frame key is provided (or the key is unknown) the avatar renders bare with
- * an optional legacy founder frame fallback.
+ * Renders a circular avatar with the decorative frame and glow overflowing
+ * outside the avatar photo's bounds. `size` sizes the avatar photo (the
+ * layout footprint); the frame extends ~35% beyond it and the glow ~50%.
  */
 export default function AvatarFrame({
   photoUrl,
@@ -29,13 +34,6 @@ export default function AvatarFrame({
   alt = "",
 }: Props) {
   const frameUrl = getFrameUrl(frameKey) || founderFallbackUrl || null;
-  // Legacy founder fallback shares the Imperial Glow artwork — reuse its inset
-  // so the avatar aligns to the inner circle even when no frame is equipped.
-  const insetPct = frameKey
-    ? getFrameInsetPct(frameKey)
-    : founderFallbackUrl
-      ? getFrameInsetPct("imperial-glow")
-      : DEFAULT_FRAME_INSET_PCT;
 
   if (frameUrl) {
     return (
@@ -43,26 +41,22 @@ export default function AvatarFrame({
         className={`avatar-frame-shell ${className}`}
         style={{ width: size, height: size }}
       >
-        <div className={`avatar-frame-inner${glow ? " avatar-frame-inner--glow" : ""}`}>
-          <div
-            className="avatar-frame-photo"
-            style={{ inset: `${insetPct}%` }}
-          >
-            {photoUrl && (
-              <img
-                src={photoUrl}
-                alt={alt}
-                style={{ objectPosition: `center ${positionY ?? 50}%` }}
-              />
-            )}
-          </div>
-          <img
-            src={frameUrl}
-            alt=""
-            loading="lazy"
-            className="avatar-frame-art"
-          />
+        {glow && <div className="avatar-frame-glow" aria-hidden="true" />}
+        <div className="avatar-frame-photo">
+          {photoUrl && (
+            <img
+              src={photoUrl}
+              alt={alt}
+              style={{ objectPosition: `center ${positionY ?? 50}%` }}
+            />
+          )}
         </div>
+        <img
+          src={frameUrl}
+          alt=""
+          loading="lazy"
+          className={`avatar-frame-art${glow ? " avatar-frame-art--glow" : ""}`}
+        />
       </div>
     );
   }
