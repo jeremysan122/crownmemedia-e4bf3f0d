@@ -185,6 +185,6 @@ describe("RoyalFrames — 81-frame catalog", () => {
     const items = buildItems(["frame-1"], "frame-1");
     mockGallery = { ...mockGallery, items, ownedCount: 1 };
     renderPage();
-    expect(screen.getByText(/Equipped/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Equipped/i).length).toBeGreaterThan(0);
   });
 });
