@@ -355,6 +355,17 @@ export default function Profile() {
         if (payload.eventType === "INSERT") setCrownVoteTotal((n) => n + 1);
         else if (payload.eventType === "DELETE") setCrownVoteTotal((n) => Math.max(0, n - 1));
       })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${prof.id}` }, (payload) => {
+        const n: any = payload.new;
+        setProf((p) => p ? {
+          ...p,
+          equipped_frame_key: n.equipped_frame_key ?? p.equipped_frame_key,
+          is_founder: n.is_founder ?? p.is_founder,
+          founder_title: n.founder_title ?? p.founder_title,
+          royal_frame_variant: n.royal_frame_variant ?? p.royal_frame_variant,
+          profile_photo_url: n.profile_photo_url ?? p.profile_photo_url,
+        } : p);
+      })
       .subscribe();
 
     return () => {
