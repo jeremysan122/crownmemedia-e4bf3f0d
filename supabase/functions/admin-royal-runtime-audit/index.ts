@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
         _stripe_charge_id: `ch_audit_${stamp}_A`,
         _stripe_subscription_id: `sub_audit_${stamp}`,
       } as never);
-      const replayOk = !!replay && typeof replay === "object" && (replay as { reason?: string }).reason === "already_processed";
+      const replayOk = !!replay && typeof replay === "object" && ((replay as { reason?: string; already_processed?: boolean }).reason === "already_processed" || (replay as { already_processed?: boolean }).already_processed === true);
       steps.push({ name: "idempotent_replay", ok: replayOk, data: replay });
       return steps;
     }),
