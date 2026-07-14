@@ -8282,6 +8282,7 @@ export type Database = {
           completed_at: string
           completion_percent: number
           description: string
+          ends_at: string
           gates: Json
           highest_checkpoint: number
           is_founder_only: boolean
@@ -8293,6 +8294,7 @@ export type Database = {
           rewards: Json
           slug: string
           started_at: string
+          starts_at: string
           status: string
         }[]
       }
