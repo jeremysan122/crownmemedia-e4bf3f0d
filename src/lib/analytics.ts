@@ -114,7 +114,25 @@ type EventName =
   | "dm_gift_notification_delivered"
   | "dm_gift_notification_clicked"
   | "dm_gift_animation_opened"
-  | "dm_gift_realtime_fallback_used";
+  | "dm_gift_realtime_fallback_used"
+  // Achievements engagement + rarity/cohort measurement
+  | "achievement_page_opened"
+  | "achievement_filter_changed"
+  | "achievement_sort_changed"
+  | "achievement_search_submitted"
+  | "achievement_next_up_impression"
+  | "achievement_next_up_clicked"
+  | "achievement_progress_changed"
+  | "achievement_checkpoint_reached"
+  | "achievement_unlocked"
+  | "achievement_frame_unlocked"
+  | "achievement_badge_unlocked"
+  | "achievement_title_unlocked"
+  | "achievement_shekel_grant"
+  | "achievement_boost_grant"
+  | "achievement_share_attempted"
+  | "achievement_share_success"
+  | "achievement_share_failed";
 
 
 async function sha256Hex(input: string): Promise<string> {

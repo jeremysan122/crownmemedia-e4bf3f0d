@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
 import { Crown, Lock, CheckCircle2, Clock, Sparkles, Trophy, Search, Share2, EyeOff } from "lucide-react";
 import { useMyAchievements, type AchievementRow } from "@/hooks/useMyAchievements";
@@ -10,6 +10,7 @@ import WeeklyQuestsPanel from "@/components/achievements/WeeklyQuestsPanel";
 import RarityLegend from "@/components/achievements/RarityLegend";
 import NextUpCard from "@/components/achievements/NextUpCard";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 import {
   matchesRarity,
   matchesSearch,
@@ -50,10 +51,18 @@ function AchievementCard({ a, rarityPct }: { a: AchievementRow; rarityPct?: numb
   const share = async () => {
     const url = `${window.location.origin}/achievements`;
     const text = `I unlocked "${a.name}" on CrownMe 👑`;
+    void trackEvent("achievement_share_attempted", {
+      metadata: { slug: a.slug, rarity: a.rarity, collection: a.collection_slug ?? "other" },
+    });
     try {
       if (navigator.share) await navigator.share({ title: a.name, text, url });
       else { await navigator.clipboard.writeText(`${text} ${url}`); toast.success("Copied to clipboard"); }
-    } catch { /* user dismissed */ }
+      void trackEvent("achievement_share_success", {
+        metadata: { slug: a.slug, rarity: a.rarity, channel: navigator.share ? "native" : "clipboard" },
+      });
+    } catch {
+      void trackEvent("achievement_share_failed", { metadata: { slug: a.slug } });
+    }
   };
 
   return (
@@ -177,10 +186,59 @@ export default function Achievements() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("rarity");
 
+  // Fire once per session mount
+  useEffect(() => { void trackEvent("achievement_page_opened"); }, []);
+
+  // Debounced search tracking
+  useEffect(() => {
+    if (!query) return;
+    const t = setTimeout(() => {
+      void trackEvent("achievement_search_submitted", { metadata: { length: query.length } });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // Detect progress + checkpoint transitions across refreshes
+  const prevMapRef = useRef<Map<string, AchievementRow> | null>(null);
+  useEffect(() => {
+    if (loading || rows.length === 0) return;
+    const prev = prevMapRef.current;
+    const next = new Map(rows.map((r) => [r.achievement_id, r]));
+    if (prev) {
+      rows.forEach((r) => {
+        const before = prev.get(r.achievement_id);
+        if (!before) return;
+        if (r.highest_checkpoint > before.highest_checkpoint) {
+          void trackEvent("achievement_checkpoint_reached", {
+            metadata: {
+              slug: r.slug,
+              rarity: r.rarity,
+              checkpoint: r.highest_checkpoint,
+              collection: r.collection_slug ?? "other",
+            },
+          });
+        } else if (Math.floor(r.completion_percent) > Math.floor(before.completion_percent)) {
+          void trackEvent("achievement_progress_changed", {
+            metadata: {
+              slug: r.slug,
+              rarity: r.rarity,
+              from: Math.floor(before.completion_percent),
+              to: Math.floor(r.completion_percent),
+            },
+          });
+        }
+      });
+    }
+    prevMapRef.current = next;
+  }, [rows, loading]);
+
   const toggleRarity = (r: string) =>
     setRarityFilter((prev) => {
       const next = new Set(prev);
       if (next.has(r)) next.delete(r); else next.add(r);
+      void trackEvent("achievement_filter_changed", {
+        metadata: { kind: "rarity", value: r, active: next.has(r) },
+      });
       return next;
     });
 
@@ -189,13 +247,24 @@ export default function Achievements() {
       statusMatches(a, statusFilter) &&
       matchesRarity(a, rarityFilter) &&
       matchesSearch(a, query) &&
-      // Hide secrets from all views except when they are completed
-      (!a.is_secret || a.status === "completed" || statusFilter === "all"),
+      // Hide incomplete secrets from all views (also fixes Next Up leak below)
+      (!a.is_secret || a.status === "completed"),
     );
     return sortAchievements(base, sort);
   }, [rows, statusFilter, rarityFilter, query, sort]);
 
-  const nextUp = useMemo(() => pickNextUp(rows), [rows]);
+  // Never surface an unrevealed secret in Next Up
+  const nextUp = useMemo(
+    () => pickNextUp(rows.filter((r) => !r.is_secret || r.status === "completed")),
+    [rows],
+  );
+
+  useEffect(() => {
+    if (!nextUp) return;
+    void trackEvent("achievement_next_up_impression", {
+      metadata: { slug: nextUp.slug, rarity: nextUp.rarity, pct: Math.floor(nextUp.completion_percent) },
+    });
+  }, [nextUp?.achievement_id]);
 
   const grouped = useMemo(() => {
     const g = new Map<string, AchievementRow[]>();
@@ -249,7 +318,11 @@ export default function Achievements() {
             </div>
             <select
               value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
+              onChange={(e) => {
+                const v = e.target.value as SortKey;
+                setSort(v);
+                void trackEvent("achievement_sort_changed", { metadata: { sort: v } });
+              }}
               aria-label="Sort achievements"
               className="text-xs px-3 py-2 rounded-full border border-border bg-background focus:outline-none focus:ring-1 focus:ring-gold"
             >
@@ -265,7 +338,10 @@ export default function Achievements() {
             {(["all", "in_progress", "completed", "locked"] as const).map((f) => (
               <button
                 key={f}
-                onClick={() => setStatusFilter(f)}
+                onClick={() => {
+                  setStatusFilter(f);
+                  void trackEvent("achievement_filter_changed", { metadata: { kind: "status", value: f } });
+                }}
                 className={`text-[11px] px-3 py-1.5 rounded-full border font-bold uppercase tracking-wider ${
                   statusFilter === f
                     ? "bg-gradient-gold text-black border-transparent"
