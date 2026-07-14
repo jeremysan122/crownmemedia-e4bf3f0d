@@ -59,6 +59,8 @@ export function validateStep1(input: Step1Input): SignupErrors {
   if (!u) errs.username = "Pick a username";
   else if (!/^[a-z0-9_.]{3,24}$/.test(u)) errs.username = "3–24 chars · letters, numbers, _ .";
   else if (isReservedUsername(u)) errs.username = "That username is reserved";
+  else if (input.usernameStatus === "reserved") errs.username = "That username is reserved";
+  else if (input.usernameStatus === "invalid") errs.username = "That username isn't allowed";
   else if (input.usernameStatus === "taken") errs.username = "That username is already taken";
   else if (input.usernameStatus === "checking") errs.username = "Checking availability…";
 
