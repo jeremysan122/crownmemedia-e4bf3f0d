@@ -74,6 +74,7 @@ export default function RoyalPassSettings() {
 
   const openPortal = async () => {
     setWorking("portal");
+    void trackEvent("royal_pass_portal_opened", { metadata: { status: pass.status ?? "unknown" } });
     try {
       const { data, error } = await supabase.functions.invoke("royal-pass-portal", { body: { environment: getStripeEnvironment() } });
       if (error) throw error;
@@ -83,12 +84,14 @@ export default function RoyalPassSettings() {
       if (!url) throw new Error("No portal URL returned");
       window.location.href = url;
     } catch (e) {
+      void trackEvent("royal_pass_portal_failed", { metadata: { message: (e as Error).message?.slice(0, 120) ?? "unknown" } });
       toast.error((e as Error).message || "Could not open billing portal");
     } finally { setWorking(null); }
   };
 
   const setCancel = async (resume: boolean) => {
     setWorking(resume ? "resume" : "cancel");
+    void trackEvent(resume ? "royal_pass_resume_clicked" : "royal_pass_cancel_confirmed");
     try {
       const { data, error } = await supabase.functions.invoke("royal-pass-cancel", {
         body: { resume, environment: getStripeEnvironment() },
