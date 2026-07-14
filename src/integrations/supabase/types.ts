@@ -7996,6 +7996,7 @@ export type Database = {
         Returns: boolean
       }
       is_feature_enabled: { Args: { _key: string }; Returns: boolean }
+      is_founder: { Args: { _user_id: string }; Returns: boolean }
       is_royal_pass_active: { Args: { _user_id: string }; Returns: boolean }
       is_thread_muted: {
         Args: { _post_id: string; _user_id: string }
