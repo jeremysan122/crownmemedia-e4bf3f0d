@@ -11,6 +11,25 @@ import { toast } from "sonner";
 import { Loader2, ShieldCheck, Database, ClipboardList, UserCheck } from "lucide-react";
 import { timeAgo } from "@/lib/crown";
 
+const CLAIM_ERROR_MESSAGES: Record<string, string> = {
+  not_authorized: "You don't have admin permission for this action.",
+  invalid_username: "Username format is invalid (2–30 lowercase alphanumerics).",
+  reservation_not_found: "That username is not in the reserved list.",
+  reservation_inactive: "This reservation is currently inactive.",
+  reservation_blocked: "Blocked reservations cannot be claimed.",
+  reservation_already_claimed: "This reservation has already been claimed.",
+  target_user_not_found: "Target user ID does not exist.",
+  username_already_assigned: "Another profile already owns this username.",
+  missing_auth: "Sign in as an admin to run this action.",
+  not_authenticated: "Session expired — sign in again.",
+};
+
+function friendlyError(raw: string): string {
+  if (!raw) return "Unknown error";
+  const key = raw.trim().replace(/^.*?:\s*/, "");
+  return CLAIM_ERROR_MESSAGES[key] ?? raw;
+}
+
 interface AuditRow {
   id: string;
   action: string;
@@ -75,6 +94,7 @@ export default function AdminReservedUsernames() {
   if (!isAdmin) return <Navigate to="/feed" replace />;
 
   const runSeed = async () => {
+    if (!isAdmin) { toast.error("Admin role required"); return; }
     setSeeding(true);
     setSeedResult(null);
     try {
@@ -82,11 +102,14 @@ export default function AdminReservedUsernames() {
         body: { dryRun },
       });
       if (error) throw error;
-      setSeedResult(data as SeedResult);
-      toast.success(dryRun ? "Dry run complete" : `Seeded ${(data as SeedResult).upserted ?? 0} rows`);
+      const payload = data as SeedResult;
+      if (payload?.error) throw new Error(payload.error);
+      setSeedResult(payload);
+      toast.success(dryRun ? "Dry run complete" : `Seeded ${payload.upserted ?? 0} rows`);
       loadCounts();
     } catch (e) {
-      const msg = (e as Error).message;
+      const raw = (e as Error).message || String(e);
+      const msg = friendlyError(raw);
       setSeedResult({ ok: false, error: msg });
       toast.error(`Seed failed: ${msg}`);
     } finally {
@@ -95,8 +118,14 @@ export default function AdminReservedUsernames() {
   };
 
   const runClaim = async () => {
+    if (!isAdmin) { toast.error("Admin role required"); return; }
     if (!username.trim() || !targetUserId.trim()) {
       toast.error("Username and target user ID are required");
+      return;
+    }
+    // Basic UUID sanity check to avoid a round-trip on malformed input.
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUserId.trim())) {
+      toast.error("Target user ID must be a UUID");
       return;
     }
     setClaiming(true);
@@ -114,7 +143,7 @@ export default function AdminReservedUsernames() {
       loadAudit();
       loadCounts();
     } catch (e) {
-      toast.error(`Claim failed: ${(e as Error).message}`);
+      toast.error(`Claim failed: ${friendlyError((e as Error).message)}`);
     } finally {
       setClaiming(false);
     }
