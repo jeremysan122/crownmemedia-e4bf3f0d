@@ -181,7 +181,6 @@ async function dispatch(e: RcEvent) {
       if (entitlement === "royal_pass") await deactivateRoyalPass(e);
       await logTransaction(e, "canceled");
       break;
-    case "UNCANCELLATION_UNSCHEDULED":
     case "BILLING_ISSUE":
       await logTransaction(e, "past_due");
       break;
