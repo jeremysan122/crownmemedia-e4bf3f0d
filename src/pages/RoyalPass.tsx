@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import BoostPostPicker from "@/components/store/BoostPostPicker";
+import RoyalPassStatusBanner, { statusIsDunning } from "@/components/royal-pass/RoyalPassStatusBanner";
+import RoyalPassReversalHistory from "@/components/royal-pass/RoyalPassReversalHistory";
+import { trackEvent } from "@/lib/analytics";
 
 interface BoostRow {
   id: string;
@@ -53,6 +56,15 @@ export default function RoyalPassSettings() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
 
+  // One-shot page-open ping
+  useEffect(() => { void trackEvent("royal_pass_page_opened"); }, []);
+
+  // Fire once per session when the dunning banner becomes visible
+  useEffect(() => {
+    if (pass.active && statusIsDunning(pass.status)) {
+      void trackEvent("royal_pass_dunning_banner_shown", { metadata: { status: pass.status ?? "unknown" } });
+    }
+  }, [pass.active, pass.status]);
 
 
   useEffect(() => {
@@ -71,6 +83,7 @@ export default function RoyalPassSettings() {
 
   const openPortal = async () => {
     setWorking("portal");
+    void trackEvent("royal_pass_portal_opened", { metadata: { status: pass.status ?? "unknown" } });
     try {
       const { data, error } = await supabase.functions.invoke("royal-pass-portal", { body: { environment: getStripeEnvironment() } });
       if (error) throw error;
@@ -80,12 +93,14 @@ export default function RoyalPassSettings() {
       if (!url) throw new Error("No portal URL returned");
       window.location.href = url;
     } catch (e) {
+      void trackEvent("royal_pass_portal_failed", { metadata: { message: (e as Error).message?.slice(0, 120) ?? "unknown" } });
       toast.error((e as Error).message || "Could not open billing portal");
     } finally { setWorking(null); }
   };
 
   const setCancel = async (resume: boolean) => {
     setWorking(resume ? "resume" : "cancel");
+    void trackEvent(resume ? "royal_pass_resume_clicked" : "royal_pass_cancel_confirmed");
     try {
       const { data, error } = await supabase.functions.invoke("royal-pass-cancel", {
         body: { resume, environment: getStripeEnvironment() },
@@ -250,16 +265,46 @@ export default function RoyalPassSettings() {
         ) : !pass.active ? (
           <div className="royal-card p-6 text-center space-y-3">
             <ShieldCheck size={28} className="mx-auto text-muted-foreground" />
-            <h2 className="font-display text-lg">No active Royal Pass</h2>
+            <h2 className="font-display text-lg">
+              {user ? "No active Royal Pass" : "Sign in to see your Royal Pass"}
+            </h2>
             <p className="text-xs text-muted-foreground">
-              Subscribe from the Royal Store to unlock crown-tier perks.
+              {user
+                ? "Subscribe from the Royal Store to unlock crown-tier perks."
+                : "Royal Pass perks, billing, and rewards live in your account."}
             </p>
-            <Button onClick={() => nav("/store?tab=pass")} className="bg-gradient-gold text-primary-foreground">
-              See Royal Pass plans
-            </Button>
+            {user ? (
+              <Button
+                onClick={() => {
+                  void trackEvent("royal_pass_subscribe_started", { metadata: { source: "royal_pass_page" } });
+                  nav("/store?tab=pass");
+                }}
+                className="bg-gradient-gold text-primary-foreground"
+              >
+                See Royal Pass plans
+              </Button>
+            ) : (
+              <Button
+                onClick={() => {
+                  void trackEvent("royal_pass_signed_out_cta_clicked");
+                  nav("/auth?next=/royal-pass");
+                }}
+                className="bg-gradient-gold text-primary-foreground"
+              >
+                Sign in to continue
+              </Button>
+            )}
           </div>
         ) : (
           <>
+            <RoyalPassStatusBanner
+              status={pass.status}
+              working={working === "portal"}
+              onOpenPortal={() => {
+                void trackEvent("royal_pass_dunning_cta_clicked", { metadata: { status: pass.status ?? "unknown" } });
+                void openPortal();
+              }}
+            />
             <div className="royal-card p-5 space-y-4 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-gold opacity-[0.08] pointer-events-none" />
               <div className="relative flex items-center gap-3">
@@ -555,7 +600,7 @@ export default function RoyalPassSettings() {
                   Resume subscription
                 </Button>
               ) : (
-                <Button onClick={() => setConfirmCancel(true)} disabled={working !== null} variant="outline"
+                <Button onClick={() => { void trackEvent("royal_pass_cancel_started"); setConfirmCancel(true); }} disabled={working !== null} variant="outline"
                   className="w-full text-destructive border-destructive/40">
                   <X size={14} className="mr-2" /> Cancel at period end
                 </Button>
@@ -565,6 +610,8 @@ export default function RoyalPassSettings() {
                 <Link to="/wallet"><Receipt size={14} className="mr-2" /> View billing history</Link>
               </Button>
             </div>
+
+            <RoyalPassReversalHistory />
           </>
         )}
 

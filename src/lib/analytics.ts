@@ -132,7 +132,21 @@ type EventName =
   | "achievement_boost_grant"
   | "achievement_share_attempted"
   | "achievement_share_success"
-  | "achievement_share_failed";
+  | "achievement_share_failed"
+  // Royal Pass subscribe / manage funnel
+  | "royal_pass_page_opened"
+  | "royal_pass_subscribe_started"
+  | "royal_pass_subscribe_failed"
+  | "royal_pass_portal_opened"
+  | "royal_pass_portal_failed"
+  | "royal_pass_cancel_started"
+  | "royal_pass_cancel_confirmed"
+  | "royal_pass_resume_clicked"
+  | "royal_pass_dunning_banner_shown"
+  | "royal_pass_dunning_cta_clicked"
+  | "royal_pass_reversal_history_viewed"
+  | "royal_pass_daily_boost_claimed"
+  | "royal_pass_signed_out_cta_clicked";
 
 
 async function sha256Hex(input: string): Promise<string> {
