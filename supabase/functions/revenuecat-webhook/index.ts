@@ -86,7 +86,22 @@ async function activateRoyalPass(e: RcEvent) {
 async function deactivateRoyalPass(e: RcEvent) {
   await sb()
     .from("royal_pass_subscriptions")
-    .update({ status: "canceled", updated_at: new Date().toISOString() })
+    .update({ status: "canceled", cancel_at_period_end: false, updated_at: new Date().toISOString() })
+    .eq("provider_subscription_id", e.original_transaction_id ?? e.transaction_id ?? e.id);
+}
+
+// Stripe parity: user-initiated cancel with a future expiration keeps
+// access until period end. Mirrors setting `cancel_at_period_end = true`
+// without revoking `status = 'active'`.
+async function scheduleRoyalPassCancel(e: RcEvent) {
+  const expiresAt = e.expiration_at_ms ? new Date(e.expiration_at_ms).toISOString() : null;
+  await sb()
+    .from("royal_pass_subscriptions")
+    .update({
+      cancel_at_period_end: true,
+      current_period_end: expiresAt,
+      updated_at: new Date().toISOString(),
+    })
     .eq("provider_subscription_id", e.original_transaction_id ?? e.transaction_id ?? e.id);
 }
 
@@ -151,7 +166,17 @@ async function dispatch(e: RcEvent) {
       if (isShekel) await creditShekels(e);
       await logTransaction(e, "succeeded");
       break;
-    case "CANCELLATION":
+    case "CANCELLATION": {
+      // If expiration is still in the future, mirror Stripe's
+      // cancel_at_period_end behavior; only revoke on EXPIRATION.
+      const futureExpiry = e.expiration_at_ms && e.expiration_at_ms > Date.now();
+      if (entitlement === "royal_pass") {
+        if (futureExpiry) await scheduleRoyalPassCancel(e);
+        else await deactivateRoyalPass(e);
+      }
+      await logTransaction(e, futureExpiry ? "scheduled_cancel" : "canceled");
+      break;
+    }
     case "EXPIRATION":
       if (entitlement === "royal_pass") await deactivateRoyalPass(e);
       await logTransaction(e, "canceled");
