@@ -19,6 +19,7 @@ import {
   DollarSign as Wallet2,
   Server,
   ShieldCheck,
+  Trophy,
 } from "lucide-react";
 
 const NAV: Array<{ to: string; label: string; icon: ReactNode }> = [
@@ -41,6 +42,7 @@ const NAV: Array<{ to: string; label: string; icon: ReactNode }> = [
   { to: "/admin/command-center/support", label: "Support", icon: <LifeBuoy size={14} /> },
   { to: "/admin/command-center/settings", label: "Settings", icon: <SettingsIcon size={14} /> },
   { to: "/admin/command-center/audit", label: "Audit", icon: <ScrollText size={14} /> },
+  { to: "/admin/command-center/achievement-author", label: "Achievement Author", icon: <Trophy size={14} /> },
 ];
 
 export default function CommandCenterLayout() {
