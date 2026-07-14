@@ -600,7 +600,7 @@ export default function RoyalPassSettings() {
                   Resume subscription
                 </Button>
               ) : (
-                <Button onClick={() => setConfirmCancel(true)} disabled={working !== null} variant="outline"
+                <Button onClick={() => { void trackEvent("royal_pass_cancel_started"); setConfirmCancel(true); }} disabled={working !== null} variant="outline"
                   className="w-full text-destructive border-destructive/40">
                   <X size={14} className="mr-2" /> Cancel at period end
                 </Button>
