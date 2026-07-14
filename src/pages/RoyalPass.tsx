@@ -56,6 +56,15 @@ export default function RoyalPassSettings() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
 
+  // One-shot page-open ping
+  useEffect(() => { void trackEvent("royal_pass_page_opened"); }, []);
+
+  // Fire once per session when the dunning banner becomes visible
+  useEffect(() => {
+    if (pass.active && statusIsDunning(pass.status)) {
+      void trackEvent("royal_pass_dunning_banner_shown", { metadata: { status: pass.status ?? "unknown" } });
+    }
+  }, [pass.active, pass.status]);
 
 
   useEffect(() => {
