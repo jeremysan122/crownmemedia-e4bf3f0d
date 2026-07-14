@@ -43,6 +43,9 @@ import { useIsRoyalPassUser } from "@/hooks/useIsRoyalPassUser";
 import { useActiveBoost } from "@/hooks/useActiveBoost";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import ProfileAchievementsShowcase from "@/components/profile/ProfileAchievementsShowcase";
+import ProfileUnlockFeed from "@/components/profile/ProfileUnlockFeed";
+import EquippedTitleChip from "@/components/profile/EquippedTitleChip";
+import { useProfileDecorations } from "@/hooks/useProfileDecorations";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -115,6 +118,7 @@ export default function Profile() {
   const [editingPostData, setEditingPostData] = useState<{ caption: string; image_url: string; filter: any; edited_at?: string | null } | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const decorations = useProfileDecorations(prof?.id ?? null);
   const [postMenuPosition, setPostMenuPosition] = useState<PostMenuPosition | null>(null);
   const [insightsPost, setInsightsPost] = useState<{ id: string; base: { crown_score: number; vote_count: number; comment_count: number; share_count: number; battle_wins: number; created_at: string } } | null>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
@@ -673,6 +677,9 @@ export default function Profile() {
               )}
               {royalPassActive && <RoyalPassBadge showLabel />}
               <RoleBadges roles={roles} crownsHeld={prof.crowns_held} />
+              {decorations?.title_text && (
+                <EquippedTitleChip text={decorations.title_text} rarity={decorations.title_rarity} />
+              )}
             </div>
             <p className="mt-2 text-xs lg:text-sm text-muted-foreground">
               {locationLabel(prof)} · Member since {joinedLabel}
@@ -769,6 +776,10 @@ export default function Profile() {
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-6 mt-2">
           <div>
             <ProfileAchievementsShowcase userId={prof.id} isMe={isMe} />
+            <div className="mt-4">
+              <div className="text-[11px] uppercase tracking-[0.2em] text-gold/80 mb-2">Recent Unlocks</div>
+              <ProfileUnlockFeed userId={prof.id} />
+            </div>
             <ProfileCategoryRankings userId={prof.id} />
 
 

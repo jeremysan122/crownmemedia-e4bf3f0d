@@ -15,6 +15,7 @@ import { useUnreadByType } from "@/hooks/useUnreadByType";
 import { useThreadUnread } from "@/hooks/useThreadUnread";
 import { useMutedThreads } from "@/hooks/useMutedThreads";
 import { useFrameUnlockToaster } from "@/hooks/useFrameUnlockToaster";
+import { useAchievementUnlockToaster } from "@/hooks/useAchievementUnlockToaster";
 import { SHEKEL, formatShekels } from "@/lib/gifts";
 
 interface AppShellProps {
@@ -33,6 +34,7 @@ export default function AppShell({ children, title, showHeader = true, rightSlot
   const [createOpen, setCreateOpen] = useState(false);
   useBattleAlerts();
   useFrameUnlockToaster();
+  useAchievementUnlockToaster();
   const unread = useUnreadByType();
   const dmThreads = useThreadUnread();
   const mutedSet = useMutedThreads();

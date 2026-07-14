@@ -129,6 +129,7 @@ const Discover = lazy(() => import("./pages/Discover"));
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
 const CommandCenterRoyalShields = lazy(() => import("./pages/admin/CommandCenterRoyalShields"));
 const CommandCenterAchievements = lazy(() => import("./pages/admin/CommandCenterAchievements"));
+const CommandCenterAchievementAuthor = lazy(() => import("./pages/admin/CommandCenterAchievementAuthor"));
 import LegalConsentGate from "@/components/legal/LegalConsentGate";
 const Marketing = lazy(() => import("./pages/Marketing"));
 
@@ -245,6 +246,7 @@ const App = () => (
                 <Route path="platform-health" element={<CommandCenterPlatformHealth />} />
                 <Route path="live-battle-reports" element={<CommandCenterLiveBattleReports />} />
                 <Route path="achievements" element={<CommandCenterAchievements />} />
+                <Route path="achievement-author" element={<CommandCenterAchievementAuthor />} />
               </Route>
               <Route path="/me" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               {/* Public — anyone (including Google/bots) can view profiles and posts.
