@@ -1,5 +1,5 @@
-// Admin-only seed loader for the 15,000-row reserved usernames dataset.
-// Idempotent: upserts by primary key `username`.
+// Admin-only seed loader for the 100,000-row reserved usernames dataset.
+// Idempotent: upserts by primary key `username` in resumable chunks.
 //
 // Auth: requires the caller to have the `admin` role. Uses the caller's JWT
 // to check role, then uses the service role client for bulk upserts.
@@ -52,19 +52,34 @@ function parseCsv(text: string): Row[] {
   if (!header) return rows;
   const idx = Object.fromEntries(header.map((h, i) => [h.trim(), i]));
   for (const r of lines) {
-    if (!r || r.length < header.length) continue;
+    if (!r || r.length < 3) continue;
+    const uname = (r[idx.username] ?? "").trim().toLowerCase();
+    if (!uname) continue;
     rows.push({
-      username: r[idx.username],
-      category: r[idx.category],
-      reserved_reason: r[idx.reserved_reason],
-      reservation_policy: r[idx.reservation_policy],
-      source_label: r[idx.source_label],
+      username: uname,
+      category: r[idx.category] ?? "unknown",
+      reserved_reason: r[idx.reserved_reason] ?? "",
+      reservation_policy: r[idx.reservation_policy] ?? "claimable",
+      source_label: r[idx.source_label] ?? "seed",
       priority: Number(r[idx.priority]) || 50,
-      is_active: /true/i.test(r[idx.is_active] || "true"),
-      requires_identity_verification: /true/i.test(r[idx.requires_identity_verification] || "false"),
+      is_active: /true/i.test(r[idx.is_active] ?? "true"),
+      requires_identity_verification: /true/i.test(r[idx.requires_identity_verification] ?? "false"),
     });
   }
   return rows;
+}
+
+async function loadDataset(): Promise<string> {
+  // Prefer the gzipped bundle (100k rows). Fall back to plain CSV if present.
+  const gzUrl = new URL("./data.csv.gz", import.meta.url);
+  try {
+    const gzBytes = await Deno.readFile(gzUrl);
+    const stream = new Blob([gzBytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+    return await new Response(stream).text();
+  } catch (_e) {
+    const csvUrl = new URL("./data.csv", import.meta.url);
+    return await Deno.readTextFile(csvUrl);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -72,11 +87,8 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
-    if (!authHeader) {
-      return json({ error: "missing_auth" }, 401);
-    }
+    if (!authHeader) return json({ error: "missing_auth" }, 401);
 
-    // Verify admin via the caller's JWT
     const userClient = createClient(SUPABASE_URL, ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -90,35 +102,36 @@ Deno.serve(async (req) => {
     });
     if (roleErr || !roleOk) return json({ error: "not_authorized" }, 403);
 
-    // Body opts: { dryRun?: boolean }
     let dryRun = false;
-    try { const body = await req.json(); dryRun = !!body?.dryRun; } catch { /* no body */ }
+    let chunkSize = 2000;
+    try {
+      const body = await req.json();
+      dryRun = !!body?.dryRun;
+      if (typeof body?.chunkSize === "number" && body.chunkSize >= 500 && body.chunkSize <= 5000) {
+        chunkSize = Math.floor(body.chunkSize);
+      }
+    } catch { /* no body */ }
 
-    const csvUrl = new URL("./data.csv", import.meta.url);
-    const csvText = await Deno.readTextFile(csvUrl);
+    const csvText = await loadDataset();
     const rows = parseCsv(csvText);
 
     if (dryRun) {
-      return json({ ok: true, dryRun: true, parsed: rows.length, sample: rows.slice(0, 3) });
+      const policies: Record<string, number> = {};
+      for (const r of rows) policies[r.reservation_policy] = (policies[r.reservation_policy] ?? 0) + 1;
+      return json({ ok: true, dryRun: true, parsed: rows.length, policies, sample: rows.slice(0, 3) });
     }
 
-    // Batch upsert in chunks of 1000
-    const CHUNK = 1000;
     let upserted = 0;
     const errors: { chunk: number; error: string }[] = [];
-    for (let i = 0; i < rows.length; i += CHUNK) {
-      const slice = rows.slice(i, i + CHUNK);
+    for (let i = 0; i < rows.length; i += chunkSize) {
+      const slice = rows.slice(i, i + chunkSize);
       const { error, count } = await admin
         .from("reserved_usernames")
         .upsert(slice, { onConflict: "username", count: "exact", ignoreDuplicates: false });
-      if (error) {
-        errors.push({ chunk: i / CHUNK, error: error.message });
-      } else {
-        upserted += count ?? slice.length;
-      }
+      if (error) errors.push({ chunk: Math.floor(i / chunkSize), error: error.message });
+      else upserted += count ?? slice.length;
     }
 
-    // Conflicts with existing profiles
     const usernames = rows.map((r) => r.username);
     const conflicts: { username: string; profile_id: string }[] = [];
     for (let i = 0; i < usernames.length; i += 1000) {
@@ -134,6 +147,7 @@ Deno.serve(async (req) => {
       ok: errors.length === 0,
       parsed: rows.length,
       upserted,
+      chunk_size: chunkSize,
       chunk_errors: errors,
       existing_profile_conflicts: conflicts,
     });
