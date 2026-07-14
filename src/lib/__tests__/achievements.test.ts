@@ -33,6 +33,8 @@ const mk = (over: Partial<AchievementRow>): AchievementRow => ({
   completed_at: null,
   rewards: [],
   gates: { account_age_days: 0, required_account_age_days: 0, qualified_active_days: 0, required_qualified_active_days: 0, distinct_active_weeks: 0, required_distinct_active_weeks: 0, gates_ok: true },
+  starts_at: null,
+  ends_at: null,
   ...over,
 } as AchievementRow);
 
