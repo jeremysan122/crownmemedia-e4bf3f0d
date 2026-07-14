@@ -82,15 +82,20 @@ describe("achievements helpers", () => {
     expect(RARITY_ORDER.mythic).toBeGreaterThan(RARITY_ORDER.rare);
   });
 
-  it("sortAchievements 'closest' surfaces closest-to-complete first, completed last", () => {
+  it("sortAchievements 'closest' surfaces closest-to-complete first, gated below in-progress, completed last", () => {
+    const gated = mk({ slug: "gated", completion_percent: 95, gates: { ...mk({}).gates, gates_ok: false } });
     const rows = [
       mk({ slug: "done", status: "completed", completion_percent: 100 }),
+      gated,
       mk({ slug: "far", completion_percent: 10 }),
       mk({ slug: "near", completion_percent: 90 }),
     ];
     const sorted = sortAchievements(rows, "closest");
     expect(sorted[0].slug).toBe("near");
-    expect(sorted[sorted.length - 1].slug).toBe("done");
+    expect(sorted[1].slug).toBe("far");
+    // Gated demoted below in-progress rows even with higher raw progress
+    expect(sorted[2].slug).toBe("done");
+    expect(sorted[3].slug).toBe("gated");
   });
 
   it("pickNextUp returns the most-progressed eligible row", () => {
