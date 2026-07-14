@@ -58,9 +58,15 @@ export function sortAchievements(rows: AchievementRow[], sort: SortKey): Achieve
       return bt - at;
     }
     if (sort === "closest") {
-      const ap = a.status === "completed" ? -1 : (a.completion_percent || 0);
-      const bp = b.status === "completed" ? -1 : (b.completion_percent || 0);
-      return bp - ap;
+      // Completed = -1 (bottom), gated = -2 (very bottom), otherwise progress %.
+      // Gated rows aren't realistically completable right now, so demote them
+      // below in-progress items to keep "Next Up" style focus.
+      const score = (r: AchievementRow) => {
+        if (r.status === "completed") return -1;
+        if (r.gates?.gates_ok === false) return -2;
+        return r.completion_percent || 0;
+      };
+      return score(b) - score(a);
     }
     return 0;
   });
