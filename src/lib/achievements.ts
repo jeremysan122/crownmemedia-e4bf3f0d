@@ -104,3 +104,17 @@ export function rewardChipLabel(a: AchievementRow): string {
   if (t === "boost_grant") return "Boost reward";
   return a.avatar_frame_id ? "Frame reward" : "Reward";
 }
+
+/**
+ * Returns whole days remaining until a seasonal achievement's `ends_at`, or
+ * null if the row is not time-limited or already expired. Used to render the
+ * "Ends in Xd" chip on time-sensitive cards.
+ */
+export function endsInDays(a: AchievementRow, now: number = Date.now()): number | null {
+  if (!a.ends_at) return null;
+  const t = new Date(a.ends_at).getTime();
+  if (!Number.isFinite(t)) return null;
+  const ms = t - now;
+  if (ms <= 0) return null;
+  return Math.max(1, Math.ceil(ms / 86_400_000));
+}
