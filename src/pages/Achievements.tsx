@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
 import { Crown, Lock, CheckCircle2, Clock, Sparkles, Trophy, Search, Share2, EyeOff } from "lucide-react";
 import { useMyAchievements, type AchievementRow } from "@/hooks/useMyAchievements";
@@ -10,6 +10,7 @@ import WeeklyQuestsPanel from "@/components/achievements/WeeklyQuestsPanel";
 import RarityLegend from "@/components/achievements/RarityLegend";
 import NextUpCard from "@/components/achievements/NextUpCard";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 import {
   matchesRarity,
   matchesSearch,
