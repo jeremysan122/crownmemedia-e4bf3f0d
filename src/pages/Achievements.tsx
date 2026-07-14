@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
-import { Crown, Lock, CheckCircle2, Clock, Sparkles, Trophy, Search, Share2, EyeOff } from "lucide-react";
+import { Crown, Lock, CheckCircle2, Clock, Sparkles, Trophy, Search, Share2, EyeOff, Hourglass } from "lucide-react";
 import { useMyAchievements, type AchievementRow } from "@/hooks/useMyAchievements";
 import { useAchievementRarity, rarityLabel } from "@/hooks/useAchievementRarity";
 import CrownLoader from "@/components/CrownLoader";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import WeeklyQuestsPanel from "@/components/achievements/WeeklyQuestsPanel";
 import RarityLegend from "@/components/achievements/RarityLegend";
 import NextUpCard from "@/components/achievements/NextUpCard";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import {
+  endsInDays,
   matchesRarity,
   matchesSearch,
   maskSecret,
@@ -35,12 +37,13 @@ const RARITY_COLOR: Record<string, string> = {
 const CHECKPOINTS = [25, 50, 75, 100];
 const RARITIES = ["common", "rare", "epic", "legendary", "mythic"] as const;
 
-function AchievementCard({ a, rarityPct }: { a: AchievementRow; rarityPct?: number }) {
+function AchievementCard({ a, rarityPct, onOpen }: { a: AchievementRow; rarityPct?: number; onOpen: (slug: string) => void }) {
   const displayed = maskSecret(a);
   const pct = Math.max(0, Math.min(100, Math.round(a.completion_percent || 0)));
   const done = a.status === "completed" || pct >= 100;
   const gatesOk = a.gates?.gates_ok !== false;
   const hiddenSecret = a.is_secret && a.status !== "completed";
+  const daysLeft = endsInDays(a);
   const rewardsByCp = new Map<number, string[]>();
   a.rewards.forEach((r) => {
     const list = rewardsByCp.get(r.checkpoint) || [];
@@ -48,8 +51,9 @@ function AchievementCard({ a, rarityPct }: { a: AchievementRow; rarityPct?: numb
     rewardsByCp.set(r.checkpoint, list);
   });
 
-  const share = async () => {
-    const url = `${window.location.origin}/achievements`;
+  const share = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/achievements?slug=${encodeURIComponent(a.slug)}`;
     const text = `I unlocked "${a.name}" on CrownMe 👑`;
     void trackEvent("achievement_share_attempted", {
       metadata: { slug: a.slug, rarity: a.rarity, collection: a.collection_slug ?? "other" },
@@ -67,15 +71,31 @@ function AchievementCard({ a, rarityPct }: { a: AchievementRow; rarityPct?: numb
 
   return (
     <article
-      className={`royal-card p-4 relative ${done ? "ring-1 ring-gold/50" : ""} ${!gatesOk ? "opacity-70" : ""}`}
+      className={`royal-card p-4 relative cursor-pointer ${done ? "ring-1 ring-gold/50" : ""} ${!gatesOk ? "opacity-70" : ""}`}
       data-testid="achievement-card"
+      data-slug={a.slug}
       data-status={done ? "completed" : !gatesOk ? "locked" : "in-progress"}
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(a.slug)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(a.slug); } }}
     >
-      {hiddenSecret && (
-        <div className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider text-muted-foreground">
-          <EyeOff size={10} /> Secret
-        </div>
-      )}
+      <div className="absolute top-2 right-2 flex items-center gap-1">
+        {daysLeft !== null && !done && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-amber-500/50 bg-amber-500/10 text-amber-400 px-1.5 py-0.5 text-[9px] uppercase tracking-wider"
+            title={`Seasonal — ends ${new Date(a.ends_at as string).toLocaleDateString()}`}
+            data-testid="ends-in-chip"
+          >
+            <Hourglass size={10} /> Ends in {daysLeft}d
+          </span>
+        )}
+        {hiddenSecret && (
+          <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+            <EyeOff size={10} /> Secret
+          </span>
+        )}
+      </div>
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0">
           <h3 className="font-display text-sm text-gold leading-tight truncate">{displayed.name}</h3>
@@ -185,6 +205,28 @@ export default function Achievements() {
   const [rarityFilter, setRarityFilter] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("rarity");
+
+  // Deep-link: /achievements?slug=<slug> opens the detail dialog on mount.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openSlug = searchParams.get("slug");
+  const openRow = useMemo(
+    () => (openSlug ? rows.find((r) => r.slug === openSlug) ?? null : null),
+    [openSlug, rows],
+  );
+  const openDetail = (slug: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("slug", slug);
+      return next;
+    }, { replace: false });
+  };
+  const closeDetail = () => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("slug");
+      return next;
+    }, { replace: true });
+  };
 
   // Fire once per session mount
   useEffect(() => { void trackEvent("achievement_page_opened"); }, []);
@@ -386,7 +428,7 @@ export default function Achievements() {
                   {collection.replace(/-/g, " ")}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {items.map((a) => <AchievementCard key={a.achievement_id} a={a} rarityPct={rarityMap[a.achievement_id]?.rarity_pct} />)}
+                  {items.map((a) => <AchievementCard key={a.achievement_id} a={a} rarityPct={rarityMap[a.achievement_id]?.rarity_pct} onOpen={openDetail} />)}
                 </div>
               </section>
             ))}
@@ -398,6 +440,93 @@ export default function Achievements() {
           <span className="text-[10px] text-muted-foreground">Updated live — new unlocks appear as you play.</span>
         </div>
       </div>
+
+      <AchievementDetailDialog row={openRow} slug={openSlug} loading={loading} onClose={closeDetail} />
     </AppShell>
+  );
+}
+
+function AchievementDetailDialog({
+  row, slug, loading, onClose,
+}: { row: AchievementRow | null; slug: string | null; loading: boolean; onClose: () => void }) {
+  const open = slug !== null;
+  useEffect(() => {
+    if (row) {
+      void trackEvent("achievement_next_up_impression", {
+        metadata: { slug: row.slug, rarity: row.rarity, pct: Math.floor(row.completion_percent), source: "deeplink" },
+      });
+    }
+  }, [row?.achievement_id]);
+  const displayed = row ? maskSecret(row) : null;
+  const pct = row ? Math.max(0, Math.min(100, Math.round(row.completion_percent || 0))) : 0;
+  const daysLeft = row ? endsInDays(row) : null;
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md" data-testid="achievement-detail-dialog">
+        {!row ? (
+          <DialogHeader>
+            <DialogTitle>{loading ? "Loading achievement…" : "Achievement not found"}</DialogTitle>
+            <DialogDescription>
+              {loading
+                ? "Fetching the details for this achievement."
+                : slug
+                  ? `We couldn't find "${slug}" in your achievements. It may be locked, seasonal, or expired.`
+                  : ""}
+            </DialogDescription>
+          </DialogHeader>
+        ) : (
+          <>
+            <DialogHeader>
+              <div className="flex items-start justify-between gap-3">
+                <DialogTitle className="font-display text-xl text-gold leading-tight">{displayed!.name}</DialogTitle>
+                <span className={`shrink-0 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${RARITY_COLOR[row.rarity] || RARITY_COLOR.common}`}>
+                  {row.rarity}
+                </span>
+              </div>
+              <DialogDescription className="text-xs">{displayed!.description}</DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-[11px] mb-1">
+                <span className="text-muted-foreground">Progress</span>
+                <span className="tabular-nums font-bold">{pct}%</span>
+              </div>
+              <div className="relative h-2 rounded-full bg-secondary overflow-hidden">
+                <div className="h-full bg-gradient-gold" style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+              {row.status === "completed" ? (
+                <span className="inline-flex items-center gap-1 text-gold"><CheckCircle2 size={12} /> Completed</span>
+              ) : row.gates?.gates_ok === false ? (
+                <span className="inline-flex items-center gap-1 text-muted-foreground"><Lock size={12} /> Locked</span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-muted-foreground"><Sparkles size={12} /> In progress</span>
+              )}
+              {row.is_founder_only && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-gold/40 text-gold px-1.5 py-0.5">
+                  <Crown size={10} /> Founder
+                </span>
+              )}
+              {daysLeft !== null && row.status !== "completed" && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/50 bg-amber-500/10 text-amber-400 px-1.5 py-0.5">
+                  <Hourglass size={10} /> Ends in {daysLeft}d
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 text-gold/80">
+                <Trophy size={10} /> {rewardChipLabel(row)}
+              </span>
+            </div>
+
+            {row.gates?.gates_ok === false && (
+              <div className="mt-3 text-[11px] text-muted-foreground border-t border-border pt-2 space-y-0.5">
+                <div className="italic">{unlockHint(row)}</div>
+              </div>
+            )}
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

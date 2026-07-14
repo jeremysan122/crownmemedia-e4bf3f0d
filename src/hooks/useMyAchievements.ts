@@ -42,6 +42,8 @@ export interface AchievementRow {
   completed_at: string | null;
   rewards: AchievementRewardRow[];
   gates: AchievementGates;
+  starts_at: string | null;
+  ends_at: string | null;
 }
 
 export function useMyAchievements() {

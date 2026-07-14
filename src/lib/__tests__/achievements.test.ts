@@ -7,6 +7,7 @@ import {
   rewardChipLabel,
   sortAchievements,
   statusMatches,
+  endsInDays,
   RARITY_ORDER,
 } from "@/lib/achievements";
 import type { AchievementRow } from "@/hooks/useMyAchievements";
@@ -32,6 +33,8 @@ const mk = (over: Partial<AchievementRow>): AchievementRow => ({
   completed_at: null,
   rewards: [],
   gates: { account_age_days: 0, required_account_age_days: 0, qualified_active_days: 0, required_qualified_active_days: 0, distinct_active_weeks: 0, required_distinct_active_weeks: 0, gates_ok: true },
+  starts_at: null,
+  ends_at: null,
   ...over,
 } as AchievementRow);
 
@@ -79,15 +82,20 @@ describe("achievements helpers", () => {
     expect(RARITY_ORDER.mythic).toBeGreaterThan(RARITY_ORDER.rare);
   });
 
-  it("sortAchievements 'closest' surfaces closest-to-complete first, completed last", () => {
+  it("sortAchievements 'closest' surfaces closest-to-complete first, gated below in-progress, completed last", () => {
+    const gated = mk({ slug: "gated", completion_percent: 95, gates: { ...mk({}).gates, gates_ok: false } });
     const rows = [
       mk({ slug: "done", status: "completed", completion_percent: 100 }),
+      gated,
       mk({ slug: "far", completion_percent: 10 }),
       mk({ slug: "near", completion_percent: 90 }),
     ];
     const sorted = sortAchievements(rows, "closest");
     expect(sorted[0].slug).toBe("near");
-    expect(sorted[sorted.length - 1].slug).toBe("done");
+    expect(sorted[1].slug).toBe("far");
+    // Gated demoted below in-progress rows even with higher raw progress
+    expect(sorted[2].slug).toBe("done");
+    expect(sorted[3].slug).toBe("gated");
   });
 
   it("pickNextUp returns the most-progressed eligible row", () => {
@@ -111,5 +119,19 @@ describe("achievements helpers", () => {
     expect(rewardChipLabel({ ...mk({}), achievement_type: "title_unlock" } as any)).toBe("Title reward");
     expect(rewardChipLabel({ ...mk({}), achievement_type: "shekel_grant" } as any)).toBe("Shekel reward");
     expect(rewardChipLabel({ ...mk({}), achievement_type: "boost_grant" } as any)).toBe("Boost reward");
+  });
+
+  it("endsInDays returns null when not seasonal or already ended", () => {
+    expect(endsInDays(mk({ ends_at: null }))).toBeNull();
+    const past = new Date(Date.now() - 86_400_000).toISOString();
+    expect(endsInDays(mk({ ends_at: past }))).toBeNull();
+  });
+
+  it("endsInDays rounds up remaining full days", () => {
+    const now = Date.UTC(2026, 6, 14, 0, 0, 0);
+    const in3d = new Date(now + 3 * 86_400_000 + 60_000).toISOString();
+    expect(endsInDays(mk({ ends_at: in3d }), now)).toBe(4);
+    const in12h = new Date(now + 12 * 3600_000).toISOString();
+    expect(endsInDays(mk({ ends_at: in12h }), now)).toBe(1);
   });
 });

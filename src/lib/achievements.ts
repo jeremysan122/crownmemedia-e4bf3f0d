@@ -58,9 +58,15 @@ export function sortAchievements(rows: AchievementRow[], sort: SortKey): Achieve
       return bt - at;
     }
     if (sort === "closest") {
-      const ap = a.status === "completed" ? -1 : (a.completion_percent || 0);
-      const bp = b.status === "completed" ? -1 : (b.completion_percent || 0);
-      return bp - ap;
+      // Completed = -1 (bottom), gated = -2 (very bottom), otherwise progress %.
+      // Gated rows aren't realistically completable right now, so demote them
+      // below in-progress items to keep "Next Up" style focus.
+      const score = (r: AchievementRow) => {
+        if (r.status === "completed") return -1;
+        if (r.gates?.gates_ok === false) return -2;
+        return r.completion_percent || 0;
+      };
+      return score(b) - score(a);
     }
     return 0;
   });
@@ -97,4 +103,18 @@ export function rewardChipLabel(a: AchievementRow): string {
   if (t === "shekel_grant") return "Shekel reward";
   if (t === "boost_grant") return "Boost reward";
   return a.avatar_frame_id ? "Frame reward" : "Reward";
+}
+
+/**
+ * Returns whole days remaining until a seasonal achievement's `ends_at`, or
+ * null if the row is not time-limited or already expired. Used to render the
+ * "Ends in Xd" chip on time-sensitive cards.
+ */
+export function endsInDays(a: AchievementRow, now: number = Date.now()): number | null {
+  if (!a.ends_at) return null;
+  const t = new Date(a.ends_at).getTime();
+  if (!Number.isFinite(t)) return null;
+  const ms = t - now;
+  if (ms <= 0) return null;
+  return Math.max(1, Math.ceil(ms / 86_400_000));
 }
