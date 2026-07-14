@@ -610,6 +610,8 @@ export default function RoyalPassSettings() {
                 <Link to="/wallet"><Receipt size={14} className="mr-2" /> View billing history</Link>
               </Button>
             </div>
+
+            <RoyalPassReversalHistory />
           </>
         )}
 
