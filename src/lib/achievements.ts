@@ -91,9 +91,9 @@ export function unlockHint(a: AchievementRow): string {
 }
 
 export function rewardChipLabel(a: AchievementRow): string {
-  const t = (a as any).achievement_type as string | undefined;
-  if (t === "badge_unlock") return "Badge reward";
-  if (t === "title_unlock") return "Title reward";
+  const t = ((a as any).achievement_type as string | undefined) ?? a.rewards?.[0]?.reward_type;
+  if (t === "badge_unlock" || t === "badge") return "Badge reward";
+  if (t === "title_unlock" || t === "title") return "Title reward";
   if (t === "shekel_grant") return "Shekel reward";
   if (t === "boost_grant") return "Boost reward";
   return a.avatar_frame_id ? "Frame reward" : "Reward";
