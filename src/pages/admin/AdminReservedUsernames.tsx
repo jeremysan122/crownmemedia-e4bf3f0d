@@ -11,8 +11,6 @@ import { toast } from "sonner";
 import { Loader2, ShieldCheck, Database, ClipboardList, UserCheck } from "lucide-react";
 import { timeAgo } from "@/lib/crown";
 
-interface AuditRow {
-
 const CLAIM_ERROR_MESSAGES: Record<string, string> = {
   not_authorized: "You don't have admin permission for this action.",
   invalid_username: "Username format is invalid (2–30 lowercase alphanumerics).",
@@ -32,7 +30,7 @@ function friendlyError(raw: string): string {
   return CLAIM_ERROR_MESSAGES[key] ?? raw;
 }
 
-interface _AuditRow {
+interface AuditRow {
   id: string;
   action: string;
   username: string;
