@@ -4911,6 +4911,93 @@ export type Database = {
         }
         Relationships: []
       }
+      reserved_username_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string
+          evidence_notes: string | null
+          id: string
+          new_record: Json | null
+          previous_record: Json | null
+          request_ip: string | null
+          target_user_id: string | null
+          user_agent: string | null
+          username: string
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string
+          evidence_notes?: string | null
+          id?: string
+          new_record?: Json | null
+          previous_record?: Json | null
+          request_ip?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+          username: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string
+          evidence_notes?: string | null
+          id?: string
+          new_record?: Json | null
+          previous_record?: Json | null
+          request_ip?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
+      reserved_usernames: {
+        Row: {
+          category: string
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          is_active: boolean
+          priority: number
+          requires_identity_verification: boolean
+          reservation_policy: string
+          reserved_reason: string
+          source_label: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          category: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          is_active?: boolean
+          priority?: number
+          requires_identity_verification?: boolean
+          reservation_policy: string
+          reserved_reason: string
+          source_label: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          category?: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          is_active?: boolean
+          priority?: number
+          requires_identity_verification?: boolean
+          reservation_policy?: string
+          reserved_reason?: string
+          source_label?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
       restricted_users: {
         Row: {
           created_at: string
@@ -6978,6 +7065,14 @@ export type Database = {
         }
         Returns: number
       }
+      admin_claim_reserved_username: {
+        Args: {
+          _evidence_notes?: string
+          _target_user_id: string
+          _username: string
+        }
+        Returns: Json
+      }
       admin_decide_sensitive_appeal: {
         Args: { _appeal_id: string; _decision: string; _notes?: string }
         Returns: {
@@ -7411,6 +7506,15 @@ export type Database = {
       check_repost_eligibility: {
         Args: { p_parent_post_id: string }
         Returns: Json
+      }
+      check_username_available: {
+        Args: { _username: string }
+        Returns: {
+          available: boolean
+          message: string
+          normalized: string
+          reason: string
+        }[]
       }
       claim_daily_reward: { Args: never; Returns: Json }
       claim_daily_royal_boost: { Args: { p_post_id: string }; Returns: Json }
@@ -8376,6 +8480,7 @@ export type Database = {
           sub_slug: string
         }[]
       }
+      normalize_username: { Args: { _username: string }; Returns: string }
       notif_pref: {
         Args: { _kind: string; _user_id: string }
         Returns: boolean
@@ -8926,6 +9031,15 @@ export type Database = {
       update_my_dob: { Args: { _dob: string }; Returns: undefined }
       update_my_preferences: { Args: { _prefs: Json }; Returns: undefined }
       use_royal_shield: { Args: { _post_id: string }; Returns: Json }
+      username_reservation_status: {
+        Args: { _username: string }
+        Returns: {
+          category: string
+          is_reserved: boolean
+          message: string
+          reservation_policy: string
+        }[]
+      }
       validate_storage_object: {
         Args: {
           _allowed_mimes: string[]
