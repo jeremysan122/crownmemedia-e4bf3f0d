@@ -292,6 +292,7 @@ const App = () => (
               <Route path="/admin/sensitive-appeals" element={<ProtectedRoute><AdminRoute><AdminSensitiveAppeals /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/compliance" element={<ProtectedRoute><AdminRoute><ComplianceCheck /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/categories" element={<ProtectedRoute><AdminRoute><AdminCategories /></AdminRoute></ProtectedRoute>} />
+              <Route path="/admin/reserved-usernames" element={<ProtectedRoute><AdminRoute><AdminReservedUsernames /></AdminRoute></ProtectedRoute>} />
 
               <Route path="/discover" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
               <Route path="/c/:mainSlug" element={<CategoryHub />} />
