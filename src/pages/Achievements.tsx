@@ -71,15 +71,31 @@ function AchievementCard({ a, rarityPct, onOpen }: { a: AchievementRow; rarityPc
 
   return (
     <article
-      className={`royal-card p-4 relative ${done ? "ring-1 ring-gold/50" : ""} ${!gatesOk ? "opacity-70" : ""}`}
+      className={`royal-card p-4 relative cursor-pointer ${done ? "ring-1 ring-gold/50" : ""} ${!gatesOk ? "opacity-70" : ""}`}
       data-testid="achievement-card"
+      data-slug={a.slug}
       data-status={done ? "completed" : !gatesOk ? "locked" : "in-progress"}
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(a.slug)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(a.slug); } }}
     >
-      {hiddenSecret && (
-        <div className="absolute top-2 right-2 inline-flex items-center gap-1 text-[9px] uppercase tracking-wider text-muted-foreground">
-          <EyeOff size={10} /> Secret
-        </div>
-      )}
+      <div className="absolute top-2 right-2 flex items-center gap-1">
+        {daysLeft !== null && !done && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-amber-500/50 bg-amber-500/10 text-amber-400 px-1.5 py-0.5 text-[9px] uppercase tracking-wider"
+            title={`Seasonal — ends ${new Date(a.ends_at as string).toLocaleDateString()}`}
+            data-testid="ends-in-chip"
+          >
+            <Hourglass size={10} /> Ends in {daysLeft}d
+          </span>
+        )}
+        {hiddenSecret && (
+          <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+            <EyeOff size={10} /> Secret
+          </span>
+        )}
+      </div>
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0">
           <h3 className="font-display text-sm text-gold leading-tight truncate">{displayed.name}</h3>
