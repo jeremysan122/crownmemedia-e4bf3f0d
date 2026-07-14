@@ -127,6 +127,7 @@ const ComplianceCheck = lazy(() => import("./pages/admin/ComplianceCheck"));
 const CategoryHub = lazy(() => import("./pages/CategoryHub"));
 const Discover = lazy(() => import("./pages/Discover"));
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const AdminReservedUsernames = lazy(() => import("./pages/admin/AdminReservedUsernames"));
 const CommandCenterRoyalShields = lazy(() => import("./pages/admin/CommandCenterRoyalShields"));
 const CommandCenterAchievements = lazy(() => import("./pages/admin/CommandCenterAchievements"));
 const CommandCenterAchievementAuthor = lazy(() => import("./pages/admin/CommandCenterAchievementAuthor"));
@@ -291,6 +292,7 @@ const App = () => (
               <Route path="/admin/sensitive-appeals" element={<ProtectedRoute><AdminRoute><AdminSensitiveAppeals /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/compliance" element={<ProtectedRoute><AdminRoute><ComplianceCheck /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/categories" element={<ProtectedRoute><AdminRoute><AdminCategories /></AdminRoute></ProtectedRoute>} />
+              <Route path="/admin/reserved-usernames" element={<ProtectedRoute><AdminRoute><AdminReservedUsernames /></AdminRoute></ProtectedRoute>} />
 
               <Route path="/discover" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
               <Route path="/c/:mainSlug" element={<CategoryHub />} />
