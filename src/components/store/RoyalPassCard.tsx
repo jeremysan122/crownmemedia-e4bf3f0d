@@ -12,6 +12,7 @@ import { useRoyalEntitlements, useFounderStatus } from "@/hooks/useRoyalEntitlem
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { isFeatureEnabled } from "@/lib/featureFlags";
 import { useAdminRoles } from "@/hooks/useAdminRoles";
+import { trackEvent } from "@/lib/analytics";
 
 
 
