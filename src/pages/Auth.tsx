@@ -130,7 +130,7 @@ export default function Auth() {
     }
   }, [mode, params]);
 
-  // Username availability check (debounced)
+  // Username availability check (debounced) — server-side reservation + collision
   useEffect(() => {
     if (mode !== "signup") { setUsernameStatus("idle"); return; }
     const v = form.username.trim().toLowerCase();
@@ -140,16 +140,18 @@ export default function Auth() {
     if (isReservedUsername(v)) { setUsernameStatus("reserved"); return; }
     setUsernameStatus("checking");
     usernameTimer.current = window.setTimeout(async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id")
-        .ilike("username", v)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("check_username_available", { _username: v });
       if (error) { setUsernameStatus("idle"); return; }
-      setUsernameStatus(data ? "taken" : "available");
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row) { setUsernameStatus("idle"); return; }
+      if (row.available) setUsernameStatus("available");
+      else if (row.reason === "invalid") setUsernameStatus("invalid");
+      else if (row.reason === "taken") setUsernameStatus("taken");
+      else setUsernameStatus("reserved");
     }, 400);
     return () => { if (usernameTimer.current) window.clearTimeout(usernameTimer.current); };
   }, [form.username, mode]);
+
 
   const onPwKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     setCapsOn(e.getModifierState && e.getModifierState("CapsLock"));
