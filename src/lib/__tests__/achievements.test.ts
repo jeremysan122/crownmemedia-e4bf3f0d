@@ -120,4 +120,18 @@ describe("achievements helpers", () => {
     expect(rewardChipLabel({ ...mk({}), achievement_type: "shekel_grant" } as any)).toBe("Shekel reward");
     expect(rewardChipLabel({ ...mk({}), achievement_type: "boost_grant" } as any)).toBe("Boost reward");
   });
+
+  it("endsInDays returns null when not seasonal or already ended", () => {
+    expect(endsInDays(mk({ ends_at: null }))).toBeNull();
+    const past = new Date(Date.now() - 86_400_000).toISOString();
+    expect(endsInDays(mk({ ends_at: past }))).toBeNull();
+  });
+
+  it("endsInDays rounds up remaining full days", () => {
+    const now = Date.UTC(2026, 6, 14, 0, 0, 0);
+    const in3d = new Date(now + 3 * 86_400_000 + 60_000).toISOString();
+    expect(endsInDays(mk({ ends_at: in3d }), now)).toBe(4);
+    const in12h = new Date(now + 12 * 3600_000).toISOString();
+    expect(endsInDays(mk({ ends_at: in12h }), now)).toBe(1);
+  });
 });
