@@ -677,6 +677,9 @@ export default function Profile() {
               )}
               {royalPassActive && <RoyalPassBadge showLabel />}
               <RoleBadges roles={roles} crownsHeld={prof.crowns_held} />
+              {decorations?.title_text && (
+                <EquippedTitleChip text={decorations.title_text} rarity={decorations.title_rarity} />
+              )}
             </div>
             <p className="mt-2 text-xs lg:text-sm text-muted-foreground">
               {locationLabel(prof)} · Member since {joinedLabel}
