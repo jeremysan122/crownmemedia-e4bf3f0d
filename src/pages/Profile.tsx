@@ -776,6 +776,10 @@ export default function Profile() {
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-6 mt-2">
           <div>
             <ProfileAchievementsShowcase userId={prof.id} isMe={isMe} />
+            <div className="mt-4">
+              <div className="text-[11px] uppercase tracking-[0.2em] text-gold/80 mb-2">Recent Unlocks</div>
+              <ProfileUnlockFeed userId={prof.id} />
+            </div>
             <ProfileCategoryRankings userId={prof.id} />
 
 
