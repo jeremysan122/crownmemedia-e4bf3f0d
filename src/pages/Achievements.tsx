@@ -37,12 +37,13 @@ const RARITY_COLOR: Record<string, string> = {
 const CHECKPOINTS = [25, 50, 75, 100];
 const RARITIES = ["common", "rare", "epic", "legendary", "mythic"] as const;
 
-function AchievementCard({ a, rarityPct }: { a: AchievementRow; rarityPct?: number }) {
+function AchievementCard({ a, rarityPct, onOpen }: { a: AchievementRow; rarityPct?: number; onOpen: (slug: string) => void }) {
   const displayed = maskSecret(a);
   const pct = Math.max(0, Math.min(100, Math.round(a.completion_percent || 0)));
   const done = a.status === "completed" || pct >= 100;
   const gatesOk = a.gates?.gates_ok !== false;
   const hiddenSecret = a.is_secret && a.status !== "completed";
+  const daysLeft = endsInDays(a);
   const rewardsByCp = new Map<number, string[]>();
   a.rewards.forEach((r) => {
     const list = rewardsByCp.get(r.checkpoint) || [];
@@ -50,8 +51,9 @@ function AchievementCard({ a, rarityPct }: { a: AchievementRow; rarityPct?: numb
     rewardsByCp.set(r.checkpoint, list);
   });
 
-  const share = async () => {
-    const url = `${window.location.origin}/achievements`;
+  const share = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/achievements?slug=${encodeURIComponent(a.slug)}`;
     const text = `I unlocked "${a.name}" on CrownMe 👑`;
     void trackEvent("achievement_share_attempted", {
       metadata: { slug: a.slug, rarity: a.rarity, collection: a.collection_slug ?? "other" },
