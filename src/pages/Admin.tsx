@@ -92,6 +92,7 @@ export default function Admin() {
 
         <AdminSection title="Content & Categories">
           <AdminNav to="/admin/categories" icon={<FolderTree size={12} />} label="Categories" />
+          <AdminNav to="/admin/reserved-usernames" icon={<Shield size={12} />} label="Reserved Usernames" />
         </AdminSection>
 
         <AdminSection title="Compliance & System Health">
