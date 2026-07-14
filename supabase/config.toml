@@ -37,3 +37,5 @@ project_id = "bailrqskqpmzvsgivhvm"
     verify_jwt = true
   [functions.royal-pass-reconcile]
     verify_jwt = false
+  [functions.seed-reserved-usernames]
+    verify_jwt = true
