@@ -220,6 +220,9 @@ export default function RoyalPassCard() {
     if (!user || subscribing || ctaLocked) return;
 
     setSubscribing(plan.id);
+    void trackEvent("royal_pass_subscribe_started", {
+      metadata: { plan_id: plan.id, interval: plan.interval, usd: plan.usd, source: "store_card" },
+    });
     try {
       openCheckout({
         fnName: "create-royal-pass-checkout",
@@ -227,6 +230,8 @@ export default function RoyalPassCard() {
         title: plan.name,
         returnUrl: `${window.location.origin}/store/success?kind=royal_pass`,
       });
+    } catch (e) {
+      void trackEvent("royal_pass_subscribe_failed", { metadata: { message: (e as Error)?.message?.slice(0, 120) ?? "unknown" } });
     } finally {
       // openCheckout mounts the dialog synchronously; clear immediately after mount tick
       setTimeout(() => setSubscribing(null), 800);
