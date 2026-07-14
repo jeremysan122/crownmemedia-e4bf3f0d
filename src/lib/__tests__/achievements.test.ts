@@ -7,6 +7,7 @@ import {
   rewardChipLabel,
   sortAchievements,
   statusMatches,
+  endsInDays,
   RARITY_ORDER,
 } from "@/lib/achievements";
 import type { AchievementRow } from "@/hooks/useMyAchievements";
