@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { trackEvent } from "@/lib/analytics";
 
 /**
  * Emits a toast for any achievement unlock notification (badge, title, shekel,
@@ -18,20 +19,38 @@ export function useAchievementUnlockToaster() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
         (payload) => {
-          const p = (payload.new as { payload?: Record<string, unknown>; title?: string; body?: string }) ?? {};
-          const kind = (p?.payload as { kind?: string } | undefined)?.kind;
+          const row = (payload.new as { payload?: Record<string, unknown>; title?: string; body?: string }) ?? {};
+          const meta = (row.payload ?? {}) as Record<string, unknown>;
+          const kind = typeof meta.kind === "string" ? meta.kind : undefined;
           if (!kind) return;
           if (kind === "frame_unlocked") return; // handled elsewhere
-          if (kind === "achievement_unlocked" || kind === "badge_unlocked" || kind === "title_unlocked") {
-            toast.success(p.title ?? "Achievement unlocked", {
-              description: p.body,
-              duration: 6500,
-              action: {
-                label: "View",
-                onClick: () => { window.location.href = "/achievements"; },
-              },
-            });
-          }
+
+          const safeMeta = {
+            kind,
+            slug: typeof meta.slug === "string" ? meta.slug : null,
+            rarity: typeof meta.rarity === "string" ? meta.rarity : null,
+            checkpoint: typeof meta.checkpoint === "number" ? meta.checkpoint : null,
+            reward_type: typeof meta.reward_type === "string" ? meta.reward_type : null,
+          };
+
+          if (kind === "achievement_unlocked") void trackEvent("achievement_unlocked", { metadata: safeMeta });
+          else if (kind === "badge_unlocked") void trackEvent("achievement_badge_unlocked", { metadata: safeMeta });
+          else if (kind === "title_unlocked") void trackEvent("achievement_title_unlocked", { metadata: safeMeta });
+          else if (kind === "shekel_grant") void trackEvent("achievement_shekel_grant", { metadata: safeMeta });
+          else if (kind === "boost_grant") void trackEvent("achievement_boost_grant", { metadata: safeMeta });
+          else if (kind === "checkpoint_reached") {
+            void trackEvent("achievement_checkpoint_reached", { metadata: safeMeta });
+            return; // no toast — page-level tracker handles UI
+          } else return;
+
+          toast.success(row.title ?? "Achievement unlocked", {
+            description: row.body,
+            duration: 6500,
+            action: {
+              label: "View",
+              onClick: () => { window.location.href = "/achievements"; },
+            },
+          });
         },
       )
       .subscribe();

@@ -318,7 +318,11 @@ export default function Achievements() {
             </div>
             <select
               value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
+              onChange={(e) => {
+                const v = e.target.value as SortKey;
+                setSort(v);
+                void trackEvent("achievement_sort_changed", { metadata: { sort: v } });
+              }}
               aria-label="Sort achievements"
               className="text-xs px-3 py-2 rounded-full border border-border bg-background focus:outline-none focus:ring-1 focus:ring-gold"
             >
@@ -334,7 +338,10 @@ export default function Achievements() {
             {(["all", "in_progress", "completed", "locked"] as const).map((f) => (
               <button
                 key={f}
-                onClick={() => setStatusFilter(f)}
+                onClick={() => {
+                  setStatusFilter(f);
+                  void trackEvent("achievement_filter_changed", { metadata: { kind: "status", value: f } });
+                }}
                 className={`text-[11px] px-3 py-1.5 rounded-full border font-bold uppercase tracking-wider ${
                   statusFilter === f
                     ? "bg-gradient-gold text-black border-transparent"
