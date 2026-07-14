@@ -35,3 +35,5 @@ project_id = "bailrqskqpmzvsgivhvm"
     verify_jwt = false
   [functions.generate-alt-text]
     verify_jwt = true
+  [functions.royal-pass-reconcile]
+    verify_jwt = false
