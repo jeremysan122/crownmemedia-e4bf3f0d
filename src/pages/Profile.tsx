@@ -118,6 +118,7 @@ export default function Profile() {
   const [editingPostData, setEditingPostData] = useState<{ caption: string; image_url: string; filter: any; edited_at?: string | null } | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const decorations = useProfileDecorations(prof?.id ?? null);
   const [postMenuPosition, setPostMenuPosition] = useState<PostMenuPosition | null>(null);
   const [insightsPost, setInsightsPost] = useState<{ id: string; base: { crown_score: number; vote_count: number; comment_count: number; share_count: number; battle_wins: number; created_at: string } } | null>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
