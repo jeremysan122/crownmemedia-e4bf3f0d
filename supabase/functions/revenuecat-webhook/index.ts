@@ -166,11 +166,22 @@ async function dispatch(e: RcEvent) {
       if (isShekel) await creditShekels(e);
       await logTransaction(e, "succeeded");
       break;
-    case "CANCELLATION":
+    case "CANCELLATION": {
+      // If expiration is still in the future, mirror Stripe's
+      // cancel_at_period_end behavior; only revoke on EXPIRATION.
+      const futureExpiry = e.expiration_at_ms && e.expiration_at_ms > Date.now();
+      if (entitlement === "royal_pass") {
+        if (futureExpiry) await scheduleRoyalPassCancel(e);
+        else await deactivateRoyalPass(e);
+      }
+      await logTransaction(e, futureExpiry ? "scheduled_cancel" : "canceled");
+      break;
+    }
     case "EXPIRATION":
       if (entitlement === "royal_pass") await deactivateRoyalPass(e);
       await logTransaction(e, "canceled");
       break;
+    case "UNCANCELLATION_UNSCHEDULED":
     case "BILLING_ISSUE":
       await logTransaction(e, "past_due");
       break;
