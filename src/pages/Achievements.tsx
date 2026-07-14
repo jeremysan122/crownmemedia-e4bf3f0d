@@ -428,7 +428,7 @@ export default function Achievements() {
                   {collection.replace(/-/g, " ")}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {items.map((a) => <AchievementCard key={a.achievement_id} a={a} rarityPct={rarityMap[a.achievement_id]?.rarity_pct} />)}
+                  {items.map((a) => <AchievementCard key={a.achievement_id} a={a} rarityPct={rarityMap[a.achievement_id]?.rarity_pct} onOpen={openDetail} />)}
                 </div>
               </section>
             ))}
@@ -440,6 +440,93 @@ export default function Achievements() {
           <span className="text-[10px] text-muted-foreground">Updated live — new unlocks appear as you play.</span>
         </div>
       </div>
+
+      <AchievementDetailDialog row={openRow} slug={openSlug} loading={loading} onClose={closeDetail} />
     </AppShell>
+  );
+}
+
+function AchievementDetailDialog({
+  row, slug, loading, onClose,
+}: { row: AchievementRow | null; slug: string | null; loading: boolean; onClose: () => void }) {
+  const open = slug !== null;
+  useEffect(() => {
+    if (row) {
+      void trackEvent("achievement_next_up_impression", {
+        metadata: { slug: row.slug, rarity: row.rarity, pct: Math.floor(row.completion_percent), source: "deeplink" },
+      });
+    }
+  }, [row?.achievement_id]);
+  const displayed = row ? maskSecret(row) : null;
+  const pct = row ? Math.max(0, Math.min(100, Math.round(row.completion_percent || 0))) : 0;
+  const daysLeft = row ? endsInDays(row) : null;
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md" data-testid="achievement-detail-dialog">
+        {!row ? (
+          <DialogHeader>
+            <DialogTitle>{loading ? "Loading achievement…" : "Achievement not found"}</DialogTitle>
+            <DialogDescription>
+              {loading
+                ? "Fetching the details for this achievement."
+                : slug
+                  ? `We couldn't find "${slug}" in your achievements. It may be locked, seasonal, or expired.`
+                  : ""}
+            </DialogDescription>
+          </DialogHeader>
+        ) : (
+          <>
+            <DialogHeader>
+              <div className="flex items-start justify-between gap-3">
+                <DialogTitle className="font-display text-xl text-gold leading-tight">{displayed!.name}</DialogTitle>
+                <span className={`shrink-0 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${RARITY_COLOR[row.rarity] || RARITY_COLOR.common}`}>
+                  {row.rarity}
+                </span>
+              </div>
+              <DialogDescription className="text-xs">{displayed!.description}</DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-[11px] mb-1">
+                <span className="text-muted-foreground">Progress</span>
+                <span className="tabular-nums font-bold">{pct}%</span>
+              </div>
+              <div className="relative h-2 rounded-full bg-secondary overflow-hidden">
+                <div className="h-full bg-gradient-gold" style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+              {row.status === "completed" ? (
+                <span className="inline-flex items-center gap-1 text-gold"><CheckCircle2 size={12} /> Completed</span>
+              ) : row.gates?.gates_ok === false ? (
+                <span className="inline-flex items-center gap-1 text-muted-foreground"><Lock size={12} /> Locked</span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-muted-foreground"><Sparkles size={12} /> In progress</span>
+              )}
+              {row.is_founder_only && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-gold/40 text-gold px-1.5 py-0.5">
+                  <Crown size={10} /> Founder
+                </span>
+              )}
+              {daysLeft !== null && row.status !== "completed" && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/50 bg-amber-500/10 text-amber-400 px-1.5 py-0.5">
+                  <Hourglass size={10} /> Ends in {daysLeft}d
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 text-gold/80">
+                <Trophy size={10} /> {rewardChipLabel(row)}
+              </span>
+            </div>
+
+            {row.gates?.gates_ok === false && (
+              <div className="mt-3 text-[11px] text-muted-foreground border-t border-border pt-2 space-y-0.5">
+                <div className="italic">{unlockHint(row)}</div>
+              </div>
+            )}
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
