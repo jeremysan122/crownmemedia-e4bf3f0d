@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
-import { Crown, Lock, CheckCircle2, Clock, Sparkles, Trophy, Search, Share2, EyeOff } from "lucide-react";
+import { Crown, Lock, CheckCircle2, Clock, Sparkles, Trophy, Search, Share2, EyeOff, Hourglass } from "lucide-react";
 import { useMyAchievements, type AchievementRow } from "@/hooks/useMyAchievements";
 import { useAchievementRarity, rarityLabel } from "@/hooks/useAchievementRarity";
 import CrownLoader from "@/components/CrownLoader";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import WeeklyQuestsPanel from "@/components/achievements/WeeklyQuestsPanel";
 import RarityLegend from "@/components/achievements/RarityLegend";
 import NextUpCard from "@/components/achievements/NextUpCard";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import {
+  endsInDays,
   matchesRarity,
   matchesSearch,
   maskSecret,
