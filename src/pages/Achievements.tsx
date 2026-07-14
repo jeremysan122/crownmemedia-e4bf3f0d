@@ -206,6 +206,28 @@ export default function Achievements() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("rarity");
 
+  // Deep-link: /achievements?slug=<slug> opens the detail dialog on mount.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openSlug = searchParams.get("slug");
+  const openRow = useMemo(
+    () => (openSlug ? rows.find((r) => r.slug === openSlug) ?? null : null),
+    [openSlug, rows],
+  );
+  const openDetail = (slug: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("slug", slug);
+      return next;
+    }, { replace: false });
+  };
+  const closeDetail = () => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("slug");
+      return next;
+    }, { replace: true });
+  };
+
   // Fire once per session mount
   useEffect(() => { void trackEvent("achievement_page_opened"); }, []);
 
