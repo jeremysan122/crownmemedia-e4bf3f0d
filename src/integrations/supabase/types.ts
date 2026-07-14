@@ -35,6 +35,7 @@ export type Database = {
           name: string
           rarity: string
           requirement_logic: Json
+          reward_payload: Json
           slug: string
           starts_at: string | null
           updated_at: string
@@ -60,6 +61,7 @@ export type Database = {
           name: string
           rarity?: string
           requirement_logic?: Json
+          reward_payload?: Json
           slug: string
           starts_at?: string | null
           updated_at?: string
@@ -85,6 +87,7 @@ export type Database = {
           name?: string
           rarity?: string
           requirement_logic?: Json
+          reward_payload?: Json
           slug?: string
           starts_at?: string | null
           updated_at?: string
@@ -350,6 +353,7 @@ export type Database = {
           created_at: string
           description: string | null
           display_order: number
+          icon_slug: string | null
           id: string
           is_active: boolean
           is_founder_only: boolean
@@ -362,6 +366,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number
+          icon_slug?: string | null
           id?: string
           is_active?: boolean
           is_founder_only?: boolean
@@ -374,6 +379,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number
+          icon_slug?: string | null
           id?: string
           is_active?: boolean
           is_founder_only?: boolean
@@ -483,6 +489,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      badges: {
+        Row: {
+          created_at: string
+          description: string
+          display_order: number
+          icon_slug: string
+          id: string
+          is_active: boolean
+          name: string
+          rarity: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          icon_slug?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          rarity?: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          icon_slug?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          rarity?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       battle_tickets: {
         Row: {
@@ -5967,6 +6012,42 @@ export type Database = {
         }
         Relationships: []
       }
+      titles: {
+        Row: {
+          created_at: string
+          description: string
+          display_order: number
+          id: string
+          is_active: boolean
+          rarity: string
+          slug: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          rarity?: string
+          slug: string
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          rarity?: string
+          slug?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tournament_matches: {
         Row: {
           battle_id: string | null
@@ -6300,6 +6381,55 @@ export type Database = {
           },
         ]
       }
+      user_badges: {
+        Row: {
+          achievement_id: string | null
+          badge_slug: string
+          equipped: boolean
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id?: string | null
+          badge_slug: string
+          equipped?: boolean
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string | null
+          badge_slug?: string
+          equipped?: boolean
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_rarity_stats"
+            referencedColumns: ["achievement_id"]
+          },
+          {
+            foreignKeyName: "user_badges_badge_slug_fkey"
+            columns: ["badge_slug"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
       user_legal_acceptances: {
         Row: {
           accepted_at: string
@@ -6386,6 +6516,55 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_titles: {
+        Row: {
+          achievement_id: string | null
+          equipped: boolean
+          id: string
+          title_slug: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id?: string | null
+          equipped?: boolean
+          id?: string
+          title_slug: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string | null
+          equipped?: boolean
+          id?: string
+          title_slug?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_titles_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_titles_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_rarity_stats"
+            referencedColumns: ["achievement_id"]
+          },
+          {
+            foreignKeyName: "user_titles_title_slug_fkey"
+            columns: ["title_slug"]
+            isOneToOne: false
+            referencedRelation: "titles"
+            referencedColumns: ["slug"]
+          },
+        ]
       }
       user_weekly_quests: {
         Row: {
@@ -7440,7 +7619,9 @@ export type Database = {
       }
       ensure_my_wallet: { Args: never; Returns: undefined }
       equip_avatar_frame: { Args: { _frame_id: string }; Returns: undefined }
+      equip_badge: { Args: { _slug: string }; Returns: undefined }
       equip_frame: { Args: { _frame_key: string }; Returns: Json }
+      equip_title: { Args: { _slug: string }; Returns: undefined }
       evaluate_cost_alerts: { Args: never; Returns: number }
       evaluate_creator_milestones: {
         Args: { _creator_id: string }
@@ -8208,6 +8389,18 @@ export type Database = {
         Args: { p_change_type: string; p_max_per_hour?: number }
         Returns: boolean
       }
+      profile_decorations: {
+        Args: { _user_id: string }
+        Returns: {
+          badge_icon: string
+          badge_name: string
+          badge_rarity: string
+          badge_slug: string
+          title_rarity: string
+          title_slug: string
+          title_text: string
+        }[]
+      }
       profile_showcased_achievements: {
         Args: { _limit?: number; _user_id: string }
         Returns: {
@@ -8330,6 +8523,17 @@ export type Database = {
         Returns: undefined
       }
       recalculate_repost_count: { Args: { _post_id: string }; Returns: number }
+      recent_achievement_unlocks: {
+        Args: { _limit?: number; _user_id: string }
+        Returns: {
+          achievement_id: string
+          achievement_type: string
+          completed_at: string
+          name: string
+          rarity: string
+          slug: string
+        }[]
+      }
       record_failed_royal_boost: {
         Args: { p_post_id?: string; p_reason: string }
         Returns: string
