@@ -14,12 +14,13 @@ import { useRoyalEntitlements } from "@/hooks/useRoyalEntitlements";
 import { useAdminRoles } from "@/hooks/useAdminRoles";
 import {
   Crown, Loader2, ExternalLink, Receipt, RefreshCw, ShieldCheck, X, Zap,
-  Sparkles, Star, TrendingUp, History, RotateCw, BadgeCheck, Trophy, Gem,
+  Sparkles, Star, TrendingUp, History, RotateCw, BadgeCheck, Trophy, Gem, Gift,
 } from "lucide-react";
 import { toast } from "sonner";
 import BoostPostPicker from "@/components/store/BoostPostPicker";
 import RoyalPassStatusBanner, { statusIsDunning } from "@/components/royal-pass/RoyalPassStatusBanner";
 import RoyalPassReversalHistory from "@/components/royal-pass/RoyalPassReversalHistory";
+import GiftRoyalPassDialog from "@/components/royal-pass/GiftRoyalPassDialog";
 import { trackEvent } from "@/lib/analytics";
 
 interface BoostRow {
