@@ -7877,6 +7877,10 @@ export type Database = {
         Returns: number
       }
       ensure_my_wallet: { Args: never; Returns: undefined }
+      equip_achievement_crown: {
+        Args: { _crown_id: string }
+        Returns: undefined
+      }
       equip_avatar_frame: { Args: { _frame_id: string }; Returns: undefined }
       equip_badge: { Args: { _slug: string }; Returns: undefined }
       equip_frame: { Args: { _frame_key: string }; Returns: Json }
@@ -8537,6 +8541,32 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      my_achievement_crowns: {
+        Args: never
+        Returns: {
+          asset_url: string
+          collection_name: string
+          collection_slug: string
+          completion_percent: number
+          crown_id: string
+          description: string
+          equipped: boolean
+          is_secret: boolean
+          last_evaluated_at: string
+          lore: string
+          name: string
+          owned: boolean
+          progress: number
+          rarity: string
+          requirement_logic: Json
+          slug: string
+          sort_order: number
+          target: number
+          tier_index: number
+          unlock_hint: string
+          unlocked_at: string
+        }[]
       }
       my_achievements: {
         Args: never
