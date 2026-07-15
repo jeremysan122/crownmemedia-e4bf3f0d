@@ -9,6 +9,7 @@
 export type MonetizationScope =
   | "checkout"
   | "royal_pass_checkout"
+  | "royal_pass_gift_checkout"
   | "royal_pass_portal"
   | "royal_pass_cancel"
   | "verification_submit"
