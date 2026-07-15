@@ -70,7 +70,7 @@ const RewardHistory = lazy(() => import("./pages/RewardHistory"));
 const AdminRewards = lazy(() => import("./pages/AdminRewards"));
 
 const Achievements = lazy(() => import("./pages/Achievements"));
-const AchievementFrames = lazy(() => import("./pages/AchievementFrames"));
+
 const AchievementCrowns = lazy(() => import("./pages/AchievementCrowns"));
 const AdminBroadcast = lazy(() => import("./pages/AdminBroadcast"));
 const Verification = lazy(() => import("./pages/Verification"));
