@@ -503,6 +503,43 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Royal Pass Gift (one-time payment)
+      if (
+        session.mode === "payment" &&
+        session.metadata?.kind === "royal_pass_gift"
+      ) {
+        const giftId = session.metadata?.gift_id as string | undefined;
+        if (giftId) {
+          const paymentIntentId =
+            typeof session.payment_intent === "string"
+              ? session.payment_intent
+              : session.payment_intent?.id ?? null;
+
+          await supabase
+            .from("royal_pass_gifts")
+            .update({
+              status: "paid",
+              stripe_payment_intent_id: paymentIntentId,
+              amount_usd: (session.amount_total ?? 0) / 100,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", giftId);
+
+          try {
+            const { data: grantRes } = await supabase.rpc(
+              "grant_royal_pass_gift_period",
+              { _gift_id: giftId },
+            );
+            console.log(`[stripe-webhook] royal_pass_gift granted`, grantRes);
+          } catch (e) {
+            console.error(`[stripe-webhook] grant_royal_pass_gift_period error: ${(e as Error).message}`);
+          }
+        }
+        return new Response(JSON.stringify({ ok: true, royal_pass_gift: true }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
       // Verification subscription checkout
       if (
         session.mode === "subscription" &&

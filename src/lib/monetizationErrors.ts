@@ -9,6 +9,7 @@
 export type MonetizationScope =
   | "checkout"
   | "royal_pass_checkout"
+  | "royal_pass_gift_checkout"
   | "royal_pass_portal"
   | "royal_pass_cancel"
   | "verification_submit"
@@ -25,6 +26,7 @@ export type MonetizationScope =
 const DEFAULT_MESSAGES: Record<MonetizationScope, string> = {
   checkout: "Couldn't start checkout. Try again.",
   royal_pass_checkout: "Couldn't start Royal Pass checkout. Try again.",
+  royal_pass_gift_checkout: "Couldn't start gift checkout. Try again.",
   royal_pass_portal: "Couldn't open billing portal. Try again.",
   royal_pass_cancel: "Couldn't update your subscription. Try again.",
   verification_submit: "Couldn't submit verification. Try again.",

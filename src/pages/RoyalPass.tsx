@@ -14,12 +14,13 @@ import { useRoyalEntitlements } from "@/hooks/useRoyalEntitlements";
 import { useAdminRoles } from "@/hooks/useAdminRoles";
 import {
   Crown, Loader2, ExternalLink, Receipt, RefreshCw, ShieldCheck, X, Zap,
-  Sparkles, Star, TrendingUp, History, RotateCw, BadgeCheck, Trophy, Gem,
+  Sparkles, Star, TrendingUp, History, RotateCw, BadgeCheck, Trophy, Gem, Gift,
 } from "lucide-react";
 import { toast } from "sonner";
 import BoostPostPicker from "@/components/store/BoostPostPicker";
 import RoyalPassStatusBanner, { statusIsDunning } from "@/components/royal-pass/RoyalPassStatusBanner";
 import RoyalPassReversalHistory from "@/components/royal-pass/RoyalPassReversalHistory";
+import GiftRoyalPassDialog from "@/components/royal-pass/GiftRoyalPassDialog";
 import { trackEvent } from "@/lib/analytics";
 
 interface BoostRow {
@@ -55,6 +56,7 @@ export default function RoyalPassSettings() {
   const [boostHistory, setBoostHistory] = useState<BoostRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
+  const [giftOpen, setGiftOpen] = useState(false);
 
   // One-shot page-open ping
   useEffect(() => { void trackEvent("royal_pass_page_opened"); }, []);
@@ -253,10 +255,21 @@ export default function RoyalPassSettings() {
           <h1 className="font-display text-2xl text-gold flex items-center gap-2">
             <Crown size={22} className="text-gold" /> Royal Pass
           </h1>
-          <Button variant="ghost" size="sm" onClick={() => pass.refresh()} disabled={pass.loading}>
-            <RefreshCw size={14} className={pass.loading ? "animate-spin" : ""} />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { void trackEvent("royal_pass_gift_opened"); setGiftOpen(true); }}
+              className="gap-1.5"
+            >
+              <Gift size={14} /> Gift
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => pass.refresh()} disabled={pass.loading}>
+              <RefreshCw size={14} className={pass.loading ? "animate-spin" : ""} />
+            </Button>
+          </div>
         </div>
+        <GiftRoyalPassDialog open={giftOpen} onOpenChange={setGiftOpen} />
 
         {pass.loading ? (
           <div className="royal-card p-8 flex items-center justify-center text-muted-foreground text-sm">
