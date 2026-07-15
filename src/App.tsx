@@ -132,6 +132,7 @@ const AdminReservedUsernames = lazy(() => import("./pages/admin/AdminReservedUse
 const CommandCenterRoyalShields = lazy(() => import("./pages/admin/CommandCenterRoyalShields"));
 const CommandCenterAchievements = lazy(() => import("./pages/admin/CommandCenterAchievements"));
 const CommandCenterAchievementAuthor = lazy(() => import("./pages/admin/CommandCenterAchievementAuthor"));
+const AdminCrownAssetReview = lazy(() => import("./pages/admin/AdminCrownAssetReview"));
 import LegalConsentGate from "@/components/legal/LegalConsentGate";
 const Marketing = lazy(() => import("./pages/Marketing"));
 
@@ -228,6 +229,7 @@ const App = () => (
               <Route path="/admin/system-audit" element={<ProtectedRoute><AdminRoute><AdminSystemAudit /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/race-audit" element={<ProtectedRoute><AdminRoute><AdminRaceAudit /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/royal-shields" element={<ProtectedRoute><AdminRoute><CommandCenterRoyalShields /></AdminRoute></ProtectedRoute>} />
+              <Route path="/admin/crowns/asset-review" element={<ProtectedRoute><AdminRoute><AdminCrownAssetReview /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/command-center" element={<ProtectedRoute><AdminRoute><CommandCenterLayout /></AdminRoute></ProtectedRoute>}>
                 <Route index element={<CommandCenterOverview />} />
                 <Route path="realtime" element={<CommandCenterRealtime />} />

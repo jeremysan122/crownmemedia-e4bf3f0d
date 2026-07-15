@@ -16,6 +16,11 @@ export interface CrownGalleryRow {
   collection_slug: string;
   collection_name: string;
   asset_url: string;
+  gallery_asset_url: string | null;
+  wearable_asset_url: string | null;
+  thumbnail_url: string | null;
+  asset_version: number | null;
+  image_quality_verified: boolean | null;
   requirement_logic: unknown;
   is_secret: boolean;
   sort_order: number;
