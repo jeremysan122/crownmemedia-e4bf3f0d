@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievement_crown_url_snapshots: {
+        Row: {
+          asset_url: string | null
+          asset_version: number | null
+          captured_at: string
+          crown_id: string
+          crown_number: number | null
+          gallery_asset_url: string | null
+          id: string
+          image_quality_verified: boolean | null
+          legacy_asset_url: string | null
+          master_asset_url: string | null
+          slug: string
+          snapshot_label: string
+          thumbnail_url: string | null
+          wearable_asset_url: string | null
+        }
+        Insert: {
+          asset_url?: string | null
+          asset_version?: number | null
+          captured_at?: string
+          crown_id: string
+          crown_number?: number | null
+          gallery_asset_url?: string | null
+          id?: string
+          image_quality_verified?: boolean | null
+          legacy_asset_url?: string | null
+          master_asset_url?: string | null
+          slug: string
+          snapshot_label: string
+          thumbnail_url?: string | null
+          wearable_asset_url?: string | null
+        }
+        Update: {
+          asset_url?: string | null
+          asset_version?: number | null
+          captured_at?: string
+          crown_id?: string
+          crown_number?: number | null
+          gallery_asset_url?: string | null
+          id?: string
+          image_quality_verified?: boolean | null
+          legacy_asset_url?: string | null
+          master_asset_url?: string | null
+          slug?: string
+          snapshot_label?: string
+          thumbnail_url?: string | null
+          wearable_asset_url?: string | null
+        }
+        Relationships: []
+      }
       achievement_crowns: {
         Row: {
           asset_url: string
@@ -21,6 +72,7 @@ export type Database = {
           collection_name: string
           collection_slug: string
           created_at: string
+          crown_number: number | null
           description: string
           gallery_asset_url: string | null
           id: string
@@ -52,6 +104,7 @@ export type Database = {
           collection_name: string
           collection_slug: string
           created_at?: string
+          crown_number?: number | null
           description?: string
           gallery_asset_url?: string | null
           id?: string
@@ -83,6 +136,7 @@ export type Database = {
           collection_name?: string
           collection_slug?: string
           created_at?: string
+          crown_number?: number | null
           description?: string
           gallery_asset_url?: string | null
           id?: string
