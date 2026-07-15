@@ -45,7 +45,7 @@ import { useIsRoyalPassUser } from "@/hooks/useIsRoyalPassUser";
 import { useActiveBoost } from "@/hooks/useActiveBoost";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import ProfileAchievementsShowcase from "@/components/profile/ProfileAchievementsShowcase";
-import ProfileUnlockFeed from "@/components/profile/ProfileUnlockFeed";
+import ProfileCrownCarousel from "@/components/profile/ProfileCrownCarousel";
 import EquippedTitleChip from "@/components/profile/EquippedTitleChip";
 import { useProfileDecorations } from "@/hooks/useProfileDecorations";
 import {
@@ -877,7 +877,7 @@ export default function Profile() {
                       Hidden from other users. Only you can see this notice.
                     </div>
                   ) : (
-                    <ProfileUnlockFeed userId={prof.id} />
+                    <ProfileCrownCarousel userId={prof.id} />
                   )}
                 </div>
               );
