@@ -268,7 +268,7 @@ export default function CategoryHub() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] uppercase tracking-widest text-gold font-bold">Reigning Crown Holder</p>
-            <Link to={`/profile/${reignHolder.username}`} className="font-display text-lg hover:text-primary truncate block">
+            <Link to={`/${reignHolder.username}`} className="font-display text-lg hover:text-primary truncate block">
               @{reignHolder.username}
             </Link>
           </div>
@@ -339,7 +339,7 @@ export default function CategoryHub() {
                       <img src={c.user.profile_photo_url} alt="" className="w-full h-full object-cover" />
                     )}
                   </div>
-                  <Link to={`/profile/${c.user?.username}`} className="text-xs font-bold hover:text-primary truncate flex-1">
+                  <Link to={`/${c.user?.username}`} className="text-xs font-bold hover:text-primary truncate flex-1">
                     @{c.user?.username ?? "unknown"}
                   </Link>
                   <span className="text-[10px] text-muted-foreground truncate">{c.category.replace(/_/g, " ")}</span>

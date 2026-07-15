@@ -700,7 +700,7 @@ export default function Discover() {
     if (!q) return;
     void trackEvent("discover_search_submitted", { metadata: { kind: q.startsWith("#") ? "tag" : q.startsWith("@") ? "user" : "text" } });
     if (q.startsWith("#")) nav(`/feed?tag=${encodeURIComponent(q.slice(1))}`);
-    else if (q.startsWith("@")) nav(`/profile/${encodeURIComponent(q.slice(1))}`);
+    else if (q.startsWith("@")) nav(`/${encodeURIComponent(q.slice(1))}`);
     else nav(`/feed?q=${encodeURIComponent(q)}`);
   };
 
@@ -1261,7 +1261,7 @@ export default function Discover() {
                       key={s.id}
                       className="shrink-0 w-40 royal-card p-3 text-center hover:border-primary/40 transition flex flex-col"
                     >
-                      <Link to={`/profile/${s.username}`} className="block">
+                      <Link to={`/${s.username}`} className="block">
                         <div className="size-14 rounded-full bg-muted overflow-hidden mx-auto mb-2">
                           {s.profile_photo_url && <img src={s.profile_photo_url} alt="" className="w-full h-full object-cover" />}
                         </div>
@@ -1355,7 +1355,7 @@ export default function Discover() {
                     return (
                       <div key={n.id} className="shrink-0 w-40 royal-card p-3 text-center flex flex-col">
                         <Link
-                          to={`/profile/${n.username}`}
+                          to={`/${n.username}`}
                           onClick={() => {
                             void trackEvent("discover_nearby_creator_opened", { metadata: { username: n.username } });
                             void trackEvent("discover_people_near_you_profile_clicked", { metadata: { radius_mi: radius, geo_source: geoSource } });
@@ -1411,7 +1411,7 @@ export default function Discover() {
                     <div className="size-8 rounded-full bg-muted overflow-hidden">
                       {g.profile_photo_url && <img src={g.profile_photo_url} alt="" className="w-full h-full object-cover" />}
                     </div>
-                    <Link to={`/profile/${g.username}`} className="min-w-0 flex-1 hover:text-primary">
+                    <Link to={`/${g.username}`} className="min-w-0 flex-1 hover:text-primary">
                       <p className="text-xs font-bold truncate">@{g.username}</p>
                       <p className="text-[10px] text-muted-foreground tabular-nums">{g.total.toLocaleString()} ₪</p>
                     </Link>
@@ -1457,7 +1457,7 @@ export default function Discover() {
                         <img src={r.profile_photo_url} alt="" className="w-full h-full object-cover" />
                       )}
                     </div>
-                    <Link to={`/profile/${r.username}`} className="min-w-0 flex-1 hover:text-primary">
+                    <Link to={`/${r.username}`} className="min-w-0 flex-1 hover:text-primary">
                       <p className="text-xs font-bold truncate">@{r.username}</p>
                       <p className="text-[10px] text-muted-foreground">+{r.gained} crown score</p>
                     </Link>
