@@ -88,6 +88,10 @@ export default function AchievementCrowns() {
   const pageRows = filtered.slice(start, start + PAGE_SIZE);
   const percent = Math.round((ownedCount / EXPECTED_TOTAL) * 100);
 
+  // Batched rarity stats for the visible page. Refetches when the page changes.
+  const pageIds = useMemo(() => pageRows.map((r) => r.crown_id), [pageRows]);
+  const { byId: rarityById } = useCrownRarity(pageIds);
+
   function changeFilter(next: Filter) {
     setFilter(next);
     const p = new URLSearchParams(searchParams);
@@ -232,6 +236,7 @@ export default function AchievementCrowns() {
                 <CrownCard
                   key={row.crown_id}
                   row={row}
+                  rarity={rarityById[row.crown_id] ?? null}
                   onEquip={onEquip}
                   busy={busy === row.crown_id}
                   disabled={busy !== null}
@@ -320,11 +325,13 @@ function PageBtn({
 
 function CrownCard({
   row,
+  rarity,
   onEquip,
   busy,
   disabled,
 }: {
   row: CrownGalleryRow;
+  rarity: CrownRarityStat | null;
   onEquip: (row: CrownGalleryRow, unequip: boolean) => void;
   busy: boolean;
   disabled: boolean;
@@ -332,6 +339,7 @@ function CrownCard({
   const rarityStyle = RARITY_STYLE[row.rarity] ?? RARITY_STYLE.common;
   const pct = Math.max(0, Math.min(100, Math.round(Number(row.completion_percent) || 0)));
   const isSecretLocked = row.is_secret && !row.owned;
+  const ownershipLabel = rarity ? formatOwnership(rarity.ownership_pct) : null;
 
   return (
     <article
