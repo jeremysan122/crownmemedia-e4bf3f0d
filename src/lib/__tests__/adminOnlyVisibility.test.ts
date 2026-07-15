@@ -79,6 +79,15 @@ function extractAdminGatedBlocks(src: string): string[] {
 }
 
 describe("admin-only UI must not leak to non-admin users", () => {
+  for (const { file, needles } of FORBIDDEN_ANYWHERE) {
+    it(`${file} no longer contains admin-only strings (moved to admin console)`, () => {
+      const src = readSource(file);
+      for (const n of needles) {
+        expect(src, `"${n}" must not appear in ${file}`).not.toContain(n);
+      }
+    });
+  }
+
   it("never hard-codes `const isAdmin = true` (or similar) in production source", () => {
     const files = GUARDS.map((g) => g.file);
     for (const file of files) {
