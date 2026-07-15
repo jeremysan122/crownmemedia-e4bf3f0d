@@ -1,7 +1,8 @@
 // Renders an avatar with an equipped Achievement Crown "worn" above it.
 // Size contract: `size` = avatar photo diameter (px). The crown overflows
-// upward and is horizontally centered. The outer wrapper is overflow-visible.
-import { memo } from "react";
+// upward AND horizontally around the avatar circle. Outer wrapper equals the
+// avatar diameter and stays overflow-visible so the crown can breach it.
+import { memo, useState } from "react";
 
 export interface CrownRenderConfig {
   widthScale: number;
@@ -10,6 +11,7 @@ export interface CrownRenderConfig {
   translateX?: number;
   translateY?: number;
   rotation?: number;
+  visualScale?: number;
 }
 
 interface CrownAvatarProps {
@@ -23,12 +25,13 @@ interface CrownAvatarProps {
 }
 
 const DEFAULT_RENDER_CONFIG: CrownRenderConfig = {
-  widthScale: 0.9,
-  heightScale: 0.56,
-  overlapScale: 0.21,
+  widthScale: 1.16,
+  heightScale: 0.72,
+  overlapScale: 0.33,
   translateX: 0,
-  translateY: 0,
+  translateY: 6,
   rotation: 0,
+  visualScale: 1,
 };
 
 function CrownAvatarImpl({
@@ -40,54 +43,87 @@ function CrownAvatarImpl({
   alt = "",
   renderConfig,
 }: CrownAvatarProps) {
-  const cfg: CrownRenderConfig = { ...DEFAULT_RENDER_CONFIG, ...renderConfig };
-  const crownWidth = Math.round(size * cfg.widthScale);
-  const crownHeight = Math.round(size * cfg.heightScale);
-  const overlap = Math.round(size * cfg.overlapScale);
-  const avatarTop = Math.max(0, crownHeight - overlap);
-  const wrapperHeight = avatarTop + size;
+  const [crownFailed, setCrownFailed] = useState(false);
+  const config: CrownRenderConfig = { ...DEFAULT_RENDER_CONFIG, ...renderConfig };
+
+  const crownWidth = Math.round(size * config.widthScale);
+  const crownHeight = Math.round(size * config.heightScale);
+  const crownOverlap = Math.round(size * config.overlapScale);
+  // Avatar begins after the non-overlapping upper portion of the crown.
+  const avatarTop = Math.max(0, crownHeight - crownOverlap);
 
   return (
     <div
-      className="relative isolate"
-      style={{ width: size, height: wrapperHeight, overflow: "visible" }}
+      data-testid="crown-avatar"
+      className="relative isolate shrink-0"
+      style={{
+        width: size,
+        height: avatarTop + size,
+        overflow: "visible",
+      }}
     >
-      {/* Avatar circle — clips only the photo. */}
+      {/* Avatar circle — the only element that clips. */}
       <div
-        className={`absolute left-0 rounded-full overflow-hidden bg-muted ring-2 ring-border ${glow ? "shadow-[0_0_28px_hsl(var(--gold)/0.5)] ring-gold/60" : ""}`}
-        style={{ width: size, height: size, top: avatarTop, zIndex: 10 }}
+        data-testid="crown-avatar-circle"
+        className={[
+          "absolute overflow-hidden rounded-full bg-muted ring-2 ring-border",
+          glow ? "ring-gold/60 shadow-[0_0_28px_hsl(var(--gold)/0.5)]" : "",
+        ].join(" ")}
+        style={{
+          width: size,
+          height: size,
+          top: avatarTop,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 10,
+        }}
       >
         {photoUrl ? (
           <img
             src={photoUrl}
             alt={alt}
-            className="w-full h-full object-cover"
+            draggable={false}
+            className="block h-full w-full object-cover"
             style={{ objectPosition: `center ${positionY}%` }}
           />
-        ) : null}
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-muted" aria-label={alt || "User avatar"} />
+        )}
       </div>
 
-      {/* Equipped crown — sibling of avatar, always on top. */}
-      {crownAssetUrl ? (
+      {/* Equipped crown — sibling of avatar, always on top, centered on wrapper. */}
+      {crownAssetUrl && !crownFailed && (
         <img
+          key={crownAssetUrl}
           data-testid="equipped-achievement-crown"
           src={crownAssetUrl}
           alt=""
           aria-hidden="true"
+          draggable={false}
           loading="eager"
-          onError={(e) => { e.currentTarget.style.display = "none"; }}
-          className="absolute pointer-events-none select-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]"
+          decoding="async"
+          onError={() => setCrownFailed(true)}
+          className="pointer-events-none absolute select-none"
           style={{
             width: crownWidth,
             height: crownHeight,
-            top: 0,
+            top: config.translateY ?? 0,
             left: "50%",
-            transform: `translateX(-50%) translate(${cfg.translateX ?? 0}px, ${cfg.translateY ?? 0}px) rotate(${cfg.rotation ?? 0}deg)`,
+            transform: [
+              "translateX(-50%)",
+              `translateX(${config.translateX ?? 0}px)`,
+              `rotate(${config.rotation ?? 0}deg)`,
+              `scale(${config.visualScale ?? 1})`,
+            ].join(" "),
+            transformOrigin: "center bottom",
             objectFit: "contain",
+            objectPosition: "center bottom",
             zIndex: 30,
+            filter:
+              "drop-shadow(0 4px 8px rgba(0,0,0,0.55)) drop-shadow(0 0 7px rgba(255,190,55,0.3))",
           }}
         />
-      ) : null}
+      )}
     </div>
   );
 }

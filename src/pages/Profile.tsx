@@ -32,6 +32,7 @@ import founderFrameImg from "@/assets/founder-frame.png";
 import founderBadgeImg from "@/assets/founder-badge.png";
 import AvatarFrame from "@/components/frames/AvatarFrame";
 import CrownAvatar from "@/components/crowns/CrownAvatar";
+import { getCrownRenderConfig } from "@/components/crowns/crownRenderConfig";
 import { getFrameUrl } from "@/lib/frames";
 import UserListDialog from "@/components/profile/UserListDialog";
 import ShareProfileDialog from "@/components/profile/ShareProfileDialog";
@@ -125,6 +126,7 @@ export default function Profile() {
   const [insightsPost, setInsightsPost] = useState<{ id: string; base: { crown_score: number; vote_count: number; comment_count: number; share_count: number; battle_wins: number; created_at: string } } | null>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
   const [equippedCrownAsset, setEquippedCrownAsset] = useState<string | null>(null);
+  const [equippedCrownNumber, setEquippedCrownNumber] = useState<number | null>(null);
 
   const isMe = !username || username === me?.username;
   const targetUsername = isMe ? me?.username : username;
@@ -171,10 +173,14 @@ export default function Profile() {
       const pid = (p as any).id;
       const equippedCrownId = (p as any).equipped_achievement_crown_id as string | null;
       if (equippedCrownId) {
-        const { data: cr } = await supabase.from("achievement_crowns").select("asset_url").eq("id", equippedCrownId).maybeSingle();
-        if (!cancelled) setEquippedCrownAsset((cr as any)?.asset_url ?? null);
+        const { data: cr } = await supabase.from("achievement_crowns").select("asset_url, sort_order").eq("id", equippedCrownId).maybeSingle();
+        if (!cancelled) {
+          setEquippedCrownAsset((cr as any)?.asset_url ?? null);
+          setEquippedCrownNumber((cr as any)?.sort_order ?? null);
+        }
       } else {
         setEquippedCrownAsset(null);
+        setEquippedCrownNumber(null);
       }
 
       const [{ data: ps, error: psErr }, { data: cs }, { data: rs }] = await Promise.all([
@@ -632,22 +638,25 @@ export default function Profile() {
 
       <div className="px-4 lg:px-6 py-4 lg:relative">
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+          {(() => {
+            const crownEquipped = !prof.frames_hidden && !!equippedCrownAsset;
+            const crownCfg = getCrownRenderConfig(equippedCrownNumber);
+            const wrapperCls = crownEquipped
+              ? "relative z-30 w-fit shrink-0 self-start"
+              : `self-start w-fit relative ${prof.crowns_held > 0 && !prof.equipped_frame_key && !isFounder ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full ${!isFounder && !prof.equipped_frame_key && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5 profile-glow" : ""}`;
+            return (
           <div
             data-testid="profile-avatar"
-            className={`self-start w-fit relative ${
-              !prof.frames_hidden && equippedCrownAsset
-                ? ""
-                : `${prof.crowns_held > 0 && !prof.equipped_frame_key && !isFounder ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full ${!isFounder && !prof.equipped_frame_key && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5 profile-glow" : ""}`
-            }`}
+            className={wrapperCls}
             style={{ zIndex: 30, overflow: "visible" }}
           >
-            {!prof.frames_hidden && equippedCrownAsset ? (
+            {crownEquipped ? (
               <>
-                <div className="lg:hidden">
-                  <CrownAvatar photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={112} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} />
+                <div className="lg:hidden" style={{ overflow: "visible" }}>
+                  <CrownAvatar key={`${prof.id}-${equippedCrownAsset}-m`} photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={112} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} alt={`${prof.username ?? "User"} profile photo`} renderConfig={crownCfg} />
                 </div>
-                <div className="hidden lg:block">
-                  <CrownAvatar photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={160} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} />
+                <div className="hidden lg:block" style={{ overflow: "visible" }}>
+                  <CrownAvatar key={`${prof.id}-${equippedCrownAsset}-d`} photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={160} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} alt={`${prof.username ?? "User"} profile photo`} renderConfig={crownCfg} />
                 </div>
               </>
             ) : !prof.frames_hidden && ((prof.equipped_frame_key && getFrameUrl(prof.equipped_frame_key)) || isFounder) ? (
@@ -686,6 +695,8 @@ export default function Profile() {
               </div>
             )}
           </div>
+            );
+          })()}
 
           <div className="flex-1 lg:pb-2">
             <div className="flex items-center gap-2 flex-wrap">
