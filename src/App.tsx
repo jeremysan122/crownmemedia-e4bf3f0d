@@ -277,10 +277,14 @@ const App = () => (
               <Route path="/admin/creator-program" element={<ProtectedRoute><AdminRoute><AdminCreatorProgram /></AdminRoute></ProtectedRoute>} />
               <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
               <Route path="/rewards/history" element={<ProtectedRoute><RewardHistory /></ProtectedRoute>} />
-              <Route path="/rewards/frames" element={<ProtectedRoute><RoyalFrames /></ProtectedRoute>} />
-              <Route path="/settings/frames" element={<ProtectedRoute><RoyalFrames /></ProtectedRoute>} />
+              <Route path="/rewards/crowns" element={<ProtectedRoute><AchievementCrowns /></ProtectedRoute>} />
+              <Route path="/settings/crowns" element={<ProtectedRoute><AchievementCrowns /></ProtectedRoute>} />
+              <Route path="/crowns" element={<ProtectedRoute><AchievementCrowns /></ProtectedRoute>} />
+              {/* Legacy frame routes now redirect to the new crown gallery. */}
+              <Route path="/rewards/frames" element={<Navigate to="/rewards/crowns" replace />} />
+              <Route path="/settings/frames" element={<Navigate to="/rewards/crowns" replace />} />
+              <Route path="/frames" element={<Navigate to="/rewards/crowns" replace />} />
               <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
-              <Route path="/frames" element={<ProtectedRoute><AchievementFrames /></ProtectedRoute>} />
               <Route path="/admin/rewards" element={<ProtectedRoute><AdminRoute><AdminRewards /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/broadcast" element={<ProtectedRoute><AdminRoute><AdminBroadcast /></AdminRoute></ProtectedRoute>} />
               <Route path="/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
