@@ -45,11 +45,7 @@ export default function RoyalPassMetricsCard() {
 
   return (
     <SectionCard
-      title={
-        <span className="flex items-center gap-2">
-          <Crown size={14} className="text-gold" /> Royal Pass · MRR / Churn / LTV
-        </span>
-      }
+      title="Royal Pass · MRR / Churn / LTV"
       action={
         <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={load} disabled={loading}>
           {loading ? <Loader2 size={12} className="animate-spin mr-1" /> : <RotateCw size={12} className="mr-1" />}
