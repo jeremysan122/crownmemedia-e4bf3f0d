@@ -31,6 +31,9 @@ import { template as giftReceived } from './gift-received.tsx'
 import { template as shekelsReceipt } from './shekels-receipt.tsx'
 import { template as payoutVerification } from './payout-verification.tsx'
 import { template as weeklyRecap } from './weekly-recap.tsx'
+import { template as royalPassRenewalReminder } from './royal-pass-renewal-reminder.tsx'
+import { template as royalPassCanceled } from './royal-pass-canceled.tsx'
+import { template as royalPassTrialEnding } from './royal-pass-trial-ending.tsx'
 
 // Auth template designs, wrapped as transactional sends so they can be
 // tested end-to-end (the real auth versions are wired via auth-email-hook).
@@ -56,6 +59,9 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'shekels-receipt': shekelsReceipt,
   'payout-verification': payoutVerification,
   'weekly-recap': weeklyRecap,
+  'royal-pass-renewal-reminder': royalPassRenewalReminder,
+  'royal-pass-canceled': royalPassCanceled,
+  'royal-pass-trial-ending': royalPassTrialEnding,
   // Auth previews (sendable copies for testing the design end-to-end):
   'auth-signup-test': authSignupTest,
   'auth-magic-link-test': authMagicLinkTest,
