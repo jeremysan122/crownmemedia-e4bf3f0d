@@ -32,6 +32,7 @@ import founderFrameImg from "@/assets/founder-frame.png";
 import founderBadgeImg from "@/assets/founder-badge.png";
 import AvatarFrame from "@/components/frames/AvatarFrame";
 import CrownAvatar from "@/components/crowns/CrownAvatar";
+import { getCrownRenderConfig } from "@/components/crowns/crownRenderConfig";
 import { getFrameUrl } from "@/lib/frames";
 import UserListDialog from "@/components/profile/UserListDialog";
 import ShareProfileDialog from "@/components/profile/ShareProfileDialog";
