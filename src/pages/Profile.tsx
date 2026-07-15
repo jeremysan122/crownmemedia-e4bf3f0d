@@ -125,6 +125,7 @@ export default function Profile() {
   const [insightsPost, setInsightsPost] = useState<{ id: string; base: { crown_score: number; vote_count: number; comment_count: number; share_count: number; battle_wins: number; created_at: string } } | null>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
   const [equippedCrownAsset, setEquippedCrownAsset] = useState<string | null>(null);
+  const [equippedCrownNumber, setEquippedCrownNumber] = useState<number | null>(null);
 
   const isMe = !username || username === me?.username;
   const targetUsername = isMe ? me?.username : username;
