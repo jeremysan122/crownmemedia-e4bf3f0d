@@ -389,7 +389,13 @@ function CrownCard({
             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
               <div className="h-full bg-gradient-gold transition-[width] duration-500" style={{ width: `${pct}%` }} />
             </div>
-            <div className="mt-1 text-[10px] text-muted-foreground tabular-nums">{pct}%</div>
+            <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground tabular-nums">
+              <span>
+                {Math.floor(Number(row.progress) || 0).toLocaleString()} /{" "}
+                {Math.floor(Number(row.target) || 0).toLocaleString()}
+              </span>
+              <span>{pct}%</span>
+            </div>
             {row.unlock_hint && (
               <p className="mt-1 text-[10px] text-muted-foreground leading-snug line-clamp-2">{row.unlock_hint}</p>
             )}

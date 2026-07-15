@@ -126,6 +126,7 @@ type EventName =
   | "achievement_checkpoint_reached"
   | "achievement_unlocked"
   | "achievement_frame_unlocked"
+  | "achievement_crown_unlocked"
   | "achievement_badge_unlocked"
   | "achievement_title_unlocked"
   | "achievement_shekel_grant"
