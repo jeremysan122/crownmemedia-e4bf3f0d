@@ -22,6 +22,7 @@ import { validateUpload } from "@/lib/uploadValidation";
 
 import { useSeoMeta, buildProfileOgImage } from "@/hooks/useSeoMeta";
 import { trackUsage } from "@/lib/usageTrack";
+import { trackEvent } from "@/lib/analytics";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import PostDetailDialog from "@/components/PostDetailDialog";
 import type { FeedPost } from "@/components/PostCard";
@@ -417,37 +418,77 @@ export default function Profile() {
     };
   }, [prof?.id, user?.id]);
 
+  // Mount guard: prevents in-flight follow requests from mutating state
+  // after the user navigates away from this profile (avoids setState-after-
+  // unmount warnings and stale UI updates when the component is gone).
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const runFollowOp = async (
+    wasFollowing: boolean,
+    profileId: string,
+    userId: string,
+    attempt: number,
+  ): Promise<void> => {
+    const started = performance.now();
+    void trackEvent("profile_follow_attempted", {
+      metadata: { op: wasFollowing ? "unfollow" : "follow", attempt },
+    });
+    const { error } = wasFollowing
+      ? await supabase.from("follows").delete().eq("follower_id", userId).eq("following_id", profileId)
+      : await supabase.from("follows").insert({ follower_id: userId, following_id: profileId });
+    const latency_ms = Math.round(performance.now() - started);
+
+    if (!mountedRef.current) return; // navigated away — skip UI updates
+
+    if (error) {
+      // Rollback optimistic UI
+      setFollowing(wasFollowing);
+      setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count + (wasFollowing ? 1 : -1)) } : p);
+      logRawError(error, "generic", { op: wasFollowing ? "follow_delete" : "follow_insert" });
+      void trackEvent("profile_follow_failed", {
+        metadata: { op: wasFollowing ? "unfollow" : "follow", attempt, latency_ms, code: (error as { code?: string }).code ?? null },
+      });
+      toast.error(toFriendlyMessage(error, "generic"), {
+        action: {
+          label: "Retry",
+          onClick: () => {
+            if (!mountedRef.current) return;
+            void trackEvent("profile_follow_retry", { metadata: { op: wasFollowing ? "unfollow" : "follow", attempt } });
+            // Re-apply optimistic state and try again.
+            setFollowBusy(true);
+            setFollowing(!wasFollowing);
+            setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count + (wasFollowing ? -1 : 1)) } : p);
+            runFollowOp(wasFollowing, profileId, userId, attempt + 1).finally(() => {
+              if (mountedRef.current) setFollowBusy(false);
+            });
+          },
+        },
+      });
+    } else {
+      void trackEvent("profile_follow_success", {
+        metadata: { op: wasFollowing ? "unfollow" : "follow", attempt, latency_ms },
+      });
+    }
+  };
+
   const toggleFollow = async () => {
     if (!user || !prof || followBusy) return;
-    // Optimistic update, then rollback on failure so the UI never diverges
-    // from the DB. followBusy prevents rapid double-taps from firing
-    // conflicting insert/delete pairs.
     setFollowBusy(true);
     const wasFollowing = following;
+    // Optimistic
     setFollowing(!wasFollowing);
     setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count + (wasFollowing ? -1 : 1)) } : p);
     try {
-      if (wasFollowing) {
-        const { error } = await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", prof.id);
-        if (error) {
-          setFollowing(true);
-          setProf((p) => p ? { ...p, followers_count: p.followers_count + 1 } : p);
-          logRawError(error, "generic", { op: "follow_delete" });
-          toast.error(toFriendlyMessage(error, "generic"));
-        }
-      } else {
-        const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: prof.id });
-        if (error) {
-          setFollowing(false);
-          setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count - 1) } : p);
-          logRawError(error, "generic", { op: "follow_insert" });
-          toast.error(toFriendlyMessage(error, "generic"));
-        }
-      }
+      await runFollowOp(wasFollowing, prof.id, user.id, 1);
     } finally {
-      setFollowBusy(false);
+      if (mountedRef.current) setFollowBusy(false);
     }
   };
+
 
   // Load the FULL canonical post row so the detail dialog matches the feed
   // exactly. Profile thumbnails only carry a few columns — using them as-is

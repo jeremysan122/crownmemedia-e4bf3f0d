@@ -146,7 +146,14 @@ type EventName =
   | "royal_pass_dunning_cta_clicked"
   | "royal_pass_reversal_history_viewed"
   | "royal_pass_daily_boost_claimed"
-  | "royal_pass_signed_out_cta_clicked";
+  | "royal_pass_signed_out_cta_clicked"
+  // Profile follow + carousel performance monitoring
+  | "profile_follow_attempted"
+  | "profile_follow_success"
+  | "profile_follow_failed"
+  | "profile_follow_retry"
+  | "profile_crown_carousel_load";
+
 
 
 async function sha256Hex(input: string): Promise<string> {
