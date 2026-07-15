@@ -632,8 +632,17 @@ export default function Profile() {
 
       <div className="px-4 lg:px-6 py-4 lg:relative">
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-          <div data-testid="profile-avatar" className={`self-start w-fit ${prof.crowns_held > 0 && !prof.equipped_frame_key && !isFounder ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${!isFounder && !prof.equipped_frame_key && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5 profile-glow" : ""}`}>
-            {!prof.frames_hidden && ((prof.equipped_frame_key && getFrameUrl(prof.equipped_frame_key)) || isFounder) ? (
+          <div data-testid="profile-avatar" className={`self-start w-fit ${prof.crowns_held > 0 && !equippedCrownAsset && !prof.equipped_frame_key && !isFounder ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${!isFounder && !prof.equipped_frame_key && !equippedCrownAsset && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5 profile-glow" : ""}`}>
+            {!prof.frames_hidden && equippedCrownAsset ? (
+              <>
+                <div className="lg:hidden">
+                  <CrownAvatar photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={112} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} />
+                </div>
+                <div className="hidden lg:block">
+                  <CrownAvatar photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={160} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} />
+                </div>
+              </>
+            ) : !prof.frames_hidden && ((prof.equipped_frame_key && getFrameUrl(prof.equipped_frame_key)) || isFounder) ? (
               <>
                 <div className="lg:hidden">
                   <AvatarFrame
@@ -657,8 +666,6 @@ export default function Profile() {
                 </div>
               </>
             ) : (
-              // Locked sizing contract: unframed avatar diameter matches framed
-              // avatar photo diameter exactly (112 mobile / 160 desktop).
               <div className="w-28 h-28 lg:w-40 lg:h-40 rounded-full overflow-hidden bg-muted ring-2 ring-border relative">
                 {prof.profile_photo_url && (
                   <img
