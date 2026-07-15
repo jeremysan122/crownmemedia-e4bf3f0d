@@ -8973,6 +8973,7 @@ export type Database = {
           slug: string
         }[]
       }
+      reconcile_crown_unlocks_recent: { Args: never; Returns: number }
       record_failed_royal_boost: {
         Args: { p_post_id?: string; p_reason: string }
         Returns: string
