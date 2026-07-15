@@ -172,10 +172,14 @@ export default function Profile() {
       const pid = (p as any).id;
       const equippedCrownId = (p as any).equipped_achievement_crown_id as string | null;
       if (equippedCrownId) {
-        const { data: cr } = await supabase.from("achievement_crowns").select("asset_url").eq("id", equippedCrownId).maybeSingle();
-        if (!cancelled) setEquippedCrownAsset((cr as any)?.asset_url ?? null);
+        const { data: cr } = await supabase.from("achievement_crowns").select("asset_url, sort_order").eq("id", equippedCrownId).maybeSingle();
+        if (!cancelled) {
+          setEquippedCrownAsset((cr as any)?.asset_url ?? null);
+          setEquippedCrownNumber((cr as any)?.sort_order ?? null);
+        }
       } else {
         setEquippedCrownAsset(null);
+        setEquippedCrownNumber(null);
       }
 
       const [{ data: ps, error: psErr }, { data: cs }, { data: rs }] = await Promise.all([
