@@ -386,11 +386,19 @@ function CrownCard({
         <h3 className="font-display text-sm text-gold leading-tight truncate">
           {isSecretLocked ? "???" : row.name}
         </h3>
-        <div className="mt-1 flex items-center justify-center gap-1.5 text-[10px]">
+        <div className="mt-1 flex items-center justify-center gap-1.5 text-[10px] flex-wrap">
           <span className="text-gold/70 uppercase tracking-wider truncate">{row.collection_name}</span>
           <span className={`rounded-full border px-1.5 py-0.5 uppercase tracking-wider ${rarityStyle}`}>
             {row.rarity}
           </span>
+          {ownershipLabel && !isSecretLocked && (
+            <span
+              className="inline-flex items-center gap-0.5 rounded-full border border-border/70 bg-background/40 px-1.5 py-0.5 text-muted-foreground"
+              title={`${rarity?.owners_count.toLocaleString()} of ${rarity?.total_players.toLocaleString()} players own this`}
+            >
+              <Users size={9} /> {ownershipLabel}
+            </span>
+          )}
         </div>
 
         {!row.owned && !isSecretLocked && (
@@ -417,23 +425,33 @@ function CrownCard({
 
         <div className="mt-3 pt-2 border-t border-gold/10">
           {row.owned ? (
-            row.equipped ? (
-              <button
-                onClick={() => onEquip(row, true)}
-                disabled={disabled}
-                className="w-full text-[11px] font-bold py-1.5 rounded-md border border-gold/40 text-gold hover:bg-gold/10 disabled:opacity-50"
+            <div className="flex items-center gap-1.5">
+              {row.equipped ? (
+                <button
+                  onClick={() => onEquip(row, true)}
+                  disabled={disabled}
+                  className="flex-1 text-[11px] font-bold py-1.5 rounded-md border border-gold/40 text-gold hover:bg-gold/10 disabled:opacity-50"
+                >
+                  {busy ? "…" : "Unequip"}
+                </button>
+              ) : (
+                <button
+                  onClick={() => onEquip(row, false)}
+                  disabled={disabled}
+                  className="flex-1 text-[11px] font-bold py-1.5 rounded-md bg-gradient-gold text-black hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-1"
+                >
+                  <Sparkles size={11} /> {busy ? "…" : "Equip"}
+                </button>
+              )}
+              <Link
+                to={`/crown/${row.slug}`}
+                aria-label={`Share ${row.name}`}
+                title="Open share page"
+                className="h-[26px] w-[26px] inline-flex items-center justify-center rounded-md border border-gold/40 text-gold hover:bg-gold/10"
               >
-                {busy ? "…" : "Unequip"}
-              </button>
-            ) : (
-              <button
-                onClick={() => onEquip(row, false)}
-                disabled={disabled}
-                className="w-full text-[11px] font-bold py-1.5 rounded-md bg-gradient-gold text-black hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-1"
-              >
-                <Sparkles size={11} /> {busy ? "…" : "Equip"}
-              </button>
-            )
+                <Share2 size={12} />
+              </Link>
+            </div>
           ) : (
             <button
               disabled
