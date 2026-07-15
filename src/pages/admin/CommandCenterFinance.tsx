@@ -10,6 +10,8 @@ import { useRealtimeStatus } from "@/hooks/useRealtimeStatus";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { Loader2, RotateCw, Star } from "lucide-react";
 import { toast } from "sonner";
+import RoyalPassMetricsCard from "@/components/admin/cc/RoyalPassMetricsCard";
+import ManualGrantRoyalPass from "@/components/admin/cc/ManualGrantRoyalPass";
 
 const fmt = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const PAGE = 25;
@@ -196,6 +198,9 @@ export default function CommandCenterFinance() {
           )}
         </div>
       )}
+
+      {roles.roles.length > 0 && <RoyalPassMetricsCard />}
+      {roles.roles.length > 0 && <ManualGrantRoyalPass />}
 
       <SectionCard
         title={`Payouts · page ${page + 1}`}
