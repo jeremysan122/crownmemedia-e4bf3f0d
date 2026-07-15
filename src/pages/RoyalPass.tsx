@@ -195,25 +195,8 @@ export default function RoyalPassSettings() {
 
   useEffect(() => { void loadBoostHistory(); }, [loadBoostHistory]);
 
-  const refreshEntitlements = async () => {
-    setWorking("sync");
-    const syncToast = toast.loading("Re-checking Stripe & Royal Pass entitlements…");
-    try {
-      const { data, error } = await supabase.functions.invoke("royal-pass-sync", {
-        body: { environment: getStripeEnvironment() },
-      });
-      if (error) throw error;
-      const errMsg = (data as { error?: string })?.error;
-      if (errMsg) throw new Error(errMsg);
-      await Promise.all([pass.refresh(), entitlements.refresh(), loadDaily(), loadBoostHistory()]);
-      setLastRefreshedAt(Date.now());
-      toast.success("Entitlements refreshed from Stripe", { id: syncToast });
-    } catch (e) {
-      toast.error((e as Error).message || "Refresh failed", { id: syncToast });
-    } finally {
-      setWorking(null);
-    }
-  };
+
+
 
 
   const activePerks = useMemo(() => ([
