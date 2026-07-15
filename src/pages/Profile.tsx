@@ -31,6 +31,7 @@ import { fetchPostById, hydrateParents } from "@/lib/postQuery";
 import founderFrameImg from "@/assets/founder-frame.png";
 import founderBadgeImg from "@/assets/founder-badge.png";
 import AvatarFrame from "@/components/frames/AvatarFrame";
+import CrownAvatar from "@/components/crowns/CrownAvatar";
 import { getFrameUrl } from "@/lib/frames";
 import UserListDialog from "@/components/profile/UserListDialog";
 import ShareProfileDialog from "@/components/profile/ShareProfileDialog";
@@ -70,6 +71,7 @@ interface ProfileFull {
   founder_title?: string | null;
   royal_frame_variant?: string | null;
   equipped_frame_key?: string | null;
+  equipped_achievement_crown_id?: string | null;
   frames_hidden?: boolean | null;
 }
 
@@ -122,6 +124,7 @@ export default function Profile() {
   const [postMenuPosition, setPostMenuPosition] = useState<PostMenuPosition | null>(null);
   const [insightsPost, setInsightsPost] = useState<{ id: string; base: { crown_score: number; vote_count: number; comment_count: number; share_count: number; battle_wins: number; created_at: string } } | null>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
+  const [equippedCrownAsset, setEquippedCrownAsset] = useState<string | null>(null);
 
   const isMe = !username || username === me?.username;
   const targetUsername = isMe ? me?.username : username;
@@ -158,7 +161,7 @@ export default function Profile() {
     const load = async () => {
       const { data: p, error: pErr } = await supabase
         .from("profiles")
-        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public, is_founder, founder_title, royal_frame_variant, equipped_frame_key, frames_hidden")
+        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public, is_founder, founder_title, royal_frame_variant, equipped_frame_key, equipped_achievement_crown_id, frames_hidden")
         .eq("username", targetUsername)
         .maybeSingle();
       if (cancelled) return;
@@ -166,6 +169,13 @@ export default function Profile() {
       if (!p) return;
       setProf(p as any);
       const pid = (p as any).id;
+      const equippedCrownId = (p as any).equipped_achievement_crown_id as string | null;
+      if (equippedCrownId) {
+        const { data: cr } = await supabase.from("achievement_crowns").select("asset_url").eq("id", equippedCrownId).maybeSingle();
+        if (!cancelled) setEquippedCrownAsset((cr as any)?.asset_url ?? null);
+      } else {
+        setEquippedCrownAsset(null);
+      }
 
       const [{ data: ps, error: psErr }, { data: cs }, { data: rs }] = await Promise.all([
         supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at, is_sensitive, content_type, media_type, video_poster_url, parent_post_id, aspect_ratio").eq("user_id", pid).eq("is_removed", false).eq("is_archived", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
@@ -622,8 +632,17 @@ export default function Profile() {
 
       <div className="px-4 lg:px-6 py-4 lg:relative">
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-          <div data-testid="profile-avatar" className={`self-start w-fit ${prof.crowns_held > 0 && !prof.equipped_frame_key && !isFounder ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${!isFounder && !prof.equipped_frame_key && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5 profile-glow" : ""}`}>
-            {!prof.frames_hidden && ((prof.equipped_frame_key && getFrameUrl(prof.equipped_frame_key)) || isFounder) ? (
+          <div data-testid="profile-avatar" className={`self-start w-fit ${prof.crowns_held > 0 && !equippedCrownAsset && !prof.equipped_frame_key && !isFounder ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${!isFounder && !prof.equipped_frame_key && !equippedCrownAsset && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5 profile-glow" : ""}`}>
+            {!prof.frames_hidden && equippedCrownAsset ? (
+              <>
+                <div className="lg:hidden">
+                  <CrownAvatar photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={112} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} />
+                </div>
+                <div className="hidden lg:block">
+                  <CrownAvatar photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={160} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} />
+                </div>
+              </>
+            ) : !prof.frames_hidden && ((prof.equipped_frame_key && getFrameUrl(prof.equipped_frame_key)) || isFounder) ? (
               <>
                 <div className="lg:hidden">
                   <AvatarFrame
@@ -647,8 +666,6 @@ export default function Profile() {
                 </div>
               </>
             ) : (
-              // Locked sizing contract: unframed avatar diameter matches framed
-              // avatar photo diameter exactly (112 mobile / 160 desktop).
               <div className="w-28 h-28 lg:w-40 lg:h-40 rounded-full overflow-hidden bg-muted ring-2 ring-border relative">
                 {prof.profile_photo_url && (
                   <img
