@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import AppShell from "@/components/AppShell";
-import { Crown, Lock, Sparkles, Check, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Crown, Lock, Sparkles, Check, Search, ChevronLeft, ChevronRight, Share2, Users } from "lucide-react";
 import { toast } from "sonner";
 import CrownLoader from "@/components/CrownLoader";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { useCrownGallery, equipAchievementCrown, type CrownGalleryRow } from "@/hooks/useCrownGallery";
+import { useCrownRarity, formatOwnership, type CrownRarityStat } from "@/hooks/useCrownRarity";
 
 const PAGE_SIZE = 12;
 const EXPECTED_TOTAL = 100;
@@ -86,6 +87,10 @@ export default function AchievementCrowns() {
   const start = (page - 1) * PAGE_SIZE;
   const pageRows = filtered.slice(start, start + PAGE_SIZE);
   const percent = Math.round((ownedCount / EXPECTED_TOTAL) * 100);
+
+  // Batched rarity stats for the visible page. Refetches when the page changes.
+  const pageIds = useMemo(() => pageRows.map((r) => r.crown_id), [pageRows]);
+  const { byId: rarityById } = useCrownRarity(pageIds);
 
   function changeFilter(next: Filter) {
     setFilter(next);
@@ -231,6 +236,7 @@ export default function AchievementCrowns() {
                 <CrownCard
                   key={row.crown_id}
                   row={row}
+                  rarity={rarityById[row.crown_id] ?? null}
                   onEquip={onEquip}
                   busy={busy === row.crown_id}
                   disabled={busy !== null}
@@ -319,11 +325,13 @@ function PageBtn({
 
 function CrownCard({
   row,
+  rarity,
   onEquip,
   busy,
   disabled,
 }: {
   row: CrownGalleryRow;
+  rarity: CrownRarityStat | null;
   onEquip: (row: CrownGalleryRow, unequip: boolean) => void;
   busy: boolean;
   disabled: boolean;
@@ -331,6 +339,7 @@ function CrownCard({
   const rarityStyle = RARITY_STYLE[row.rarity] ?? RARITY_STYLE.common;
   const pct = Math.max(0, Math.min(100, Math.round(Number(row.completion_percent) || 0)));
   const isSecretLocked = row.is_secret && !row.owned;
+  const ownershipLabel = rarity ? formatOwnership(rarity.ownership_pct) : null;
 
   return (
     <article
@@ -377,11 +386,19 @@ function CrownCard({
         <h3 className="font-display text-sm text-gold leading-tight truncate">
           {isSecretLocked ? "???" : row.name}
         </h3>
-        <div className="mt-1 flex items-center justify-center gap-1.5 text-[10px]">
+        <div className="mt-1 flex items-center justify-center gap-1.5 text-[10px] flex-wrap">
           <span className="text-gold/70 uppercase tracking-wider truncate">{row.collection_name}</span>
           <span className={`rounded-full border px-1.5 py-0.5 uppercase tracking-wider ${rarityStyle}`}>
             {row.rarity}
           </span>
+          {ownershipLabel && !isSecretLocked && (
+            <span
+              className="inline-flex items-center gap-0.5 rounded-full border border-border/70 bg-background/40 px-1.5 py-0.5 text-muted-foreground"
+              title={`${rarity?.owners_count.toLocaleString()} of ${rarity?.total_players.toLocaleString()} players own this`}
+            >
+              <Users size={9} /> {ownershipLabel}
+            </span>
+          )}
         </div>
 
         {!row.owned && !isSecretLocked && (
@@ -408,23 +425,33 @@ function CrownCard({
 
         <div className="mt-3 pt-2 border-t border-gold/10">
           {row.owned ? (
-            row.equipped ? (
-              <button
-                onClick={() => onEquip(row, true)}
-                disabled={disabled}
-                className="w-full text-[11px] font-bold py-1.5 rounded-md border border-gold/40 text-gold hover:bg-gold/10 disabled:opacity-50"
+            <div className="flex items-center gap-1.5">
+              {row.equipped ? (
+                <button
+                  onClick={() => onEquip(row, true)}
+                  disabled={disabled}
+                  className="flex-1 text-[11px] font-bold py-1.5 rounded-md border border-gold/40 text-gold hover:bg-gold/10 disabled:opacity-50"
+                >
+                  {busy ? "…" : "Unequip"}
+                </button>
+              ) : (
+                <button
+                  onClick={() => onEquip(row, false)}
+                  disabled={disabled}
+                  className="flex-1 text-[11px] font-bold py-1.5 rounded-md bg-gradient-gold text-black hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-1"
+                >
+                  <Sparkles size={11} /> {busy ? "…" : "Equip"}
+                </button>
+              )}
+              <Link
+                to={`/crown/${row.slug}`}
+                aria-label={`Share ${row.name}`}
+                title="Open share page"
+                className="h-[26px] w-[26px] inline-flex items-center justify-center rounded-md border border-gold/40 text-gold hover:bg-gold/10"
               >
-                {busy ? "…" : "Unequip"}
-              </button>
-            ) : (
-              <button
-                onClick={() => onEquip(row, false)}
-                disabled={disabled}
-                className="w-full text-[11px] font-bold py-1.5 rounded-md bg-gradient-gold text-black hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-1"
-              >
-                <Sparkles size={11} /> {busy ? "…" : "Equip"}
-              </button>
-            )
+                <Share2 size={12} />
+              </Link>
+            </div>
           ) : (
             <button
               disabled

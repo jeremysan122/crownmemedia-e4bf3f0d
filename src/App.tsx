@@ -72,6 +72,7 @@ const AdminRewards = lazy(() => import("./pages/AdminRewards"));
 const Achievements = lazy(() => import("./pages/Achievements"));
 
 const AchievementCrowns = lazy(() => import("./pages/AchievementCrowns"));
+const PublicCrown = lazy(() => import("./pages/PublicCrown"));
 const AdminBroadcast = lazy(() => import("./pages/AdminBroadcast"));
 const Verification = lazy(() => import("./pages/Verification"));
 const AdminVerification = lazy(() => import("./pages/AdminVerification"));
@@ -282,6 +283,8 @@ const App = () => (
               <Route path="/rewards/crowns" element={<ProtectedRoute><AchievementCrowns /></ProtectedRoute>} />
               <Route path="/settings/crowns" element={<ProtectedRoute><AchievementCrowns /></ProtectedRoute>} />
               <Route path="/crowns" element={<ProtectedRoute><AchievementCrowns /></ProtectedRoute>} />
+              {/* Public crown share page — no auth required so links preview + open cleanly. */}
+              <Route path="/crown/:slug" element={<PublicCrown />} />
               {/* Legacy frame routes now redirect to the new crown gallery. */}
               <Route path="/rewards/frames" element={<Navigate to="/rewards/crowns" replace />} />
               <Route path="/settings/frames" element={<Navigate to="/rewards/crowns" replace />} />
