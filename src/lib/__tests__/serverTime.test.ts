@@ -52,8 +52,9 @@ describe("serverTime", () => {
     const mod = await loadFresh();
     const offset = await mod.getServerTimeOffsetMs();
 
-    // Allow a few ms of round-trip midpoint slack.
-    expect(offset).toBeGreaterThan(29_000);
+    // HTTP Date header has 1s precision, so truncation can shave up to ~1000ms.
+    // Also allow for round-trip midpoint slack in either direction.
+    expect(offset).toBeGreaterThan(28_500);
     expect(offset).toBeLessThan(31_000);
     // serverNow() reflects the offset.
     expect(mod.serverNow() - Date.now()).toBeGreaterThan(28_000);
