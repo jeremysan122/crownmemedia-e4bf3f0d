@@ -846,8 +846,15 @@ export default function Profile() {
             </>
           ) : (
             <>
-              <Button onClick={toggleFollow} className={`flex-1 ${following ? "" : "bg-gradient-gold text-primary-foreground"}`} variant={following ? "outline" : "default"}>
-                {following ? "Following" : "Follow"}
+              <Button
+                onClick={toggleFollow}
+                disabled={followBusy}
+                aria-busy={followBusy}
+                aria-pressed={following}
+                className={`flex-1 ${following ? "" : "bg-gradient-gold text-primary-foreground"}`}
+                variant={following ? "outline" : "default"}
+              >
+                {followBusy ? "…" : (following ? "Following" : "Follow")}
               </Button>
               <Button onClick={() => nav(`/messages/${prof.id}`)} variant="outline" size="icon" aria-label="Message"><MessageCircle size={16} /></Button>
               <Button onClick={() => setChallengeOpen(true)} variant="outline" size="icon" aria-label="Challenge to Crown Battle" className="border-primary/50 text-primary">
