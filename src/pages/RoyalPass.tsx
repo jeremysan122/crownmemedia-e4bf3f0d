@@ -11,10 +11,9 @@ import { getStripeEnvironment } from "@/lib/stripe";
 import { useAuth } from "@/context/AuthContext";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
 import { useRoyalEntitlements } from "@/hooks/useRoyalEntitlements";
-import { useAdminRoles } from "@/hooks/useAdminRoles";
 import {
   Crown, Loader2, ExternalLink, Receipt, RefreshCw, ShieldCheck, X, Zap,
-  Sparkles, Star, TrendingUp, History, RotateCw, BadgeCheck, Trophy, Gem,
+  Sparkles, Star, TrendingUp, History, BadgeCheck, Trophy, Gem,
 } from "lucide-react";
 import { toast } from "sonner";
 import BoostPostPicker from "@/components/store/BoostPostPicker";
