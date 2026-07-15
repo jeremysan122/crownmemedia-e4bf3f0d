@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -39,7 +39,7 @@ describe("CrownAvatar positioning contract", () => {
 
   it("uses the profile photo URL for the avatar image", () => {
     render(<CrownAvatar photoUrl="/profile-photo.jpg" crownAssetUrl="/wearable-crown.webp" size={160} />);
-    const avatar = screen.getByAltText("") as HTMLImageElement;
+    const avatar = within(screen.getByTestId("crown-avatar-circle")).getByRole("img", { hidden: true }) as HTMLImageElement;
 
     expect(avatar.getAttribute("src")).toBe("/profile-photo.jpg");
   });
