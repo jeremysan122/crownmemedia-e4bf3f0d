@@ -51,7 +51,7 @@ export default function RoyalPassSettings() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [boostHistory, setBoostHistory] = useState<BoostRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
+  
 
   // One-shot page-open ping
   useEffect(() => { void trackEvent("royal_pass_page_opened"); }, []);
