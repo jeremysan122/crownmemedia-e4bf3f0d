@@ -1,63 +1,74 @@
-# Wave 8 — Full Achievements Overhaul
+# Crown System Completion — 4 Waves
 
-Sliced into 4 sub-waves so each is testable and revertible. All 4 ship in this wave unless you say stop.
+Ships the remaining 12 gaps from the audit. Each wave is independently shippable and testable; after each I'll return with verification before starting the next.
 
-## 8A — Data Model & Catalog
+## Wave 1 — Game Loop (turns art into rewards)
 
-**Schema (migration)**
-- Extend `achievement_definitions`:
-  - `reward_type` widened via check: `frame_unlock | badge_unlock | title_unlock | shekel_grant | boost_grant`
-  - `reward_payload jsonb` (badge slug, title text, amount, etc.)
-- New tables:
-  - `badges` (slug, name, icon, rarity, description) + GRANTs + RLS
-  - `titles` (slug, text, rarity) + GRANTs + RLS
-  - `user_badges` (user_id, badge_slug, unlocked_at) + RLS (owner+admin read, service write)
-  - `user_titles` (user_id, title_slug, equipped bool) + RLS
-- Seed:
-  - ~20 non-frame achievements: badges (First Battle, First Crown, Streak 7/30/100, Verified Voter, Top Fan), titles (Contender, Champion, Legend), seasonal (`starts_at`/`ends_at`) — Summer 2026 event.
-  - Mark 5 as `is_secret=true`, 3 as `is_repeatable=true` (weekly variants).
-- Rebalance founder-only flags: ensure ≥60 achievements visible to non-founders.
+The highest-impact wave: right now only 3 users have crowns because the evaluator isn't wired end-to-end.
 
-**RPCs**
-- `equip_title(_slug)` / `unequip_title()`
-- `equip_badge(_slug)` (single showcase)
-- Extend unlock processor to handle new reward types.
+1. **Unlock evaluator RPC + cron**
+   - `evaluate_crown_unlocks(user_id uuid)` — reads `requirement_logic` JSON for all 100 crowns, checks user stats (wins, streaks, votes, tournaments, etc.), inserts missing rows into `user_achievement_crowns`, updates `user_crown_progress`.
+   - Trigger it on: battle end, tournament advance, daily streak tick, and a 5-minute reconciliation cron for stragglers.
+   - Emit an analytics event per unlock.
 
-## 8B — Achievements Page UX (`/achievements`)
+2. **Unlock notifications**
+   - Insert into `notifications` on unlock; push via existing push infra when enabled.
+   - Show sonner toast on next page load; for `rarity IN ('rare','legendary')` open the existing celebratory modal.
 
-- Search input (name/description)
-- Sort dropdown: Rarity ↓ / Progress ↓ / Recently unlocked / Closest to complete
-- Rarity filter chips (Common → Legendary) with legend tooltip
-- "Next Up" card at top — closest incomplete achievement with progress bar
-- Reward preview on card: mini frame/badge/title chip
-- Distinct **Locked/Gated** visual state (blurred + lock overlay + unlock hint)
-- Secret achievements: `??? Hidden` card until unlocked
-- Share button on completed achievements → OG share card
-- Collections: icons + descriptions + explicit ordering column
-- Weekly Quests: streak counter + last-4-weeks history strip
+3. **Progress bars on locked crowns**
+   - `AchievementCrowns.tsx` locked tile reads `user_crown_progress.progress_current / progress_target` and renders a slim bar + "3 / 10 wins" label.
 
-## 8C — Cross-Surface
+## Wave 2 — Discovery & Social
 
-- **Toast + notification** on any achievement unlock (not just frames): `useAchievementUnlockToaster` global mount
-- **Profile achievement feed**: chronological log tab on `/profile/:username` (recent 20 unlocks)
-- **Equipped title** rendered inline under username on Profile + comment author chip
-- **Equipped badge** slot next to Founder/RoyalPass badges
+4. **Per-crown share page** at `/crown/:slug`
+   - Public route showing artwork, rarity, holders count, unlock hint, "how to earn" CTA.
+   - OG image via existing `share_cards` — reuse the crown's `gallery_asset_url` as the primary visual.
 
-## 8D — Admin Authoring
+5. **Rarity stats** — "0.4% of players own this"
+   - Materialized view `crown_rarity_stats(crown_id, holder_count, holder_pct)` refreshed hourly.
+   - Displayed on the crown detail sheet and on `/crown/:slug`.
 
-- New tab in Command Center: `CommandCenterAchievementAuthor.tsx`
-  - Create / edit / disable achievement definitions
-  - Set thresholds, rarity, reward_type/payload, secret/repeatable, time window, founder-only
-  - Preview card
-- Audit entries to `admin_audit_log`.
+6. **Collection completion reward**
+   - Completing all 10 in a collection grants a matching title (e.g. "Battle Sovereign") + one Royal Shield charge.
+   - New table `crown_collection_rewards` mapping collection_slug → reward payload; grant runs inside `evaluate_crown_unlocks`.
 
-## Testing
-- New unit tests: search/sort/filter, secret hiding, reward-preview mapping, equip_title RPC
-- Integration: unlock flow emits toast + notification + audit
-- Target: +30 tests (≈1050 total)
+## Wave 3 — Ops & Performance
 
-## Out of scope (call out to defer)
-- Real OG image server for share cards (uses static template for now)
-- Push notification delivery beyond in-app
+7. **Asset preloading strategy**
+   - Grid renders `thumbnail_url` (256px WebP) via `<img srcset>`; `gallery_asset_url` only on tap/hover/detail.
+   - Add `loading="lazy"` + `decoding="async"` uniformly.
 
-Confirm and I'll execute 8A → 8D end-to-end.
+8. **CDN cache headers**
+   - Verify + set `Cache-Control: public, max-age=31536000, immutable` on `achievement-crowns-v2` public bucket via storage update.
+
+9. **Feature flag flip plan**
+   - Confirm `crown_system_v2` flag state; add gradual rollout (admin → founders → 10% → 100%).
+
+## Wave 4 — Cleanup
+
+10. **001–010 path normalization** — copy the 10 masters to `masters/crown-NNN-master-2048.png` layout, update DB to match the rest, drop legacy paths.
+
+11. **Move 001–010 masters to private bucket** — same treatment as 011–090; masters no longer publicly downloadable.
+
+12. **`/admin/crown-assets` all-green dashboard** — verify it now reflects 100/100 verified + shows storage location per crown; add a "Rebuild derivatives" per-row action for future asset swaps.
+
+## Technical notes
+
+- All new SQL functions use `SECURITY DEFINER` + `SET search_path = public`.
+- `evaluate_crown_unlocks` is idempotent via the `UNIQUE (user_id, crown_id)` constraint on `user_achievement_crowns`.
+- New tables get GRANT + RLS in the same migration (per project convention).
+- Wave 1's cron uses `pg_cron` + `pg_net` with the anon key via `supabase--insert` (not migration).
+- Feature flag `crown_system_v2` gates the new evaluator so we can pause instantly if unlock rates spike.
+
+## Verification per wave
+
+- **W1:** run evaluator against a test user with known stats; confirm expected unlocks land, toast fires, progress bars render.
+- **W2:** hit `/crown/battle-sovereign-i`, screenshot; confirm OG preview + rarity math against `count(*) / total_users`.
+- **W3:** Playwright network audit — grid page should load thumbs (~10KB each) not full gallery WebPs.
+- **W4:** re-run the audit script; expect 0 files in public bucket under `masters/` and 100/100 rows using the standardized path.
+
+## Order of operations
+
+Wave 1 → verify → Wave 2 → verify → Wave 3 → verify → Wave 4 → final GO report.
+
+Approve to start Wave 1.
