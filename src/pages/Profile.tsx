@@ -841,10 +841,47 @@ export default function Profile() {
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-6 mt-2">
           <div>
             <ProfileAchievementsShowcase userId={prof.id} isMe={isMe} />
-            <div className="mt-4">
-              <div className="text-[11px] uppercase tracking-[0.2em] text-gold/80 mb-2">Recent Unlocks</div>
-              <ProfileUnlockFeed userId={prof.id} />
-            </div>
+            {(() => {
+              const hideUnlocks = !!prof.hide_recent_unlocks;
+              if (hideUnlocks && !isMe) return null;
+              const toggleHideUnlocks = async () => {
+                const next = !hideUnlocks;
+                setProf((prev) => (prev ? { ...prev, hide_recent_unlocks: next } : prev));
+                const { error } = await supabase
+                  .from("profiles")
+                  .update({ hide_recent_unlocks: next } as any)
+                  .eq("id", prof.id);
+                if (error) {
+                  setProf((prev) => (prev ? { ...prev, hide_recent_unlocks: !next } : prev));
+                  toast.error("Couldn't update visibility");
+                } else {
+                  toast.success(next ? "Recent Unlocks hidden on your profile" : "Recent Unlocks visible on your profile");
+                }
+              };
+              return (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[11px] uppercase tracking-[0.2em] text-gold/80">Recent Unlocks</div>
+                    {isMe && (
+                      <button
+                        type="button"
+                        onClick={toggleHideUnlocks}
+                        className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                      >
+                        {hideUnlocks ? "Show on profile" : "Hide from profile"}
+                      </button>
+                    )}
+                  </div>
+                  {hideUnlocks && isMe ? (
+                    <div className="royal-card p-3 text-xs text-muted-foreground text-center">
+                      Hidden from other users. Only you can see this notice.
+                    </div>
+                  ) : (
+                    <ProfileUnlockFeed userId={prof.id} />
+                  )}
+                </div>
+              );
+            })()}
             <ProfileCategoryRankings userId={prof.id} />
 
 
