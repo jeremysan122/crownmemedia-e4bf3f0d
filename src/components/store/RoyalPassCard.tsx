@@ -824,12 +824,48 @@ export default function RoyalPassCard() {
             <Flame size={11} />
             {founder.status?.active && founder.status.remaining > 0
               ? `Founder window · ${founder.status.remaining.toLocaleString()} spots left`
-              : "Royal Pass · Monthly membership"}
+              : `Royal Pass · ${primaryPlan.interval === "year" ? "Annual" : "Monthly"} membership`}
           </div>
+
+          {annualPlan && (
+            <div className="relative flex items-center justify-center pb-1">
+              <div className="inline-flex items-center rounded-full border border-gold/30 bg-background/60 p-1">
+                <button
+                  type="button"
+                  onClick={() => setSelectedInterval("month")}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition ${
+                    selectedInterval === "month" ? "bg-gradient-gold text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedInterval("year")}
+                  className={`relative px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition ${
+                    selectedInterval === "year" ? "bg-gradient-gold text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Annual
+                  {annualSavingsPct > 0 && (
+                    <span className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-[9px] font-bold shadow">
+                      -{annualSavingsPct}%
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="font-display text-5xl md:text-6xl text-gold leading-none">
             ${Number(primaryPlan.usd).toFixed(2)}
             <span className="text-base text-muted-foreground font-sans">/{primaryPlan.interval}</span>
           </div>
+          {selectedInterval === "year" && annualPlan && monthlyPlan && (
+            <div className="text-[11px] text-emerald-500 font-semibold">
+              Save ${(Number(monthlyPlan.usd) * 12 - Number(annualPlan.usd)).toFixed(2)} vs monthly · that's ~${(Number(annualPlan.usd) / 12).toFixed(2)}/mo
+            </div>
+          )}
           <p className="text-sm text-muted-foreground max-w-sm mx-auto">
             Premium identity, 5 monthly Crown Shields (24h each), 500 Shekels, 3 Boost Tokens, and — during the Founder window — a Badge, Frame, and Title kept for life.
           </p>
