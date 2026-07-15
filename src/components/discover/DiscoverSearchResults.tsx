@@ -155,7 +155,7 @@ export default function DiscoverSearchResults({ query, onNavigate }: Props) {
           {users.map((u) => (
             <Link
               key={u.id}
-              to={`/profile/${u.username}`}
+              to={`/${u.username}`}
               onClick={onNavigate}
               className="flex items-center gap-2 px-3 py-2 hover:bg-secondary/50 transition"
             >

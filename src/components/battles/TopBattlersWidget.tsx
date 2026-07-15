@@ -29,7 +29,7 @@ export default function TopBattlersWidget() {
       </div>
       <div className="space-y-2">
         {users.map((u, i) => (
-          <Link key={u.id} to={`/profile/${u.username}`}
+          <Link key={u.id} to={`/${u.username}`}
             className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted/40 transition-colors">
             <span className="text-xs font-bold w-4 text-muted-foreground">{i + 1}</span>
             <div className="w-7 h-7 rounded-full overflow-hidden bg-muted shrink-0">
