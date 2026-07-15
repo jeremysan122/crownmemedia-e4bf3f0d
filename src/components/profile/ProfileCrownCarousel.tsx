@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy, ChevronLeft, ChevronRight } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 interface CrownRow {
   crown_id: string;
