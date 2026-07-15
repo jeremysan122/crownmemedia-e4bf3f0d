@@ -774,6 +774,9 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
                   <DropdownMenuItem onClick={() => nav("/store?tab=boosts")}>
                     <Zap size={14} className="mr-2" /> Boost this post
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={useCrownShield} disabled={shieldBusy}>
+                    <Shield size={14} className="mr-2" /> {shieldBusy ? "Activating shield…" : "Use Crown Shield (24h)"}
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={togglePin}>
                     {pinnedAt
                       ? <><PinOff size={14} className="mr-2" /> Unpin from profile</>
