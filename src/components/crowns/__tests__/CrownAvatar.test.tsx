@@ -39,7 +39,7 @@ describe("CrownAvatar positioning contract", () => {
 
   it("uses the profile photo URL for the avatar image", () => {
     render(<CrownAvatar photoUrl="/profile-photo.jpg" crownAssetUrl="/wearable-crown.webp" size={160} />);
-    const avatar = within(screen.getByTestId("crown-avatar-circle")).getByRole("img", { hidden: true }) as HTMLImageElement;
+    const avatar = screen.getByTestId("crown-avatar-circle").querySelector("img") as HTMLImageElement;
 
     expect(avatar.getAttribute("src")).toBe("/profile-photo.jpg");
   });
