@@ -877,7 +877,7 @@ export default function Profile() {
                       Hidden from other users. Only you can see this notice.
                     </div>
                   ) : (
-                    <ProfileUnlockFeed userId={prof.id} />
+                    <ProfileCrownCarousel userId={prof.id} />
                   )}
                 </div>
               );
