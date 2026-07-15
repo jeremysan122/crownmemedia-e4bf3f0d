@@ -123,9 +123,9 @@ describe("CrownAvatar source regression guardrails", () => {
   it("does not contain duplicate className or style props on a single JSX line", () => {
     const source = crownSource();
 
-    for (const line of source.split("\n")) {
-      expect((line.match(/className=/g) ?? [])).toHaveLength(Math.min((line.match(/className=/g) ?? []).length, 1));
-      expect((line.match(/style=/g) ?? [])).toHaveLength(Math.min((line.match(/style=/g) ?? []).length, 1));
+    for (const tag of source.match(/<[^>]+>/gs) ?? []) {
+      expect((tag.match(/className=/g) ?? [])).toHaveLength(Math.min((tag.match(/className=/g) ?? []).length, 1));
+      expect((tag.match(/style=/g) ?? [])).toHaveLength(Math.min((tag.match(/style=/g) ?? []).length, 1));
     }
   });
 });
