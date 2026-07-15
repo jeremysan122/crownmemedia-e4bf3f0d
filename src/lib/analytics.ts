@@ -148,6 +148,8 @@ type EventName =
   | "royal_pass_reversal_history_viewed"
   | "royal_pass_daily_boost_claimed"
   | "royal_pass_signed_out_cta_clicked"
+  | "royal_pass_gift_opened"
+  | "royal_pass_gift_checkout_started"
   // Profile follow + carousel performance monitoring
   | "profile_follow_attempted"
   | "profile_follow_success"
