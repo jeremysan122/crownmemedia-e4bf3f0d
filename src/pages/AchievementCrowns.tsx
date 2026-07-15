@@ -271,7 +271,7 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
       className={`text-[11px] px-3 py-1.5 rounded-full border transition ${
         active
           ? "bg-gold/20 border-gold text-gold"
-          : "border-border text-muted-foreground hover:border-gold/40 hover:text-gold"
+          : "border-border/70 bg-background/40 text-foreground/85 hover:border-gold/50 hover:text-gold"
       }`}
     >
       {label}
