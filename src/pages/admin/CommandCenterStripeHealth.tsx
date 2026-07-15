@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getStripeEnvironment } from "@/lib/stripe";
 import { SectionCard, EmptyState, StatTile } from "@/components/admin/cc/CommandCenterUI";
-import { Loader2, RefreshCw, CheckCircle2, AlertTriangle, RotateCw } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 
 interface StripeEvent { id: string; type: string; received_at: string }
 interface LedgerRow {
@@ -29,27 +27,6 @@ export default function CommandCenterStripeHealth() {
   const [connects, setConnects] = useState<ConnectAcct[]>([]);
   const [lastPurchaseAt, setLastPurchaseAt] = useState<string | null>(null);
   const [lastPayoutAt, setLastPayoutAt] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
-  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
-
-  const refreshRoyalPassEntitlements = async () => {
-    setSyncing(true);
-    const t = toast.loading("Re-checking Stripe & Royal Pass entitlements…");
-    try {
-      const { data, error } = await supabase.functions.invoke("royal-pass-sync", {
-        body: { environment: getStripeEnvironment() },
-      });
-      if (error) throw error;
-      const errMsg = (data as { error?: string })?.error;
-      if (errMsg) throw new Error(errMsg);
-      setLastSyncedAt(Date.now());
-      toast.success("Entitlements refreshed from Stripe", { id: t });
-    } catch (e) {
-      toast.error((e as Error).message || "Refresh failed", { id: t });
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const load = async () => {
     setLoading(true);
@@ -103,33 +80,6 @@ export default function CommandCenterStripeHealth() {
         <StatTile label="Last payout paid" value={ago(lastPayoutAt)} />
         <StatTile label="Webhook events (50)" value={String(events.length)} />
       </div>
-
-      <SectionCard title="Royal Pass admin tools">
-        <div className="p-4 space-y-2">
-          <p className="text-xs text-muted-foreground">
-            Re-hydrate the Royal Pass subscription row directly from Stripe. Useful for testing without waiting for a webhook retry.
-          </p>
-          <Button
-            onClick={refreshRoyalPassEntitlements}
-            disabled={syncing}
-            variant="outline"
-            className="w-full border-gold/40 text-gold hover:bg-gold/10"
-          >
-            {syncing
-              ? <Loader2 size={14} className="animate-spin mr-2" />
-              : <RotateCw size={14} className="mr-2" />}
-            Refresh Entitlements from Stripe
-          </Button>
-          {lastSyncedAt && (
-            <p className="text-[10px] text-muted-foreground text-center">
-              Last refreshed {new Date(lastSyncedAt).toLocaleTimeString(undefined, {
-                hour: "numeric", minute: "2-digit", second: "2-digit",
-              })}
-            </p>
-          )}
-        </div>
-      </SectionCard>
-
 
       <SectionCard title="Latest webhook events">
         {loading ? <div className="p-6 flex items-center justify-center text-muted-foreground"><Loader2 size={14} className="animate-spin mr-2" /> Loading…</div> :
