@@ -416,16 +416,28 @@ export default function Profile() {
 
   const toggleFollow = async () => {
     if (!user || !prof) return;
-    if (following) {
-      await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", prof.id);
-      setFollowing(false);
-      // Fix #1: keep stat card in sync
-      setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count - 1) } : p);
+    // Optimistic update, then rollback on failure so the UI never diverges
+    // from the DB (previously silent errors made follow appear to work then
+    // "revert" on refresh).
+    const wasFollowing = following;
+    setFollowing(!wasFollowing);
+    setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count + (wasFollowing ? -1 : 1)) } : p);
+    if (wasFollowing) {
+      const { error } = await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", prof.id);
+      if (error) {
+        setFollowing(true);
+        setProf((p) => p ? { ...p, followers_count: p.followers_count + 1 } : p);
+        logRawError(error, "generic", { op: "follow_delete" });
+        toast.error(toFriendlyMessage(error, "generic"));
+      }
     } else {
-      await supabase.from("follows").insert({ follower_id: user.id, following_id: prof.id });
-      setFollowing(true);
-      // Fix #1: keep stat card in sync
-      setProf((p) => p ? { ...p, followers_count: p.followers_count + 1 } : p);
+      const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: prof.id });
+      if (error) {
+        setFollowing(false);
+        setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count - 1) } : p);
+        logRawError(error, "generic", { op: "follow_insert" });
+        toast.error(toFriendlyMessage(error, "generic"));
+      }
     }
   };
 
