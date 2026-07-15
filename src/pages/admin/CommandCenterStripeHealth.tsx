@@ -104,6 +104,33 @@ export default function CommandCenterStripeHealth() {
         <StatTile label="Webhook events (50)" value={String(events.length)} />
       </div>
 
+      <SectionCard title="Royal Pass admin tools">
+        <div className="p-4 space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Re-hydrate the Royal Pass subscription row directly from Stripe. Useful for testing without waiting for a webhook retry.
+          </p>
+          <Button
+            onClick={refreshRoyalPassEntitlements}
+            disabled={syncing}
+            variant="outline"
+            className="w-full border-gold/40 text-gold hover:bg-gold/10"
+          >
+            {syncing
+              ? <Loader2 size={14} className="animate-spin mr-2" />
+              : <RotateCw size={14} className="mr-2" />}
+            Refresh Entitlements from Stripe
+          </Button>
+          {lastSyncedAt && (
+            <p className="text-[10px] text-muted-foreground text-center">
+              Last refreshed {new Date(lastSyncedAt).toLocaleTimeString(undefined, {
+                hour: "numeric", minute: "2-digit", second: "2-digit",
+              })}
+            </p>
+          )}
+        </div>
+      </SectionCard>
+
+
       <SectionCard title="Latest webhook events">
         {loading ? <div className="p-6 flex items-center justify-center text-muted-foreground"><Loader2 size={14} className="animate-spin mr-2" /> Loading…</div> :
           events.length === 0 ? <EmptyState message="No events yet" /> : (
