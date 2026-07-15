@@ -29,6 +29,27 @@ export default function CommandCenterStripeHealth() {
   const [connects, setConnects] = useState<ConnectAcct[]>([]);
   const [lastPurchaseAt, setLastPurchaseAt] = useState<string | null>(null);
   const [lastPayoutAt, setLastPayoutAt] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
+
+  const refreshRoyalPassEntitlements = async () => {
+    setSyncing(true);
+    const t = toast.loading("Re-checking Stripe & Royal Pass entitlements…");
+    try {
+      const { data, error } = await supabase.functions.invoke("royal-pass-sync", {
+        body: { environment: getStripeEnvironment() },
+      });
+      if (error) throw error;
+      const errMsg = (data as { error?: string })?.error;
+      if (errMsg) throw new Error(errMsg);
+      setLastSyncedAt(Date.now());
+      toast.success("Entitlements refreshed from Stripe", { id: t });
+    } catch (e) {
+      toast.error((e as Error).message || "Refresh failed", { id: t });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
