@@ -8628,10 +8628,10 @@ export type Database = {
           description: string
           equipped: boolean
           gallery_asset_url: string
+          image_quality_verified: boolean
           is_secret: boolean
           last_evaluated_at: string
           lore: string
-          master_asset_url: string
           name: string
           owned: boolean
           progress: number
