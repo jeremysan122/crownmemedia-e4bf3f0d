@@ -90,6 +90,7 @@ export type Database = {
           rarity: string
           render_config: Json
           requirement_logic: Json
+          royal_pass_required: boolean
           slug: string
           sort_order: number
           thumbnail_url: string | null
@@ -122,6 +123,7 @@ export type Database = {
           rarity: string
           render_config?: Json
           requirement_logic?: Json
+          royal_pass_required?: boolean
           slug: string
           sort_order?: number
           thumbnail_url?: string | null
@@ -154,6 +156,7 @@ export type Database = {
           rarity?: string
           render_config?: Json
           requirement_logic?: Json
+          royal_pass_required?: boolean
           slug?: string
           sort_order?: number
           thumbnail_url?: string | null
@@ -578,6 +581,7 @@ export type Database = {
           name: string
           ownership_type: string
           rarity: string
+          royal_pass_required: boolean
           slug: string
           starts_at: string | null
           static_asset_url: string | null
@@ -601,6 +605,7 @@ export type Database = {
           name: string
           ownership_type?: string
           rarity?: string
+          royal_pass_required?: boolean
           slug: string
           starts_at?: string | null
           static_asset_url?: string | null
@@ -624,6 +629,7 @@ export type Database = {
           name?: string
           ownership_type?: string
           rarity?: string
+          royal_pass_required?: boolean
           slug?: string
           starts_at?: string | null
           static_asset_url?: string | null
@@ -7168,6 +7174,7 @@ export type Database = {
           name: string
           requirement_logic: Json
           rewards: Json
+          royal_multiplier: number
           slug: string
           updated_at: string
         }
@@ -7180,6 +7187,7 @@ export type Database = {
           name: string
           requirement_logic?: Json
           rewards?: Json
+          royal_multiplier?: number
           slug: string
           updated_at?: string
         }
@@ -7192,6 +7200,7 @@ export type Database = {
           name?: string
           requirement_logic?: Json
           rewards?: Json
+          royal_multiplier?: number
           slug?: string
           updated_at?: string
         }
@@ -7424,6 +7433,10 @@ export type Database = {
           _request_id: string
         }
         Returns: undefined
+      }
+      admin_grant_royal_pass: {
+        Args: { _days: number; _reason: string; _target_user_id: string }
+        Returns: Json
       }
       admin_hide_live_battle_comment: {
         Args: { _comment_id: string; _hide: boolean; _reason?: string }
@@ -8496,6 +8509,7 @@ export type Database = {
       }
       is_feature_enabled: { Args: { _key: string }; Returns: boolean }
       is_founder: { Args: { _user_id: string }; Returns: boolean }
+      is_royal_active: { Args: { _uid: string }; Returns: boolean }
       is_royal_pass_active: { Args: { _user_id: string }; Returns: boolean }
       is_thread_muted: {
         Args: { _post_id: string; _user_id: string }
@@ -9149,6 +9163,7 @@ export type Database = {
         Returns: number
       }
       royal_pass_daily_boost_status: { Args: never; Returns: Json }
+      royal_pass_finance_metrics: { Args: never; Returns: Json }
       royal_spendable_shekels: { Args: { _user_id: string }; Returns: number }
       run_achievement_pipeline: {
         Args: { _batch_size?: number; _time_limit?: number }
