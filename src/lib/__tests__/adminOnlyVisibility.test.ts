@@ -35,11 +35,21 @@ const GUARDS: Guard[] = [
     forbiddenOutsideGate: ["data-admin-only=\"verification-timeline\""],
   },
   {
-    file: "src/pages/RoyalPass.tsx",
+    file: "src/pages/PurchaseSuccess.tsx",
     requiredInsideGate: [
-      "Admin tools",
-      "Refresh Entitlements from Stripe",
+      "Stripe payment received",
+      "Webhook delivered",
+      "Ledger entry recorded",
     ],
+    forbiddenOutsideGate: ["data-admin-only=\"verification-timeline\""],
+  },
+];
+
+// Files where admin-only strings MUST NOT appear at all (moved to admin console).
+const FORBIDDEN_ANYWHERE: { file: string; needles: string[] }[] = [
+  {
+    file: "src/pages/RoyalPass.tsx",
+    needles: ["Admin tools", "Refresh Entitlements from Stripe"],
   },
 ];
 
