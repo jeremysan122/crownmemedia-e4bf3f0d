@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Crown, Flame, Gem, Gift, MessageCircle, Share2, MapPin, MoreHorizontal, Pencil, Flag, Ban, Sparkles, Trash2, Archive, Bookmark, Pin, PinOff, Zap, BarChart3, Repeat2, Clock, Eye, EyeOff, } from "lucide-react";
+import { Crown, Flame, Gem, Gift, MessageCircle, Share2, MapPin, MoreHorizontal, Pencil, Flag, Ban, Sparkles, Trash2, Archive, Bookmark, Pin, PinOff, Zap, BarChart3, Repeat2, Clock, Eye, EyeOff, Shield, } from "lucide-react";
 import { BrokenCrown } from "@/components/icons/BrokenCrown";
 import { canSeeLikes, canSeeComments } from "@/lib/privacyVisibility";
 import HiddenCountLock from "./HiddenCountLock";
@@ -308,6 +308,38 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
     setHidden(true);
     window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id: post.id } }));
   };
+
+  const [shieldBusy, setShieldBusy] = useState(false);
+  const useCrownShield = async () => {
+    if (!user || !isOwner || shieldBusy) return;
+    setShieldBusy(true);
+    const { data, error } = await (supabase as any).rpc("use_royal_shield", { _post_id: post.id });
+    setShieldBusy(false);
+    if (error) {
+      logRawError(error, "generic", { feature: "use_royal_shield", post_id: post.id });
+      return toast.error(toFriendlyMessage(error, "generic"));
+    }
+    const res = (data ?? {}) as { error?: string; expires_at?: string; grant_status?: string };
+    if (res.error) {
+      const messages: Record<string, string> = {
+        unauthenticated: "Please sign in first.",
+        no_active_royal_pass: "Royal Pass required to use Crown Shields.",
+        post_not_found: "Post not found.",
+        post_removed: "This post has been removed.",
+        not_post_owner: "You can only shield your own posts.",
+        no_active_crown: "This post isn't currently crowned.",
+        already_shielded: "This post is already shielded.",
+        no_allowance: "No shield allowance found.",
+        royal_allowance_not_linked: "Your Royal Pass grant isn't linked yet — try again in a moment.",
+        royal_benefits_temporarily_suspended: "Royal Pass benefits are temporarily paused.",
+        no_shields_remaining: "You've used all your shields this period.",
+      };
+      return toast.error(messages[res.error] ?? "Couldn't activate shield.");
+    }
+    toast.success("Crown Shield activated — this post is protected for 24h.");
+    window.dispatchEvent(new CustomEvent("royal-shield:used", { detail: { post_id: post.id } }));
+  };
+
   const togglePin = async () => {
     if (!user || !isOwner) return;
     const next = pinnedAt ? null : new Date().toISOString();
@@ -741,6 +773,9 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => nav("/store?tab=boosts")}>
                     <Zap size={14} className="mr-2" /> Boost this post
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={useCrownShield} disabled={shieldBusy}>
+                    <Shield size={14} className="mr-2" /> {shieldBusy ? "Activating shield…" : "Use Crown Shield (24h)"}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={togglePin}>
                     {pinnedAt
