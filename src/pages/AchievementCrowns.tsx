@@ -161,21 +161,36 @@ export default function AchievementCrowns() {
         </header>
 
         <div className="mb-5 space-y-3">
-          <div className="relative max-w-md mx-auto">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                const p = new URLSearchParams(searchParams);
-                p.set("page", "1");
-                setSearchParams(p, { replace: true });
-              }}
-              placeholder="Search crowns or collections…"
-              className="w-full pl-9 pr-3 py-2 text-sm rounded-md bg-background border border-border focus:outline-none focus:border-gold/60"
-              aria-label="Search Achievement Crowns"
-            />
+          <div className="flex flex-col sm:flex-row gap-2 max-w-2xl mx-auto">
+            <div className="relative flex-1">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  const p = new URLSearchParams(searchParams);
+                  p.set("page", "1");
+                  setSearchParams(p, { replace: true });
+                }}
+                placeholder="Search crowns, collections, or unlock hints…"
+                className="w-full pl-9 pr-3 py-2 text-sm rounded-md bg-background border border-border focus:outline-none focus:border-gold/60"
+                aria-label="Search Achievement Crowns"
+              />
+            </div>
+            <select
+              value={collections.some((c) => c.slug === filter) ? filter : "__all_collections__"}
+              onChange={(e) => changeFilter(e.target.value === "__all_collections__" ? "all" : e.target.value)}
+              aria-label="Filter by collection"
+              className="sm:w-64 px-3 py-2 text-sm rounded-md bg-background border border-border focus:outline-none focus:border-gold/60"
+            >
+              <option value="__all_collections__">All collections ({collections.length})</option>
+              {collections.map((c) => (
+                <option key={c.slug} value={c.slug}>
+                  {c.name} · {c.owned}/{c.total}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex flex-wrap justify-center gap-2">
             <Chip label={`All · ${rows.length}`} active={filter === "all"} onClick={() => changeFilter("all")} />
