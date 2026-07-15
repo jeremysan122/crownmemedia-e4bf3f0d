@@ -168,6 +168,13 @@ export default function Profile() {
       if (!p) return;
       setProf(p as any);
       const pid = (p as any).id;
+      const equippedCrownId = (p as any).equipped_achievement_crown_id as string | null;
+      if (equippedCrownId) {
+        const { data: cr } = await supabase.from("achievement_crowns").select("asset_url").eq("id", equippedCrownId).maybeSingle();
+        if (!cancelled) setEquippedCrownAsset((cr as any)?.asset_url ?? null);
+      } else {
+        setEquippedCrownAsset(null);
+      }
 
       const [{ data: ps, error: psErr }, { data: cs }, { data: rs }] = await Promise.all([
         supabase.from("posts").select("id, image_url, crown_score, filter, pinned_at, is_sensitive, content_type, media_type, video_poster_url, parent_post_id, aspect_ratio").eq("user_id", pid).eq("is_removed", false).eq("is_archived", false).order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
