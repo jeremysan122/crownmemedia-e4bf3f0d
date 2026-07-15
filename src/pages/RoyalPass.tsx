@@ -44,7 +44,7 @@ export default function RoyalPassSettings() {
   const entitlements = useRoyalEntitlements();
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [working, setWorking] = useState<
-    "portal" | "cancel" | "resume" | "claim" | "sync" | null
+    "portal" | "cancel" | "resume" | "claim" | null
   >(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [daily, setDaily] = useState<DailyStatus | null>(null);
