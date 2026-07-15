@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionCard, StatTile } from "@/components/admin/cc/CommandCenterUI";
 import { Button } from "@/components/ui/button";
-import { RotateCw, Loader2, Crown } from "lucide-react";
+import { RotateCw, Loader2 } from "lucide-react";
 
 interface Metrics {
   mrr_usd: number;
