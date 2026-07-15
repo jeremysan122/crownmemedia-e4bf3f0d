@@ -64,20 +64,30 @@ export default function PullToRefresh() {
     };
   }, [pull, status]);
 
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const triggerRefresh = () => {
     setStatus("refreshing");
     setPull(THRESHOLD);
     // Kick off the reload. If the browser hasn't navigated in a reasonable
     // window (offline, cold cache, service worker stalled), surface a retry
-    // instead of leaving the spinner forever.
-    const safety = window.setTimeout(() => setStatus("failed"), RELOAD_TIMEOUT_MS);
+    // instead of leaving the spinner forever. Guard against updates after
+    // unmount so a stalled reload can't touch state on a subsequent route.
+    const safety = window.setTimeout(() => {
+      if (mountedRef.current) setStatus("failed");
+    }, RELOAD_TIMEOUT_MS);
     try {
       window.location.reload();
     } catch {
       window.clearTimeout(safety);
-      setStatus("failed");
+      if (mountedRef.current) setStatus("failed");
     }
   };
+
 
   if (!enabled.current) return null;
   if (pull <= 0 && status === "idle") return null;
