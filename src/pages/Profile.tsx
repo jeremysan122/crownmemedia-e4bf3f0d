@@ -638,22 +638,25 @@ export default function Profile() {
 
       <div className="px-4 lg:px-6 py-4 lg:relative">
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+          {(() => {
+            const crownEquipped = !prof.frames_hidden && !!equippedCrownAsset;
+            const crownCfg = getCrownRenderConfig(equippedCrownNumber);
+            const wrapperCls = crownEquipped
+              ? "relative z-30 w-fit shrink-0 self-start"
+              : `self-start w-fit relative ${prof.crowns_held > 0 && !prof.equipped_frame_key && !isFounder ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full ${!isFounder && !prof.equipped_frame_key && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5 profile-glow" : ""}`;
+            return (
           <div
             data-testid="profile-avatar"
-            className={`self-start w-fit relative ${
-              !prof.frames_hidden && equippedCrownAsset
-                ? ""
-                : `${prof.crowns_held > 0 && !prof.equipped_frame_key && !isFounder ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full ${!isFounder && !prof.equipped_frame_key && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5 profile-glow" : ""}`
-            }`}
+            className={wrapperCls}
             style={{ zIndex: 30, overflow: "visible" }}
           >
-            {!prof.frames_hidden && equippedCrownAsset ? (
+            {crownEquipped ? (
               <>
-                <div className="lg:hidden">
-                  <CrownAvatar photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={112} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} />
+                <div className="lg:hidden" style={{ overflow: "visible" }}>
+                  <CrownAvatar key={`${prof.id}-${equippedCrownAsset}-m`} photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={112} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} alt={`${prof.username ?? "User"} profile photo`} renderConfig={crownCfg} />
                 </div>
-                <div className="hidden lg:block">
-                  <CrownAvatar photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={160} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} />
+                <div className="hidden lg:block" style={{ overflow: "visible" }}>
+                  <CrownAvatar key={`${prof.id}-${equippedCrownAsset}-d`} photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={160} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} alt={`${prof.username ?? "User"} profile photo`} renderConfig={crownCfg} />
                 </div>
               </>
             ) : !prof.frames_hidden && ((prof.equipped_frame_key && getFrameUrl(prof.equipped_frame_key)) || isFounder) ? (
