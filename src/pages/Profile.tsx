@@ -74,6 +74,7 @@ interface ProfileFull {
   equipped_frame_key?: string | null;
   equipped_achievement_crown_id?: string | null;
   frames_hidden?: boolean | null;
+  hide_recent_unlocks?: boolean | null;
 }
 
 interface BattleRow {
@@ -164,7 +165,7 @@ export default function Profile() {
     const load = async () => {
       const { data: p, error: pErr } = await supabase
         .from("profiles")
-        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public, is_founder, founder_title, royal_frame_variant, equipped_frame_key, equipped_achievement_crown_id, frames_hidden")
+        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public, is_founder, founder_title, royal_frame_variant, equipped_frame_key, equipped_achievement_crown_id, frames_hidden, hide_recent_unlocks")
         .eq("username", targetUsername)
         .maybeSingle();
       if (cancelled) return;
@@ -840,10 +841,47 @@ export default function Profile() {
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-6 mt-2">
           <div>
             <ProfileAchievementsShowcase userId={prof.id} isMe={isMe} />
-            <div className="mt-4">
-              <div className="text-[11px] uppercase tracking-[0.2em] text-gold/80 mb-2">Recent Unlocks</div>
-              <ProfileUnlockFeed userId={prof.id} />
-            </div>
+            {(() => {
+              const hideUnlocks = !!prof.hide_recent_unlocks;
+              if (hideUnlocks && !isMe) return null;
+              const toggleHideUnlocks = async () => {
+                const next = !hideUnlocks;
+                setProf((prev) => (prev ? { ...prev, hide_recent_unlocks: next } : prev));
+                const { error } = await supabase
+                  .from("profiles")
+                  .update({ hide_recent_unlocks: next } as any)
+                  .eq("id", prof.id);
+                if (error) {
+                  setProf((prev) => (prev ? { ...prev, hide_recent_unlocks: !next } : prev));
+                  toast.error("Couldn't update visibility");
+                } else {
+                  toast.success(next ? "Recent Unlocks hidden on your profile" : "Recent Unlocks visible on your profile");
+                }
+              };
+              return (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[11px] uppercase tracking-[0.2em] text-gold/80">Recent Unlocks</div>
+                    {isMe && (
+                      <button
+                        type="button"
+                        onClick={toggleHideUnlocks}
+                        className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                      >
+                        {hideUnlocks ? "Show on profile" : "Hide from profile"}
+                      </button>
+                    )}
+                  </div>
+                  {hideUnlocks && isMe ? (
+                    <div className="royal-card p-3 text-xs text-muted-foreground text-center">
+                      Hidden from other users. Only you can see this notice.
+                    </div>
+                  ) : (
+                    <ProfileUnlockFeed userId={prof.id} />
+                  )}
+                </div>
+              );
+            })()}
             <ProfileCategoryRankings userId={prof.id} />
 
 

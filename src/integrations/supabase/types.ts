@@ -4439,6 +4439,7 @@ export type Database = {
           gender: Database["public"]["Enums"]["gender_type"] | null
           hide_comments: boolean
           hide_likes: boolean
+          hide_recent_unlocks: boolean
           hide_views: boolean
           high_contrast: boolean
           id: string
@@ -4518,6 +4519,7 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender_type"] | null
           hide_comments?: boolean
           hide_likes?: boolean
+          hide_recent_unlocks?: boolean
           hide_views?: boolean
           high_contrast?: boolean
           id: string
@@ -4597,6 +4599,7 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender_type"] | null
           hide_comments?: boolean
           hide_likes?: boolean
+          hide_recent_unlocks?: boolean
           hide_views?: boolean
           high_contrast?: boolean
           id?: string
@@ -8077,6 +8080,7 @@ export type Database = {
           gender: Database["public"]["Enums"]["gender_type"] | null
           hide_comments: boolean
           hide_likes: boolean
+          hide_recent_unlocks: boolean
           hide_views: boolean
           high_contrast: boolean
           id: string
