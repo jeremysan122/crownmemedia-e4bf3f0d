@@ -19,19 +19,9 @@ function CrownAvatarImpl({ photoUrl, crownAssetUrl, size, glow, positionY = 50, 
       className="relative"
       style={{ width: size, height: size + Math.round(crownH * 0.55) }}
     >
-      {crownAssetUrl && (
-        <img
-          src={crownAssetUrl}
-          alt=""
-          aria-hidden
-          loading="lazy"
-          className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]"
-          style={{ width: crownW, height: crownH, top: 0, objectFit: "contain" }}
-        />
-      )}
       <div
         className={`absolute left-0 rounded-full overflow-hidden bg-muted ring-2 ring-border ${glow ? "shadow-[0_0_28px_hsl(var(--gold)/0.5)] ring-gold/60" : ""}`}
-        style={{ width: size, height: size, top: Math.round(crownH * 0.55) }}
+        style={{ width: size, height: size, top: Math.round(crownH * 0.55), zIndex: 1 }}
       >
         {photoUrl && (
           <img
@@ -42,6 +32,16 @@ function CrownAvatarImpl({ photoUrl, crownAssetUrl, size, glow, positionY = 50, 
           />
         )}
       </div>
+      {crownAssetUrl && (
+        <img
+          src={crownAssetUrl}
+          alt=""
+          aria-hidden
+          loading="lazy"
+          className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]"
+          style={{ width: crownW, height: crownH, top: 0, objectFit: "contain", zIndex: 2 }}
+        />
+      )}
     </div>
   );
 }
