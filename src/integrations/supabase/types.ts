@@ -7668,6 +7668,10 @@ export type Database = {
         Returns: string
       }
       admin_user_growth_summary: { Args: never; Returns: Json }
+      admin_verify_crown_asset: {
+        Args: { _crown_id: string; _verified: boolean }
+        Returns: undefined
+      }
       apply_to_creator_program: {
         Args: { _note?: string }
         Returns: {
