@@ -1,74 +1,60 @@
-# Crown System Completion — 4 Waves
+# Royal Pass — Audit & Completion Plan
 
-Ships the remaining 12 gaps from the audit. Each wave is independently shippable and testable; after each I'll return with verification before starting the next.
+## Audit results (verified against code + DB)
 
-## Wave 1 — Game Loop (turns art into rewards)
+Confirmed gaps in the current implementation:
 
-The highest-impact wave: right now only 3 users have crowns because the evaluator isn't wired end-to-end.
+| Area | Status | Evidence |
+|---|---|---|
+| Annual plan | ❌ Missing | `royal_pass_plans` has 1 row: `royal_pass_monthly` @ $9.99 only |
+| Free trial | ❌ Missing | `create-royal-pass-checkout` sets no `trial_period_days`; webhook handles `trialing` status but nothing ever produces it |
+| Gift Royal Pass | ❌ Missing | No gift flow in `create-royal-pass-checkout`, no `royal_pass_gifts` table |
+| Renewal reminder email | ❌ Missing | No template in `_shared/transactional-email-templates/` |
+| Cancellation confirmation email | ❌ Missing | `royal-pass-cancel` returns JSON only, no email |
+| Win-back / dunning offer | ⚠️ Partial | Dunning banner shipped; no discount coupon flow |
+| MRR / churn / LTV dashboard | ❌ Missing | No `MRR|churn|LTV|cohort` refs in `src/pages/admin/` |
+| Manual grant / comp tool | ❌ Missing | Admin has reversal history but no "grant N days" UI |
+| Royal-only crowns/frames | ❌ Missing | No `royal_pass_required` flag on `achievement_crowns` / `avatar_frames` |
+| Royal quests (boosted rewards) | ❌ Missing | `weekly_quest_definitions` exists but has no royal multiplier |
+| Public "What you get" page | ❌ Missing | Value prop only lives inside paywall card |
+| Profile Royal badge | ✅ Shipped | `RoyalPassBadge.tsx` exists |
+| Reversal history | ✅ Shipped | `RoyalPassReversalHistory.tsx` |
+| Reconciliation cron | ✅ Shipped | `royal-pass-reconcile` function |
 
-1. **Unlock evaluator RPC + cron**
-   - `evaluate_crown_unlocks(user_id uuid)` — reads `requirement_logic` JSON for all 100 crowns, checks user stats (wins, streaks, votes, tournaments, etc.), inserts missing rows into `user_achievement_crowns`, updates `user_crown_progress`.
-   - Trigger it on: battle end, tournament advance, daily streak tick, and a 5-minute reconciliation cron for stragglers.
-   - Emit an analytics event per unlock.
+## Proposed waves
 
-2. **Unlock notifications**
-   - Insert into `notifications` on unlock; push via existing push infra when enabled.
-   - Show sonner toast on next page load; for `rarity IN ('rare','legendary')` open the existing celebratory modal.
+### Wave 1 — Monetization foundation (highest ROI)
+1. Add **annual plan** row ($79.99/yr → "save 33%") + admin can toggle.
+2. Update `RoyalPassCard.tsx` to show monthly/annual toggle with savings badge.
+3. Add `trial_period_days` (7-day) option in `create-royal-pass-checkout`, gated by a feature flag.
+4. Wire proration for monthly ↔ annual switch via existing `royal-pass-portal` (Stripe handles the math).
 
-3. **Progress bars on locked crowns**
-   - `AchievementCrowns.tsx` locked tile reads `user_crown_progress.progress_current / progress_target` and renders a slim bar + "3 / 10 wins" label.
+### Wave 2 — Retention comms
+1. New app-email templates: `royal-pass-renewal-reminder` (T-3 days), `royal-pass-canceled`, `royal-pass-trial-ending`.
+2. `pg_cron` job (daily 09:00 UTC) queries `royal_pass_subscriptions` for renewals in 3 days & trials ending in 2 days, invokes `send-transactional-email`.
+3. `royal-pass-cancel` triggers the cancellation email with expiry date.
 
-## Wave 2 — Discovery & Social
+### Wave 3 — Growth loops
+1. **Gift Royal Pass**: new `create-royal-pass-gift-checkout` fn (one-time price, recipient by @username), `royal_pass_gifts` table, redemption on webhook → `royal_pass_grants` with `source='gift'`.
+2. **Public value page** at `/royal-pass` with SEO, hero, feature list, testimonials, CTA.
+3. **Referral bonus**: existing `creator_referrals` — add "gift a friend Royal → get 1 month free" reward rule.
 
-4. **Per-crown share page** at `/crown/:slug`
-   - Public route showing artwork, rarity, holders count, unlock hint, "how to earn" CTA.
-   - OG image via existing `share_cards` — reuse the crown's `gallery_asset_url` as the primary visual.
-
-5. **Rarity stats** — "0.4% of players own this"
-   - Materialized view `crown_rarity_stats(crown_id, holder_count, holder_pct)` refreshed hourly.
-   - Displayed on the crown detail sheet and on `/crown/:slug`.
-
-6. **Collection completion reward**
-   - Completing all 10 in a collection grants a matching title (e.g. "Battle Sovereign") + one Royal Shield charge.
-   - New table `crown_collection_rewards` mapping collection_slug → reward payload; grant runs inside `evaluate_crown_unlocks`.
-
-## Wave 3 — Ops & Performance
-
-7. **Asset preloading strategy**
-   - Grid renders `thumbnail_url` (256px WebP) via `<img srcset>`; `gallery_asset_url` only on tap/hover/detail.
-   - Add `loading="lazy"` + `decoding="async"` uniformly.
-
-8. **CDN cache headers**
-   - Verify + set `Cache-Control: public, max-age=31536000, immutable` on `achievement-crowns-v2` public bucket via storage update.
-
-9. **Feature flag flip plan**
-   - Confirm `crown_system_v2` flag state; add gradual rollout (admin → founders → 10% → 100%).
-
-## Wave 4 — Cleanup
-
-10. **001–010 path normalization** — copy the 10 masters to `masters/crown-NNN-master-2048.png` layout, update DB to match the rest, drop legacy paths.
-
-11. **Move 001–010 masters to private bucket** — same treatment as 011–090; masters no longer publicly downloadable.
-
-12. **`/admin/crown-assets` all-green dashboard** — verify it now reflects 100/100 verified + shows storage location per crown; add a "Rebuild derivatives" per-row action for future asset swaps.
+### Wave 4 — Ops & exclusivity
+1. Admin **Manual Grant** tool in `CommandCenterFinance.tsx`: grant N days of Royal to any user (reason + audit row).
+2. Admin **MRR/Churn/LTV** tile: SQL views on `royal_pass_subscriptions` + `payment_transactions`, render in `CommandCenterOverview.tsx`.
+3. Add `royal_pass_required boolean` column to `achievement_crowns` and `avatar_frames`; gate equip RPCs; mark 3–5 assets as Royal-only.
+4. Royal-boosted **weekly quests**: add `royal_multiplier numeric default 1.0` to `weekly_quest_definitions`; award RP subs 2× shekels on completion.
 
 ## Technical notes
 
-- All new SQL functions use `SECURITY DEFINER` + `SET search_path = public`.
-- `evaluate_crown_unlocks` is idempotent via the `UNIQUE (user_id, crown_id)` constraint on `user_achievement_crowns`.
-- New tables get GRANT + RLS in the same migration (per project convention).
-- Wave 1's cron uses `pg_cron` + `pg_net` with the anon key via `supabase--insert` (not migration).
-- Feature flag `crown_system_v2` gates the new evaluator so we can pause instantly if unlock rates spike.
+- All Stripe calls route through the existing `createStripeClient(env)` shared utility — no new Stripe SDK usage.
+- New tables (`royal_pass_gifts`) will include `GRANT` + RLS in the same migration per project rules.
+- Renewal cron uses `pg_cron` + `net.http_post` to `send-transactional-email` (already-scaffolded transactional pipeline).
+- Feature flags via existing `useFeatureFlag` hook so we can roll out trial + gifting gradually.
+- Estimated: Wave 1 ≈ 1 session, Wave 2 ≈ 1 session, Wave 3 ≈ 1–2 sessions, Wave 4 ≈ 1–2 sessions.
 
-## Verification per wave
+## Recommended order
 
-- **W1:** run evaluator against a test user with known stats; confirm expected unlocks land, toast fires, progress bars render.
-- **W2:** hit `/crown/battle-sovereign-i`, screenshot; confirm OG preview + rarity math against `count(*) / total_users`.
-- **W3:** Playwright network audit — grid page should load thumbs (~10KB each) not full gallery WebPs.
-- **W4:** re-run the audit script; expect 0 files in public bucket under `masters/` and 100/100 rows using the standardized path.
+Ship **Wave 1 first** (biggest revenue lift — annual = ~2x LTV per subscriber, trial = ~30% conversion boost). Then Wave 2 (protects the base you just grew), then 3, then 4.
 
-## Order of operations
-
-Wave 1 → verify → Wave 2 → verify → Wave 3 → verify → Wave 4 → final GO report.
-
-Approve to start Wave 1.
+Reply "ship wave 1" (or pick a different wave) to begin.
