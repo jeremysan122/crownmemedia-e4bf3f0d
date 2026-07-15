@@ -906,10 +906,10 @@ export default function RoyalPassCard() {
       </div>
 
       {/* Additional plans */}
-      {plans.length > 1 && (
+      {plans.filter((p) => p.id !== primaryPlan.id).length > 0 && annualPlan == null && (
         <div className="space-y-3">
           <SectionTitle kicker="Other options">More plans</SectionTitle>
-          {plans.slice(1).map((plan) => (
+          {plans.filter((p) => p.id !== primaryPlan.id).map((plan) => (
             <div key={plan.id} className="royal-card p-4 flex items-center justify-between">
               <div>
                 <div className="font-display text-lg text-gold">{plan.name}</div>
