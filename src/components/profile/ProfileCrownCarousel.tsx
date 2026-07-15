@@ -47,12 +47,14 @@ export default function ProfileCrownCarousel({ userId }: { userId?: string | nul
     let cancel = false;
     (async () => {
       setLoading(true);
-      const { data } = await (supabase as any)
+      const started = performance.now();
+      const { data, error } = await (supabase as any)
         .from("user_achievement_crowns")
         .select("unlocked_at, achievement_crowns!inner(id, slug, name, rarity, collection_name, asset_url, wearable_asset_url)")
         .eq("user_id", userId)
         .order("unlocked_at", { ascending: false })
         .limit(24);
+      const latency_ms = Math.round(performance.now() - started);
       if (cancel) return;
       const mapped: CrownRow[] = (data ?? []).map((r: any) => ({
         crown_id: r.achievement_crowns.id,
@@ -66,9 +68,13 @@ export default function ProfileCrownCarousel({ userId }: { userId?: string | nul
       }));
       setRows(mapped);
       setLoading(false);
+      void trackEvent("profile_crown_carousel_load", {
+        metadata: { latency_ms, count: mapped.length, ok: !error },
+      });
     })();
     return () => { cancel = true; };
   }, [userId]);
+
 
   if (!userId) return null;
   if (loading) {
