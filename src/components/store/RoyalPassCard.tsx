@@ -358,7 +358,13 @@ export default function RoyalPassCard() {
     );
   }
 
-  const primaryPlan = plans[0];
+  const monthlyPlan = plans.find((p) => p.interval === "month") ?? plans[0];
+  const annualPlan = plans.find((p) => p.interval === "year") ?? null;
+  const [selectedInterval, setSelectedInterval] = useState<"month" | "year">(annualPlan ? "year" : "month");
+  const primaryPlan = selectedInterval === "year" && annualPlan ? annualPlan : monthlyPlan;
+  const annualSavingsPct = annualPlan && monthlyPlan
+    ? Math.max(0, Math.round((1 - Number(annualPlan.usd) / (Number(monthlyPlan.usd) * 12)) * 100))
+    : 0;
 
   return (
     <div className="space-y-8 animate-fade-in">
