@@ -787,8 +787,15 @@ export default function Profile() {
               </>
             ) : (
               <>
-                <Button onClick={toggleFollow} className={following ? "" : "bg-gradient-gold text-primary-foreground"} variant={following ? "outline" : "default"}>
-                  {following ? "Following" : "Follow"}
+                <Button
+                  onClick={toggleFollow}
+                  disabled={followBusy}
+                  aria-busy={followBusy}
+                  aria-pressed={following}
+                  className={following ? "" : "bg-gradient-gold text-primary-foreground"}
+                  variant={following ? "outline" : "default"}
+                >
+                  {followBusy ? "…" : (following ? "Following" : "Follow")}
                 </Button>
                 <Button onClick={() => nav(`/messages/${prof.id}`)} variant="outline"><MessageCircle size={14} className="mr-1.5" /> Message</Button>
                 <Button onClick={() => setChallengeOpen(true)} variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">
