@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { freezePayout, unfreezePayout, markPayoutPaid } from "@/lib/admin";
 import { useAdminRoles } from "@/hooks/useAdminRoles";
 import { useRealtimeStatus } from "@/hooks/useRealtimeStatus";
+import { getStripeEnvironment } from "@/lib/stripe";
+import { Loader2, RotateCw, Star } from "lucide-react";
 import { toast } from "sonner";
 
 const fmt = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -120,6 +122,29 @@ export default function CommandCenterFinance() {
   const pendingTotal = useMemo(() => payouts.filter(p => p.status === "pending").reduce((s, p) => s + Number(p.amount_usd ?? 0), 0), [payouts]);
   const frozenCount = useMemo(() => payouts.filter(p => p.frozen).length, [payouts]);
 
+  const [syncing, setSyncing] = useState(false);
+  const [syncTarget, setSyncTarget] = useState("");
+  const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
+
+  const refreshEntitlements = async () => {
+    setSyncing(true);
+    const t = toast.loading("Re-checking Stripe & Royal Pass entitlements…");
+    try {
+      const body: Record<string, unknown> = { environment: getStripeEnvironment() };
+      if (syncTarget.trim()) body.target_user_id = syncTarget.trim();
+      const { data, error } = await supabase.functions.invoke("royal-pass-sync", { body });
+      if (error) throw error;
+      const errMsg = (data as { error?: string })?.error;
+      if (errMsg) throw new Error(errMsg);
+      setLastSyncAt(Date.now());
+      toast.success("Entitlements refreshed from Stripe", { id: t });
+    } catch (e) {
+      toast.error((e as Error).message || "Refresh failed", { id: t });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-end">
@@ -131,6 +156,46 @@ export default function CommandCenterFinance() {
         <StatTile label="Active Subs" value={activeSubs} tone="good" />
         <StatTile label="Pending (page)" value={fmt(pendingTotal)} tone={frozenCount > 0 ? "warn" : "default"} hint={`${frozenCount} frozen`} />
       </div>
+
+      {roles.roles.length > 0 && (
+        <div
+          data-admin-only="royal-pass-sync"
+          className="rounded-lg border-2 border-dashed border-gold/40 p-4 space-y-2 bg-background/40"
+        >
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gold font-bold">
+            <Star size={12} /> Admin tools
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Re-hydrate the Royal Pass subscription row directly from Stripe.
+            Useful for testing without waiting for a webhook retry. Leave the
+            user id blank to sync your own subscription.
+          </p>
+          <Input
+            value={syncTarget}
+            onChange={(e) => setSyncTarget(e.target.value)}
+            placeholder="target user id (optional)"
+            className="h-8 text-[11px]"
+          />
+          <Button
+            onClick={refreshEntitlements}
+            disabled={syncing}
+            variant="outline"
+            className="w-full border-gold/40 text-gold hover:bg-gold/10"
+          >
+            {syncing
+              ? <Loader2 size={14} className="animate-spin mr-2" />
+              : <RotateCw size={14} className="mr-2" />}
+            Refresh Entitlements from Stripe
+          </Button>
+          {lastSyncAt && (
+            <p className="text-[10px] text-muted-foreground text-center">
+              Last refreshed {new Date(lastSyncAt).toLocaleTimeString(undefined, {
+                hour: "numeric", minute: "2-digit", second: "2-digit",
+              })}
+            </p>
+          )}
+        </div>
+      )}
 
       <SectionCard
         title={`Payouts · page ${page + 1}`}

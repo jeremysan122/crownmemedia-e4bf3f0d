@@ -35,11 +35,21 @@ const GUARDS: Guard[] = [
     forbiddenOutsideGate: ["data-admin-only=\"verification-timeline\""],
   },
   {
-    file: "src/pages/RoyalPass.tsx",
+    file: "src/pages/PurchaseSuccess.tsx",
     requiredInsideGate: [
-      "Admin tools",
-      "Refresh Entitlements from Stripe",
+      "Stripe payment received",
+      "Webhook delivered",
+      "Ledger entry recorded",
     ],
+    forbiddenOutsideGate: ["data-admin-only=\"verification-timeline\""],
+  },
+];
+
+// Files where admin-only strings MUST NOT appear at all (moved to admin console).
+const FORBIDDEN_ANYWHERE: { file: string; needles: string[] }[] = [
+  {
+    file: "src/pages/RoyalPass.tsx",
+    needles: ["Admin tools", "Refresh Entitlements from Stripe"],
   },
 ];
 
@@ -69,6 +79,15 @@ function extractAdminGatedBlocks(src: string): string[] {
 }
 
 describe("admin-only UI must not leak to non-admin users", () => {
+  for (const { file, needles } of FORBIDDEN_ANYWHERE) {
+    it(`${file} no longer contains admin-only strings (moved to admin console)`, () => {
+      const src = readSource(file);
+      for (const n of needles) {
+        expect(src, `"${n}" must not appear in ${file}`).not.toContain(n);
+      }
+    });
+  }
+
   it("never hard-codes `const isAdmin = true` (or similar) in production source", () => {
     const files = GUARDS.map((g) => g.file);
     for (const file of files) {

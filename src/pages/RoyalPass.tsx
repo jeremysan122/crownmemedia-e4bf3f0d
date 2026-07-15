@@ -554,35 +554,8 @@ export default function RoyalPassSettings() {
               )}
             </div>
 
-            {isAdmin && (
-              <div className="royal-card p-4 space-y-2 border-2 border-dashed border-gold/40">
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gold font-bold">
-                  <Star size={12} /> Admin tools
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Re-hydrate the Royal Pass subscription row directly from Stripe.
-                  Useful for testing without waiting for a webhook retry.
-                </p>
-                <Button
-                  onClick={refreshEntitlements}
-                  disabled={working !== null}
-                  variant="outline"
-                  className="w-full border-gold/40 text-gold hover:bg-gold/10"
-                >
-                  {working === "sync"
-                    ? <Loader2 size={14} className="animate-spin mr-2" />
-                    : <RotateCw size={14} className="mr-2" />}
-                  Refresh Entitlements from Stripe
-                </Button>
-                {lastRefreshedAt && (
-                  <p className="text-[10px] text-muted-foreground text-center">
-                    Last refreshed {new Date(lastRefreshedAt).toLocaleTimeString(undefined, {
-                      hour: "numeric", minute: "2-digit", second: "2-digit",
-                    })}
-                  </p>
-                )}
-              </div>
-            )}
+
+
 
 
             <div className="royal-card p-4 space-y-2">

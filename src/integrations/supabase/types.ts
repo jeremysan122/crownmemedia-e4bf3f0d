@@ -17,19 +17,30 @@ export type Database = {
       achievement_crowns: {
         Row: {
           asset_url: string
+          asset_version: number
           collection_name: string
           collection_slug: string
           created_at: string
           description: string
+          gallery_asset_url: string | null
           id: string
+          image_file_size_bytes: number | null
+          image_format: string | null
+          image_height: number | null
+          image_quality_verified: boolean
+          image_width: number | null
           is_active: boolean
           is_secret: boolean
+          legacy_asset_url: string | null
           lore: string
+          master_asset_url: string | null
           name: string
           rarity: string
+          render_config: Json
           requirement_logic: Json
           slug: string
           sort_order: number
+          thumbnail_url: string | null
           tier_index: number
           unlock_hint: string
           updated_at: string
@@ -37,19 +48,30 @@ export type Database = {
         }
         Insert: {
           asset_url: string
+          asset_version?: number
           collection_name: string
           collection_slug: string
           created_at?: string
           description?: string
+          gallery_asset_url?: string | null
           id?: string
+          image_file_size_bytes?: number | null
+          image_format?: string | null
+          image_height?: number | null
+          image_quality_verified?: boolean
+          image_width?: number | null
           is_active?: boolean
           is_secret?: boolean
+          legacy_asset_url?: string | null
           lore?: string
+          master_asset_url?: string | null
           name: string
           rarity: string
+          render_config?: Json
           requirement_logic?: Json
           slug: string
           sort_order?: number
+          thumbnail_url?: string | null
           tier_index: number
           unlock_hint?: string
           updated_at?: string
@@ -57,19 +79,30 @@ export type Database = {
         }
         Update: {
           asset_url?: string
+          asset_version?: number
           collection_name?: string
           collection_slug?: string
           created_at?: string
           description?: string
+          gallery_asset_url?: string | null
           id?: string
+          image_file_size_bytes?: number | null
+          image_format?: string | null
+          image_height?: number | null
+          image_quality_verified?: boolean
+          image_width?: number | null
           is_active?: boolean
           is_secret?: boolean
+          legacy_asset_url?: string | null
           lore?: string
+          master_asset_url?: string | null
           name?: string
           rarity?: string
+          render_config?: Json
           requirement_logic?: Json
           slug?: string
           sort_order?: number
+          thumbnail_url?: string | null
           tier_index?: number
           unlock_hint?: string
           updated_at?: string
@@ -7234,6 +7267,32 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_crown_asset_review: {
+        Args: never
+        Returns: {
+          asset_url: string
+          asset_version: number
+          collection_name: string
+          collection_slug: string
+          crown_id: string
+          gallery_asset_url: string
+          image_file_size_bytes: number
+          image_format: string
+          image_height: number
+          image_quality_verified: boolean
+          image_width: number
+          legacy_asset_url: string
+          master_asset_url: string
+          name: string
+          rarity: string
+          render_config: Json
+          slug: string
+          thumbnail_url: string
+          tier_index: number
+          updated_at: string
+          wearable_asset_url: string
+        }[]
+      }
       admin_decide_sensitive_appeal: {
         Args: { _appeal_id: string; _decision: string; _notes?: string }
         Returns: {
@@ -7534,6 +7593,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      admin_set_crown_quality: {
+        Args: { _crown_id: string; _verified: boolean }
+        Returns: undefined
+      }
+      admin_set_crown_render_config: {
+        Args: { _config: Json; _crown_id: string }
+        Returns: undefined
       }
       admin_set_founder_program: {
         Args: { _active: boolean; _end_at: string; _member_cap: number }
@@ -8553,26 +8620,32 @@ export type Database = {
         Args: never
         Returns: {
           asset_url: string
+          asset_version: number
           collection_name: string
           collection_slug: string
           completion_percent: number
           crown_id: string
           description: string
           equipped: boolean
+          gallery_asset_url: string
           is_secret: boolean
           last_evaluated_at: string
           lore: string
+          master_asset_url: string
           name: string
           owned: boolean
           progress: number
           rarity: string
+          render_config: Json
           requirement_logic: Json
           slug: string
           sort_order: number
           target: number
+          thumbnail_url: string
           tier_index: number
           unlock_hint: string
           unlocked_at: string
+          wearable_asset_url: string
         }[]
       }
       my_achievements: {
