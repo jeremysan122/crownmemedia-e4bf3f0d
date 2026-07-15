@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getStripeEnvironment } from "@/lib/stripe";
 import { SectionCard, EmptyState, StatTile } from "@/components/admin/cc/CommandCenterUI";
-import { Loader2, RefreshCw, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, AlertTriangle, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface StripeEvent { id: string; type: string; received_at: string }
 interface LedgerRow {
