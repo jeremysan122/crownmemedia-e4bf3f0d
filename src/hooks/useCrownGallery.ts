@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { preloadCrownAssets } from "@/lib/crownPreload";
 
 export interface CrownGalleryRow {
   crown_id: string;
@@ -68,7 +69,10 @@ export function useCrownGallery(): CrownGalleryResult {
       }
       const { data, error: e } = await (supabase as any).rpc("my_achievement_crowns");
       if (e) throw e;
-      setRows((data ?? []) as CrownGalleryRow[]);
+      const loaded = (data ?? []) as CrownGalleryRow[];
+      setRows(loaded);
+      // Wave 3: warm CDN cache for equipped + owned + closest-to-unlock crowns.
+      try { preloadCrownAssets(loaded); } catch { /* non-fatal */ }
     } catch (e) {
       setError((e as Error).message || "Failed to load Achievement Crowns");
     } finally {
