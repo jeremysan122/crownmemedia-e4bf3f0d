@@ -172,7 +172,8 @@ export default function Profile() {
         .maybeSingle();
       if (cancelled) return;
       if (pErr) { toast.error("Failed to load profile"); return; }
-      if (!p) return;
+      if (!p) { setProfileNotFound(true); return; }
+      setProfileNotFound(false);
       setProf(p as any);
       const pid = (p as any).id;
       const equippedCrownId = (p as any).equipped_achievement_crown_id as string | null;
