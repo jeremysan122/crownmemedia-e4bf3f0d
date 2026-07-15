@@ -221,6 +221,8 @@ const App = () => (
               <Route path="/store/success" element={<ProtectedRoute><PurchaseSuccess /></ProtectedRoute>} />
               <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
               <Route path="/royal-pass" element={<ProtectedRoute><RoyalPass /></ProtectedRoute>} />
+              <Route path="/get-royal-pass" element={<RoyalPassPublic />} />
+              <Route path="/royal-pass/about" element={<RoyalPassPublic />} />
               <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><AdminRoute><Admin /></AdminRoute></ProtectedRoute>} />
               <Route path="/admin/bundles" element={<ProtectedRoute><AdminRoute><AdminBundles /></AdminRoute></ProtectedRoute>} />
