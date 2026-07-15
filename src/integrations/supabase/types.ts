@@ -7813,6 +7813,10 @@ export type Database = {
         Returns: number
       }
       cleanup_rate_limits: { Args: never; Returns: undefined }
+      collection_completion_title_slug: {
+        Args: { _collection_slug: string }
+        Returns: string
+      }
       comments_allowed_on: { Args: { _post: string }; Returns: boolean }
       compute_daily_usage_rollup: { Args: { _d?: string }; Returns: undefined }
       confirm_my_age: { Args: { _dob: string }; Returns: undefined }
@@ -8077,6 +8081,16 @@ export type Database = {
           votes: number
         }[]
       }
+      get_collection_progress: {
+        Args: { _user_id: string }
+        Returns: {
+          collection_name: string
+          collection_slug: string
+          complete: boolean
+          owned: number
+          total: number
+        }[]
+      }
       get_creator_dashboard: { Args: { _user_id?: string }; Returns: Json }
       get_crown_map_public_points: {
         Args: { _category?: string; _limit?: number; _region_type?: string }
@@ -8091,6 +8105,15 @@ export type Database = {
           region_name: string
           region_type: string
           score: number
+        }[]
+      }
+      get_crown_rarity_stats: {
+        Args: { _crown_ids: string[] }
+        Returns: {
+          crown_id: string
+          owners_count: number
+          ownership_pct: number
+          total_players: number
         }[]
       }
       get_crowned_post_map_points: {
@@ -8275,6 +8298,27 @@ export type Database = {
       }
       get_post_share_status: { Args: { _post_id: string }; Returns: string }
       get_post_vote_stats: { Args: { _post_id: string }; Returns: Json }
+      get_public_crown_by_slug: {
+        Args: { _slug: string }
+        Returns: {
+          asset_version: string
+          collection_name: string
+          collection_slug: string
+          crown_number: number
+          description: string
+          gallery_asset_url: string
+          id: string
+          lore: string
+          name: string
+          owners_count: number
+          ownership_pct: number
+          rarity: string
+          slug: string
+          thumbnail_url: string
+          tier_index: number
+          total_players: number
+        }[]
+      }
       get_user_crown_metrics: { Args: { _user_id: string }; Returns: Json }
       get_user_liked_post_ids: {
         Args: { _limit?: number; _user_id: string }
