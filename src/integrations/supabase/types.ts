@@ -5206,6 +5206,54 @@ export type Database = {
         }
         Relationships: []
       }
+      royal_pass_gifts: {
+        Row: {
+          amount_usd: number
+          buyer_id: string
+          created_at: string
+          environment: string
+          granted_at: string | null
+          id: string
+          message: string | null
+          months_granted: number
+          recipient_id: string
+          status: string
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_usd?: number
+          buyer_id: string
+          created_at?: string
+          environment?: string
+          granted_at?: string | null
+          id?: string
+          message?: string | null
+          months_granted?: number
+          recipient_id: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_usd?: number
+          buyer_id?: string
+          created_at?: string
+          environment?: string
+          granted_at?: string | null
+          id?: string
+          message?: string | null
+          months_granted?: number
+          recipient_id?: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       royal_pass_grants: {
         Row: {
           active_shields_reversed: number
@@ -8353,6 +8401,10 @@ export type Database = {
         }
         Returns: Json
       }
+      grant_royal_pass_gift_period: {
+        Args: { _gift_id: string }
+        Returns: Json
+      }
       handle_royal_dispute_created: {
         Args: {
           _dispute_reason?: string
@@ -9044,6 +9096,14 @@ export type Database = {
       }
       request_account_deletion: { Args: never; Returns: Json }
       request_standard_verification: { Args: never; Returns: Json }
+      resolve_gift_recipient: {
+        Args: { _username: string }
+        Returns: {
+          id: string
+          profile_photo_url: string
+          username: string
+        }[]
+      }
       resolve_tournament_match: {
         Args: { _match_id: string; _winner_id: string }
         Returns: {
