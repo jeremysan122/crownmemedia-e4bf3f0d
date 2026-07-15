@@ -35,12 +35,10 @@ const GUARDS: Guard[] = [
     forbiddenOutsideGate: ["data-admin-only=\"verification-timeline\""],
   },
   {
-    file: "src/pages/RoyalPass.tsx",
-    requiredInsideGate: [
-      "Admin tools",
-      "Refresh Entitlements from Stripe",
-    ],
+    file: "src/pages/admin/CommandCenterStripeHealth.tsx",
+    requiredInsideGate: [],
   },
+
 ];
 
 function readSource(rel: string): string {

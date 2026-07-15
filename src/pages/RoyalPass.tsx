@@ -11,10 +11,9 @@ import { getStripeEnvironment } from "@/lib/stripe";
 import { useAuth } from "@/context/AuthContext";
 import { useRoyalPass } from "@/hooks/useRoyalPass";
 import { useRoyalEntitlements } from "@/hooks/useRoyalEntitlements";
-import { useAdminRoles } from "@/hooks/useAdminRoles";
 import {
   Crown, Loader2, ExternalLink, Receipt, RefreshCw, ShieldCheck, X, Zap,
-  Sparkles, Star, TrendingUp, History, RotateCw, BadgeCheck, Trophy, Gem,
+  Sparkles, Star, TrendingUp, History, BadgeCheck, Trophy, Gem,
 } from "lucide-react";
 import { toast } from "sonner";
 import BoostPostPicker from "@/components/store/BoostPostPicker";
@@ -43,18 +42,16 @@ export default function RoyalPassSettings() {
   const nav = useNavigate();
   const pass = useRoyalPass();
   const entitlements = useRoyalEntitlements();
-  const { roles } = useAdminRoles();
-  const isAdmin = roles.length > 0;
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [working, setWorking] = useState<
-    "portal" | "cancel" | "resume" | "claim" | "sync" | null
+    "portal" | "cancel" | "resume" | "claim" | null
   >(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [daily, setDaily] = useState<DailyStatus | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [boostHistory, setBoostHistory] = useState<BoostRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
+  
 
   // One-shot page-open ping
   useEffect(() => { void trackEvent("royal_pass_page_opened"); }, []);
@@ -198,25 +195,8 @@ export default function RoyalPassSettings() {
 
   useEffect(() => { void loadBoostHistory(); }, [loadBoostHistory]);
 
-  const refreshEntitlements = async () => {
-    setWorking("sync");
-    const syncToast = toast.loading("Re-checking Stripe & Royal Pass entitlements…");
-    try {
-      const { data, error } = await supabase.functions.invoke("royal-pass-sync", {
-        body: { environment: getStripeEnvironment() },
-      });
-      if (error) throw error;
-      const errMsg = (data as { error?: string })?.error;
-      if (errMsg) throw new Error(errMsg);
-      await Promise.all([pass.refresh(), entitlements.refresh(), loadDaily(), loadBoostHistory()]);
-      setLastRefreshedAt(Date.now());
-      toast.success("Entitlements refreshed from Stripe", { id: syncToast });
-    } catch (e) {
-      toast.error((e as Error).message || "Refresh failed", { id: syncToast });
-    } finally {
-      setWorking(null);
-    }
-  };
+
+
 
 
   const activePerks = useMemo(() => ([
@@ -554,35 +534,6 @@ export default function RoyalPassSettings() {
               )}
             </div>
 
-            {isAdmin && (
-              <div className="royal-card p-4 space-y-2 border-2 border-dashed border-gold/40">
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gold font-bold">
-                  <Star size={12} /> Admin tools
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Re-hydrate the Royal Pass subscription row directly from Stripe.
-                  Useful for testing without waiting for a webhook retry.
-                </p>
-                <Button
-                  onClick={refreshEntitlements}
-                  disabled={working !== null}
-                  variant="outline"
-                  className="w-full border-gold/40 text-gold hover:bg-gold/10"
-                >
-                  {working === "sync"
-                    ? <Loader2 size={14} className="animate-spin mr-2" />
-                    : <RotateCw size={14} className="mr-2" />}
-                  Refresh Entitlements from Stripe
-                </Button>
-                {lastRefreshedAt && (
-                  <p className="text-[10px] text-muted-foreground text-center">
-                    Last refreshed {new Date(lastRefreshedAt).toLocaleTimeString(undefined, {
-                      hour: "numeric", minute: "2-digit", second: "2-digit",
-                    })}
-                  </p>
-                )}
-              </div>
-            )}
 
 
             <div className="royal-card p-4 space-y-2">
