@@ -260,6 +260,7 @@ const App = () => (
               {/* Legacy share URLs — permanent redirect to /:username so old
                   links posted online (DMs, tweets, embeds) keep working. */}
               <Route path="/u/:username" element={<UsernameRedirect />} />
+              <Route path="/profile/:username" element={<UsernameRedirect />} />
               {/* Pretty short-link: crownmemedia.com/<username>. The dynamic
                   param is matched last by react-router, so all static routes
                   above still win. Reserved usernames prevent collisions. */}
