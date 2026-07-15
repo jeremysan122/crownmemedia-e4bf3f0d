@@ -695,6 +695,8 @@ export default function Profile() {
               </div>
             )}
           </div>
+            );
+          })()}
 
           <div className="flex-1 lg:pb-2">
             <div className="flex items-center gap-2 flex-wrap">
