@@ -68,7 +68,7 @@ const Scrolls = lazy(() => import("./pages/Shorts"));
 const Rewards = lazy(() => import("./pages/Rewards"));
 const RewardHistory = lazy(() => import("./pages/RewardHistory"));
 const AdminRewards = lazy(() => import("./pages/AdminRewards"));
-const RoyalFrames = lazy(() => import("./pages/RoyalFrames"));
+
 const Achievements = lazy(() => import("./pages/Achievements"));
 const AchievementFrames = lazy(() => import("./pages/AchievementFrames"));
 const AchievementCrowns = lazy(() => import("./pages/AchievementCrowns"));
