@@ -11,7 +11,7 @@ export interface StripeEmbeddedCheckoutProps {
    */
   priceId?: string;
   /** Edge function name to call to create the session. */
-  fnName: "create-checkout" | "create-royal-pass-checkout" | "create-verification-checkout";
+  fnName: "create-checkout" | "create-royal-pass-checkout" | "create-royal-pass-gift-checkout" | "create-verification-checkout";
   /**
    * Extra body fields to send. MUST include the internal catalog id
    * (bundle_id / boost_bundle_id / plan_id / target_post_id).
