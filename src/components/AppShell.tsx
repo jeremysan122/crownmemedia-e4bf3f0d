@@ -72,6 +72,7 @@ export default function AppShell({ children, title, showHeader = true, rightSlot
 
   return (
     <div className="min-h-screen flex flex-col">
+      <PullToRefresh />
       {/* Desktop header (lg+) */}
       <DesktopHeader />
 
