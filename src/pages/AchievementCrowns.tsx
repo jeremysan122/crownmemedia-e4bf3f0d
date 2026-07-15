@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import AppShell from "@/components/AppShell";
-import { Crown, Lock, Sparkles, Check, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Crown, Lock, Sparkles, Check, Search, ChevronLeft, ChevronRight, Share2, Users } from "lucide-react";
 import { toast } from "sonner";
 import CrownLoader from "@/components/CrownLoader";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { useCrownGallery, equipAchievementCrown, type CrownGalleryRow } from "@/hooks/useCrownGallery";
+import { useCrownRarity, formatOwnership, type CrownRarityStat } from "@/hooks/useCrownRarity";
 
 const PAGE_SIZE = 12;
 const EXPECTED_TOTAL = 100;
