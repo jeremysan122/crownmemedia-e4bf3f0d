@@ -416,29 +416,34 @@ export default function Profile() {
   }, [prof?.id, user?.id]);
 
   const toggleFollow = async () => {
-    if (!user || !prof) return;
+    if (!user || !prof || followBusy) return;
     // Optimistic update, then rollback on failure so the UI never diverges
-    // from the DB (previously silent errors made follow appear to work then
-    // "revert" on refresh).
+    // from the DB. followBusy prevents rapid double-taps from firing
+    // conflicting insert/delete pairs.
+    setFollowBusy(true);
     const wasFollowing = following;
     setFollowing(!wasFollowing);
     setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count + (wasFollowing ? -1 : 1)) } : p);
-    if (wasFollowing) {
-      const { error } = await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", prof.id);
-      if (error) {
-        setFollowing(true);
-        setProf((p) => p ? { ...p, followers_count: p.followers_count + 1 } : p);
-        logRawError(error, "generic", { op: "follow_delete" });
-        toast.error(toFriendlyMessage(error, "generic"));
+    try {
+      if (wasFollowing) {
+        const { error } = await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", prof.id);
+        if (error) {
+          setFollowing(true);
+          setProf((p) => p ? { ...p, followers_count: p.followers_count + 1 } : p);
+          logRawError(error, "generic", { op: "follow_delete" });
+          toast.error(toFriendlyMessage(error, "generic"));
+        }
+      } else {
+        const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: prof.id });
+        if (error) {
+          setFollowing(false);
+          setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count - 1) } : p);
+          logRawError(error, "generic", { op: "follow_insert" });
+          toast.error(toFriendlyMessage(error, "generic"));
+        }
       }
-    } else {
-      const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: prof.id });
-      if (error) {
-        setFollowing(false);
-        setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count - 1) } : p);
-        logRawError(error, "generic", { op: "follow_insert" });
-        toast.error(toFriendlyMessage(error, "generic"));
-      }
+    } finally {
+      setFollowBusy(false);
     }
   };
 
