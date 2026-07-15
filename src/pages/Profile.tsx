@@ -70,6 +70,7 @@ interface ProfileFull {
   founder_title?: string | null;
   royal_frame_variant?: string | null;
   equipped_frame_key?: string | null;
+  equipped_achievement_crown_id?: string | null;
   frames_hidden?: boolean | null;
 }
 
@@ -122,6 +123,7 @@ export default function Profile() {
   const [postMenuPosition, setPostMenuPosition] = useState<PostMenuPosition | null>(null);
   const [insightsPost, setInsightsPost] = useState<{ id: string; base: { crown_score: number; vote_count: number; comment_count: number; share_count: number; battle_wins: number; created_at: string } } | null>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
+  const [equippedCrownAsset, setEquippedCrownAsset] = useState<string | null>(null);
 
   const isMe = !username || username === me?.username;
   const targetUsername = isMe ? me?.username : username;
@@ -158,7 +160,7 @@ export default function Profile() {
     const load = async () => {
       const { data: p, error: pErr } = await supabase
         .from("profiles")
-        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public, is_founder, founder_title, royal_frame_variant, equipped_frame_key, frames_hidden")
+        .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public, is_founder, founder_title, royal_frame_variant, equipped_frame_key, equipped_achievement_crown_id, frames_hidden")
         .eq("username", targetUsername)
         .maybeSingle();
       if (cancelled) return;
