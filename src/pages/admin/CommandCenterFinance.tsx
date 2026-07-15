@@ -199,6 +199,9 @@ export default function CommandCenterFinance() {
         </div>
       )}
 
+      {roles.roles.length > 0 && <RoyalPassMetricsCard />}
+      {roles.roles.length > 0 && <ManualGrantRoyalPass />}
+
       <SectionCard
         title={`Payouts · page ${page + 1}`}
         action={
