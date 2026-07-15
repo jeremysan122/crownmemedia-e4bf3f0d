@@ -9,6 +9,7 @@ import BrandLogo from "./BrandLogo";
 import DesktopHeader from "./desktop/DesktopHeader";
 import DesktopSidebar from "./desktop/DesktopSidebar";
 import CreateSheet from "./create/CreateSheet";
+import PullToRefresh from "./PullToRefresh";
 import { useWallet } from "@/hooks/useWallet";
 import { useBattleAlerts } from "@/hooks/useBattleAlerts";
 import { useUnreadByType } from "@/hooks/useUnreadByType";
@@ -71,6 +72,7 @@ export default function AppShell({ children, title, showHeader = true, rightSlot
 
   return (
     <div className="min-h-screen flex flex-col">
+      <PullToRefresh />
       {/* Desktop header (lg+) */}
       <DesktopHeader />
 
