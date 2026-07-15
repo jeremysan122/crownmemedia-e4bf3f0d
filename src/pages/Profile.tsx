@@ -175,7 +175,7 @@ export default function Profile() {
       if (equippedCrownId) {
         const { data: crown, error: crownError } = await supabase
           .from("achievement_crowns")
-          .select("id, sort_order, wearable_asset_url, is_active")
+          .select("id, crown_number:sort_order, wearable_asset_url, is_active")
           .eq("id", equippedCrownId)
           .eq("is_active", true)
           .maybeSingle();
@@ -189,7 +189,7 @@ export default function Profile() {
             console.warn("Equipped achievement crown is missing wearable_asset_url:", crown.id);
           }
           setEquippedCrownAsset(crown?.wearable_asset_url ?? null);
-          setEquippedCrownNumber(crown?.sort_order ?? null);
+          setEquippedCrownNumber(crown?.crown_number ?? null);
         }
       } else {
         setEquippedCrownAsset(null);
