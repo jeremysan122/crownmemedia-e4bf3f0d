@@ -102,6 +102,7 @@ export default function Profile() {
   const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null; filter?: string | null; media_type?: string | null; video_poster_url?: string | null; image_urls?: string[] | null }[]>([]);
   const [battles, setBattles] = useState<BattleRow[]>([]);
   const [following, setFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
   const [openPost, setOpenPost] = useState<FeedPost | null>(null);
   const [listMode, setListMode] = useState<"followers" | "following" | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
