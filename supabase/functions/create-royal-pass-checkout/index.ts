@@ -71,6 +71,32 @@ Deno.serve(async (req) => {
 
     const customerId = await resolveOrCreateCustomer(stripe, { email: userEmail, userId });
 
+    // Trial gated by feature flag `royal_pass_trial_enabled`. Only grant a trial
+    // to users who have never held a Royal Pass subscription before.
+    let trialPeriodDays: number | undefined;
+    const { data: trialFlag } = await admin
+      .from("feature_flags")
+      .select("enabled, rollout_percent")
+      .eq("key", "royal_pass_trial_enabled")
+      .maybeSingle();
+    if (trialFlag?.enabled) {
+      const { count: priorSubs } = await admin
+        .from("royal_pass_subscriptions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId);
+      if (!priorSubs || priorSubs === 0) trialPeriodDays = 7;
+    }
+
+    const subscriptionData: Record<string, unknown> = {
+      metadata: {
+        user_id: userId,
+        userId,
+        kind: "royal_pass",
+        plan_id: resolvedPlanId,
+      },
+    };
+    if (trialPeriodDays) subscriptionData.trial_period_days = trialPeriodDays;
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       ui_mode: "embedded_page",
@@ -82,15 +108,9 @@ Deno.serve(async (req) => {
         userId,
         kind: "royal_pass",
         plan_id: resolvedPlanId,
+        trial_days: trialPeriodDays ? String(trialPeriodDays) : "0",
       },
-      subscription_data: {
-        metadata: {
-          user_id: userId,
-          userId,
-          kind: "royal_pass",
-          plan_id: resolvedPlanId,
-        },
-      },
+      subscription_data: subscriptionData,
     } as unknown as Parameters<typeof stripe.checkout.sessions.create>[0]);
 
     return json(200, { clientSecret: session.client_secret, sessionId: session.id });
