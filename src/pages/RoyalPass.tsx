@@ -42,8 +42,6 @@ export default function RoyalPassSettings() {
   const nav = useNavigate();
   const pass = useRoyalPass();
   const entitlements = useRoyalEntitlements();
-  const { roles } = useAdminRoles();
-  const isAdmin = roles.length > 0;
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [working, setWorking] = useState<
     "portal" | "cancel" | "resume" | "claim" | "sync" | null
