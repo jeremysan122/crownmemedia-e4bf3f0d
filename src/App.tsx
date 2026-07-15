@@ -71,6 +71,7 @@ const AdminRewards = lazy(() => import("./pages/AdminRewards"));
 const RoyalFrames = lazy(() => import("./pages/RoyalFrames"));
 const Achievements = lazy(() => import("./pages/Achievements"));
 const AchievementFrames = lazy(() => import("./pages/AchievementFrames"));
+const AchievementCrowns = lazy(() => import("./pages/AchievementCrowns"));
 const AdminBroadcast = lazy(() => import("./pages/AdminBroadcast"));
 const Verification = lazy(() => import("./pages/Verification"));
 const AdminVerification = lazy(() => import("./pages/AdminVerification"));
