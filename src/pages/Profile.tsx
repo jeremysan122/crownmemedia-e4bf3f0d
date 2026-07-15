@@ -74,6 +74,7 @@ interface ProfileFull {
   equipped_frame_key?: string | null;
   equipped_achievement_crown_id?: string | null;
   frames_hidden?: boolean | null;
+  hide_recent_unlocks?: boolean | null;
 }
 
 interface BattleRow {
