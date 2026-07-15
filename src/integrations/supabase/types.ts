@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievement_crowns: {
+        Row: {
+          asset_url: string
+          collection_name: string
+          collection_slug: string
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          is_secret: boolean
+          lore: string
+          name: string
+          rarity: string
+          requirement_logic: Json
+          slug: string
+          sort_order: number
+          tier_index: number
+          unlock_hint: string
+          updated_at: string
+        }
+        Insert: {
+          asset_url: string
+          collection_name: string
+          collection_slug: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          is_secret?: boolean
+          lore?: string
+          name: string
+          rarity: string
+          requirement_logic?: Json
+          slug: string
+          sort_order?: number
+          tier_index: number
+          unlock_hint?: string
+          updated_at?: string
+        }
+        Update: {
+          asset_url?: string
+          collection_name?: string
+          collection_slug?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          is_secret?: boolean
+          lore?: string
+          name?: string
+          rarity?: string
+          requirement_logic?: Json
+          slug?: string
+          sort_order?: number
+          tier_index?: number
+          unlock_hint?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       achievement_definitions: {
         Row: {
           achievement_type: string
@@ -4364,6 +4424,7 @@ export type Database = {
           default_post_visibility: string
           default_race_scope: string
           deletion_requested_at: string | null
+          equipped_achievement_crown_id: string | null
           equipped_avatar_frame_id: string | null
           equipped_frame_key: string | null
           first_name: string | null
@@ -4442,6 +4503,7 @@ export type Database = {
           default_post_visibility?: string
           default_race_scope?: string
           deletion_requested_at?: string | null
+          equipped_achievement_crown_id?: string | null
           equipped_avatar_frame_id?: string | null
           equipped_frame_key?: string | null
           first_name?: string | null
@@ -4520,6 +4582,7 @@ export type Database = {
           default_post_visibility?: string
           default_race_scope?: string
           deletion_requested_at?: string | null
+          equipped_achievement_crown_id?: string | null
           equipped_avatar_frame_id?: string | null
           equipped_frame_key?: string | null
           first_name?: string | null
@@ -4572,6 +4635,13 @@ export type Database = {
           who_can_tag?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_equipped_achievement_crown_id_fkey"
+            columns: ["equipped_achievement_crown_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_crowns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_equipped_avatar_frame_id_fkey"
             columns: ["equipped_avatar_frame_id"]
@@ -6247,6 +6317,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievement_crowns: {
+        Row: {
+          created_at: string
+          crown_id: string
+          id: string
+          metadata: Json
+          source: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          crown_id: string
+          id?: string
+          metadata?: Json
+          source?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          crown_id?: string
+          id?: string
+          metadata?: Json
+          source?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievement_crowns_crown_id_fkey"
+            columns: ["crown_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_crowns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_achievement_progress: {
         Row: {
           achievement_id: string
@@ -6514,6 +6622,53 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "badges"
             referencedColumns: ["slug"]
+          },
+        ]
+      }
+      user_crown_progress: {
+        Row: {
+          completion_percent: number
+          created_at: string
+          crown_id: string
+          id: string
+          last_evaluated_at: string
+          metadata: Json
+          progress: number
+          target: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completion_percent?: number
+          created_at?: string
+          crown_id: string
+          id?: string
+          last_evaluated_at?: string
+          metadata?: Json
+          progress?: number
+          target?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completion_percent?: number
+          created_at?: string
+          crown_id?: string
+          id?: string
+          last_evaluated_at?: string
+          metadata?: Json
+          progress?: number
+          target?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_crown_progress_crown_id_fkey"
+            columns: ["crown_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_crowns"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -7897,6 +8052,7 @@ export type Database = {
           default_post_visibility: string
           default_race_scope: string
           deletion_requested_at: string | null
+          equipped_achievement_crown_id: string | null
           equipped_avatar_frame_id: string | null
           equipped_frame_key: string | null
           first_name: string | null
