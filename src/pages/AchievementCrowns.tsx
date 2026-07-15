@@ -340,7 +340,7 @@ function CrownCard({
             </div>
           ) : (
             <img
-              src={row.asset_url}
+              src={row.gallery_asset_url || row.asset_url}
               alt={row.name}
               loading="lazy"
               className={`w-full h-full object-contain drop-shadow-[0_0_18px_hsl(var(--gold)/0.35)] transition ${
