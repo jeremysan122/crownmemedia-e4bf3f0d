@@ -25,6 +25,7 @@ export interface StripeEmbeddedCheckoutProps {
 const SCOPE_BY_FN: Record<StripeEmbeddedCheckoutProps["fnName"], MonetizationScope> = {
   "create-checkout": "checkout",
   "create-royal-pass-checkout": "royal_pass_checkout",
+  "create-royal-pass-gift-checkout": "royal_pass_gift_checkout",
   "create-verification-checkout": "verification_checkout",
 };
 
