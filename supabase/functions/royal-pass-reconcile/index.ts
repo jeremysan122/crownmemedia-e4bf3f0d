@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     const cutoffIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: rows, error } = await admin
       .from("royal_pass_subscriptions")
-      .select("user_id, status, provider, stripe_subscription_id, provider_subscription_id, current_period_end, updated_at")
+      .select("user_id, status, stripe_subscription_id, current_period_end, updated_at")
       .or(
         [
           `and(status.in.(active,trialing),current_period_end.lt.${nowIso})`,
@@ -68,8 +68,7 @@ Deno.serve(async (req) => {
 
       // Only Stripe-backed rows are reconcilable here. RevenueCat/App
       // Store rows are pushed to us and don't have a Stripe id.
-      const stripeSubId = (row as any).stripe_subscription_id
-        ?? ((row as any).provider === "stripe" ? (row as any).provider_subscription_id : null);
+      const stripeSubId = (row as any).stripe_subscription_id ?? null;
       if (!stripeSubId) {
         summary.skipped++;
         continue;
