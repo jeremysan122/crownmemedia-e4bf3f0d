@@ -95,6 +95,7 @@ export default function Profile() {
   const { user, profile: me } = useAuth();
   const nav = useNavigate();
   const [prof, setProf] = useState<ProfileFull | null>(null);
+  const [profileNotFound, setProfileNotFound] = useState(false);
   const [crownVoteTotal, setCrownVoteTotal] = useState<number>(0);
   const [posts, setPosts] = useState<{ id: string; image_url: string; crown_score: number; filter: string | null; pinned_at?: string | null; is_sensitive?: boolean | null; content_type?: string | null; media_type?: string | null; video_poster_url?: string | null; parent_post_id?: string | null }[]>([]);
   const [crowns, setCrowns] = useState<{ id: string; title: string; region_name: string; active: boolean; category: string; started_at: string | null; ended_at: string | null }[]>([]);
