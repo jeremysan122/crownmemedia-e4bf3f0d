@@ -1,12 +1,7 @@
-// Renders an avatar with an equipped Achievement Crown "worn" above it.
-// Size contract: `size` = avatar photo diameter (px). The crown overflows
-// upward AND horizontally around the avatar circle. Outer wrapper equals the
-// avatar diameter and stays overflow-visible so the crown can breach it.
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 
 export interface CrownRenderConfig {
   widthScale: number;
-  heightScale: number;
   overlapScale: number;
   translateX?: number;
   translateY?: number;
@@ -25,11 +20,10 @@ interface CrownAvatarProps {
 }
 
 const DEFAULT_RENDER_CONFIG: CrownRenderConfig = {
-  widthScale: 1.16,
-  heightScale: 0.72,
-  overlapScale: 0.33,
+  widthScale: 1.05,
+  overlapScale: 0.1,
   translateX: 0,
-  translateY: 6,
+  translateY: 0,
   rotation: 0,
   visualScale: 1,
 };
@@ -44,37 +38,50 @@ function CrownAvatarImpl({
   renderConfig,
 }: CrownAvatarProps) {
   const [crownFailed, setCrownFailed] = useState(false);
-  const config: CrownRenderConfig = { ...DEFAULT_RENDER_CONFIG, ...renderConfig };
+
+  useEffect(() => {
+    setCrownFailed(false);
+  }, [crownAssetUrl]);
+
+  const config: CrownRenderConfig = {
+    ...DEFAULT_RENDER_CONFIG,
+    ...renderConfig,
+  };
 
   const crownWidth = Math.round(size * config.widthScale);
-  const crownHeight = Math.round(size * config.heightScale);
   const crownOverlap = Math.round(size * config.overlapScale);
-  // Avatar begins after the non-overlapping upper portion of the crown.
-  const avatarTop = Math.max(0, crownHeight - crownOverlap);
+
+  /*
+   * The outer wrapper remains exactly the same size as the avatar.
+   *
+   * The crown is anchored by its bottom edge to the avatar's top edge.
+   * It overflows upward instead of pushing the avatar downward.
+   */
+  const crownBottom = size - crownOverlap;
 
   return (
     <div
       data-testid="crown-avatar"
-      className="relative isolate shrink-0"
+      className="relative isolate shrink-0 overflow-visible"
       style={{
         width: size,
-        height: avatarTop + size,
+        height: size,
         overflow: "visible",
       }}
     >
-      {/* Avatar circle — the only element that clips. */}
+      {/* Avatar circle stays fixed at its normal size and position. */}
       <div
         data-testid="crown-avatar-circle"
         className={[
-          "absolute overflow-hidden rounded-full bg-muted ring-2 ring-border",
-          glow ? "ring-gold/60 shadow-[0_0_28px_hsl(var(--gold)/0.5)]" : "",
+          "absolute inset-0 overflow-hidden rounded-full bg-muted",
+          "ring-2 ring-border",
+          glow
+            ? "ring-gold/60 shadow-[0_0_28px_hsl(var(--gold)/0.5)]"
+            : "",
         ].join(" ")}
         style={{
           width: size,
           height: size,
-          top: avatarTop,
-          left: "50%",
-          transform: "translateX(-50%)",
           zIndex: 10,
         }}
       >
@@ -84,14 +91,19 @@ function CrownAvatarImpl({
             alt={alt}
             draggable={false}
             className="block h-full w-full object-cover"
-            style={{ objectPosition: `center ${positionY}%` }}
+            style={{
+              objectPosition: `center ${positionY}%`,
+            }}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-muted" aria-label={alt || "User avatar"} />
+          <div
+            className="flex h-full w-full items-center justify-center bg-muted"
+            aria-label={alt || "User avatar"}
+          />
         )}
       </div>
 
-      {/* Equipped crown — sibling of avatar, always on top, centered on wrapper. */}
+      {/* Exactly one equipped wearable crown. */}
       {crownAssetUrl && !crownFailed && (
         <img
           key={crownAssetUrl}
@@ -106,12 +118,14 @@ function CrownAvatarImpl({
           className="pointer-events-none absolute select-none"
           style={{
             width: crownWidth,
-            height: crownHeight,
-            top: config.translateY ?? 0,
+            height: "auto",
+            maxHeight: Math.round(size * 0.65),
             left: "50%",
+            bottom: crownBottom,
             transform: [
               "translateX(-50%)",
               `translateX(${config.translateX ?? 0}px)`,
+              `translateY(${config.translateY ?? 0}px)`,
               `rotate(${config.rotation ?? 0}deg)`,
               `scale(${config.visualScale ?? 1})`,
             ].join(" "),
@@ -120,7 +134,7 @@ function CrownAvatarImpl({
             objectPosition: "center bottom",
             zIndex: 30,
             filter:
-              "drop-shadow(0 4px 8px rgba(0,0,0,0.55)) drop-shadow(0 0 7px rgba(255,190,55,0.3))",
+              "drop-shadow(0 4px 8px rgba(0,0,0,0.55)) drop-shadow(0 0 6px rgba(255,190,55,0.28))",
           }}
         />
       )}

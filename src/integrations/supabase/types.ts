@@ -33,6 +33,7 @@ export type Database = {
           tier_index: number
           unlock_hint: string
           updated_at: string
+          wearable_asset_url: string | null
         }
         Insert: {
           asset_url: string
@@ -52,6 +53,7 @@ export type Database = {
           tier_index: number
           unlock_hint?: string
           updated_at?: string
+          wearable_asset_url?: string | null
         }
         Update: {
           asset_url?: string
@@ -71,6 +73,7 @@ export type Database = {
           tier_index?: number
           unlock_hint?: string
           updated_at?: string
+          wearable_asset_url?: string | null
         }
         Relationships: []
       }

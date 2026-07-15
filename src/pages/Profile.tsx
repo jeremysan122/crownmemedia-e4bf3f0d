@@ -127,6 +127,7 @@ export default function Profile() {
   const bannerInput = useRef<HTMLInputElement>(null);
   const [equippedCrownAsset, setEquippedCrownAsset] = useState<string | null>(null);
   const [equippedCrownNumber, setEquippedCrownNumber] = useState<number | null>(null);
+  const [equippedCrownMissingWearable, setEquippedCrownMissingWearable] = useState(false);
 
   const isMe = !username || username === me?.username;
   const targetUsername = isMe ? me?.username : username;
@@ -173,14 +174,29 @@ export default function Profile() {
       const pid = (p as any).id;
       const equippedCrownId = (p as any).equipped_achievement_crown_id as string | null;
       if (equippedCrownId) {
-        const { data: cr } = await supabase.from("achievement_crowns").select("asset_url, sort_order").eq("id", equippedCrownId).maybeSingle();
+        const { data: crown, error: crownError } = await supabase
+          .from("achievement_crowns")
+          .select("id, crown_number:sort_order, wearable_asset_url, is_active")
+          .eq("id", equippedCrownId)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (crownError) {
+          console.error("Failed to load equipped achievement crown:", crownError);
+        }
+
         if (!cancelled) {
-          setEquippedCrownAsset((cr as any)?.asset_url ?? null);
-          setEquippedCrownNumber((cr as any)?.sort_order ?? null);
+          if (crown && !crown.wearable_asset_url) {
+            console.warn("Equipped achievement crown is missing wearable_asset_url:", crown.id);
+          }
+          setEquippedCrownAsset(crown?.wearable_asset_url ?? null);
+          setEquippedCrownNumber(crown?.crown_number ?? null);
+          setEquippedCrownMissingWearable(!!crown && !crown.wearable_asset_url);
         }
       } else {
         setEquippedCrownAsset(null);
         setEquippedCrownNumber(null);
+        setEquippedCrownMissingWearable(false);
       }
 
       const [{ data: ps, error: psErr }, { data: cs }, { data: rs }] = await Promise.all([
@@ -640,25 +656,37 @@ export default function Profile() {
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
           {(() => {
             const crownEquipped = !prof.frames_hidden && !!equippedCrownAsset;
-            const crownCfg = getCrownRenderConfig(equippedCrownNumber);
+            const crownMissingWearable = !prof.frames_hidden && !!prof.equipped_achievement_crown_id && equippedCrownMissingWearable;
+            const equippedCrownRenderConfig = getCrownRenderConfig(equippedCrownNumber);
             const wrapperCls = crownEquipped
-              ? "relative z-30 w-fit shrink-0 self-start"
+              ? "relative z-30 w-fit shrink-0 self-start overflow-visible"
               : `self-start w-fit relative ${prof.crowns_held > 0 && !prof.equipped_frame_key && !isFounder ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full ${!isFounder && !prof.equipped_frame_key && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5 profile-glow" : ""}`;
             return (
           <div
             data-testid="profile-avatar"
             className={wrapperCls}
-            style={{ zIndex: 30, overflow: "visible" }}
+            style={{ overflow: "visible" }}
           >
             {crownEquipped ? (
               <>
-                <div className="lg:hidden" style={{ overflow: "visible" }}>
-                  <CrownAvatar key={`${prof.id}-${equippedCrownAsset}-m`} photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={112} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} alt={`${prof.username ?? "User"} profile photo`} renderConfig={crownCfg} />
+                <div className="overflow-visible lg:hidden">
+                  <CrownAvatar key={`${prof.id}-${equippedCrownAsset}-mobile`} photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={112} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} alt={`${prof.username ?? "User"} profile photo`} renderConfig={equippedCrownRenderConfig} />
                 </div>
-                <div className="hidden lg:block" style={{ overflow: "visible" }}>
-                  <CrownAvatar key={`${prof.id}-${equippedCrownAsset}-d`} photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={160} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} alt={`${prof.username ?? "User"} profile photo`} renderConfig={crownCfg} />
+                <div className="hidden overflow-visible lg:block">
+                  <CrownAvatar key={`${prof.id}-${equippedCrownAsset}-desktop`} photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={160} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} alt={`${prof.username ?? "User"} profile photo`} renderConfig={equippedCrownRenderConfig} />
                 </div>
               </>
+            ) : crownMissingWearable ? (
+              <div className="w-28 h-28 lg:w-40 lg:h-40 rounded-full overflow-hidden bg-muted ring-2 ring-border relative">
+                {prof.profile_photo_url && (
+                  <img
+                    src={prof.profile_photo_url}
+                    className="w-full h-full object-cover"
+                    alt=""
+                    style={{ objectPosition: `center ${prof.avatar_position_y ?? 50}%` }}
+                  />
+                )}
+              </div>
             ) : !prof.frames_hidden && ((prof.equipped_frame_key && getFrameUrl(prof.equipped_frame_key)) || isFounder) ? (
               <>
                 <div className="lg:hidden">
