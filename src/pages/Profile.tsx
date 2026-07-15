@@ -95,6 +95,7 @@ export default function Profile() {
   const { user, profile: me } = useAuth();
   const nav = useNavigate();
   const [prof, setProf] = useState<ProfileFull | null>(null);
+  const [profileNotFound, setProfileNotFound] = useState(false);
   const [crownVoteTotal, setCrownVoteTotal] = useState<number>(0);
   const [posts, setPosts] = useState<{ id: string; image_url: string; crown_score: number; filter: string | null; pinned_at?: string | null; is_sensitive?: boolean | null; content_type?: string | null; media_type?: string | null; video_poster_url?: string | null; parent_post_id?: string | null }[]>([]);
   const [crowns, setCrowns] = useState<{ id: string; title: string; region_name: string; active: boolean; category: string; started_at: string | null; ended_at: string | null }[]>([]);
@@ -102,6 +103,7 @@ export default function Profile() {
   const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null; filter?: string | null; media_type?: string | null; video_poster_url?: string | null; image_urls?: string[] | null }[]>([]);
   const [battles, setBattles] = useState<BattleRow[]>([]);
   const [following, setFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
   const [openPost, setOpenPost] = useState<FeedPost | null>(null);
   const [listMode, setListMode] = useState<"followers" | "following" | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
@@ -170,7 +172,8 @@ export default function Profile() {
         .maybeSingle();
       if (cancelled) return;
       if (pErr) { toast.error("Failed to load profile"); return; }
-      if (!p) return;
+      if (!p) { setProfileNotFound(true); return; }
+      setProfileNotFound(false);
       setProf(p as any);
       const pid = (p as any).id;
       const equippedCrownId = (p as any).equipped_achievement_crown_id as string | null;
@@ -415,29 +418,34 @@ export default function Profile() {
   }, [prof?.id, user?.id]);
 
   const toggleFollow = async () => {
-    if (!user || !prof) return;
+    if (!user || !prof || followBusy) return;
     // Optimistic update, then rollback on failure so the UI never diverges
-    // from the DB (previously silent errors made follow appear to work then
-    // "revert" on refresh).
+    // from the DB. followBusy prevents rapid double-taps from firing
+    // conflicting insert/delete pairs.
+    setFollowBusy(true);
     const wasFollowing = following;
     setFollowing(!wasFollowing);
     setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count + (wasFollowing ? -1 : 1)) } : p);
-    if (wasFollowing) {
-      const { error } = await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", prof.id);
-      if (error) {
-        setFollowing(true);
-        setProf((p) => p ? { ...p, followers_count: p.followers_count + 1 } : p);
-        logRawError(error, "generic", { op: "follow_delete" });
-        toast.error(toFriendlyMessage(error, "generic"));
+    try {
+      if (wasFollowing) {
+        const { error } = await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", prof.id);
+        if (error) {
+          setFollowing(true);
+          setProf((p) => p ? { ...p, followers_count: p.followers_count + 1 } : p);
+          logRawError(error, "generic", { op: "follow_delete" });
+          toast.error(toFriendlyMessage(error, "generic"));
+        }
+      } else {
+        const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: prof.id });
+        if (error) {
+          setFollowing(false);
+          setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count - 1) } : p);
+          logRawError(error, "generic", { op: "follow_insert" });
+          toast.error(toFriendlyMessage(error, "generic"));
+        }
       }
-    } else {
-      const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: prof.id });
-      if (error) {
-        setFollowing(false);
-        setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count - 1) } : p);
-        logRawError(error, "generic", { op: "follow_insert" });
-        toast.error(toFriendlyMessage(error, "generic"));
-      }
+    } finally {
+      setFollowBusy(false);
     }
   };
 
@@ -524,6 +532,19 @@ export default function Profile() {
     ),
   });
 
+  if (profileNotFound) {
+    return (
+      <AppShell>
+        <div className="max-w-md mx-auto text-center py-24 px-4">
+          <h1 className="text-2xl font-bold mb-2">Profile not found</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            @{username} doesn't exist or is no longer available.
+          </p>
+          <Button onClick={() => nav("/feed")} variant="outline">Back to feed</Button>
+        </div>
+      </AppShell>
+    );
+  }
   if (!prof) {
     return <AppShell><CrownLoader fullscreen={false} label="Loading royal profile…" /></AppShell>;
   }
@@ -781,8 +802,15 @@ export default function Profile() {
               </>
             ) : (
               <>
-                <Button onClick={toggleFollow} className={following ? "" : "bg-gradient-gold text-primary-foreground"} variant={following ? "outline" : "default"}>
-                  {following ? "Following" : "Follow"}
+                <Button
+                  onClick={toggleFollow}
+                  disabled={followBusy}
+                  aria-busy={followBusy}
+                  aria-pressed={following}
+                  className={following ? "" : "bg-gradient-gold text-primary-foreground"}
+                  variant={following ? "outline" : "default"}
+                >
+                  {followBusy ? "…" : (following ? "Following" : "Follow")}
                 </Button>
                 <Button onClick={() => nav(`/messages/${prof.id}`)} variant="outline"><MessageCircle size={14} className="mr-1.5" /> Message</Button>
                 <Button onClick={() => setChallengeOpen(true)} variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">
@@ -833,8 +861,15 @@ export default function Profile() {
             </>
           ) : (
             <>
-              <Button onClick={toggleFollow} className={`flex-1 ${following ? "" : "bg-gradient-gold text-primary-foreground"}`} variant={following ? "outline" : "default"}>
-                {following ? "Following" : "Follow"}
+              <Button
+                onClick={toggleFollow}
+                disabled={followBusy}
+                aria-busy={followBusy}
+                aria-pressed={following}
+                className={`flex-1 ${following ? "" : "bg-gradient-gold text-primary-foreground"}`}
+                variant={following ? "outline" : "default"}
+              >
+                {followBusy ? "…" : (following ? "Following" : "Follow")}
               </Button>
               <Button onClick={() => nav(`/messages/${prof.id}`)} variant="outline" size="icon" aria-label="Message"><MessageCircle size={16} /></Button>
               <Button onClick={() => setChallengeOpen(true)} variant="outline" size="icon" aria-label="Challenge to Crown Battle" className="border-primary/50 text-primary">
