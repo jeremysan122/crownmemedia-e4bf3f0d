@@ -49,6 +49,7 @@ const PurchaseSuccess = lazy(() => import("./pages/PurchaseSuccess"));
 const Wallet = lazy(() => import("./pages/Wallet"));
 const Insights = lazy(() => import("./pages/Insights"));
 const RoyalPass = lazy(() => import("./pages/RoyalPass"));
+const RoyalPassPublic = lazy(() => import("./pages/RoyalPassPublic"));
 const MyReports = lazy(() => import("./pages/MyReports"));
 const BlockedAccounts = lazy(() => import("./pages/BlockedAccounts"));
 const Preferences = lazy(() => import("./pages/Preferences"));
