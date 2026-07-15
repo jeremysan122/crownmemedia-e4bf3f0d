@@ -298,6 +298,8 @@ export default function AchievementCrowns() {
           </>
         )}
       </div>
+      </>
+      )}
     </AppShell>
   );
 }
