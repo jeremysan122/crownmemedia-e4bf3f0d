@@ -532,6 +532,19 @@ export default function Profile() {
     ),
   });
 
+  if (profileNotFound) {
+    return (
+      <AppShell>
+        <div className="max-w-md mx-auto text-center py-24 px-4">
+          <h1 className="text-2xl font-bold mb-2">Profile not found</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            @{username} doesn't exist or is no longer available.
+          </p>
+          <Button onClick={() => nav("/feed")} variant="outline">Back to feed</Button>
+        </div>
+      </AppShell>
+    );
+  }
   if (!prof) {
     return <AppShell><CrownLoader fullscreen={false} label="Loading royal profile…" /></AppShell>;
   }
