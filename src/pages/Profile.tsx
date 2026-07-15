@@ -127,6 +127,7 @@ export default function Profile() {
   const bannerInput = useRef<HTMLInputElement>(null);
   const [equippedCrownAsset, setEquippedCrownAsset] = useState<string | null>(null);
   const [equippedCrownNumber, setEquippedCrownNumber] = useState<number | null>(null);
+  const [equippedCrownMissingWearable, setEquippedCrownMissingWearable] = useState(false);
 
   const isMe = !username || username === me?.username;
   const targetUsername = isMe ? me?.username : username;
@@ -190,10 +191,12 @@ export default function Profile() {
           }
           setEquippedCrownAsset(crown?.wearable_asset_url ?? null);
           setEquippedCrownNumber(crown?.crown_number ?? null);
+          setEquippedCrownMissingWearable(!!crown && !crown.wearable_asset_url);
         }
       } else {
         setEquippedCrownAsset(null);
         setEquippedCrownNumber(null);
+        setEquippedCrownMissingWearable(false);
       }
 
       const [{ data: ps, error: psErr }, { data: cs }, { data: rs }] = await Promise.all([
@@ -653,6 +656,7 @@ export default function Profile() {
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
           {(() => {
             const crownEquipped = !prof.frames_hidden && !!equippedCrownAsset;
+            const crownMissingWearable = !prof.frames_hidden && !!prof.equipped_achievement_crown_id && equippedCrownMissingWearable;
             const equippedCrownRenderConfig = getCrownRenderConfig(equippedCrownNumber);
             const wrapperCls = crownEquipped
               ? "relative z-30 w-fit shrink-0 self-start overflow-visible"
@@ -672,6 +676,17 @@ export default function Profile() {
                   <CrownAvatar key={`${prof.id}-${equippedCrownAsset}-desktop`} photoUrl={prof.profile_photo_url} crownAssetUrl={equippedCrownAsset} size={160} glow={profileGlowActive || royalPassActive || isFounder} positionY={prof.avatar_position_y ?? 50} alt={`${prof.username ?? "User"} profile photo`} renderConfig={equippedCrownRenderConfig} />
                 </div>
               </>
+            ) : crownMissingWearable ? (
+              <div className="w-28 h-28 lg:w-40 lg:h-40 rounded-full overflow-hidden bg-muted ring-2 ring-border relative">
+                {prof.profile_photo_url && (
+                  <img
+                    src={prof.profile_photo_url}
+                    className="w-full h-full object-cover"
+                    alt=""
+                    style={{ objectPosition: `center ${prof.avatar_position_y ?? 50}%` }}
+                  />
+                )}
+              </div>
             ) : !prof.frames_hidden && ((prof.equipped_frame_key && getFrameUrl(prof.equipped_frame_key)) || isFounder) ? (
               <>
                 <div className="lg:hidden">
