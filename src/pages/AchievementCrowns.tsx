@@ -7,6 +7,7 @@ import CrownLoader from "@/components/CrownLoader";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
 import { useCrownGallery, equipAchievementCrown, type CrownGalleryRow } from "@/hooks/useCrownGallery";
 import { useCrownRarity, formatOwnership, type CrownRarityStat } from "@/hooks/useCrownRarity";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 
 const PAGE_SIZE = 12;
 const EXPECTED_TOTAL = 100;
@@ -61,6 +62,12 @@ export default function AchievementCrowns() {
     description:
       "Collect all 100 CrownMe Achievement Crowns across ten themed collections. Track your progress, equip a crown, and show off your journey.",
   });
+
+  // Wave 3: soft feature flag. Defaults to on; admins can flip
+  // `achievement_crowns_enabled` off in the Command Center to hide the
+  // gallery instantly without a redeploy.
+  const flagResolved = useFeatureFlag("achievement_crowns_enabled", true);
+  const crownsEnabled = flagResolved === null ? true : flagResolved;
 
   const { rows, collections, ownedCount, totalCount, loading, error, refresh } = useCrownGallery();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -122,6 +129,16 @@ export default function AchievementCrowns() {
 
   return (
     <AppShell>
+      {!crownsEnabled ? (
+        <div className="max-w-2xl mx-auto px-4 py-24 text-center">
+          <Crown className="mx-auto text-gold mb-4" size={40} />
+          <h1 className="font-display text-2xl mb-2">Achievement Crowns are paused</h1>
+          <p className="text-muted-foreground text-sm">
+            The crown gallery is temporarily unavailable while we roll out an update. Check back shortly.
+          </p>
+        </div>
+      ) : (
+      <>
       <div className="max-w-6xl mx-auto px-4 py-6 pb-32">
         <header className="mb-6 text-center" id="crown-gallery-heading">
           <div className="inline-flex items-center gap-2 mb-2">
