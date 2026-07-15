@@ -632,7 +632,15 @@ export default function Profile() {
 
       <div className="px-4 lg:px-6 py-4 lg:relative">
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-          <div data-testid="profile-avatar" className={`self-start w-fit ${prof.crowns_held > 0 && !equippedCrownAsset && !prof.equipped_frame_key && !isFounder ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full relative z-10 ${!isFounder && !prof.equipped_frame_key && !equippedCrownAsset && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5 profile-glow" : ""}`}>
+          <div
+            data-testid="profile-avatar"
+            className={`self-start w-fit relative ${
+              !prof.frames_hidden && equippedCrownAsset
+                ? ""
+                : `${prof.crowns_held > 0 && !prof.equipped_frame_key && !isFounder ? "crown-ring" : ""} lg:ring-4 lg:ring-background lg:rounded-full ${!isFounder && !prof.equipped_frame_key && royalPassActive ? "ring-2 ring-gold rounded-full p-0.5 profile-glow" : ""}`
+            }`}
+            style={{ zIndex: 30, overflow: "visible" }}
+          >
             {!prof.frames_hidden && equippedCrownAsset ? (
               <>
                 <div className="lg:hidden">
