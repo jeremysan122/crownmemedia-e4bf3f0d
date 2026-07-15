@@ -7902,6 +7902,12 @@ export type Database = {
           status: string
         }[]
       }
+      evaluate_user_crowns: {
+        Args: { _user_id: string }
+        Returns: {
+          newly_unlocked_crown_ids: string[]
+        }[]
+      }
       founder_program_public_status: { Args: never; Returns: Json }
       frame_reward_stats: { Args: { _user_id: string }; Returns: Json }
       get_battle_official_result: {
@@ -8133,6 +8139,7 @@ export type Database = {
       }
       get_post_share_status: { Args: { _post_id: string }; Returns: string }
       get_post_vote_stats: { Args: { _post_id: string }; Returns: Json }
+      get_user_crown_metrics: { Args: { _user_id: string }; Returns: Json }
       get_user_liked_post_ids: {
         Args: { _limit?: number; _user_id: string }
         Returns: {
