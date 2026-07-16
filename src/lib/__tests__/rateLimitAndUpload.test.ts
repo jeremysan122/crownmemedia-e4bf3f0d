@@ -50,8 +50,8 @@ describe("validateUpload", () => {
     expect(r.message).toMatch(/Unsupported/);
   });
 
-  it("accepts mp4 video under 200MB", () => {
-    const r = validateUpload(mk(100 * 1024 * 1024, "video/mp4"), "post_video");
+  it("accepts mp4 video under 250MB", () => {
+    const r = validateUpload(mk(240 * 1024 * 1024, "video/mp4"), "post_video");
     expect(r.ok).toBe(true);
   });
 
@@ -64,7 +64,7 @@ describe("validateUpload", () => {
     expect(UPLOAD_RULES.avatar.maxBytes).toBe(5 * 1024 * 1024);
     expect(UPLOAD_RULES.banner.maxBytes).toBe(5 * 1024 * 1024);
     expect(UPLOAD_RULES.share_card.maxBytes).toBe(5 * 1024 * 1024);
-    expect(UPLOAD_RULES.post_video.maxBytes).toBe(200 * 1024 * 1024);
+    expect(UPLOAD_RULES.post_video.maxBytes).toBe(250 * 1024 * 1024);
     expect(UPLOAD_RULES.dm_attachment.maxBytes).toBe(25 * 1024 * 1024);
     expect(UPLOAD_RULES.verification_doc.maxBytes).toBe(25 * 1024 * 1024);
     expect(UPLOAD_RULES.verification_doc.mimeTypes).toContain("application/pdf");
