@@ -516,7 +516,7 @@ export default function Upload() {
         if (video) URL.revokeObjectURL(video.preview);
         photos.forEach((p) => URL.revokeObjectURL(p.preview));
         setPhotos([]);
-        setVideo({ file, preview: URL.createObjectURL(file), durationMs: meta.durationMs, origin: "camera" });
+        setVideo({ file, preview: URL.createObjectURL(file), durationMs: meta.durationMs, width: meta.width, height: meta.height, origin: "camera" });
         setMode("video");
       } catch {
         toast.error("Couldn't read recorded video");
