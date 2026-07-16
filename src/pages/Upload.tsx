@@ -2013,36 +2013,11 @@ export default function Upload() {
         </div>
 
 
-        {/* Schedule */}
-        <div className="rounded-xl border border-border bg-card/40 p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-foreground">
-              <CalendarIcon size={14} className="text-primary" />
-              <span className="text-xs font-bold uppercase tracking-widest">Schedule</span>
-            </div>
-            {scheduledFor && (
-              <button
-                type="button"
-                onClick={() => setScheduledFor("")}
-                className="text-[11px] underline underline-offset-2 text-muted-foreground hover:text-foreground"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          <Input
-            type="datetime-local"
-            value={scheduledFor}
-            min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
-            onChange={(e) => setScheduledFor(e.target.value)}
-            className="bg-input"
-          />
-          <p className="text-[10px] text-muted-foreground">
-            {scheduledFor
-              ? `Will publish on ${new Date(scheduledFor).toLocaleString()}`
-              : "Leave blank to publish immediately"}
-          </p>
-        </div>
+        {/* Scheduling UI hidden (audit P0-#5). There is no server-side
+            release job wired up yet — surfacing a scheduler here caused
+            posts to appear "scheduled" and then never publish. When the
+            release cron ships, restore the block guarded by a feature
+            flag. All posts publish immediately for now. */}
 
         {validation && (
           <p className="text-[11px] text-destructive">{validation}</p>
