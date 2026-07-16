@@ -2092,7 +2092,7 @@ export default function Upload() {
           disabled={!canSubmit}
           className="w-full h-14 bg-gradient-gold text-primary-foreground font-bold tracking-widest gold-shadow disabled:opacity-50"
         >
-          {submitting ? (<><Loader2 size={16} className="animate-spin mr-2" /> {scheduledFor ? "SCHEDULING…" : "POSTING…"}</>) : (scheduledFor ? "SCHEDULE POST" : "POST & COMPETE")}
+          {submitting ? (<><Loader2 size={16} className="animate-spin mr-2" /> POSTING…</>) : "POST & COMPETE"}
         </Button>
 
         <Button
