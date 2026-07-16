@@ -1629,69 +1629,12 @@ export default function Upload() {
                 </button>
               </div>
 
-              {/* Video trim — pick a start/end range, then re-encode in-browser */}
-              {trimRange && (
-                <div className="rounded-xl border border-border bg-card/40 p-2.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">
-                      Trim
-                    </span>
-                    <span className="text-[10px] text-muted-foreground tabular-nums">
-                      {trimRange[0].toFixed(1)}s → {trimRange[1].toFixed(1)}s
-                      {" · "}
-                      {(trimRange[1] - trimRange[0]).toFixed(1)}s
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="text-[10px] text-muted-foreground space-y-1">
-                      <span>Start</span>
-                      <input
-                        type="range"
-                        min={0}
-                        max={Math.max(0.1, video.durationMs / 1000)}
-                        step={0.1}
-                        value={trimRange[0]}
-                        onChange={(e) => {
-                          const s = Math.min(parseFloat(e.target.value), trimRange[1] - 0.5);
-                          setTrimRange([Math.max(0, s), trimRange[1]]);
-                        }}
-                        className="w-full accent-primary"
-                        disabled={trimming}
-                      />
-                    </label>
-                    <label className="text-[10px] text-muted-foreground space-y-1">
-                      <span>End</span>
-                      <input
-                        type="range"
-                        min={0}
-                        max={Math.max(0.1, video.durationMs / 1000)}
-                        step={0.1}
-                        value={trimRange[1]}
-                        onChange={(e) => {
-                          const en = Math.max(parseFloat(e.target.value), trimRange[0] + 0.5);
-                          setTrimRange([trimRange[0], Math.min(video.durationMs / 1000, en)]);
-                        }}
-                        className="w-full accent-primary"
-                        disabled={trimming}
-                      />
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={applyTrim}
-                      disabled={trimming || (trimRange[1] - trimRange[0]) >= video.durationMs / 1000 - 0.05}
-                      className="px-3 py-1.5 rounded-lg bg-gradient-gold text-primary-foreground text-[11px] font-bold uppercase tracking-widest disabled:opacity-50 flex items-center gap-1.5"
-                    >
-                      {trimming ? <Loader2 size={12} className="animate-spin" /> : null}
-                      {trimming ? `Trimming ${trimProgress}%` : "Apply trim"}
-                    </button>
-                    <p className="text-[10px] text-muted-foreground flex-1">
-                      Trim re-encodes in real time — a 10s clip takes ~10s.
-                    </p>
-                  </div>
-                </div>
-              )}
+              {/* Video trim is disabled (audit P0-#9). The in-browser
+                  re-encode path was silently stripping the audio track and
+                  producing a lossy copy on every re-attempt. Scrolls are
+                  bounded to 30s via `validateUploadSelection`; longer clips
+                  are rejected outright at pick time instead of being
+                  silently cropped. Original audio + bitrate are preserved. */}
 
               {/* Video poster picker — scrub a frame to become the cover thumbnail */}
 
