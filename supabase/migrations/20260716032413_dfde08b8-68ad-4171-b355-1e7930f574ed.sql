@@ -1,0 +1,1 @@
+UPDATE public.feature_flags SET enabled = true, rollout_percent = 100, updated_at = now() WHERE key = 'achievement_crowns_enabled';
