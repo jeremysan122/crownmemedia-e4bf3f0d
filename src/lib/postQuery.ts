@@ -113,7 +113,12 @@ export async function fetchShortsPage(opts: { limit: number; beforeCreatedAt?: s
   let q = supabase
     .from("posts")
     .select(POST_SELECT)
-    .or("content_type.eq.scroll,media_type.eq.video")
+    // Scrolls surface = explicit scrolls only. Legacy rows without a
+    // content_type value fall back to media_type='video', but a row that
+    // was intentionally published as a Post (content_type='post') never
+    // leaks into Scrolls, even when it contains video. See CrownMe upload
+    // audit P0-#1.
+    .or("content_type.eq.scroll,and(content_type.is.null,media_type.eq.video)")
     .eq("is_removed", false)
     .eq("is_archived", false)
     .not("video_url", "is", null)
