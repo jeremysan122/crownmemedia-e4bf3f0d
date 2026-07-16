@@ -73,6 +73,11 @@ interface PickedVideo {
   file: File;
   preview: string;
   durationMs: number;
+  /** Real intrinsic dimensions read from the file (probeVideo). Never a
+   * placeholder — Scroll validation and stored media_width/media_height
+   * rely on these being truthful. */
+  width: number;
+  height: number;
   uploaded?: { path: string; url: string };
   posterUploaded?: { path: string; url: string };
   posterError?: string;
@@ -492,7 +497,7 @@ export default function Upload() {
       if (video) URL.revokeObjectURL(video.preview);
       photos.forEach((p) => URL.revokeObjectURL(p.preview));
       setPhotos([]);
-      setVideo({ file, preview: URL.createObjectURL(file), durationMs: meta.durationMs, origin });
+      setVideo({ file, preview: URL.createObjectURL(file), durationMs: meta.durationMs, width: meta.width, height: meta.height, origin });
       setMode("video");
     } catch {
       toast.error("Couldn't read this video");
@@ -511,7 +516,7 @@ export default function Upload() {
         if (video) URL.revokeObjectURL(video.preview);
         photos.forEach((p) => URL.revokeObjectURL(p.preview));
         setPhotos([]);
-        setVideo({ file, preview: URL.createObjectURL(file), durationMs: meta.durationMs, origin: "camera" });
+        setVideo({ file, preview: URL.createObjectURL(file), durationMs: meta.durationMs, width: meta.width, height: meta.height, origin: "camera" });
         setMode("video");
       } catch {
         toast.error("Couldn't read recorded video");
@@ -644,17 +649,15 @@ export default function Upload() {
     if (locationMode === "current" && (postLat == null || postLng == null)) {
       return "Waiting for location — allow permission or switch to city/none";
     }
-    if (scheduledFor) {
-      const t = new Date(scheduledFor).getTime();
-      if (!Number.isFinite(t)) return "Invalid scheduled time";
-      if (t < Date.now() + 60_000) return "Schedule at least 1 minute in the future";
-      if (t > Date.now() + 1000 * 60 * 60 * 24 * 60) return "Schedule within the next 60 days";
-    }
-    // Post vs Scroll: enforce surface-specific media rules client-side. The
-    // publish RPC re-validates content_type independently — this is UX only.
+    // Scheduling is hidden until server-side release exists (audit P0-#5).
+    // Any leftover scheduledFor value from restored drafts is ignored below —
+    // we never send it in the payload, so every post publishes immediately.
+    // Post vs Scroll: enforce surface-specific media rules client-side using
+    // REAL media dimensions. The publish RPC re-validates content_type
+    // independently — this is UX only.
     const ctErr = validateUploadSelection(contentType, mode, {
-      width: null,
-      height: null,
+      width: mode === "video" ? (video?.width ?? null) : null,
+      height: mode === "video" ? (video?.height ?? null) : null,
       durationMs: mode === "video" ? (video?.durationMs ?? null) : null,
     });
     if (ctErr) return ctErr;
@@ -935,8 +938,18 @@ export default function Upload() {
         alt_texts: mode === "photo"
           ? photos.map((p, i) => (p.alt.trim() || autoAlts[i] || "")).slice(0, imageUrls.length)
           : [],
-        media_width: 1080,
-        media_height: 1080,
+        // Real media dimensions (audit P0-#3). Photos are normalised to
+        // 1080x1080 by mediaProcess; videos carry the intrinsic dimensions
+        // read from the source file at pick / trim time.
+        media_width: mode === "photo" ? 1080 : (video?.width ?? null),
+        media_height: mode === "photo" ? 1080 : (video?.height ?? null),
+        // Persisted framing so downstream surfaces don't have to guess.
+        aspect_ratio:
+          contentType === "scroll"
+            ? "9:16"
+            : mode === "photo"
+              ? "1:1"
+              : (video && video.width && video.height ? `${video.width}:${video.height}` : null),
         tagged_user_ids: tagged.map((t) => t.id),
         media_origin: mode === "photo" ? (photos[0]?.origin ?? "gallery") : (video?.origin ?? "gallery"),
         is_sensitive: isSensitive,
@@ -970,6 +983,15 @@ export default function Upload() {
         p_payload: payload as any,
       });
       if (error) throw error;
+      // ─── Commit boundary (audit P0-#8) ───
+      // Once the RPC succeeds, the post row exists and owns every uploaded
+      // asset. Any error after this point (profile refresh, cache broadcast,
+      // etc.) must NOT delete the media — the post would exist with dead
+      // URLs. Clear the `uploaded` tracker so the catch block's cleanup
+      // becomes a no-op.
+      const postCommitted = true;
+      uploaded.length = 0;
+      void postCommitted;
       const publishedRow = (published ?? null) as { id?: string; publish_status?: string; created_at?: string } | null;
       const publishStatus = publishedRow?.publish_status ?? "approved";
       // If the RPC returned a row older than ~5s, it's a dedup-hit — the post
@@ -1035,16 +1057,22 @@ export default function Upload() {
       // dangling at this point are guaranteed orphans for this session.
       // The server-side cleanup_orphaned_media RPC is the fallback safety
       // net for partial failures the client never gets to handle.
+      // Only reachable on pre-commit failures — post-commit paths clear
+      // `uploaded` immediately after the RPC succeeds (audit P0-#8).
       if (uploaded.length) {
         try {
           await supabase.storage.from("media").remove(uploaded.map((u) => u.path));
         } catch { /* noop */ }
+        // Clear cached upload URLs from composer state so a retry re-uploads
+        // to fresh paths instead of publishing the URLs we just deleted
+        // (audit P0-#7).
+        setPhotos((cur) => cur.map((x) => ({ ...x, uploading: false, progress: 0, uploaded: undefined, error: undefined })));
+        setVideo((cur) => (cur ? { ...cur, uploaded: undefined, posterUploaded: undefined, error: undefined, posterError: undefined } : cur));
       }
       if (isCancel) {
         setUploadError(null);
         setUploadStage("");
         setUploadProgress(0);
-        setPhotos((cur) => cur.map((x) => ({ ...x, uploading: false, progress: 0, uploaded: undefined })));
         toast("Upload cancelled");
       } else {
         // Translate the two server-side guards that are otherwise opaque.
@@ -1201,6 +1229,8 @@ export default function Upload() {
         file: trimmed,
         preview: URL.createObjectURL(trimmed),
         durationMs: meta.durationMs,
+        width: meta.width,
+        height: meta.height,
       });
       toast.success(`Trimmed to ${(meta.durationMs / 1000).toFixed(1)}s`);
     } catch (err) {
@@ -1599,69 +1629,12 @@ export default function Upload() {
                 </button>
               </div>
 
-              {/* Video trim — pick a start/end range, then re-encode in-browser */}
-              {trimRange && (
-                <div className="rounded-xl border border-border bg-card/40 p-2.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">
-                      Trim
-                    </span>
-                    <span className="text-[10px] text-muted-foreground tabular-nums">
-                      {trimRange[0].toFixed(1)}s → {trimRange[1].toFixed(1)}s
-                      {" · "}
-                      {(trimRange[1] - trimRange[0]).toFixed(1)}s
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="text-[10px] text-muted-foreground space-y-1">
-                      <span>Start</span>
-                      <input
-                        type="range"
-                        min={0}
-                        max={Math.max(0.1, video.durationMs / 1000)}
-                        step={0.1}
-                        value={trimRange[0]}
-                        onChange={(e) => {
-                          const s = Math.min(parseFloat(e.target.value), trimRange[1] - 0.5);
-                          setTrimRange([Math.max(0, s), trimRange[1]]);
-                        }}
-                        className="w-full accent-primary"
-                        disabled={trimming}
-                      />
-                    </label>
-                    <label className="text-[10px] text-muted-foreground space-y-1">
-                      <span>End</span>
-                      <input
-                        type="range"
-                        min={0}
-                        max={Math.max(0.1, video.durationMs / 1000)}
-                        step={0.1}
-                        value={trimRange[1]}
-                        onChange={(e) => {
-                          const en = Math.max(parseFloat(e.target.value), trimRange[0] + 0.5);
-                          setTrimRange([trimRange[0], Math.min(video.durationMs / 1000, en)]);
-                        }}
-                        className="w-full accent-primary"
-                        disabled={trimming}
-                      />
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={applyTrim}
-                      disabled={trimming || (trimRange[1] - trimRange[0]) >= video.durationMs / 1000 - 0.05}
-                      className="px-3 py-1.5 rounded-lg bg-gradient-gold text-primary-foreground text-[11px] font-bold uppercase tracking-widest disabled:opacity-50 flex items-center gap-1.5"
-                    >
-                      {trimming ? <Loader2 size={12} className="animate-spin" /> : null}
-                      {trimming ? `Trimming ${trimProgress}%` : "Apply trim"}
-                    </button>
-                    <p className="text-[10px] text-muted-foreground flex-1">
-                      Trim re-encodes in real time — a 10s clip takes ~10s.
-                    </p>
-                  </div>
-                </div>
-              )}
+              {/* Video trim is disabled (audit P0-#9). The in-browser
+                  re-encode path was silently stripping the audio track and
+                  producing a lossy copy on every re-attempt. Scrolls are
+                  bounded to 30s via `validateUploadSelection`; longer clips
+                  are rejected outright at pick time instead of being
+                  silently cropped. Original audio + bitrate are preserved. */}
 
               {/* Video poster picker — scrub a frame to become the cover thumbnail */}
 
@@ -2040,36 +2013,11 @@ export default function Upload() {
         </div>
 
 
-        {/* Schedule */}
-        <div className="rounded-xl border border-border bg-card/40 p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-foreground">
-              <CalendarIcon size={14} className="text-primary" />
-              <span className="text-xs font-bold uppercase tracking-widest">Schedule</span>
-            </div>
-            {scheduledFor && (
-              <button
-                type="button"
-                onClick={() => setScheduledFor("")}
-                className="text-[11px] underline underline-offset-2 text-muted-foreground hover:text-foreground"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          <Input
-            type="datetime-local"
-            value={scheduledFor}
-            min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
-            onChange={(e) => setScheduledFor(e.target.value)}
-            className="bg-input"
-          />
-          <p className="text-[10px] text-muted-foreground">
-            {scheduledFor
-              ? `Will publish on ${new Date(scheduledFor).toLocaleString()}`
-              : "Leave blank to publish immediately"}
-          </p>
-        </div>
+        {/* Scheduling UI hidden (audit P0-#5). There is no server-side
+            release job wired up yet — surfacing a scheduler here caused
+            posts to appear "scheduled" and then never publish. When the
+            release cron ships, restore the block guarded by a feature
+            flag. All posts publish immediately for now. */}
 
         {validation && (
           <p className="text-[11px] text-destructive">{validation}</p>
@@ -2144,7 +2092,7 @@ export default function Upload() {
           disabled={!canSubmit}
           className="w-full h-14 bg-gradient-gold text-primary-foreground font-bold tracking-widest gold-shadow disabled:opacity-50"
         >
-          {submitting ? (<><Loader2 size={16} className="animate-spin mr-2" /> {scheduledFor ? "SCHEDULING…" : "POSTING…"}</>) : (scheduledFor ? "SCHEDULE POST" : "POST & COMPETE")}
+          {submitting ? (<><Loader2 size={16} className="animate-spin mr-2" /> POSTING…</>) : "POST & COMPETE"}
         </Button>
 
         <Button
