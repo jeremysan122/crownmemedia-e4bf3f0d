@@ -8,9 +8,13 @@ describe("postMediaFrameClass", () => {
     expect(postMediaFrameClass(undefined)).toBe("aspect-square");
   });
 
-  it("uses 9:16 for video / scroll content", () => {
-    expect(postMediaFrameClass({ media_type: "video" })).toBe("aspect-[9/16]");
+  it("uses 9:16 only for explicit scrolls (Post videos never force 9:16)", () => {
+    // Regression: previously ANY video was forced to 9:16, which made a
+    // Post video render as a Scroll frame across Feed/Profile/Detail.
+    expect(postMediaFrameClass({ media_type: "video", content_type: "post" })).toBe("aspect-square");
     expect(postMediaFrameClass({ content_type: "scroll" })).toBe("aspect-[9/16]");
+    // Legacy rows (no content_type at all) fall back to media_type inference.
+    expect(postMediaFrameClass({ media_type: "video" })).toBe("aspect-[9/16]");
   });
 
   it("honours explicit aspect_ratio metadata when persisted", () => {
