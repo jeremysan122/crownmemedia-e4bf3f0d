@@ -649,17 +649,15 @@ export default function Upload() {
     if (locationMode === "current" && (postLat == null || postLng == null)) {
       return "Waiting for location — allow permission or switch to city/none";
     }
-    if (scheduledFor) {
-      const t = new Date(scheduledFor).getTime();
-      if (!Number.isFinite(t)) return "Invalid scheduled time";
-      if (t < Date.now() + 60_000) return "Schedule at least 1 minute in the future";
-      if (t > Date.now() + 1000 * 60 * 60 * 24 * 60) return "Schedule within the next 60 days";
-    }
-    // Post vs Scroll: enforce surface-specific media rules client-side. The
-    // publish RPC re-validates content_type independently — this is UX only.
+    // Scheduling is hidden until server-side release exists (audit P0-#5).
+    // Any leftover scheduledFor value from restored drafts is ignored below —
+    // we never send it in the payload, so every post publishes immediately.
+    // Post vs Scroll: enforce surface-specific media rules client-side using
+    // REAL media dimensions. The publish RPC re-validates content_type
+    // independently — this is UX only.
     const ctErr = validateUploadSelection(contentType, mode, {
-      width: null,
-      height: null,
+      width: mode === "video" ? (video?.width ?? null) : null,
+      height: mode === "video" ? (video?.height ?? null) : null,
       durationMs: mode === "video" ? (video?.durationMs ?? null) : null,
     });
     if (ctErr) return ctErr;
