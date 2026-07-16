@@ -73,6 +73,11 @@ interface PickedVideo {
   file: File;
   preview: string;
   durationMs: number;
+  /** Real intrinsic dimensions read from the file (probeVideo). Never a
+   * placeholder — Scroll validation and stored media_width/media_height
+   * rely on these being truthful. */
+  width: number;
+  height: number;
   uploaded?: { path: string; url: string };
   posterUploaded?: { path: string; url: string };
   posterError?: string;
