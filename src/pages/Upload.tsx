@@ -1057,16 +1057,22 @@ export default function Upload() {
       // dangling at this point are guaranteed orphans for this session.
       // The server-side cleanup_orphaned_media RPC is the fallback safety
       // net for partial failures the client never gets to handle.
+      // Only reachable on pre-commit failures — post-commit paths clear
+      // `uploaded` immediately after the RPC succeeds (audit P0-#8).
       if (uploaded.length) {
         try {
           await supabase.storage.from("media").remove(uploaded.map((u) => u.path));
         } catch { /* noop */ }
+        // Clear cached upload URLs from composer state so a retry re-uploads
+        // to fresh paths instead of publishing the URLs we just deleted
+        // (audit P0-#7).
+        setPhotos((cur) => cur.map((x) => ({ ...x, uploading: false, progress: 0, uploaded: undefined, error: undefined })));
+        setVideo((cur) => (cur ? { ...cur, uploaded: undefined, posterUploaded: undefined, error: undefined, posterError: undefined } : cur));
       }
       if (isCancel) {
         setUploadError(null);
         setUploadStage("");
         setUploadProgress(0);
-        setPhotos((cur) => cur.map((x) => ({ ...x, uploading: false, progress: 0, uploaded: undefined })));
         toast("Upload cancelled");
       } else {
         // Translate the two server-side guards that are otherwise opaque.
