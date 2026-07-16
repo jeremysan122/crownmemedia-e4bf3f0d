@@ -1206,6 +1206,8 @@ export default function Upload() {
         file: trimmed,
         preview: URL.createObjectURL(trimmed),
         durationMs: meta.durationMs,
+        width: meta.width,
+        height: meta.height,
       });
       toast.success(`Trimmed to ${(meta.durationMs / 1000).toFixed(1)}s`);
     } catch (err) {
