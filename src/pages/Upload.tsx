@@ -983,6 +983,15 @@ export default function Upload() {
         p_payload: payload as any,
       });
       if (error) throw error;
+      // ─── Commit boundary (audit P0-#8) ───
+      // Once the RPC succeeds, the post row exists and owns every uploaded
+      // asset. Any error after this point (profile refresh, cache broadcast,
+      // etc.) must NOT delete the media — the post would exist with dead
+      // URLs. Clear the `uploaded` tracker so the catch block's cleanup
+      // becomes a no-op.
+      const postCommitted = true;
+      uploaded.length = 0;
+      void postCommitted;
       const publishedRow = (published ?? null) as { id?: string; publish_status?: string; created_at?: string } | null;
       const publishStatus = publishedRow?.publish_status ?? "approved";
       // If the RPC returned a row older than ~5s, it's a dedup-hit — the post
