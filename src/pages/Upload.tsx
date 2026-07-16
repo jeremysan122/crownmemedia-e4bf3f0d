@@ -938,8 +938,18 @@ export default function Upload() {
         alt_texts: mode === "photo"
           ? photos.map((p, i) => (p.alt.trim() || autoAlts[i] || "")).slice(0, imageUrls.length)
           : [],
-        media_width: 1080,
-        media_height: 1080,
+        // Real media dimensions (audit P0-#3). Photos are normalised to
+        // 1080x1080 by mediaProcess; videos carry the intrinsic dimensions
+        // read from the source file at pick / trim time.
+        media_width: mode === "photo" ? 1080 : (video?.width ?? null),
+        media_height: mode === "photo" ? 1080 : (video?.height ?? null),
+        // Persisted framing so downstream surfaces don't have to guess.
+        aspect_ratio:
+          contentType === "scroll"
+            ? "9:16"
+            : mode === "photo"
+              ? "1:1"
+              : (video && video.width && video.height ? `${video.width}:${video.height}` : null),
         tagged_user_ids: tagged.map((t) => t.id),
         media_origin: mode === "photo" ? (photos[0]?.origin ?? "gallery") : (video?.origin ?? "gallery"),
         is_sensitive: isSensitive,
