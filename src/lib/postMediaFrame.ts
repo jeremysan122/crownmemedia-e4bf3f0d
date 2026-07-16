@@ -42,12 +42,21 @@ export function postMediaFrameClass(post: PostMediaFrameInput | null | undefined
     case "9:16":     return "aspect-[9/16]";
   }
 
-  // Videos / scroll content default to 9:16.
-  if (post.media_type === "video" || post.content_type === "scroll") {
+  // Scrolls are always 9:16.
+  if ((post.content_type || "").toLowerCase() === "scroll") {
     return "aspect-[9/16]";
   }
 
-  // Photo default: 1:1, matches the upload pipeline's 1080x1080 output.
+  // Legacy rows without an explicit content_type: infer scroll from video
+  // media so pre-migration content still frames correctly. A row that IS
+  // explicitly a Post never falls into this branch — Post videos render
+  // at the default frame (or their persisted aspect_ratio, above).
+  if (!post.content_type && post.media_type === "video") {
+    return "aspect-[9/16]";
+  }
+
+  // Photo posts and Post-videos-without-a-persisted-ratio default to 1:1,
+  // matching the upload pipeline's 1080x1080 image output.
   return "aspect-square";
 }
 
