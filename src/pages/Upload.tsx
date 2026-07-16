@@ -46,7 +46,13 @@ import { runPickPipeline, type PickItem } from "@/lib/pickPipeline";
 
 const MAX_PHOTOS = 10;
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;          // 8MB raw input
-const MAX_VIDEO_BYTES = 80 * 1024 * 1024;          // 80MB raw input
+// Single source of truth for the client-side video capacity limit. Server
+// trigger (`validate_post_media_upload`) and the storage bucket
+// `file_size_limit` are aligned to the same 250 MB ceiling — see the
+// `bump_video_upload_capacity_250mb` migration. Duration cap stays at 30s
+// because Scrolls are short-form; longer clips are rejected at pick time.
+const MAX_VIDEO_BYTES = 250 * 1024 * 1024;         // 250MB raw input
+const MAX_VIDEO_MB = 250;
 const MAX_VIDEO_MS = 30_000;                        // 30s hard cap
 const MAX_DIM = 6000;                               // sanity ceiling
 
@@ -487,7 +493,7 @@ export default function Upload() {
     if (!file.type.startsWith("video/")) { toast.error("Not a video file"); return; }
     const vcheck = validateUpload(file, "post_video");
     if (!vcheck.ok) { toast.error(vcheck.message); return; }
-    if (file.size > MAX_VIDEO_BYTES) { toast.error("Video must be under 80MB"); return; }
+    if (file.size > MAX_VIDEO_BYTES) { toast.error(`Video must be under ${MAX_VIDEO_MB}MB`); return; }
     try {
       const meta = await probeVideo(file);
       if (meta.durationMs > MAX_VIDEO_MS) {
@@ -1737,7 +1743,7 @@ export default function Upload() {
               <label className="aspect-square rounded-2xl border-2 border-dashed border-primary/40 bg-card/40 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary/70 cursor-pointer">
                 <ImagePlus size={36} />
                 <span className="text-sm">Upload video</span>
-                <span className="text-[10px]">MP4/WebM · ≤30s · ≤80MB</span>
+                <span className="text-[10px]">MP4/WebM · ≤30s · ≤{MAX_VIDEO_MB}MB</span>
                 <input type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={(e) => { onPickVideo(e.target.files?.[0] ?? null); e.target.value = ""; }} />
               </label>
             </div>

@@ -23,9 +23,9 @@ describe("server-side upload validation triggers", () => {
     expect(migrationSource).toMatch(/50 \* 1024 \* 1024/);
   });
 
-  it("post_media trigger enforces video mimes + 200 MB", () => {
+  it("post_media trigger enforces video mimes + 250 MB", () => {
     expect(migrationSource).toMatch(/'video\/mp4','video\/quicktime','video\/webm'/);
-    expect(migrationSource).toMatch(/200 \* 1024 \* 1024/);
+    expect(migrationSource).toMatch(/250 \* 1024 \* 1024/);
   });
 
   it("dm attachment trigger is image-only ≤ 25 MB", () => {

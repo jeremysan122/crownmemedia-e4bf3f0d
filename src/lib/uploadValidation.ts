@@ -31,7 +31,7 @@ export const UPLOAD_RULES: Record<UploadPreset, UploadRule> = {
   banner:      { maxBytes: 5 * MB,   mimeTypes: IMAGE_MIMES, label: "banner" },
   share_card:  { maxBytes: 5 * MB,   mimeTypes: IMAGE_MIMES, label: "share card" },
   post_image:  { maxBytes: 50 * MB,  mimeTypes: IMAGE_MIMES, label: "photo" },
-  post_video:  { maxBytes: 200 * MB, mimeTypes: VIDEO_MIMES, label: "video" },
+  post_video:  { maxBytes: 250 * MB, mimeTypes: VIDEO_MIMES, label: "video" },
   dm_attachment: {
     // Launch scope: image-only DM attachments. Video support is disabled
     // until moderation/preview pipeline is fully vetted.
