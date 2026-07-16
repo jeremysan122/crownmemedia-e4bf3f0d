@@ -46,7 +46,13 @@ import { runPickPipeline, type PickItem } from "@/lib/pickPipeline";
 
 const MAX_PHOTOS = 10;
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;          // 8MB raw input
-const MAX_VIDEO_BYTES = 80 * 1024 * 1024;          // 80MB raw input
+// Single source of truth for the client-side video capacity limit. Server
+// trigger (`validate_post_media_upload`) and the storage bucket
+// `file_size_limit` are aligned to the same 250 MB ceiling — see the
+// `bump_video_upload_capacity_250mb` migration. Duration cap stays at 30s
+// because Scrolls are short-form; longer clips are rejected at pick time.
+const MAX_VIDEO_BYTES = 250 * 1024 * 1024;         // 250MB raw input
+const MAX_VIDEO_MB = 250;
 const MAX_VIDEO_MS = 30_000;                        // 30s hard cap
 const MAX_DIM = 6000;                               // sanity ceiling
 
