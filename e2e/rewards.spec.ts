@@ -1,4 +1,5 @@
 import { test, expect, Page, Route } from "@playwright/test";
+import { currentRequiredLegalAcceptances } from "./helpers/legalConsentMock";
 
 /**
  * Hermetic E2E tests for /rewards.
@@ -164,13 +165,7 @@ async function installSupabaseMocks(page: Page, claimCounter: ClaimCounter) {
     // src/lib/legalDocs.ts) so LegalConsentGate doesn't render its blocking
     // modal over /rewards.
     if (url.includes("/user_legal_acceptances")) {
-      const accepted = ["terms", "privacy", "community", "csae"].map((slug) => ({
-        doc_slug: slug,
-        version: "1.1",
-        last_updated: "2026-06-02",
-        accepted_at: "2026-01-01T00:00:00Z",
-      }));
-      return json(accepted);
+      return json(currentRequiredLegalAcceptances());
     }
 
 
@@ -206,12 +201,14 @@ async function bootRewards(page: Page, claimCounter: ClaimCounter) {
 
 test.describe("/rewards — freshness, focus refresh & notification deep link", () => {
   test("UTC rollover countdown ticks every second", async ({ page }) => {
-    const counter: ClaimCounter = { count: 0, nextStreak: 0 };
+    // A recent claim puts the CTA into its countdown state. An unclaimed
+    // account correctly renders the static "Claim available now" message.
+    const counter: ClaimCounter = { count: 1, nextStreak: 1 };
     await bootRewards(page, counter);
 
     const countdown = page.getByTestId("rewards-utc-countdown");
     const first = (await countdown.textContent())?.trim();
-    expect(first).toMatch(/Next reset in \d+h \d{2}m \d{2}s|Next reset in \d+m \d{2}s/);
+    expect(first).toMatch(/Next claim in \d+h \d{2}m \d{2}s|Next claim in \d+m \d{2}s/);
     // Wait a couple of ticks and confirm the seconds value changed.
     await page.waitForTimeout(2200);
     const second = (await countdown.textContent())?.trim();

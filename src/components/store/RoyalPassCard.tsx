@@ -180,6 +180,7 @@ export default function RoyalPassCard() {
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const [publicLaunch, setPublicLaunch] = useState<boolean | null>(null);
+  const [selectedInterval, setSelectedInterval] = useState<"month" | "year">("year");
   const { openCheckout, checkoutElement } = useStripeCheckout();
   const ctaRef = useRef<HTMLDivElement | null>(null);
 
@@ -360,7 +361,6 @@ export default function RoyalPassCard() {
 
   const monthlyPlan = plans.find((p) => p.interval === "month") ?? plans[0];
   const annualPlan = plans.find((p) => p.interval === "year") ?? null;
-  const [selectedInterval, setSelectedInterval] = useState<"month" | "year">(annualPlan ? "year" : "month");
   const primaryPlan = selectedInterval === "year" && annualPlan ? annualPlan : monthlyPlan;
   const annualSavingsPct = annualPlan && monthlyPlan
     ? Math.max(0, Math.round((1 - Number(annualPlan.usd) / (Number(monthlyPlan.usd) * 12)) * 100))

@@ -1,4 +1,5 @@
 import { test, expect, Page, Route, devices } from "@playwright/test";
+import { currentRequiredLegalAcceptances } from "./helpers/legalConsentMock";
 
 /**
  * Hermetic E2E regression: follow toggling + refreshing another user's
@@ -77,6 +78,18 @@ async function installMocks(page: Page, state: State) {
         headers: { "content-range": "0-0/1" },
         body: JSON.stringify(body),
       });
+
+    if (url.includes("/user_legal_acceptances")) {
+      return json(currentRequiredLegalAcceptances());
+    }
+    if (url.includes("/profiles_private")) {
+      return json({
+        age_confirmed: true,
+        onboarded_at: "2026-01-01T00:00:00Z",
+        welcome_email_sent_at: "2026-01-01T00:00:00Z",
+        onboarding_step: 999,
+      });
+    }
 
     // Target profile lookup by username
     if (url.includes("/profiles") && url.includes(`username=eq.${TARGET_USERNAME}`)) {

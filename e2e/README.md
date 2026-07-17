@@ -20,8 +20,10 @@ Playwright snapshot tests for the share-card pipeline. Uses
    `SUPABASE_SERVICE_ROLE_KEY` to create (or reuse) a deterministic test
    user namespaced with the prefix **`e2e_share_test`**.
 
-If none of the three are available, setup throws with a clear message
-explaining exactly which env var to add — tests don't silently skip.
+If none of the three are available, setup emits a clear warning and runs the
+fixture-free browser suite; only fixture-dependent specs skip. Set
+`E2E_REQUIRE_FIXTURE=1` in a fully provisioned release pipeline to make a
+missing fixture fail the entire run.
 
 ### Safety guarantees of the auto-seed
 
@@ -47,6 +49,9 @@ bunx playwright test
 
 # force a fresh seed
 E2E_RESEED=1 bunx playwright test
+
+# require a fixture and fail fast when none is configured
+E2E_REQUIRE_FIXTURE=1 bunx playwright test
 
 # manual reseed (no test run)
 bun run e2e/seed.ts
@@ -90,7 +95,11 @@ from Lovable Cloud → Users; the profile and post cascade.
 1. `bun run build` (TypeScript)
 2. `bun run lint`
 3. `bun run test` (vitest unit suite)
-4. `bunx playwright test` (all specs above; requires `SUPABASE_SERVICE_ROLE_KEY` in repo secrets for the lifecycle + verification specs — they `test.skip` cleanly without it)
+4. Playwright on desktop Chromium and mobile WebKit. With
+   `SUPABASE_SERVICE_ROLE_KEY`, CI runs the full suite and safely auto-seeds
+   its namespaced fixture. Without that secret, CI runs the hermetic mocked
+   navigation, profile, rewards, and admin-visibility smoke specs. This keeps
+   a real browser gate active without retrying credential-dependent tests.
 
 A separate optional `browserstack-ios` job runs only when both
 `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` repo secrets exist —

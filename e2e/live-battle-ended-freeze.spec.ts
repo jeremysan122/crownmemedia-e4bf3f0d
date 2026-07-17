@@ -1,7 +1,9 @@
 // After a live battle ends: optimistic UI, realtime vote patches, and vote
 // buttons must all be permanently frozen until the user refreshes the page.
 import { test, expect } from "@playwright/test";
-import { seedLiveBattle, signInAsSeed } from "./helpers/liveBattleSeed";
+import { hasServiceRoleForLive, seedLiveBattle, signInAsSeed } from "./helpers/liveBattleSeed";
+
+test.skip(!hasServiceRoleForLive(), "Requires service-role + seeded users.");
 
 test("post-ended vote controls stay locked and vote counts freeze", async ({ page }) => {
   const { battleId, viewer } = await seedLiveBattle({ status: "ended", host_votes: 7, opponent_votes: 4 });
@@ -16,7 +18,7 @@ test("post-ended vote controls stay locked and vote counts freeze", async ({ pag
   // Simulate a stray realtime UPDATE that bumps vote counts after end —
   // the leaderboard snapshot must not change until refresh.
   await page.evaluate((id) => {
-    // @ts-ignore
+    // @ts-expect-error -- test-only hook installed by LiveBattle
     window.__testSimulateRealtimeVoteBump?.(id, { host_votes: 999, opponent_votes: 999 });
   }, battleId);
 

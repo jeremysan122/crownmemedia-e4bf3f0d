@@ -6,6 +6,15 @@
 import { test, expect } from "@playwright/test";
 import { signInAsSeed, ensureAnySeedUser } from "./helpers/liveBattleSeed";
 
+test.skip(
+  !process.env.E2E_USER_A_EMAIL ||
+    !process.env.E2E_USER_A_PASSWORD ||
+    !process.env.E2E_USER_B_EMAIL ||
+    !process.env.E2E_USER_B_PASSWORD ||
+    !process.env.E2E_USER_B_USERNAME,
+  "Requires seeded host and opponent credentials.",
+);
+
 test("acceptance RPC failure surfaces retry and blocks navigation", async ({ page }) => {
   const { user, opponent } = await ensureAnySeedUser();
   await signInAsSeed(page, user);

@@ -12,6 +12,7 @@ import { join } from "node:path";
 const MIG_DIR = join(process.cwd(), "supabase", "migrations");
 const allSql = readdirSync(MIG_DIR)
   .filter((f) => f.endsWith(".sql"))
+  .sort()
   .map((f) => readFileSync(join(MIG_DIR, f), "utf8"))
   .join("\n\n");
 

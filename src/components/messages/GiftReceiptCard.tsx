@@ -64,7 +64,9 @@ export default function GiftReceiptCard({
     if (!seenAt) {
       void supabase.rpc("mark_dm_gift_seen", { p_message_id: messageId } as never);
       setAnimateFor(tx.gift_id);
-      try { (window as any).analytics?.track?.("dm_gift_animation_opened", { gift_id: tx.gift_id }); } catch {}
+      try { (window as any).analytics?.track?.("dm_gift_animation_opened", { gift_id: tx.gift_id }); } catch {
+        // Analytics must never block the receipt animation.
+      }
     }
   }, [mine, tx, seenAt, messageId]);
 

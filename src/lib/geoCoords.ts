@@ -13,7 +13,7 @@ function norm(s: string): string {
     .toLowerCase()
     .trim()
     .replace(/\./g, "")       // "U.S." → "us"
-    .replace(/[_\-]+/g, " ")
+    .replace(/[-_]+/g, " ")
     .replace(/\s+/g, " ");
 }
 
@@ -394,4 +394,3 @@ export function fallbackCoord(name: string): LatLng {
   const lon = u2 * 340 - 170;
   return [lat, lon];
 }
-

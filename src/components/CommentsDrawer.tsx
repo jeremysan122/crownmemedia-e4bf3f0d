@@ -180,7 +180,8 @@ export default function CommentsDrawer({ postId, onClose, variant = "sheet" }: P
 
     setMyFires((prev) => {
       const next = new Set(prev);
-      hasFired ? next.delete(commentId) : next.add(commentId);
+      if (hasFired) next.delete(commentId);
+      else next.add(commentId);
       return next;
     });
     setFireCounts((prev) => ({

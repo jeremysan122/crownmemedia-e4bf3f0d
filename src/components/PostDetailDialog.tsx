@@ -53,7 +53,9 @@ const writeDraft = (postId: string, replyToId: string | null, value: string) => 
   try {
     if (value) localStorage.setItem(draftKey(postId, replyToId), value);
     else localStorage.removeItem(draftKey(postId, replyToId));
-  } catch {}
+  } catch {
+    // Draft persistence is optional when storage is unavailable.
+  }
 };
 
 interface CommentRow {

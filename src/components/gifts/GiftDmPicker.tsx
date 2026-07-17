@@ -57,7 +57,9 @@ export default function GiftDmPicker({
 
   useEffect(() => {
     if (!open || !user) return;
-    try { (window as any).analytics?.track?.("dm_gift_picker_opened", { gift_name: giftName }); } catch {}
+    try { (window as any).analytics?.track?.("dm_gift_picker_opened", { gift_name: giftName }); } catch {
+      // Analytics must never block the picker.
+    }
     let cancelled = false;
     setLoading(true);
 
@@ -209,7 +211,9 @@ export default function GiftDmPicker({
                     <button
                       type="button"
                       onClick={() => {
-                        try { (window as any).analytics?.track?.("dm_gift_recipient_selected", { source: p.source }); } catch {}
+                        try { (window as any).analytics?.track?.("dm_gift_recipient_selected", { source: p.source }); } catch {
+                          // Analytics must never block recipient selection.
+                        }
                         onPick({
                           userId: p.id,
                           username: p.username,

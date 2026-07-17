@@ -159,7 +159,9 @@ export default function CrownMap() {
     try { return window.localStorage.getItem("crownmap.filtersOpen.v1") === "1"; } catch { return false; }
   });
   useEffect(() => {
-    try { window.localStorage.setItem("crownmap.filtersOpen.v1", mobileFiltersOpen ? "1" : "0"); } catch {}
+    try { window.localStorage.setItem("crownmap.filtersOpen.v1", mobileFiltersOpen ? "1" : "0"); } catch {
+      // Persisting this display preference is optional.
+    }
   }, [mobileFiltersOpen]);
 
   // Track the lg breakpoint so we can stage filter edits as drafts on
@@ -1360,7 +1362,14 @@ function SharePopover({
                       <span className="text-foreground">{h.label || "(default view)"}</span>
                     </button>
                     <button
-                      onClick={async () => { try { await navigator.clipboard.writeText(h.url); toast.success("Copied"); } catch {} }}
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(h.url);
+                          toast.success("Copied");
+                        } catch {
+                          // Clipboard access can be denied by the browser.
+                        }
+                      }}
                       aria-label="Copy this link"
                       className="p-1 rounded text-muted-foreground hover:text-foreground"
                     >
