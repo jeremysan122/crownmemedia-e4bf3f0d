@@ -12,10 +12,11 @@ dist
 dist-ssr
 *.local
 
-# Environment files — never commit real secrets
-.env
+# Environment files — never commit real secrets.
+# `.env` contains only VITE_* browser-public configuration required by Lovable.
 .env.*
 !.env.example
+!.env
 
 # Large build artifacts / nested archives
 *.zip

@@ -1,6 +1,12 @@
 const clientToken = import.meta.env.VITE_PAYMENTS_CLIENT_TOKEN as string | undefined;
 
+export const shouldShowPaymentDiagnostics = (isDevelopment: boolean) => isDevelopment;
+
 export function PaymentTestModeBanner() {
+  // Deployment diagnostics belong in preview/development tooling, not in the
+  // consumer experience. Checkout surfaces still handle unavailable payments.
+  if (!shouldShowPaymentDiagnostics(import.meta.env.DEV)) return null;
+
   if (!clientToken) {
     return (
       <div className="w-full bg-red-100 border-b border-red-300 px-4 py-2 text-center text-xs text-red-800">
