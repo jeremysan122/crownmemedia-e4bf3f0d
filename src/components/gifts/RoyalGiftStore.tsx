@@ -92,7 +92,9 @@ export default function RoyalGiftStore() {
     try {
       // Server-authoritative: debit + gift_transactions + DM message + recipient notification are atomic.
       await sendDmGift({ gift, recipientId: target.userId, quantity: 1, idempotencyKey });
-      try { (window as any).analytics?.track?.("dm_gift_send_success", { gift_id: gift.id, rarity: gift.rarity }); } catch {}
+      try { (window as any).analytics?.track?.("dm_gift_send_success", { gift_id: gift.id, rarity: gift.rarity }); } catch {
+        // Analytics must never block a completed gift send.
+      }
       fxGiftSend(gift.category);
       toast.success(`Sent ${gift.name} to @${target.username}`, {
         description: `${SHEKEL}${formatShekels(total)} · Opening your conversation…`,
@@ -107,7 +109,9 @@ export default function RoyalGiftStore() {
       applyDelta(total, -total);
       refreshWallet();
       const msg = e instanceof Error ? e.message : "Gift could not be sent";
-      try { (window as any).analytics?.track?.("dm_gift_send_failed", { gift_id: gift.id, code: msg.slice(0, 80) }); } catch {}
+      try { (window as any).analytics?.track?.("dm_gift_send_failed", { gift_id: gift.id, code: msg.slice(0, 80) }); } catch {
+        // Preserve the original gift error when analytics is unavailable.
+      }
       toast.error("Gift failed to send", { description: msg });
     } finally {
       setSendingDm(false);

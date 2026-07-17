@@ -46,7 +46,7 @@ describe("BottomNav viewport behavior", () => {
     const battles = screen.getByTestId("bottom-nav-battles");
     expect(battles.className).toMatch(/text-primary/);
     const feed = screen.getByTestId("bottom-nav-feed");
-    expect(feed.className).not.toMatch(/text-primary(?!\-)/);
+    expect(feed.className).not.toMatch(/text-primary(?!-)/);
   });
 
   it("persists the last selected bottom-nav tab so it can be restored on return", () => {

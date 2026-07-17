@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
+import { useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
 describe("ConfirmDialog", () => {
@@ -43,7 +44,7 @@ describe("ConfirmDialog", () => {
         }),
     );
     function Wrapper() {
-      const [loading, setLoading] = require("react").useState(false);
+      const [loading, setLoading] = useState(false);
       return (
         <ConfirmDialog
           open

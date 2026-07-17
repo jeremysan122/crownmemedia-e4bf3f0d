@@ -253,7 +253,12 @@ export default function CommandCenterContent() {
   };
 
   const toggleSel = (id: string) => {
-    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   };
 
   const renderPostRow = (p: Post, withCheckbox = false) => (

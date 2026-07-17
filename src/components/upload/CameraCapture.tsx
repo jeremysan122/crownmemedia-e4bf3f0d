@@ -187,7 +187,9 @@ export default function CameraCapture({
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
       if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
-      try { recorderRef.current?.state === "recording" && recorderRef.current.stop(); } catch { /* noop */ }
+      try {
+        if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+      } catch { /* noop */ }
       stopStream();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -384,7 +386,9 @@ export default function CameraCapture({
 
   const stopRecording = () => {
     if (stopTimerRef.current) { clearTimeout(stopTimerRef.current); stopTimerRef.current = null; }
-    try { recorderRef.current?.state === "recording" && recorderRef.current.stop(); } catch { /* noop */ }
+    try {
+      if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+    } catch { /* noop */ }
   };
 
   const accept = () => {

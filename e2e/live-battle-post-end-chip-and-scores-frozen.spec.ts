@@ -37,7 +37,7 @@ test.describe("Live battle — post-end chip and leaderboard permanently frozen"
       // Simulate a stray realtime payload that tries to flip status back
       // to live AND bump both counts. The client must ignore it.
       await page.evaluate((id) => {
-        // @ts-ignore
+        // @ts-expect-error -- test-only hook installed by LiveBattle
         window.__testSimulateRealtimeVoteBump?.(id, {
           status: "live", host_votes: 777, opponent_votes: 888,
         });

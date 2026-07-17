@@ -21,6 +21,7 @@ import { resolve, join } from "node:path";
 const MIG_DIR = resolve(process.cwd(), "supabase/migrations");
 const ALL_MIG = readdirSync(MIG_DIR)
   .filter((f) => f.endsWith(".sql"))
+  .sort()
   .map((f) => readFileSync(join(MIG_DIR, f), "utf8"))
   .join("\n\n-- FILE BREAK --\n\n");
 

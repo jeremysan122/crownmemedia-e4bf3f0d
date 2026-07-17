@@ -24,8 +24,6 @@ export function useCountdown(until: number | null, onDone?: () => void) {
       return;
     }
 
-    let id: ReturnType<typeof setInterval>;
-
     const tick = () => {
       const r = Math.max(0, Math.ceil((until - Date.now()) / 1000));
 
@@ -37,9 +35,8 @@ export function useCountdown(until: number | null, onDone?: () => void) {
       }
     };
 
+    const id = setInterval(tick, 250);
     tick();
-
-    id = setInterval(tick, 250);
 
     return () => clearInterval(id);
   }, [until]);

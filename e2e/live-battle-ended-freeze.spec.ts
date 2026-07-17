@@ -16,7 +16,7 @@ test("post-ended vote controls stay locked and vote counts freeze", async ({ pag
   // Simulate a stray realtime UPDATE that bumps vote counts after end —
   // the leaderboard snapshot must not change until refresh.
   await page.evaluate((id) => {
-    // @ts-ignore
+    // @ts-expect-error -- test-only hook installed by LiveBattle
     window.__testSimulateRealtimeVoteBump?.(id, { host_votes: 999, opponent_votes: 999 });
   }, battleId);
 

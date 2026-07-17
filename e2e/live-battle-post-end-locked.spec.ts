@@ -28,7 +28,7 @@ test.describe("Live battle — post-end vote controls stay locked", () => {
       // Simulate a rogue realtime payload that tries to flip status back to
       // live and bump votes. The client must ignore it.
       await page.evaluate((id) => {
-        // @ts-ignore
+        // @ts-expect-error -- test-only hook installed by LiveBattle
         window.__testSimulateRealtimeVoteBump?.(id, { status: "live", host_votes: 500, opponent_votes: 500 });
       }, seed.id);
       await page.waitForTimeout(500);

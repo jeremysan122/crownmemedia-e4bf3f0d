@@ -66,7 +66,9 @@ function readTimes(): number[] {
 }
 
 function writeTimes(times: number[]) {
-  try { localStorage.setItem(RATE_KEY, JSON.stringify(times.slice(-20))); } catch {}
+  try { localStorage.setItem(RATE_KEY, JSON.stringify(times.slice(-20))); } catch {
+    // Rate limiting remains best-effort when storage is unavailable.
+  }
 }
 
 export interface RateCheck {
