@@ -24,9 +24,16 @@ Copy `.env.example` to `.env` and fill in the values from your Lovable Cloud pro
 VITE_SUPABASE_URL=
 VITE_SUPABASE_PUBLISHABLE_KEY=
 VITE_SUPABASE_PROJECT_ID=
+VITE_PAYMENTS_CLIENT_TOKEN=
 ```
 
-> Never commit a real `.env` file. Only `.env.example` should be checked in.
+`VITE_` values are public browser configuration. Never put service-role keys,
+webhook secrets, Stripe secret keys, or other private credentials behind a
+`VITE_` prefix.
+
+Never commit a populated `.env` file. Only the placeholder-only `.env.example`
+should be checked in. Lovable injects Supabase and Payments configuration for
+hosted builds; GitHub Actions reads the four values from repository secrets.
 
 ## Build & Test
 
