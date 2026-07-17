@@ -8,6 +8,7 @@ The browser media publication gate is complete. A labeled QA photo and a 1080×1
 
 ## Released revisions
 
+- `efa237c` — remove owned Storage objects immediately when a post is deleted from Feed, Profile, or Archived Posts.
 - `9bf9c1d` — reverse Shekels when a Stripe store purchase is refunded.
 - `7b022d4` — make refund reversal retryable and allow one purchase plus one refund ledger entry per Stripe session.
 - `e286df9` — make browser-push state durable and truthful across browser and server state.
@@ -31,6 +32,7 @@ The browser media publication gate is complete. A labeled QA photo and a 1080×1
 - Ran one labeled production push canary to `@crownmemedia`: the send function returned `sent=1`, `failed=0`, `pruned=0`; the temporary notification was deleted; and the preference/subscription remained unchanged. Server acceptance is verified, but an OS-level visual toast was not observable from the database runner.
 - Published a labeled 1080×1080 QA photo through the production file chooser, verified its alt text, caption, category, feed card, and profile tile, then deleted it and confirmed the profile returned to its original post count.
 - Verified that the Scroll composer rejects a 640×480 landscape video, then published a public-domain 1080×1920, 2.9-second WebM. The Scroll rendered in the immersive viewer, appeared under `@crownmemedia → Scrolls`, and opened with the correct caption/category metadata before deletion. The temporary Scroll and photo are no longer present in the UI.
+- Synced `efa237c` into Lovable and used the authenticated Publish → Update flow until all production domains reported **Up to date**. A second labeled photo canary was published and removed through the updated Feed deletion path; the card disappeared immediately. The final request to its captured public Storage URL was blocked by the test environment's external-action usage limit, so HTTP-level deletion verification remains explicitly open rather than being inferred from the UI.
 
 ## Security remediation
 
@@ -79,7 +81,7 @@ Do not treat manual authenticated redelivery as proof that native Stripe deliver
 
 ## Remaining controlled gates
 
-1. After the immediate media-deletion bundle reaches production, publish/delete one labeled canary and confirm its captured public Storage URL returns 404 immediately.
+1. Repeat the captured public-URL request when the external-action budget is available and confirm the updated deletion canary returns 404. Also confirm the pre-deployment synthetic QA orphan was removed by the scheduled fallback job; neither object contains user content.
 2. Confirm the push canary's OS/browser notification appears and opens the expected route. The server accepted one delivery, but visual receipt was outside the server runner's observability.
 3. Run an expired-subscription `410 Gone` cleanup check only with a deterministic first-party test endpoint. It was intentionally skipped because no safe endpoint existed.
 4. After the P0 webhook ingress fix, repeat Stripe-initiated purchase, refund, duplicate-event replay, dispute lifecycle, receipt, and failure retry without adding a Supabase authorization header.
@@ -87,6 +89,7 @@ Do not treat manual authenticated redelivery as proof that native Stripe deliver
 
 ## Non-blocking follow-up
 
+- Newly published media appeared in Feed immediately, while the authenticated Profile intermittently displayed its empty state after reload. The post remained available through Feed and could be deleted normally. Diagnose Profile query/cache invalidation and replace the misleading empty state with an explicit loading or refresh state before broad rollout.
 - Split the largest Vite production bundles to improve first-load performance on slower mobile devices.
 - Reduce the 166 lint warnings, prioritizing React hook dependency warnings on feed, post, and battle flows.
 - Keep recurring RLS probes, dependency scans, browser canaries, database backups, webhook alerts, and restore drills in the release process.
