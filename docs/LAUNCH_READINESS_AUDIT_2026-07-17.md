@@ -2,27 +2,33 @@
 
 ## Decision
 
-**Conditional go.** The audited release is materially safer and more reliable than the starting build, and the verified code, database, and production read paths are suitable for a controlled launch. A final staging gate is still required for a complete payment lifecycle, actual browser-push receipt, media publication through a real file chooser, and privileged abuse tests. No report should describe CrownMe as “unbreakable”; those controlled checks and ongoing monitoring remain necessary.
+**No-go for an unrestricted public launch with payments enabled.** The audited release is materially safer than the starting build, and the exercised application, database, Stripe sandbox lifecycle, and web-push paths now pass their controlled checks. One P0 platform blocker remains: Stripe's native webhook requests are rejected by the Lovable-managed Supabase gateway before CrownMe's HMAC verifier runs. A limited launch is reasonable only if payment-dependent fulfillment is disabled or the gateway/proxy issue is fixed and retested first.
+
+The media publication gate also remains incomplete because the browser bridge could not attach a local file without its file-URL permission. No production post or draft was changed. Software should not be described as “unbreakable”; the evidence and remaining gaps below define the current boundary.
 
 ## Released revisions
 
-- `ed747b2` — hardened live launch canary workflows.
-- `ac31abb` — remediated launch security findings.
-- `d1d70de` — merged the audited release with Lovable's production migration records.
-- `5c1d12f` — removed Lovable's duplicate migration copy so a fresh database will not attempt to create the same policies twice.
-- GitHub `main` and `agent/production-startup-hotfix` were pushed to the audited release line.
+- `9bf9c1d` — reverse Shekels when a Stripe store purchase is refunded.
+- `7b022d4` — make refund reversal retryable and allow one purchase plus one refund ledger entry per Stripe session.
+- `e286df9` — make browser-push state durable and truthful across browser and server state.
+- `6126569` — merge the audited release line and remove Lovable's duplicate refund migration.
+- GitHub `main` and `agent/production-startup-hotfix` point to the audited release line.
+- The production Settings bundle was inspected and contains the authenticated VAPID-key request, `save_push_subscription`, and server read-back verification added by `e286df9`.
 
-## Production actions completed
+## Controlled production and sandbox actions completed
 
-- Loaded the authenticated production feed and core navigation on `crownmemedia.com` after release.
-- Sent a clearly labeled QA direct message to `@crownme` and verified the message appeared.
+- Loaded authenticated production feed, settings, profile, navigation, messages, notifications, store, and payment entry points on `crownmemedia.com`.
+- Sent a clearly labeled QA direct message to `@crownme` and verified it appeared.
 - Cast and removed a Crown vote, verifying both state transitions and restoring the original state.
 - Changed the theme and restored dark mode.
-- Disabled and re-enabled browser-push permission in the CrownMe account, restoring the original enabled state.
 - Sent the 23-template transactional-email suite twice and verified the `[TEST]` messages arrived in the connected Gmail inbox.
-- Opened the production Stripe checkout entry point and verified that the minimum live offer rendered. No charge was submitted because no exact product, amount, and payment method were authorized for a real transaction.
-- Verified the live gift-checkout function ignores an injected external `return_url`.
-- Verified the live Royal Pass communications cron returns `401 {"ok":false,"error":"Unauthorized"}` to a valid non-service-role JWT before its scan executes.
+- Completed a real Stripe **sandbox** Starter Pouch purchase for **$2.49**. Wallet fulfillment increased by the expected 500 Shekels.
+- Refunded that sandbox purchase and discovered that the original implementation did not reverse the 500 Shekels. The refund RPC, ledger uniqueness rule, and webhook retry behavior were fixed and deployed.
+- Replayed the authentic signed `charge.refunded` event. The final state contained exactly one `bundle_refund` entry for -500, exactly one `stripe_store_reversals` entry, and the wallet returned from 172,750 to 172,250.
+- Replayed the same event ID and a distinct idempotency probe. Both produced no second debit, ledger entry, or reversal.
+- Updated the Stripe sandbox webhook subscription from 5 to 10 events while preserving the original events and adding the five refund/dispute events required by CrownMe.
+- Disabled and re-enabled browser push on `@crownmemedia` using the repaired production Settings flow. The backend then verified `push_enabled=true` and exactly one active subscription.
+- Ran one labeled production push canary to `@crownmemedia`: the send function returned `sent=1`, `failed=0`, `pruned=0`; the temporary notification was deleted; and the preference/subscription remained unchanged. Server acceptance is verified, but an OS-level visual toast was not observable from the database runner.
 
 ## Security remediation
 
@@ -35,29 +41,49 @@
 | Royal Pass communications cron callable without authorization | Enabled JWT verification and added a constant-time service-role bearer check before `run()` | Live non-service-role probe returned 401 |
 | Mutable database-function search path | Pinned `collection_completion_title_slug(text)` to `pg_catalog, public` | Production `proconfig` verification |
 | Duplicate follow notifications | Removed notification insertion from the counter trigger and kept the single notification path | Live follow canary produced exactly one notification; cleanup restored the original counts |
+| Refund did not reverse store Shekels | Added a transactional refund RPC and explicit purchase/refund ledger semantics | Authentic signed sandbox refund plus replay/idempotency checks |
+| Web-push UI could report enabled without server state | Reconciled browser subscription, server subscription, and preference; both Settings controls now use one durable operation | Production disable/enable flow plus one-account delivery canary |
 
 Two Lovable warnings were reviewed as intentional fail-closed behavior, not vulnerabilities: feature flags are admin-managed and are not read by normal app clients; direct inserts into `profile_visits` are blocked because visits are recorded through the rate-limited `record_profile_visit` RPC.
 
 ## Automated verification
 
-- Vitest: 128 files passed, 5 skipped; 1,068 tests passed, 48 skipped.
+- Vitest: **130 files passed, 5 skipped; 1,081 tests passed, 48 skipped**.
 - TypeScript: `tsc --noEmit` passed.
-- ESLint: passed with no errors.
-- Production Vite build: passed.
-- Launch-remediation regression suite: 5/5 passed after release cleanup.
+- ESLint: **0 errors, 166 warnings**. The warnings are existing hook-dependency/Fast Refresh cleanup debt and do not fail the configured gate.
+- Production Vite build: passed. Vite still reports large-chunk optimization warnings.
+- Focused refund and push-persistence regression suites: **13/13 passed**.
 - Production anonymous RLS probe: all 15 sensitive tables blocked or returned zero rows; `unsafe: false`.
-- Security suite: 31 checks passed; 31 privileged checks skipped because isolated privileged test credentials were not supplied.
+- Controlled privileged RLS/security probes passed against the authorized production test account.
 - Lovable dependency scan: 0 known package vulnerabilities reported.
 
-## Required final staging gate
+## P0 launch blocker
 
-1. Complete a Stripe test-mode purchase, webhook fulfillment, cancellation/refund, receipt, and duplicate-event replay using a dedicated test customer. Do not use a real card or charge production without an exact user-approved item and amount.
-2. Publish and delete a labeled QA photo and video through a real browser file chooser; verify feed, profile, Scrolls, poster, metadata, moderation, and storage cleanup. The automated browser bridge opened the native picker but could not attach the file, so no production post or existing draft was changed.
-3. Send a controlled web-push test to a dedicated device and verify delivery, click-through, badge clearing, unsubscribe, and expired-subscription cleanup.
-4. Run the skipped privileged security suite in an isolated staging project with service-role and test-user credentials. Exercise rate limits, duplicate payments, webhook replay, vote/follow/message spam, upload abuse, and moderator/admin authorization boundaries.
-5. Monitor error rate, latency, queue depth, email suppression, payment-webhook failures, storage growth, and database saturation during a limited rollout before expanding traffic.
+Stripe sends webhooks without a Supabase bearer token. Direct unauthenticated requests to both `payments-webhook` and the similarly configured `revenuecat-webhook` receive:
+
+```text
+401 UNAUTHORIZED_NO_AUTH_HEADER
+```
+
+This occurs at the Lovable-managed Supabase functions gateway even though `supabase/config.toml` declares `verify_jwt = false`, so the request never reaches CrownMe's Stripe-signature verifier. The sandbox refund handler itself is verified when the gateway is passed with an anon bearer token plus an authentic Stripe HMAC, but Stripe cannot supply that bearer token.
+
+Before public payments are enabled, either:
+
+1. Have Lovable/Supabase disable gateway JWT enforcement for the webhook function and then repeat a Stripe-initiated purchase/refund/replay; or
+2. Deploy a public ingress proxy that verifies Stripe signatures and forwards to the private handler, then test retry, replay, dispute, and failure recovery end to end.
+
+Do not treat manual authenticated redelivery as proof that native Stripe delivery works.
+
+## Remaining controlled gates
+
+1. Publish and delete a labeled QA photo and video through a real browser file chooser; verify feed, profile, Scrolls, poster, metadata, moderation, and storage cleanup. The browser bridge's file-URL permission must be enabled first.
+2. Confirm the push canary's OS/browser notification appears and opens the expected route. The server accepted one delivery, but visual receipt was outside the server runner's observability.
+3. Run an expired-subscription `410 Gone` cleanup check only with a deterministic first-party test endpoint. It was intentionally skipped because no safe endpoint existed.
+4. After the P0 webhook ingress fix, repeat Stripe-initiated purchase, refund, duplicate-event replay, dispute lifecycle, receipt, and failure retry without adding a Supabase authorization header.
+5. Monitor error rate, latency, webhook failures, email suppression, storage growth, queue depth, and database saturation during a limited rollout before expanding traffic.
 
 ## Non-blocking follow-up
 
-- Split the largest production bundles reported by Vite to improve first-load performance on slower mobile devices.
-- Keep recurring RLS probes, dependency scans, browser canaries, database backups, and restore drills in the release process.
+- Split the largest Vite production bundles to improve first-load performance on slower mobile devices.
+- Reduce the 166 lint warnings, prioritizing React hook dependency warnings on feed, post, and battle flows.
+- Keep recurring RLS probes, dependency scans, browser canaries, database backups, webhook alerts, and restore drills in the release process.
