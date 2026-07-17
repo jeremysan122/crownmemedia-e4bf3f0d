@@ -6197,6 +6197,59 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_store_reversals: {
+        Row: {
+          boosts_deactivated: number
+          boosts_intended: number
+          created_at: string
+          id: string
+          metadata: Json
+          reason: string
+          shekels_intended: number
+          shekels_reversed: number
+          status: string
+          stripe_event_id: string
+          stripe_session_id: string
+          user_id: string
+        }
+        Insert: {
+          boosts_deactivated?: number
+          boosts_intended?: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          reason: string
+          shekels_intended?: number
+          shekels_reversed?: number
+          status: string
+          stripe_event_id: string
+          stripe_session_id: string
+          user_id: string
+        }
+        Update: {
+          boosts_deactivated?: number
+          boosts_intended?: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          reason?: string
+          shekels_intended?: number
+          shekels_reversed?: number
+          status?: string
+          stripe_event_id?: string
+          stripe_session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_store_reversals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subcategories: {
         Row: {
           created_at: string
@@ -8478,6 +8531,14 @@ export type Database = {
           _stripe_event_id: string
           _stripe_invoice_id?: string
           _stripe_payment_intent_id?: string
+        }
+        Returns: Json
+      }
+      handle_store_refund: {
+        Args: {
+          _reason?: string
+          _stripe_event_id: string
+          _stripe_session_id: string
         }
         Returns: Json
       }
