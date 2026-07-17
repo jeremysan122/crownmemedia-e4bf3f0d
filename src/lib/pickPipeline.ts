@@ -42,6 +42,47 @@ export interface PickPipelineOptions {
   isCancelled: () => boolean;
   onProgress: (items: PickItem[]) => void;
   deps: PickPipelineDeps;
+  /** Per decode/hash step timeout. Overridable only to keep regression tests fast. */
+  stepTimeoutMs?: number;
+}
+
+export const PICK_STEP_TIMEOUT_MS = 20_000;
+
+class PickCancelledError extends Error {
+  constructor() {
+    super("Photo processing cancelled.");
+    this.name = "PickCancelledError";
+  }
+}
+
+function runBoundedStep<T>(
+  promise: Promise<T>,
+  isCancelled: () => boolean,
+  timeoutMs: number,
+  timeoutMessage: string,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      clearInterval(cancelPoll);
+      callback();
+    };
+    const timeout = setTimeout(
+      () => finish(() => reject(new Error(timeoutMessage))),
+      timeoutMs,
+    );
+    const cancelPoll = setInterval(() => {
+      if (isCancelled()) finish(() => reject(new PickCancelledError()));
+    }, 100);
+
+    promise.then(
+      (value) => finish(() => resolve(value)),
+      (error) => finish(() => reject(error)),
+    );
+  });
 }
 
 export interface PickPipelineResult {
@@ -56,23 +97,35 @@ export interface PickPipelineResult {
 export async function runPickPipeline(
   opts: PickPipelineOptions,
 ): Promise<PickPipelineResult> {
-  const { files, existingHashes, isCancelled, onProgress, deps } = opts;
+  const {
+    files,
+    existingHashes,
+    isCancelled,
+    onProgress,
+    deps,
+    stepTimeoutMs = PICK_STEP_TIMEOUT_MS,
+  } = opts;
   const items: PickItem[] = files.map((f) => ({ name: f.name, status: "pending" }));
   const valid: File[] = [];
   const seen = new Set(existingHashes);
   let cancelled = false;
 
   const emit = () => onProgress(items.map((it) => ({ ...it })));
+  const cancelFrom = (index: number) => {
+    cancelled = true;
+    for (let j = index; j < items.length; j++) {
+      if (items[j].status !== "done" && items[j].status !== "failed") {
+        items[j].status = "cancelled";
+      }
+    }
+    emit();
+    return { valid, items, cancelled };
+  };
   emit();
 
   for (let i = 0; i < files.length; i++) {
     if (isCancelled()) {
-      cancelled = true;
-      for (let j = i; j < items.length; j++) {
-        if (items[j].status === "pending") items[j].status = "cancelled";
-      }
-      emit();
-      return { valid, items, cancelled };
+      return cancelFrom(i);
     }
 
     const raw = files[i];
@@ -82,8 +135,14 @@ export async function runPickPipeline(
       items[i].status = "converting";
       emit();
       try {
-        f = await deps.convertHeicToJpeg(f);
+        f = await runBoundedStep(
+          deps.convertHeicToJpeg(f),
+          isCancelled,
+          stepTimeoutMs,
+          `${raw.name} took too long to convert. Try a different photo.`,
+        );
       } catch (err) {
+        if (err instanceof PickCancelledError) return cancelFrom(i);
         items[i].status = "failed";
         items[i].error =
           err instanceof Error
@@ -95,13 +154,7 @@ export async function runPickPipeline(
     }
 
     if (isCancelled()) {
-      cancelled = true;
-      items[i].status = "cancelled";
-      for (let j = i + 1; j < items.length; j++) {
-        if (items[j].status === "pending") items[j].status = "cancelled";
-      }
-      emit();
-      return { valid, items, cancelled };
+      return cancelFrom(i);
     }
 
     items[i].status = "validating";
@@ -121,14 +174,24 @@ export async function runPickPipeline(
     }
 
     try {
-      const dims = await deps.probeImage(f);
+      const dims = await runBoundedStep(
+        deps.probeImage(f),
+        isCancelled,
+        stepTimeoutMs,
+        `${f.name} took too long to decode. Try a different photo.`,
+      );
       if (dims.width > deps.maxDim || dims.height > deps.maxDim) {
         items[i].status = "failed";
         items[i].error = `${f.name} is too large (${dims.width}×${dims.height}).`;
         emit();
         continue;
       }
-      const hash = await deps.sha256File(f);
+      const hash = await runBoundedStep(
+        deps.sha256File(f),
+        isCancelled,
+        stepTimeoutMs,
+        `${f.name} took too long to verify. Try a different photo.`,
+      );
       if (seen.has(hash)) {
         items[i].status = "failed";
         items[i].error = `${f.name} is already added.`;
@@ -139,9 +202,12 @@ export async function runPickPipeline(
       valid.push(f);
       items[i].status = "done";
       emit();
-    } catch {
+    } catch (error) {
+      if (error instanceof PickCancelledError) return cancelFrom(i);
       items[i].status = "failed";
-      items[i].error = `Couldn't read ${f.name}.`;
+      items[i].error = error instanceof Error && /took too long/i.test(error.message)
+        ? error.message
+        : `Couldn't read ${f.name}.`;
       emit();
     }
   }

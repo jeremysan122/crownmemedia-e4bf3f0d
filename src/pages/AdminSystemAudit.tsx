@@ -290,7 +290,8 @@ function EmailTestSuiteCard() {
         <h2 className="font-display text-sm text-gold uppercase tracking-wider">Email Test Suite</h2>
       </div>
       <p className="text-[12px] text-muted-foreground mb-3">
-        Sends all 20 templates (14 app + 6 auth previews) to the recipient. Uses the new hero images.
+        Sends every currently registered app and authentication template to the recipient.
+        Uses the production email queue and the latest hero images.
       </p>
       <div className="flex gap-2">
         <input
@@ -306,7 +307,7 @@ function EmailTestSuiteCard() {
           className="inline-flex items-center gap-2 rounded-lg bg-gold text-royal-deep font-bold text-sm px-4 py-2 hover:brightness-110 disabled:opacity-50"
         >
           {sending ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
-          {sending ? "Sending…" : "Send all 20"}
+          {sending ? "Sending…" : "Send full suite"}
         </button>
       </div>
       {result && (

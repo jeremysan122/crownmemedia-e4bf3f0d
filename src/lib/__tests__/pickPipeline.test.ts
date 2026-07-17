@@ -108,4 +108,40 @@ describe("runPickPipeline", () => {
     expect(result.items[0].error).toMatch(/exceeds/);
     expect(result.valid).toHaveLength(0);
   });
+
+  it("times out a decoder that never settles instead of leaving the picker blocked", async () => {
+    const file = makeFile("stuck.png", { type: "image/png" });
+    const result = await runPickPipeline({
+      files: [file],
+      existingHashes: new Set(),
+      isCancelled: () => false,
+      onProgress: () => {},
+      deps: makeDeps({ probeImage: () => new Promise(() => {}) }),
+      stepTimeoutMs: 5,
+    });
+
+    expect(result.items[0]).toMatchObject({
+      status: "failed",
+      error: "stuck.png took too long to decode. Try a different photo.",
+    });
+    expect(result.valid).toHaveLength(0);
+  });
+
+  it("lets Cancel interrupt a decoder that never settles", async () => {
+    const file = makeFile("stuck.png", { type: "image/png" });
+    let cancelled = false;
+    setTimeout(() => { cancelled = true; }, 5);
+
+    const result = await runPickPipeline({
+      files: [file],
+      existingHashes: new Set(),
+      isCancelled: () => cancelled,
+      onProgress: () => {},
+      deps: makeDeps({ probeImage: () => new Promise(() => {}) }),
+      stepTimeoutMs: 1_000,
+    });
+
+    expect(result.cancelled).toBe(true);
+    expect(result.items[0].status).toBe("cancelled");
+  });
 });

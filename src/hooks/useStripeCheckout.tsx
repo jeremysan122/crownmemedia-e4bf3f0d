@@ -1,6 +1,12 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   StripeEmbeddedCheckoutMount,
   type StripeEmbeddedCheckoutProps,
@@ -53,6 +59,9 @@ export function useStripeCheckout() {
           <DialogTitle className="font-display text-lg">
             {opts.title ?? "Secure Checkout"}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Complete your payment securely with Stripe. Your CrownMe balance updates only after payment confirmation.
+          </DialogDescription>
         </DialogHeader>
         <div className="px-3 pb-3 overflow-y-auto flex-1 min-h-0">
           <StripeEmbeddedCheckoutMount
