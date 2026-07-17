@@ -25,6 +25,7 @@ const ALLOWED = new Set<string>([
   "public.handle_royal_dispute_won",
   "public.handle_royal_dispute_lost",
   "public.handle_royal_dispute_reinstated",
+  "public.handle_store_refund",
   "public.refund_gift",
   "public.process_royal_reversal",
 ]);

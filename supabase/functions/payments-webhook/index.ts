@@ -81,6 +81,44 @@ Deno.serve(async (req) => {
     return null;
   }
 
+  async function resolveCheckoutSessionId(paymentIntentId: string | null): Promise<string | null> {
+    if (!paymentIntentId) return null;
+    try {
+      const sessions = await stripe.checkout.sessions.list({
+        payment_intent: paymentIntentId,
+        limit: 10,
+      });
+      const session = sessions.data.find((candidate) => candidate.payment_status === "paid")
+        ?? sessions.data[0];
+      return session?.id ?? null;
+    } catch (e) {
+      console.warn(
+        `[stripe-webhook] could not resolve checkout session for ${paymentIntentId}: ${(e as Error).message}`,
+      );
+      return null;
+    }
+  }
+
+  async function reverseStorePurchase(
+    paymentIntentId: string | null,
+    reason: string,
+  ): Promise<void> {
+    const sessionId = await resolveCheckoutSessionId(paymentIntentId);
+    if (!sessionId) {
+      console.log(`[stripe-webhook] no checkout session found for store reversal (${reason})`);
+      return;
+    }
+    const { data, error } = await supabase.rpc("handle_store_refund", {
+      _stripe_event_id: event.id,
+      _stripe_session_id: sessionId,
+      _reason: reason,
+    });
+    if (error) throw new Error(`handle_store_refund failed: ${error.message}`);
+    console.log(
+      `[stripe-webhook] store reversal session=${sessionId} result=${JSON.stringify(data)}`,
+    );
+  }
+
   async function upsertRoyalPassFromSubscription(
     sub: any,
     userIdHint?: string,
@@ -334,7 +372,7 @@ Deno.serve(async (req) => {
 
     // ------------------------------------------------------------------------
     // charge.refunded — event.data.object IS a Charge.
-    // Full refund → reverse the matching Royal grant.
+    // Full refund → reverse the matching Store purchase and/or Royal grant.
     // ------------------------------------------------------------------------
     if (event.type === "charge.refunded") {
       try {
@@ -345,6 +383,7 @@ Deno.serve(async (req) => {
           const paymentIntentId = typeof charge.payment_intent === "string"
             ? charge.payment_intent
             : charge.payment_intent?.id ?? null;
+          await reverseStorePurchase(paymentIntentId, "charge.refunded");
           const { error } = await supabase.rpc("handle_royal_refund", {
             _stripe_event_id: event.id,
             _reason: "charge.refunded",
@@ -353,7 +392,7 @@ Deno.serve(async (req) => {
             _stripe_charge_id: charge.id,
             _new_status: "reversed",
           });
-          if (error) console.error(`[stripe-webhook] handle_royal_refund failed: ${error.message}`);
+          if (error) throw new Error(`handle_royal_refund failed: ${error.message}`);
           else console.log(`[stripe-webhook] refund processed charge=${charge.id}`);
         } else {
           console.log(`[stripe-webhook] partial refund ignored charge=${(event.data.object as any).id}`);
@@ -416,6 +455,7 @@ Deno.serve(async (req) => {
           if (error) console.error(`[stripe-webhook] handle_royal_dispute_created failed: ${error.message}`);
           else console.log(`[stripe-webhook] dispute created dispute=${disputeId}`);
         } else if (event.type === "charge.dispute.funds_withdrawn") {
+          await reverseStorePurchase(paymentIntentId, "charge.dispute.funds_withdrawn");
           const { error } = await supabase.rpc("handle_royal_dispute_funds_withdrawn", {
             _stripe_event_id: event.id,
             _stripe_dispute_id: disputeId,
@@ -423,7 +463,7 @@ Deno.serve(async (req) => {
             _stripe_payment_intent_id: paymentIntentId,
             _stripe_charge_id: chargeId,
           });
-          if (error) console.error(`[stripe-webhook] handle_royal_dispute_funds_withdrawn failed: ${error.message}`);
+          if (error) throw new Error(`handle_royal_dispute_funds_withdrawn failed: ${error.message}`);
           else console.log(`[stripe-webhook] dispute funds withdrawn dispute=${disputeId}`);
         } else if (event.type === "charge.dispute.funds_reinstated") {
           const { error } = await supabase.rpc("handle_royal_dispute_reinstated", {
@@ -437,6 +477,7 @@ Deno.serve(async (req) => {
           else console.log(`[stripe-webhook] dispute funds reinstated dispute=${disputeId}`);
         } else if (event.type === "charge.dispute.closed") {
           if (dispute.status === "lost") {
+            await reverseStorePurchase(paymentIntentId, "charge.dispute.closed:lost");
             const { error } = await supabase.rpc("handle_royal_dispute_lost", {
               _stripe_event_id: event.id,
               _stripe_dispute_id: disputeId,
@@ -445,7 +486,7 @@ Deno.serve(async (req) => {
               _stripe_payment_intent_id: paymentIntentId,
               _stripe_charge_id: chargeId,
             });
-            if (error) console.error(`[stripe-webhook] handle_royal_dispute_lost failed: ${error.message}`);
+            if (error) throw new Error(`handle_royal_dispute_lost failed: ${error.message}`);
             else console.log(`[stripe-webhook] dispute lost dispute=${disputeId}`);
           } else if (dispute.status === "won") {
             const { error } = await supabase.rpc("handle_royal_dispute_won", {
