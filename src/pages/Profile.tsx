@@ -100,6 +100,8 @@ export default function Profile() {
   const [profileNotFound, setProfileNotFound] = useState(false);
   const [crownVoteTotal, setCrownVoteTotal] = useState<number>(0);
   const [posts, setPosts] = useState<{ id: string; image_url: string; crown_score: number; filter: string | null; pinned_at?: string | null; is_sensitive?: boolean | null; content_type?: string | null; media_type?: string | null; video_poster_url?: string | null; parent_post_id?: string | null }[]>([]);
+  const [postsLoadState, setPostsLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [postsReloadKey, setPostsReloadKey] = useState(0);
   const [crowns, setCrowns] = useState<{ id: string; title: string; region_name: string; active: boolean; category: string; started_at: string | null; ended_at: string | null }[]>([]);
   const [liked, setLiked] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null; filter?: string | null; media_type?: string | null; video_poster_url?: string | null; image_urls?: string[] | null }[]>([]);
   const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null; filter?: string | null; media_type?: string | null; video_poster_url?: string | null; image_urls?: string[] | null }[]>([]);
@@ -167,6 +169,7 @@ export default function Profile() {
     if (!targetUsername) return;
     let cancelled = false;
     const load = async () => {
+      setPostsLoadState("loading");
       const { data: p, error: pErr } = await supabase
         .from("profiles")
         .select("id, username, profile_photo_url, bio, city, state, country, followers_count, following_count, votes_received, votes_given, crowns_held, crowns_total, battle_wins, created_at, updated_at, banner_url, banner_position_y, avatar_position_y, gender, pronouns, is_private, hide_likes, hide_comments, hide_views, posts_visibility, links, verified, verified_at, liked_posts_public, is_founder, founder_title, royal_frame_variant, equipped_frame_key, equipped_achievement_crown_id, frames_hidden, hide_recent_unlocks")
@@ -212,13 +215,17 @@ export default function Profile() {
       ]);
       if (cancelled) return;
       // Fix #5: surface load errors
-      if (psErr) console.error("Failed to load posts:", psErr);
+      if (psErr) {
+        console.error("Failed to load posts:", psErr);
+        setPostsLoadState("error");
+      }
       // Dedupe by id defensively to avoid duplicate keys / duplicated post-options menus
       const uniquePosts = Array.from(new Map(((ps as any) || []).map((row: any) => [row.id, row])).values());
       // Hydrate parent metadata for reposts so the Reposts tab shows the original
       // author/media context and the "unavailable" fallback for removed originals.
       await hydrateParents(uniquePosts as any);
       setPosts(uniquePosts as any);
+      if (!psErr) setPostsLoadState("ready");
       setCrowns((cs as any) || []);
       setRoles(((rs as any) || []).map((r: any) => r.role));
 
@@ -319,7 +326,7 @@ export default function Profile() {
     };
     load();
     return () => { cancelled = true; };
-  }, [targetUsername, user?.id]); // Fix #4: user?.id not user
+  }, [targetUsername, user?.id, postsReloadKey]); // Fix #4: user?.id not user
 
   useEffect(() => {
     if (!openMenuId) return;
@@ -342,7 +349,9 @@ export default function Profile() {
     };
   }, [openMenuId]);
 
-  // Cross-platform realtime: keep posts grid in sync with edits/deletes from anywhere.
+  // Cross-platform realtime: keep posts grid in sync with creates, edits, and
+  // deletes from anywhere. INSERT is important when publish and profile-load
+  // overlap; without it a successful post can briefly look missing.
   useEffect(() => {
     if (!prof?.id) return;
     const onUpdated = (e: Event) => {
@@ -372,12 +381,23 @@ export default function Profile() {
 
     const ch = supabase
       .channel(`profile-rt-${prof.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts", filter: `user_id=eq.${prof.id}` }, (payload) => {
+        const n = payload.new as (typeof posts)[number] & { is_removed?: boolean; is_archived?: boolean };
+        if (!n?.id || n.is_removed || n.is_archived) return;
+        setPosts((prev) => prev.some((p) => p.id === n.id) ? prev : [n, ...prev]);
+        setPostsLoadState("ready");
+      })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "posts", filter: `user_id=eq.${prof.id}` }, (payload) => {
-        const n: any = payload.new;
+        const n = payload.new as (typeof posts)[number] & { is_removed?: boolean; is_archived?: boolean };
+        if (n.is_removed || n.is_archived) {
+          setPosts((prev) => prev.filter((p) => p.id !== n.id));
+          return;
+        }
         setPosts((prev) => prev.map((p) => p.id === n.id ? { ...p, image_url: n.image_url ?? p.image_url, crown_score: n.crown_score ?? p.crown_score, filter: n.filter ?? p.filter } : p));
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "posts", filter: `user_id=eq.${prof.id}` }, (payload) => {
-        const o: any = payload.old;
+        const o = payload.old as { id?: string };
+        if (!o.id) return;
         setPosts((prev) => prev.filter((p) => p.id !== o.id));
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "follows", filter: `following_id=eq.${prof.id}` }, async () => {
@@ -987,6 +1007,16 @@ export default function Profile() {
               const repostRows = (posts as any[]).filter((p) => !!p.parent_post_id);
               const imagePosts = filterByContentType(originals as any, "post") as typeof posts;
               const scrollPosts = filterByContentType(originals as any, "scroll") as typeof posts;
+              const postLoadFallback = postsLoadState === "loading" ? (
+                <CrownLoader fullscreen={false} label="Refreshing royal posts…" />
+              ) : postsLoadState === "error" ? (
+                <EmptyState
+                  icon={<ImageIcon size={28} className="text-muted-foreground" />}
+                  title="Posts couldn't refresh"
+                  body="The profile loaded, but its posts did not. Retry before assuming this royal has no posts."
+                  cta={{ label: "Retry", onClick: () => setPostsReloadKey((key) => key + 1) }}
+                />
+              ) : null;
               const renderTile = (p: typeof posts[number], showPlay: boolean) => (
                 <div
                   key={p.id}
@@ -1046,7 +1076,7 @@ export default function Profile() {
               </TabsList>
 
               <TabsContent value="posts" className="mt-3">
-                {imagePosts.length > 0 ? (
+                {postLoadFallback ?? (imagePosts.length > 0 ? (
                   <div className="grid grid-cols-3 gap-1 lg:gap-2">
                     {imagePosts.map((p) => renderTile(p, false))}
                   </div>
@@ -1057,11 +1087,11 @@ export default function Profile() {
                     body={isMe ? "Upload your first photo and start competing for the throne." : "This royal hasn't posted yet."}
                     cta={isMe ? { label: "Upload Photo", icon: <Plus size={14} />, onClick: () => nav("/upload") } : undefined}
                   />
-                )}
+                ))}
               </TabsContent>
 
               <TabsContent value="scrolls" className="mt-3">
-                {scrollPosts.length > 0 ? (
+                {postLoadFallback ?? (scrollPosts.length > 0 ? (
                   <div className="grid grid-cols-3 gap-1 lg:gap-2">
                     {scrollPosts.map((p) => renderTile(p, true))}
                   </div>
@@ -1072,11 +1102,11 @@ export default function Profile() {
                     body={isMe ? "Record a vertical 9:16 short for the Scrolls feed." : "This royal hasn't shared any scrolls yet."}
                     cta={isMe ? { label: "Create Scroll", icon: <Plus size={14} />, onClick: () => nav("/upload?type=scroll") } : undefined}
                   />
-                )}
+                ))}
               </TabsContent>
 
               <TabsContent value="reposts" className="mt-3">
-                {repostRows.length > 0 ? (
+                {postLoadFallback ?? (repostRows.length > 0 ? (
                   <>
                     <p className="text-[11px] text-muted-foreground mb-2 px-1">
                       Reposts don't earn crowns, ranks, or votes for this profile — all engagement credits the original author.
@@ -1098,7 +1128,7 @@ export default function Profile() {
                     title={isMe ? "No reposts yet" : "No reposts yet"}
                     body={isMe ? "When you repost someone's post, it appears here — original ownership stays with them." : "This royal hasn't reposted anything yet."}
                   />
-                )}
+                ))}
               </TabsContent>
 
 

@@ -176,7 +176,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
-              <Route path="/email-template-preview" element={<EmailTemplatePreview />} />
+              <Route path="/email-template-preview" element={<ProtectedRoute><AdminRoute requireAdmin><EmailTemplatePreview /></AdminRoute></ProtectedRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
               <Route path="/legal" element={<LegalCenter />} />
               <Route path="/terms" element={<TermsOfService />} />

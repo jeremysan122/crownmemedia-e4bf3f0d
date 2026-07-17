@@ -606,7 +606,7 @@
   },
   "src/pages/Profile.tsx": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 57
+      "count": 55
     }
   },
   "src/pages/PublicCrown.tsx": {
