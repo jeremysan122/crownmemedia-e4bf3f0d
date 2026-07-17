@@ -34,6 +34,13 @@ describe("Store refund lifecycle", () => {
     expect(latestStoreRefund).toMatch(/kind, shekels_delta[\s\S]+?'bundle_refund', -shekels_reversed/);
   });
 
+  it("allows the refund ledger row beside the original Stripe purchase", () => {
+    expect(allSql).toMatch(/DROP INDEX IF EXISTS public\.shekel_ledger_stripe_session_unique/);
+    expect(allSql).toMatch(
+      /CREATE UNIQUE INDEX shekel_ledger_stripe_session_unique[\s\S]+?stripe_session_id IS NOT NULL[\s\S]+?kind <> 'bundle_refund'/,
+    );
+  });
+
   it("deactivates Stripe-funded boosts linked to the refunded session", () => {
     expect(latestStoreRefund).toMatch(/array_agg\(DISTINCT reference_id\)/);
     expect(latestStoreRefund).toMatch(/UPDATE public\.boosts[\s\S]+?SET active = false[\s\S]+?id = ANY\(boost_ids\)/);
@@ -60,6 +67,18 @@ describe("Store refund lifecycle", () => {
     const refunded = webhook.slice(webhook.indexOf('if (event.type === "charge.refunded")'));
     expect(refunded).toMatch(/isFullRefund[\s\S]+?reverseStorePurchase\(paymentIntentId, "charge\.refunded"\)/);
     expect(refunded).toMatch(/handle_royal_refund/);
+  });
+
+  it("releases the event claim and asks Stripe to retry failed reversals", () => {
+    expect(webhook).toMatch(
+      /refund handler error[\s\S]+?throw e;/,
+    );
+    expect(webhook).toMatch(
+      /dispute handler error[\s\S]+?throw e;/,
+    );
+    expect(webhook).toMatch(
+      /handler error for \$\{event\.id\}[\s\S]+?from\("stripe_events"\)\.delete\(\)\.eq\("id", event\.id\)[\s\S]+?jsonError\(500, "handler_error"/,
+    );
   });
 
   it("also reverses Store entitlements on terminal dispute loss", () => {

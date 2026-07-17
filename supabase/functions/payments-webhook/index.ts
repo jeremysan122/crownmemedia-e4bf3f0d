@@ -399,6 +399,10 @@ Deno.serve(async (req) => {
         }
       } catch (e) {
         console.error(`[stripe-webhook] refund handler error: ${(e as Error).message}`);
+        // A failed entitlement reversal must remain retryable. Propagate to
+        // the outer handler so it removes the stripe_events claim and returns
+        // a non-2xx response for Stripe redelivery.
+        throw e;
       }
     }
 
@@ -504,6 +508,10 @@ Deno.serve(async (req) => {
         }
       } catch (e) {
         console.error(`[stripe-webhook] dispute handler error: ${(e as Error).message}`);
+        // Terminal dispute processing changes paid entitlements. Never
+        // acknowledge the event when that work failed; release the claim and
+        // let Stripe retry through the outer handler.
+        throw e;
       }
     }
 
