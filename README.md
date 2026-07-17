@@ -35,6 +35,10 @@ Never commit a populated `.env` file. Only the placeholder-only `.env.example`
 should be checked in. Lovable injects Supabase and Payments configuration for
 hosted builds; GitHub Actions reads the four values from repository secrets.
 
+The optional BrowserStack job is disabled by default. To enable it, add the
+`BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` repository secrets, then
+set the `BROWSERSTACK_ENABLED` repository variable to `true`.
+
 ## Build & Test
 
 ```bash

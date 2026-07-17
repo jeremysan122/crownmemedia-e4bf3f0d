@@ -64,8 +64,9 @@ jobs:
     name: BrowserStack iOS Safari (optional)
     needs: static-checks
     runs-on: ubuntu-latest
-    # Only runs when both BrowserStack secrets are configured at the repo level.
-    if: ${{ secrets.BROWSERSTACK_USERNAME != '' && secrets.BROWSERSTACK_ACCESS_KEY != '' }}
+    # Job-level conditions cannot access the secrets context. Opt in with the
+    # repository variable after both BrowserStack secrets are configured.
+    if: ${{ vars.BROWSERSTACK_ENABLED == 'true' }}
     env:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
