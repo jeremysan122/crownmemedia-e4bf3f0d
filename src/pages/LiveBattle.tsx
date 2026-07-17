@@ -182,11 +182,13 @@ export default function LiveBattlePage() {
     return () => { supabase.removeChannel(ch); };
   }, [battleId, user?.id, nav]);
 
-  // Track this viewer's own report + live status updates.
+  // Track this viewer's own report. Moderation reports are intentionally not
+  // published to Realtime; a short poll keeps status fresh without exposing a
+  // sensitive table on the replication stream.
   useEffect(() => {
     if (!battleId || !user?.id) return;
     let mounted = true;
-    (async () => {
+    const refreshOwnReport = async () => {
       const { data } = await supabase
         .from("live_battle_reports")
         .select("*")
@@ -195,29 +197,24 @@ export default function LiveBattlePage() {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (mounted && data) setMyReport(data as LiveBattleReportRow);
-    })();
-    const ch = supabase
-      .channel(`live_battle_report_self:${battleId}:${user.id}`)
-      .on("postgres_changes", {
-        event: "*", schema: "public", table: "live_battle_reports",
-        filter: `battle_id=eq.${battleId}`,
-      }, (payload) => {
-        const row = (payload.new ?? payload.old) as LiveBattleReportRow | undefined;
-        if (!row || row.reporter_id !== user.id) return;
-        if (payload.eventType === "DELETE") { setMyReport(null); return; }
-        setMyReport((prev) => {
-          const next = payload.new as LiveBattleReportRow;
-          if (prev && prev.status !== next.status && next.status === "handled") {
-            toast({ title: "Your report was handled", description: "Thanks — our team reviewed it." });
-          } else if (prev && prev.status !== next.status && next.status === "rejected") {
-            toast({ title: "Report reviewed", description: "Our team looked at your report and closed it without action." });
-          }
-          return next;
-        });
-      })
-      .subscribe();
-    return () => { mounted = false; supabase.removeChannel(ch); };
+      if (!mounted) return;
+      if (!data) {
+        setMyReport(null);
+        return;
+      }
+      const next = data as LiveBattleReportRow;
+      setMyReport((prev) => {
+        if (prev && prev.status !== next.status && next.status === "handled") {
+          toast({ title: "Your report was handled", description: "Thanks — our team reviewed it." });
+        } else if (prev && prev.status !== next.status && next.status === "rejected") {
+          toast({ title: "Report reviewed", description: "Our team looked at your report and closed it without action." });
+        }
+        return next;
+      });
+    };
+    void refreshOwnReport();
+    const timer = window.setInterval(() => { void refreshOwnReport(); }, 30_000);
+    return () => { mounted = false; window.clearInterval(timer); };
   }, [battleId, user?.id]);
 
   // Mint token only once the battle is actually LIVE. Pending/declined/

@@ -66,9 +66,7 @@ export default function Settings() {
   useEffect(() => {
     if (!profile?.id) return;
     supabase
-      .from("profiles")
-      .select("is_private, hide_likes, hide_comments, hide_views, posts_visibility")
-      .eq("id", profile.id)
+      .rpc("get_my_profile")
       .maybeSingle()
       .then(({ data, error }) => {
         if (error) console.error("[Settings] privacy fetch failed:", error.message);

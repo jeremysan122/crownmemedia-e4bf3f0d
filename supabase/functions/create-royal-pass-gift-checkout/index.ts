@@ -8,6 +8,7 @@ import {
   createStripeClient,
   resolveOrCreateCustomer,
 } from "../_shared/stripe.ts";
+import { safeReturnUrl } from "../_shared/origin.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,12 +51,10 @@ Deno.serve(async (req) => {
     const {
       recipient_username,
       message,
-      return_url,
       environment,
     } = body as {
       recipient_username?: string;
       message?: string;
-      return_url?: string;
       environment?: StripeEnv;
     };
 
@@ -106,10 +105,11 @@ Deno.serve(async (req) => {
       .single();
     if (giftErr || !gift) return json(500, { error: "Could not create gift" });
 
-    const origin = req.headers.get("origin") ?? "https://crownmemedia.com";
+    // The redirect destination is server-owned. The client cannot redirect a
+    // completed purchase away from CrownMe or to an unexpected in-app route.
+    const safeReturn = safeReturnUrl(req, "/royal-pass", "/royal-pass");
     const finalReturn =
-      return_url ??
-      `${origin}/royal-pass?gift_success=1&session_id={CHECKOUT_SESSION_ID}`;
+      `${safeReturn}?gift_success=1&session_id={CHECKOUT_SESSION_ID}`;
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",

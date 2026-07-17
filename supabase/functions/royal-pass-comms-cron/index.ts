@@ -10,6 +10,28 @@ const admin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
+async function isServiceRoleRequest(req: Request): Promise<boolean> {
+  const expected = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const authorization = req.headers.get("Authorization") ?? "";
+  const supplied = authorization.replace(/^Bearer\s+/i, "");
+  if (!expected || !supplied) return false;
+
+  // Compare fixed-length digests so a public endpoint cannot learn the
+  // service-role token through a timing side channel.
+  const encoder = new TextEncoder();
+  const [expectedDigest, suppliedDigest] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(expected)),
+    crypto.subtle.digest("SHA-256", encoder.encode(supplied)),
+  ]);
+  const left = new Uint8Array(expectedDigest);
+  const right = new Uint8Array(suppliedDigest);
+  let mismatch = left.length ^ right.length;
+  for (let i = 0; i < Math.min(left.length, right.length); i += 1) {
+    mismatch |= left[i] ^ right[i];
+  }
+  return mismatch === 0;
+}
+
 type Sub = {
   id: string;
   user_id: string;
@@ -149,6 +171,12 @@ async function run() {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (!(await isServiceRoleRequest(req))) {
+    return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
   try {
     const counts = await run();
     return new Response(JSON.stringify({ ok: true, counts }), {

@@ -40,4 +40,4 @@ project_id = "bailrqskqpmzvsgivhvm"
   [functions.seed-reserved-usernames]
     verify_jwt = true
   [functions.royal-pass-comms-cron]
-    verify_jwt = false
+    verify_jwt = true

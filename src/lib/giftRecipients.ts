@@ -19,8 +19,6 @@ export interface GiftRecipientCandidate {
 interface ProfileRow {
   id: string;
   username: string | null;
-  first_name: string | null;
-  last_name: string | null;
   profile_photo_url: string | null;
   verified: boolean | null;
   is_banned: boolean | null;
@@ -30,18 +28,17 @@ interface ProfileRow {
 function rowToCandidate(row: ProfileRow, source: GiftRecipientSource): GiftRecipientCandidate | null {
   if (!row || !row.id || !row.username) return null;
   if (row.is_banned || row.is_suspended) return null;
-  const display = [row.first_name, row.last_name].filter(Boolean).join(" ").trim() || row.username;
   return {
     id: row.id,
     username: row.username,
-    displayName: display,
+    displayName: row.username,
     avatarUrl: row.profile_photo_url,
     verified: !!row.verified,
     source,
   };
 }
 
-const PROFILE_FIELDS = "id, username, first_name, last_name, profile_photo_url, verified, is_banned, is_suspended";
+const PROFILE_FIELDS = "id, username, profile_photo_url, verified, is_banned, is_suspended";
 
 async function blockedIds(viewerId: string): Promise<Set<string>> {
   const { data } = await supabase
@@ -127,7 +124,7 @@ export async function searchRecipients(viewerId: string, query: string): Promise
     supabase
       .from("profiles")
       .select(PROFILE_FIELDS)
-      .or(`username.ilike.${q}%,first_name.ilike.${q}%,last_name.ilike.${q}%`)
+      .ilike("username", `${q}%`)
       .neq("id", viewerId)
       .limit(25),
     blockedIds(viewerId),

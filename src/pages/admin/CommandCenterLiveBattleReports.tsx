@@ -1,14 +1,12 @@
 // Admin/moderator review queue for Live Battle reports. Filters by status
 // (queued / processing / handled / rejected / all) and lets a mod approve
-// (handled) or reject a report. Realtime-refreshes when new reports come in
-// or statuses change.
+// (handled) or reject a report. Polls at a short interval so the sensitive
+// moderation table does not need to be published to Realtime.
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionCard, EmptyState, PillBadge, StatTile } from "@/components/admin/cc/CommandCenterUI";
-import { ConnectionStatus } from "@/components/admin/cc/ConnectionStatus";
 import { Button } from "@/components/ui/button";
-import { useRealtimeStatus } from "@/hooks/useRealtimeStatus";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import {
@@ -17,7 +15,7 @@ import {
   liveBattleErrorMessage,
   type AdminLiveBattleReportRow,
 } from "@/lib/liveBattles";
-import { Loader2, CheckCircle2, XCircle, Clock, Play } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Clock, Play, RefreshCw } from "lucide-react";
 
 type Filter = "queued" | "processing" | "handled" | "rejected" | "all";
 
@@ -47,13 +45,11 @@ export default function CommandCenterLiveBattleReports() {
     } finally { setLoading(false); }
   }, [filter]);
 
-  useEffect(() => { void load(); }, [load]);
-
-  const rt = useRealtimeStatus("cc-live-battle-reports", (ch) =>
-    ch.on("postgres_changes", { event: "*", schema: "public", table: "live_battle_reports" }, () => {
-      void load();
-    })
-  , [load]);
+  useEffect(() => {
+    void load();
+    const timer = window.setInterval(() => { void load(); }, 30_000);
+    return () => { window.clearInterval(timer); };
+  }, [load]);
 
   const act = async (r: AdminLiveBattleReportRow, next: "queued" | "processing" | "handled" | "rejected") => {
     setBusyId(r.id);
@@ -64,7 +60,6 @@ export default function CommandCenterLiveBattleReports() {
         next === "rejected" ? "Report rejected" :
         "Marked as processing",
       );
-      // load() will be triggered by the realtime subscription; also refresh now.
       await load();
     } catch (e) {
       toast.error(liveBattleErrorMessage(e, "Couldn't update report."));
@@ -74,7 +69,10 @@ export default function CommandCenterLiveBattleReports() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-end">
-        <ConnectionStatus status={rt.status} retryIn={rt.retryIn} label="live-battle-reports" />
+        <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => void load()} disabled={loading}>
+          <RefreshCw className={`mr-1 h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+          Refresh · auto 30s
+        </Button>
       </div>
 
       <div className="grid grid-cols-3 gap-2">

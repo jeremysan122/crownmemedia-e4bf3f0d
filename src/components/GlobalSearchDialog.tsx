@@ -9,8 +9,6 @@ import { fetchMainCategories, fetchSubcategories, type MainCategory, type Subcat
 interface UserHit {
   id: string;
   username: string;
-  first_name: string | null;
-  last_name: string | null;
   profile_photo_url: string | null;
   crowns_held: number;
   city: string | null;
@@ -71,9 +69,9 @@ export default function GlobalSearchDialog({ open, onOpenChange }: Props) {
       const userQuery = userTerm.length >= 2
         ? supabase
             .from("profiles")
-            .select("id, username, first_name, last_name, profile_photo_url, crowns_held, city, country")
+            .select("id, username, profile_photo_url, crowns_held, city, country")
             .or(
-              `username.ilike.%${userTerm}%,first_name.ilike.%${userTerm}%,last_name.ilike.%${userTerm}%,city.ilike.%${userTerm}%,country.ilike.%${userTerm}%`
+              `username.ilike.%${userTerm}%,city.ilike.%${userTerm}%,country.ilike.%${userTerm}%`
             )
             .limit(8)
         : Promise.resolve({ data: [], error: null });

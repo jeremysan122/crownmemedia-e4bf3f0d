@@ -64,7 +64,7 @@ export default function GiftDmPicker({
     setLoading(true);
 
     (async () => {
-      const PROFILE = "id, username, first_name, last_name, profile_photo_url, verified, is_banned, is_suspended";
+      const PROFILE = "id, username, profile_photo_url, verified, is_banned, is_suspended";
       const [{ data: dms }, follows] = await Promise.all([
         supabase
           .from("messages")
@@ -87,14 +87,13 @@ export default function GiftDmPicker({
         const profileRow = isMineSender ? row.receiver : row.sender;
         if (!profileRow || profileRow.is_banned || profileRow.is_suspended || !profileRow.username) return;
         if (seen.has(partnerId)) return;
-        const display = [profileRow.first_name, profileRow.last_name].filter(Boolean).join(" ").trim() || profileRow.username;
         seen.set(partnerId, {
           partnerId,
           lastAt: row.created_at,
           partner: {
             id: profileRow.id,
             username: profileRow.username,
-            displayName: display,
+            displayName: profileRow.username,
             avatarUrl: profileRow.profile_photo_url,
             verified: !!profileRow.verified,
             source: "recent",

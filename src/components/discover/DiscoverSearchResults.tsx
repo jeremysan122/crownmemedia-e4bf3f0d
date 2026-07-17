@@ -12,7 +12,7 @@ import { Link } from "react-router-dom";
 import { Loader2, Hash, AtSign, Crown, Search as SearchIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-interface UserHit  { id: string; username: string; display_name: string | null; profile_photo_url: string | null; }
+interface UserHit  { id: string; username: string; profile_photo_url: string | null; }
 interface PostHit  { id: string; caption: string | null; image_url: string | null; image_urls: string[] | null; video_poster_url: string | null; profile: { username: string | null } | null; }
 interface HubHit   { slug: string; label: string; kind: "hub"; }
 interface TopicHit { slug: string; label: string; mainSlug: string | null; kind: "topic"; }
@@ -55,14 +55,14 @@ export default function DiscoverSearchResults({ query, onNavigate }: Props) {
     const t = setTimeout(async () => {
       try {
         const tasks: Array<PromiseLike<any>> = [];
-        // Users (username / display_name) — skip when a tag is being typed.
+        // Users (public username only) — skip when a tag is being typed.
         tasks.push(
           kind === "tag"
             ? Promise.resolve({ data: [] })
             : supabase
                 .from("profiles")
-                .select("id, username, display_name, profile_photo_url")
-                .or(`username.ilike.${like},display_name.ilike.${like}`)
+                .select("id, username, profile_photo_url")
+                .ilike("username", like)
                 .eq("is_banned", false)
                 .limit(6),
         );
@@ -164,7 +164,6 @@ export default function DiscoverSearchResults({ query, onNavigate }: Props) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold truncate">@{u.username}</p>
-                {u.display_name && <p className="text-[10px] text-muted-foreground truncate">{u.display_name}</p>}
               </div>
               <AtSign size={12} className="text-muted-foreground" />
             </Link>

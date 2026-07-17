@@ -421,7 +421,7 @@ export default function Discover() {
         .select(
           "id, ends_at, challenger_votes, opponent_votes, challenger_id, opponent_id, challenger:profiles!battles_challenger_id_fkey(username, profile_photo_url), opponent:profiles!battles_opponent_id_fkey(username, profile_photo_url)",
         )
-        .in("status", ["active", "pending"])
+        .eq("status", "active")
         .gt("ends_at", nowIso)
         .order("ends_at", { ascending: true })
         .order("id", { ascending: true })
