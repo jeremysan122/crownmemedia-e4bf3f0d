@@ -95,9 +95,11 @@ from Lovable Cloud → Users; the profile and post cascade.
 1. `bun run build` (TypeScript)
 2. `bun run lint`
 3. `bun run test` (vitest unit suite)
-4. `bunx playwright test` (the fixture-free browser suite always runs;
-   lifecycle, share-card, and verification specs require
-   `SUPABASE_SERVICE_ROLE_KEY` and skip cleanly without it)
+4. Playwright on desktop Chromium and mobile WebKit. With
+   `SUPABASE_SERVICE_ROLE_KEY`, CI runs the full suite and safely auto-seeds
+   its namespaced fixture. Without that secret, CI runs the hermetic mocked
+   navigation, profile, rewards, and admin-visibility smoke specs. This keeps
+   a real browser gate active without retrying credential-dependent tests.
 
 A separate optional `browserstack-ios` job runs only when both
 `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` repo secrets exist —

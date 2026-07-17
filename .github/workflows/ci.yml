@@ -48,8 +48,20 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium webkit
-      - name: Run Playwright (mobile + desktop, share-card + carousel + verification)
-        run: bunx playwright test
+      - name: Run Playwright (full suite with fixture, hermetic smoke otherwise)
+        shell: bash
+        run: |
+          if [[ -n "${SUPABASE_SERVICE_ROLE_KEY}" ]]; then
+            echo "Service-role fixture available: running the full Playwright suite."
+            bunx playwright test
+          else
+            echo "No service-role fixture: running the hermetic browser smoke suite."
+            bunx playwright test \
+              e2e/discover-suggested-creator-nav.spec.ts \
+              e2e/profile-follow-refresh.spec.ts \
+              e2e/rewards.spec.ts \
+              e2e/royal-pass-admin-only-visibility.spec.ts
+          fi
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v4
