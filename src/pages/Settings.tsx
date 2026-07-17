@@ -29,6 +29,11 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { state: pushState, enable: enablePush, disable: disablePush } = useWebPush();
 
+  const setPushEnabled = async (enabled: boolean) => {
+    const saved = enabled ? await enablePush() : await disablePush();
+    if (saved) await updatePrefs({ push_enabled: enabled });
+  };
+
   const out = async () => { await signOut(); nav("/", { replace: true }); };
 
   const togglePublicLikes = async (next: boolean) => {
@@ -175,7 +180,7 @@ export default function Settings() {
               size="sm"
               variant={pushState === "on" ? "outline" : "default"}
               disabled={pushState === "loading" || pushState === "unsupported" || pushState === "denied"}
-              onClick={() => pushState === "on" ? disablePush() : enablePush()}
+              onClick={() => void setPushEnabled(pushState !== "on")}
               className="h-8"
             >
               {pushState === "on" ? "Disable" : "Enable"}
@@ -217,16 +222,11 @@ export default function Settings() {
               <Switch
                 checked={prefs[key]}
                 onCheckedChange={async (v) => {
-                  if (key === "push_enabled" && v && typeof Notification !== "undefined") {
-                    try {
-                      const perm = await Notification.requestPermission();
-                      if (perm !== "granted") {
-                        toast.error("Push permission denied", { description: "Enable notifications in your browser settings to receive push alerts." });
-                        return;
-                      }
-                    } catch { /* noop */ }
+                  if (key === "push_enabled") {
+                    await setPushEnabled(v);
+                    return;
                   }
-                  updatePrefs({ [key]: v });
+                  await updatePrefs({ [key]: v });
                 }}
                 aria-label={title}
               />
