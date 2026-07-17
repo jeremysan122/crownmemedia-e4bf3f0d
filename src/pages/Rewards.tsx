@@ -371,7 +371,10 @@ export default function Rewards() {
 
   return (
     <AppShell showHeader={false}>
-    <main className="bg-[#0a0510] flex-1 lg:rounded-3xl lg:my-2 lg:mr-2">
+    <section
+      className="bg-[#0a0510] flex-1 lg:rounded-3xl lg:my-2 lg:mr-2"
+      aria-label="Daily rewards"
+    >
       <header className="lg:hidden sticky top-0 z-20 backdrop-blur bg-[#0a0510]/80 border-b border-amber-500/10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <Link to="/feed" aria-label="Back" className="p-2 -ml-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white"><ArrowLeft className="size-5" /></Link>
@@ -697,7 +700,7 @@ export default function Rewards() {
           </p>
         </div>
       </div>
-    </main>
+    </section>
     </AppShell>
   );
 }

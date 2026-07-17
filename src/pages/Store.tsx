@@ -182,6 +182,8 @@ export default function Store() {
   return (
     <AppShell title="ROYAL STORE">
       <div className="px-4 lg:px-0 py-4 space-y-4">
+        <h1 className="sr-only">Royal Store</h1>
+
         {/* Active boosts always visible at top */}
         <ActiveBoostsPanel />
 

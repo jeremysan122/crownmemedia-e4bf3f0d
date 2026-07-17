@@ -940,10 +940,10 @@ export default function Discover() {
           )}
         </div>
 
-        <main className="max-w-5xl mx-auto px-4 pb-24">
+        <section className="max-w-5xl mx-auto px-4 pb-24" aria-labelledby="discover-heading">
           <header className="pt-6 pb-4 flex items-start justify-between gap-3">
             <div>
-              <h1 className="font-display text-3xl mb-1">Discover</h1>
+              <h1 id="discover-heading" className="font-display text-3xl mb-1">Discover</h1>
               <p className="text-sm text-muted-foreground">Browse every kingdom. Crown a category.</p>
             </div>
             <button
@@ -1516,7 +1516,7 @@ export default function Discover() {
               })}
             </div>
           </section>
-        </main>
+        </section>
       </div>
     </AppShell>
   );
