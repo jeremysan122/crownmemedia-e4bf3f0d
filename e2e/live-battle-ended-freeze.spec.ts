@@ -1,7 +1,9 @@
 // After a live battle ends: optimistic UI, realtime vote patches, and vote
 // buttons must all be permanently frozen until the user refreshes the page.
 import { test, expect } from "@playwright/test";
-import { seedLiveBattle, signInAsSeed } from "./helpers/liveBattleSeed";
+import { hasServiceRoleForLive, seedLiveBattle, signInAsSeed } from "./helpers/liveBattleSeed";
+
+test.skip(!hasServiceRoleForLive(), "Requires service-role + seeded users.");
 
 test("post-ended vote controls stay locked and vote counts freeze", async ({ page }) => {
   const { battleId, viewer } = await seedLiveBattle({ status: "ended", host_votes: 7, opponent_votes: 4 });

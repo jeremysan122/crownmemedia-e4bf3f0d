@@ -1,7 +1,9 @@
 // Reopening /live/:id after a long idle must load the exact final weighted
 // leaderboard snapshot from the backend — no transient pre-ended flicker.
 import { test, expect } from "@playwright/test";
-import { seedLiveBattle, signInAsSeed } from "./helpers/liveBattleSeed";
+import { hasServiceRoleForLive, seedLiveBattle, signInAsSeed } from "./helpers/liveBattleSeed";
+
+test.skip(!hasServiceRoleForLive(), "Requires service-role + seeded users.");
 
 test("reopen after idle shows final snapshot without live-state flicker", async ({ page }) => {
   const { battleId, viewer } = await seedLiveBattle({

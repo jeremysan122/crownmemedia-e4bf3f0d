@@ -1,7 +1,9 @@
 // Vote chip lifecycle: pending → confirmed after realtime reconciliation,
 // or pending → failed when the RPC rejects. Final weighted score updates.
 import { test, expect } from "@playwright/test";
-import { seedLiveBattle, signInAsSeed } from "./helpers/liveBattleSeed";
+import { hasServiceRoleForLive, seedLiveBattle, signInAsSeed } from "./helpers/liveBattleSeed";
+
+test.skip(!hasServiceRoleForLive(), "Requires service-role + seeded users.");
 
 test("vote chip transitions pending → confirmed with weighted score update", async ({ page }) => {
   const { battleId, viewer } = await seedLiveBattle({ status: "live", duration_seconds: 600 });

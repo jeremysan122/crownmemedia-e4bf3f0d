@@ -6,8 +6,10 @@
  *   2. Cached e2e/.seed.json from a prior run — reuse.
  *   3. Live seed via service-role key — requires SUPABASE_SERVICE_ROLE_KEY.
  *
- * If none of the above works, we throw with a clear, actionable message
- * instead of letting individual specs silently `test.skip`.
+ * If none of the above works, fixture-dependent specs skip while the
+ * fixture-free browser suite still runs. Set E2E_REQUIRE_FIXTURE=1 when a
+ * missing fixture should fail the entire run (for example, in a fully
+ * provisioned release pipeline).
  */
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -40,24 +42,20 @@ export default async function globalSetup() {
   }
 
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error(
-      [
-        "",
-        "Playwright e2e setup cannot start: no test fixture is available.",
-        "",
-        "Pick ONE of these to fix it:",
-        "  (a) Auto-seed (recommended) — add SUPABASE_SERVICE_ROLE_KEY to your local .env",
-        "      and rerun. The seed script creates a test user + post namespaced with the",
-        "      'e2e_share_test' prefix and never touches real production data.",
-        "",
-        "  (b) Bring-your-own fixture — export both:",
-        "        E2E_POST_ID=<uuid of a real post>",
-        "        E2E_PROFILE_USERNAME=<existing username>",
-        "",
-        "See e2e/README.md for details.",
-        "",
-      ].join("\n"),
-    );
+    const message = [
+      "Playwright has no database fixture: fixture-dependent specs will skip.",
+      "Add SUPABASE_SERVICE_ROLE_KEY for safe auto-seeding, or set both",
+      "E2E_POST_ID and E2E_PROFILE_USERNAME to use an existing fixture.",
+      "Set E2E_REQUIRE_FIXTURE=1 to make a missing fixture fatal.",
+      "See e2e/README.md for details.",
+    ].join(" ");
+
+    if (process.env.E2E_REQUIRE_FIXTURE === "1") {
+      throw new Error(message);
+    }
+
+    console.warn(`[e2e/setup] ${message}`);
+    return;
   }
 
   console.log("[e2e/setup] Seeding fresh fixtures via service-role key…");
