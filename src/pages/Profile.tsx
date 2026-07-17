@@ -42,6 +42,7 @@ import ChallengeDialog from "@/components/battles/ChallengeDialog";
 import ReportDialog from "@/components/ReportDialog";
 import RoyalPassBadge from "@/components/store/RoyalPassBadge";
 import { useIsRoyalPassUser } from "@/hooks/useIsRoyalPassUser";
+import { deletePostWithMedia } from "@/lib/deletePostWithMedia";
 
 import { useActiveBoost } from "@/hooks/useActiveBoost";
 import VerifiedBadge from "@/components/VerifiedBadge";
@@ -1594,13 +1595,21 @@ export default function Profile() {
             <AlertDialogAction
               onClick={async () => {
                 const id = deletingPostId;
-                if (!id) return;
-                const { error } = await supabase.from("posts").delete().eq("id", id);
-                if (error) { logRawError(error, "generic"); toast.error(toFriendlyMessage(error, "generic")); return; }
-                setPosts((prev) => prev.filter((p) => p.id !== id));
-                window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id } }));
-                toast.success("Post deleted");
-                setDeletingPostId(null);
+                if (!id || !user?.id) return;
+                try {
+                  const result = await deletePostWithMedia(supabase, id, user.id);
+                  setPosts((prev) => prev.filter((p) => p.id !== id));
+                  window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id } }));
+                  if (result.cleanupDeferred) {
+                    toast.warning("Post deleted. Media cleanup will finish automatically.");
+                  } else {
+                    toast.success("Post deleted");
+                  }
+                  setDeletingPostId(null);
+                } catch (error) {
+                  logRawError(error, "generic", { feature: "post_delete", post_id: id, user_id: user.id, action: "delete", from: "profile" });
+                  toast.error(toFriendlyMessage(error, "generic"));
+                }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

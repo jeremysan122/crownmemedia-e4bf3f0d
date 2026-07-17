@@ -4,7 +4,7 @@
 
 **No-go for an unrestricted public launch with payments enabled.** The audited release is materially safer than the starting build, and the exercised application, database, Stripe sandbox lifecycle, and web-push paths now pass their controlled checks. One P0 platform blocker remains: Stripe's native webhook requests are rejected by the Lovable-managed Supabase gateway before CrownMe's HMAC verifier runs. A limited launch is reasonable only if payment-dependent fulfillment is disabled or the gateway/proxy issue is fixed and retested first.
 
-The media publication gate also remains incomplete because the browser bridge could not attach a local file without its file-URL permission. No production post or draft was changed. Software should not be described as “unbreakable”; the evidence and remaining gaps below define the current boundary.
+The browser media publication gate is complete. A labeled QA photo and a 1080×1920, 2.9-second Scroll were published, verified, and deleted; a 640×480 landscape clip was correctly rejected from the Scroll path with a 9:16 validation error. The test exposed one additional deletion defect: deleting a post removed its row immediately but left public media to the daily orphan job. All three user-facing delete paths now remove strictly owner-scoped Storage objects immediately, with the scheduled job retained as fallback. Software should not be described as “unbreakable”; the evidence and remaining gaps below define the current boundary.
 
 ## Released revisions
 
@@ -29,6 +29,8 @@ The media publication gate also remains incomplete because the browser bridge co
 - Updated the Stripe sandbox webhook subscription from 5 to 10 events while preserving the original events and adding the five refund/dispute events required by CrownMe.
 - Disabled and re-enabled browser push on `@crownmemedia` using the repaired production Settings flow. The backend then verified `push_enabled=true` and exactly one active subscription.
 - Ran one labeled production push canary to `@crownmemedia`: the send function returned `sent=1`, `failed=0`, `pruned=0`; the temporary notification was deleted; and the preference/subscription remained unchanged. Server acceptance is verified, but an OS-level visual toast was not observable from the database runner.
+- Published a labeled 1080×1080 QA photo through the production file chooser, verified its alt text, caption, category, feed card, and profile tile, then deleted it and confirmed the profile returned to its original post count.
+- Verified that the Scroll composer rejects a 640×480 landscape video, then published a public-domain 1080×1920, 2.9-second WebM. The Scroll rendered in the immersive viewer, appeared under `@crownmemedia → Scrolls`, and opened with the correct caption/category metadata before deletion. The temporary Scroll and photo are no longer present in the UI.
 
 ## Security remediation
 
@@ -43,12 +45,13 @@ The media publication gate also remains incomplete because the browser bridge co
 | Duplicate follow notifications | Removed notification insertion from the counter trigger and kept the single notification path | Live follow canary produced exactly one notification; cleanup restored the original counts |
 | Refund did not reverse store Shekels | Added a transactional refund RPC and explicit purchase/refund ledger semantics | Authentic signed sandbox refund plus replay/idempotency checks |
 | Web-push UI could report enabled without server state | Reconciled browser subscription, server subscription, and preference; both Settings controls now use one durable operation | Production disable/enable flow plus one-account delivery canary |
+| Deleted posts left public media until the daily orphan job | Added owner-scoped media-manifest capture and immediate Storage removal to Feed, Profile, and Archived Posts deletion; deferred cleanup is surfaced and remains covered by the scheduled fallback | 4 focused regression tests, TypeScript, full unit suite, and production build |
 
 Two Lovable warnings were reviewed as intentional fail-closed behavior, not vulnerabilities: feature flags are admin-managed and are not read by normal app clients; direct inserts into `profile_visits` are blocked because visits are recorded through the rate-limited `record_profile_visit` RPC.
 
 ## Automated verification
 
-- Vitest: **130 files passed, 5 skipped; 1,081 tests passed, 48 skipped**.
+- Vitest: **131 files passed, 5 skipped; 1,085 tests passed, 48 skipped**.
 - TypeScript: `tsc --noEmit` passed.
 - ESLint: **0 errors, 166 warnings**. The warnings are existing hook-dependency/Fast Refresh cleanup debt and do not fail the configured gate.
 - Production Vite build: passed. Vite still reports large-chunk optimization warnings.
@@ -76,7 +79,7 @@ Do not treat manual authenticated redelivery as proof that native Stripe deliver
 
 ## Remaining controlled gates
 
-1. Publish and delete a labeled QA photo and video through a real browser file chooser; verify feed, profile, Scrolls, poster, metadata, moderation, and storage cleanup. The browser bridge's file-URL permission must be enabled first.
+1. After the immediate media-deletion bundle reaches production, publish/delete one labeled canary and confirm its captured public Storage URL returns 404 immediately.
 2. Confirm the push canary's OS/browser notification appears and opens the expected route. The server accepted one delivery, but visual receipt was outside the server runner's observability.
 3. Run an expired-subscription `410 Gone` cleanup check only with a deterministic first-party test endpoint. It was intentionally skipped because no safe endpoint existed.
 4. After the P0 webhook ingress fix, repeat Stripe-initiated purchase, refund, duplicate-event replay, dispute lifecycle, receipt, and failure retry without adding a Supabase authorization header.

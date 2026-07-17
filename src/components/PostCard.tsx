@@ -34,6 +34,7 @@ import { subscribePost, subscribeStatus } from "@/lib/postRealtimeBus";
 import { registerVisiblePost } from "@/lib/postPollBus";
 import { trackEvent } from "@/lib/analytics";
 import ConfirmDialog from "./ConfirmDialog";
+import { deletePostWithMedia } from "@/lib/deletePostWithMedia";
 
 import { FilterId, isValidFilter, FILTER_BY_ID } from "@/lib/filters";
 import PostMedia from "./PostMedia";
@@ -273,19 +274,24 @@ function PostCard({ post, onCommentClick }: { post: FeedPost; onCommentClick?: (
   const deletePost = async () => {
     if (!user || !isOwner || deleteBusy) return;
     setDeleteBusy(true);
-    const { error } = await supabase.from("posts").delete().eq("id", post.id).eq("user_id", user.id);
-    if (error) {
+    try {
+      const result = await deletePostWithMedia(supabase, post.id, user.id);
+      trackEvent("post_deleted", { metadata: { post_id: interactionPostId } });
+      if (result.cleanupDeferred) {
+        toast.warning("Post deleted. Media cleanup will finish automatically.");
+      } else {
+        toast.success("Post deleted");
+      }
+      setDeleteConfirmOpen(false);
+      setHidden(true);
+      window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id: post.id } }));
+    } catch (error) {
       setDeleteBusy(false);
       logRawError(error, "generic", { feature: "post_delete", post_id: post.id, user_id: user.id, action: "delete" });
       toast.error(toFriendlyMessage(error, "generic"));
       return;
     }
-    trackEvent("post_deleted", { metadata: { post_id: interactionPostId } });
-    toast.success("Post deleted");
-    setDeleteConfirmOpen(false);
     setDeleteBusy(false);
-    setHidden(true);
-    window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id: post.id } }));
   };
 
   const archivePost = async () => {

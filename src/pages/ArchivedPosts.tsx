@@ -9,6 +9,7 @@ import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { Button } from "@/components/ui/button";
 import { formatScore } from "@/lib/crown";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { deletePostWithMedia } from "@/lib/deletePostWithMedia";
 
 interface ArchivedPost {
   id: string;
@@ -56,21 +57,26 @@ export default function ArchivedPosts() {
   const [removeBusy, setRemoveBusy] = useState(false);
 
   const remove = async () => {
-    if (!pendingDelete || removeBusy) return;
+    if (!pendingDelete || !user?.id || removeBusy) return;
     const id = pendingDelete;
     setRemoveBusy(true);
-    const { error } = await supabase.from("posts").delete().eq("id", id);
-    if (error) {
+    try {
+      const result = await deletePostWithMedia(supabase, id, user.id);
+      setPosts((p) => p.filter((x) => x.id !== id));
+      window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id } }));
+      if (result.cleanupDeferred) {
+        toast.warning("Post deleted. Media cleanup will finish automatically.");
+      } else {
+        toast.success("Post deleted");
+      }
+      setPendingDelete(null);
+    } catch (error) {
       setRemoveBusy(false);
       logRawError(error, "generic", { feature: "post_delete", post_id: id, action: "delete", from: "archived" });
       toast.error(toFriendlyMessage(error, "generic"));
       return;
     }
-    setPosts((p) => p.filter((x) => x.id !== id));
-    window.dispatchEvent(new CustomEvent("post:deleted", { detail: { id } }));
-    toast.success("Post deleted");
     setRemoveBusy(false);
-    setPendingDelete(null);
   };
 
   return (
