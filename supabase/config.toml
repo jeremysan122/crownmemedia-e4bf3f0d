@@ -28,7 +28,11 @@ project_id = "bailrqskqpmzvsgivhvm"
   [functions.moderate-media]
     verify_jwt = true
   [functions.analyze-post-media]
-    verify_jwt = true
+    # Function verifies either a user JWT or CRON_SECRET internally so the
+    # durable retry worker can invoke it without a user session.
+    verify_jwt = false
+  [functions.process-media-analysis-queue]
+    verify_jwt = false
   [functions.web-push-public-key]
     verify_jwt = false
   [functions.send-web-push]
@@ -40,4 +44,10 @@ project_id = "bailrqskqpmzvsgivhvm"
   [functions.seed-reserved-usernames]
     verify_jwt = true
   [functions.royal-pass-comms-cron]
+    verify_jwt = false
+  [functions.process-account-deletions]
+    verify_jwt = false
+  [functions.revenuecat-webhook]
+    # RevenueCat sends its configured static Authorization value, not a
+    # Supabase JWT. The function verifies that value in constant time.
     verify_jwt = false

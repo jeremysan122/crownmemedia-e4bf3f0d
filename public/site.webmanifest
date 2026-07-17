@@ -64,13 +64,6 @@
       "type": "image/png",
       "form_factor": "wide",
       "label": "CrownMe — Earn the crown"
-    },
-    {
-      "src": "/og-image.png",
-      "sizes": "1200x630",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "CrownMe on mobile"
     }
   ],
   "prefer_related_applications": false

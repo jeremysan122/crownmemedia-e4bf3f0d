@@ -20,7 +20,9 @@ export default defineConfig(({ mode }) => ({
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
   build: {
-    target: "esnext",
+    // A stable production baseline for current Safari/Chrome/Firefox instead
+    // of shipping syntax that only the newest engines understand.
+    target: "es2020",
     rollupOptions: {
       external: [/^@capacitor\//],
       output: {
@@ -28,12 +30,12 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("/node_modules/react/") || id.includes("/node_modules/react-dom/") || id.includes("/node_modules/scheduler/")) return "vendor-react";
           if (id.includes("mapbox-gl")) return "vendor-mapbox";
           if (id.includes("recharts")) return "vendor-charts";
-          if (id.includes("lucide-react")) return "vendor-lucide";
           if (id.includes("@supabase/")) return "vendor-supabase";
           if (id.includes("@tanstack/")) return "vendor-query";
-          // Keep Radix in the shared vendor chunk. Splitting it out can create a
-          // circular production chunk where Radix executes before React exists.
-          if (id.includes("node_modules")) return "vendor-misc";
+          // Keep interdependent UI primitives together, but let Rollup place
+          // feature-only libraries beside their lazy route instead of forcing
+          // a multi-megabyte global vendor chunk.
+          if (id.includes("@radix-ui/") || id.includes("/node_modules/cmdk/") || id.includes("/node_modules/vaul/")) return "vendor-ui";
         },
       },
     },

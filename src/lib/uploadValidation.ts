@@ -1,7 +1,6 @@
 /**
- * Client-side upload validation. Interim backup until server-side storage
- * bucket `file_size_limit` / `allowed_mime_types` are enforced in the
- * backend dashboard.
+ * Client-side upload validation. Server-side storage limits and the post
+ * publish RPC remain authoritative; these checks provide immediate feedback.
  *
  * These presets mirror the intended server-side bucket configuration.
  */
@@ -25,6 +24,16 @@ const MB = 1024 * 1024;
 
 const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"] as const;
 const VIDEO_MIMES = ["video/mp4", "video/quicktime", "video/webm"] as const;
+
+export const VIDEO_EXTENSION_BY_MIME: Readonly<Record<(typeof VIDEO_MIMES)[number], string>> = {
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
+  "video/webm": "webm",
+};
+
+export function videoExtensionForMime(mime: string): string | null {
+  return VIDEO_EXTENSION_BY_MIME[mime.toLowerCase() as keyof typeof VIDEO_EXTENSION_BY_MIME] ?? null;
+}
 
 export const UPLOAD_RULES: Record<UploadPreset, UploadRule> = {
   avatar:      { maxBytes: 5 * MB,   mimeTypes: IMAGE_MIMES, label: "avatar" },

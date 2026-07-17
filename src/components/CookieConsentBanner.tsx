@@ -1,19 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import {
+  getCookieConsent,
+  setCookieConsent,
+  type CookieConsentChoice,
+} from "@/lib/cookieConsent";
 
-const STORAGE_KEY = "cm:cookie-consent:v1";
-
-type Choice = "accepted" | "rejected";
-
-export function getCookieConsent(): Choice | null {
-  try {
-    const v = localStorage.getItem(STORAGE_KEY);
-    return v === "accepted" || v === "rejected" ? v : null;
-  } catch {
-    return null;
-  }
-}
+export { getCookieConsent } from "@/lib/cookieConsent";
 
 export default function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
@@ -22,9 +16,9 @@ export default function CookieConsentBanner() {
     if (getCookieConsent() === null) setVisible(true);
   }, []);
 
-  const decide = (choice: Choice) => {
+  const decide = (choice: CookieConsentChoice) => {
     try {
-      localStorage.setItem(STORAGE_KEY, choice);
+      setCookieConsent(choice);
       window.dispatchEvent(new CustomEvent("cm:cookie-consent", { detail: choice }));
     } catch {
       /* ignore */

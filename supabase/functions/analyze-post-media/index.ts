@@ -10,18 +10,18 @@
 //      `posts.moderation_status` / `posts.sensitive_reason` based on the
 //      verdict, but never overwrites the user's selected category.
 //
-// Fail-open w.r.t. UX: any error path marks the row `failed` (or
-// `needs_review`) and surfaces nothing to the user — the post stays live until
-// a human moderator acts (matching existing CrownMe moderation semantics).
+// Fail closed: posts remain processing/pending_review until analysis explicitly
+// approves safe or allowed-sensitive media.
 //
 // Idempotent: a second call for the same post short-circuits when a
 // `complete` row already exists.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { authorizeCronRequest } from "../_shared/cron-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, x-crownme-cron-secret, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -123,6 +123,7 @@ function coerceVerdict(raw: unknown): AiVerdict {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -132,25 +133,36 @@ Deno.serve(async (req) => {
   const startedAt = Date.now();
 
   try {
-    // ─── Authentication: require a valid JWT ───
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // ─── Authentication: user JWT or the internal moderation queue worker ───
+    let callerId: string | null = null;
+    const internalRequest = req.headers.has("x-crownme-cron-secret");
+    if (internalRequest) {
+      const authorization = authorizeCronRequest(req);
+      if (!authorization.ok) {
+        return new Response(JSON.stringify({ error: authorization.error }), {
+          status: authorization.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
       });
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+      if (claimsErr || !claimsData?.claims?.sub) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      callerId = claimsData.claims.sub as string;
     }
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
-    if (claimsErr || !claimsData?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const callerId = claimsData.claims.sub as string;
 
     const body = await req.json().catch(() => ({}));
     postId = typeof body?.post_id === "string" ? body.post_id : null;
@@ -161,12 +173,15 @@ Deno.serve(async (req) => {
     }
 
     // ─── Idempotency guard ───
-    const { data: existing } = await admin
+    const { data: existing, error: existingError } = await admin
       .from("post_media_ai_analysis")
       .select("id, analysis_status, retry_count")
       .eq("post_id", postId)
       .maybeSingle();
+    if (existingError) throw existingError;
     if (existing?.analysis_status === "complete") {
+      const { error: completeError } = await admin.rpc("complete_post_media_analysis_job", { _post_id: postId });
+      if (completeError) throw completeError;
       return new Response(JSON.stringify({ ok: true, status: "already_complete" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -184,7 +199,7 @@ Deno.serve(async (req) => {
       });
     }
     // Authorize: only the post owner or an admin/moderator may trigger analysis.
-    if (post.user_id !== callerId) {
+    if (callerId && post.user_id !== callerId) {
       const { data: isAdmin } = await admin.rpc("has_role", { _user_id: callerId, _role: "admin" });
       const { data: isMod } = await admin.rpc("has_role", { _user_id: callerId, _role: "moderator" });
       if (!isAdmin && !isMod) {
@@ -194,6 +209,8 @@ Deno.serve(async (req) => {
       }
     }
     if (post.is_removed) {
+      const { error: completeError } = await admin.rpc("complete_post_media_analysis_job", { _post_id: postId });
+      if (completeError) throw completeError;
       return new Response(JSON.stringify({ ok: true, status: "post_removed" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -211,17 +228,21 @@ Deno.serve(async (req) => {
       model_name: MODEL,
       analysis_status: "pending",
       retry_count: (existing?.retry_count ?? 0) + (existing ? 1 : 0),
-    }, { onConflict: "post_id" });
+    }, { onConflict: "post_id" }).throwOnError();
 
     if (urls.length === 0) {
-      // Nothing to analyse (e.g. video-only post during first ship).
+      // Missing preview media is never enough evidence to approve a post.
       await admin.from("post_media_ai_analysis").update({
-        analysis_status: "complete",
-        safety_status: "safe",
-        moderation_reason: "no image media",
+        analysis_status: "needs_review",
+        safety_status: "needs_review",
+        moderation_reason: "no reviewable preview media",
         duration_ms: Date.now() - startedAt,
-      }).eq("post_id", postId);
-      return new Response(JSON.stringify({ ok: true, status: "no_media" }), {
+      }).eq("post_id", postId).throwOnError();
+      await admin.from("posts").update({
+        moderation_status: "pending_review",
+        publish_status: "pending_review",
+      }).eq("id", postId).throwOnError();
+      return new Response(JSON.stringify({ ok: false, status: "no_media" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -233,9 +254,13 @@ Deno.serve(async (req) => {
         analysis_status: "failed",
         error_message: "LOVABLE_API_KEY missing",
         duration_ms: Date.now() - startedAt,
-      }).eq("post_id", postId);
+      }).eq("post_id", postId).throwOnError();
+      await admin.from("posts").update({
+        moderation_status: "pending_review",
+        publish_status: "pending_review",
+      }).eq("id", postId).throwOnError();
       return new Response(JSON.stringify({ ok: false, error: "AI disabled" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 503, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "30" },
       });
     }
 
@@ -271,11 +296,12 @@ Deno.serve(async (req) => {
         moderation_reason: isCredits ? "ai credits exhausted" : isRate ? "ai rate limited" : "ai gateway error",
         error_message: text.slice(0, 500),
         duration_ms: Date.now() - startedAt,
-      }).eq("post_id", postId);
+      }).eq("post_id", postId).throwOnError();
       // Per moderation rules: hide from public surfaces until reviewed.
       await admin.from("posts").update({
         moderation_status: "pending_review",
-      }).eq("id", postId);
+        publish_status: "pending_review",
+      }).eq("id", postId).throwOnError();
       return new Response(JSON.stringify({ ok: false, status: aiRes.status }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -295,6 +321,7 @@ Deno.serve(async (req) => {
       // Auto-hide + route to admin review. Keep is_removed=false so admins can
       // see it in CommandCenterContent; only humans should hard-remove.
       postUpdate.moderation_status = "pending_review";
+      postUpdate.publish_status = "pending_review";
       postUpdate.is_sensitive = true;
       postUpdate.sensitive_reason = verdict.reason.slice(0, 120) || "Flagged by automated review";
       postUpdate.content_rating = "explicit";
@@ -302,8 +329,14 @@ Deno.serve(async (req) => {
       postUpdate.is_sensitive = true;
       postUpdate.sensitive_reason = verdict.reason.slice(0, 120) || "Marked sensitive by automated review";
       postUpdate.content_rating = "suggestive";
+      postUpdate.moderation_status = "approved";
+      postUpdate.publish_status = "approved";
     } else if (verdict.safety_status === "needs_review") {
       postUpdate.moderation_status = "pending_review";
+      postUpdate.publish_status = "pending_review";
+    } else {
+      postUpdate.moderation_status = "approved";
+      postUpdate.publish_status = "approved";
     }
 
     // Always populate the AI search/discovery fields on the post — search
@@ -320,19 +353,29 @@ Deno.serve(async (req) => {
     }
 
     if (Object.keys(postUpdate).length > 0) {
-      await admin.from("posts").update(postUpdate).eq("id", postId);
+      await admin.from("posts").update(postUpdate).eq("id", postId).throwOnError();
     }
 
     // ─── Enqueue for human review when not safe ───
     if (verdict.safety_status === "blocked" || verdict.safety_status === "needs_review") {
-      await admin.from("moderation_queue").insert({
-        target_type: "post",
-        target_id: postId,
-        reason: `ai:${verdict.safety_status}:${verdict.reason || "auto"}`.slice(0, 200),
-        priority: verdict.safety_status === "blocked" ? 1 : 5,
-        status: "open",
-        metadata: { ai: true, model: MODEL, confidence: verdict.confidence, flags: verdict.safety_flags },
-      }).then(() => null, () => null); // ignore conflicts / missing columns
+      const { data: queued, error: queueReadError } = await admin.from("moderation_queue")
+        .select("id")
+        .eq("target_type", "post")
+        .eq("target_id", postId)
+        .in("status", ["pending", "in_review"])
+        .limit(1)
+        .maybeSingle();
+      if (queueReadError) throw queueReadError;
+      if (!queued) {
+        await admin.from("moderation_queue").insert({
+          target_type: "post",
+          target_id: postId,
+          reason: `ai:${verdict.safety_status}:${verdict.reason || "auto"}`.slice(0, 200),
+          priority: verdict.safety_status === "blocked" ? "urgent" : "normal",
+          status: "pending",
+          metadata: { ai: true, model: MODEL, confidence: verdict.confidence, flags: verdict.safety_flags },
+        }).throwOnError();
+      }
     }
 
     await admin.from("post_media_ai_analysis").update({
@@ -351,7 +394,10 @@ Deno.serve(async (req) => {
       duration_ms: aiDuration,
       token_usage: usage,
       error_message: null,
-    }).eq("post_id", postId);
+    }).eq("post_id", postId).throwOnError();
+
+    const { error: completeError } = await admin.rpc("complete_post_media_analysis_job", { _post_id: postId });
+    if (completeError) throw completeError;
 
     return new Response(JSON.stringify({ ok: true, verdict }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -368,9 +414,15 @@ Deno.serve(async (req) => {
           duration_ms: Date.now() - startedAt,
         }, { onConflict: "post_id" });
       } catch { /* noop */ }
+      try {
+        await admin.from("posts").update({
+          moderation_status: "pending_review",
+          publish_status: "pending_review",
+        }).eq("id", postId);
+      } catch { /* noop */ }
     }
     return new Response(JSON.stringify({ ok: false, error: "internal" }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

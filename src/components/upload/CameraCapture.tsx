@@ -82,6 +82,7 @@ export default function CameraCapture({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const compositeStreamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const startedAtRef = useRef<number>(0);
@@ -114,8 +115,18 @@ export default function CameraCapture({
   useEffect(() => { setFilter(initialFilter); }, [initialFilter]);
   useEffect(() => { setRatio(initialRatio); }, [initialRatio]);
 
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
+
+
+  const stopCompositeStream = () => {
+    compositeStreamRef.current?.getTracks().forEach((track) => track.stop());
+    compositeStreamRef.current = null;
+  };
 
   const stopStream = () => {
+    stopCompositeStream();
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
@@ -336,45 +347,90 @@ export default function CameraCapture({
   const startRecording = () => {
     const v = videoRef.current;
     const stream = streamRef.current;
-    if (!v || !stream) return;
+    if (!v || !stream || recorderRef.current) return;
     const canvas = canvasRef.current ?? document.createElement("canvas");
     canvasRef.current = canvas;
 
-    // RAF render loop into canvas
-    const start = performance.now();
-    const loop = () => {
-      paintFrame(canvas, v, filter, performance.now() - start);
-      rafRef.current = requestAnimationFrame(loop);
-    };
-    rafRef.current = requestAnimationFrame(loop);
+    let composite: MediaStream | null = null;
+    let rec: MediaRecorder;
+    try {
+      if (typeof MediaRecorder === "undefined") throw new Error("Recording is not supported by this browser");
 
-    // Build composite stream: video from canvas + audio from mic
-    const fps = 30;
-    const composite = (canvas as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }).captureStream(fps);
-    const audioTracks = stream.getAudioTracks();
-    audioTracks.forEach((t) => composite.addTrack(t));
+      // RAF render loop into canvas
+      const start = performance.now();
+      const loop = () => {
+        paintFrame(canvas, v, filter, performance.now() - start);
+        rafRef.current = requestAnimationFrame(loop);
+      };
+      rafRef.current = requestAnimationFrame(loop);
+
+      // Build an owned composite stream. Clone microphone tracks so stopping
+      // the recording never leaves or unexpectedly kills the camera stream.
+      const fps = 30;
+      composite = (canvas as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }).captureStream(fps);
+      stream.getAudioTracks().forEach((track) => composite!.addTrack(track.clone()));
+      compositeStreamRef.current = composite;
+
+      const mime = [
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp8,opus",
+        "video/webm",
+        "video/mp4",
+      ].find((candidate) => MediaRecorder.isTypeSupported(candidate));
+      const options: MediaRecorderOptions = {
+        videoBitsPerSecond: 8_000_000,
+        audioBitsPerSecond: 192_000,
+        ...(mime ? { mimeType: mime } : {}),
+      };
+      rec = new MediaRecorder(composite, options);
+    } catch (error) {
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      composite?.getTracks().forEach((track) => track.stop());
+      compositeStreamRef.current = null;
+      console.error("[CameraCapture] recorder init failed", error);
+      toast.error("Video recording is not supported on this device. Choose a video from your library instead.");
+      return;
+    }
 
     chunksRef.current = [];
-    const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-      ? "video/webm;codecs=vp9,opus"
-      : MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
-        ? "video/webm;codecs=vp8,opus"
-        : MediaRecorder.isTypeSupported("video/webm")
-          ? "video/webm"
-          : "video/mp4";
-    const rec = new MediaRecorder(composite, { mimeType: mime, videoBitsPerSecond: 8_000_000, audioBitsPerSecond: 192_000 });
     recorderRef.current = rec;
+    let recorderFailed = false;
     rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     rec.onstop = () => {
       if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-      const blob = new Blob(chunksRef.current, { type: mime });
-      const url = URL.createObjectURL(blob);
-      setPreviewUrl(url);
-      setPreviewBlob({ blob, kind: "video" });
+      stopCompositeStream();
+      if (!recorderFailed) {
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || "video/webm" });
+        const url = URL.createObjectURL(blob);
+        setPreviewUrl(url);
+        setPreviewBlob({ blob, kind: "video" });
+      }
       setRecording(false);
+      recorderRef.current = null;
       if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
+      if (stopTimerRef.current) { clearTimeout(stopTimerRef.current); stopTimerRef.current = null; }
     };
-    rec.start(250);
+    rec.onerror = (event) => {
+      recorderFailed = true;
+      console.error("[CameraCapture] recorder failed", event);
+      toast.error("Recording failed. Please try again or choose a video from your library.");
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
+      if (stopTimerRef.current) { clearTimeout(stopTimerRef.current); stopTimerRef.current = null; }
+      stopCompositeStream();
+      recorderRef.current = null;
+      setRecording(false);
+    };
+    try {
+      rec.start(250);
+    } catch (error) {
+      console.error("[CameraCapture] recorder start failed", error);
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      stopCompositeStream();
+      recorderRef.current = null;
+      toast.error("Recording could not start on this device. Choose a video from your library instead.");
+      return;
+    }
     startedAtRef.current = Date.now();
     setRecording(true);
     setElapsed(0);

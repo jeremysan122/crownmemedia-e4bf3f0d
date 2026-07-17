@@ -13,16 +13,12 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { type StripeEnv, createStripeClient } from "../_shared/stripe.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { authorizeCronRequest, cronResponseHeaders } from "../_shared/cron-auth.ts";
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: cronResponseHeaders,
   });
 }
 
@@ -30,7 +26,9 @@ const STALE_STATUSES = new Set(["active", "trialing", "past_due", "unpaid", "inc
 const MAX_BATCH = 50;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json(405, { error: "method not allowed" });
+  const authorization = authorizeCronRequest(req);
+  if (!authorization.ok) return json(authorization.status, { error: authorization.error });
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,

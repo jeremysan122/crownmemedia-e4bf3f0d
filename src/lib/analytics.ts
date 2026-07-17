@@ -2,6 +2,7 @@
 // We hash (user_id || daily salt) client-side so events are pseudonymous and
 // unlinkable across days.
 import { supabase } from "@/integrations/supabase/client";
+import { getCookieConsent } from "@/lib/cookieConsent";
 
 type EventName =
   | "vote_cast"
@@ -192,6 +193,8 @@ export interface TrackPayload {
 
 export async function trackEvent(event: EventName, payload: TrackPayload = {}): Promise<void> {
   try {
+    // Optional product analytics are disabled until the user explicitly opts in.
+    if (getCookieConsent() !== "accepted") return;
     const user_hash = await getUserHash();
     if (!user_hash) return; // anonymous visitors are not tracked
     // Strip any potentially identifying values from metadata

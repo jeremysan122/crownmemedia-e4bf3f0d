@@ -3,7 +3,7 @@
 // trial-ending notices (T-2d), and cancellation confirmations.
 // Idempotency keys guarantee at-most-once-per-period delivery.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { authorizeCronRequest, cronResponseHeaders } from "../_shared/cron-auth.ts";
 
 const admin = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -148,17 +148,29 @@ async function run() {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ ok: false, error: "method not allowed" }), {
+      status: 405,
+      headers: { ...cronResponseHeaders, Allow: "POST" },
+    });
+  }
+  const authorization = authorizeCronRequest(req);
+  if (!authorization.ok) {
+    return new Response(JSON.stringify({ ok: false, error: authorization.error }), {
+      status: authorization.status,
+      headers: cronResponseHeaders,
+    });
+  }
   try {
     const counts = await run();
     return new Response(JSON.stringify({ ok: true, counts }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: cronResponseHeaders,
     });
   } catch (e) {
     console.error("royal-pass-comms-cron error", e);
     return new Response(JSON.stringify({ ok: false, error: String(e) }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: cronResponseHeaders,
     });
   }
 });

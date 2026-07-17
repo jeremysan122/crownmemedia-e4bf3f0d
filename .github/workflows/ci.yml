@@ -9,11 +9,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   # Public anon key is safe to expose; service key + secrets are only in repo secrets.
-  VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-  VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
+  # Fork PRs do not receive repository secrets. The non-routable fallbacks let
+  # build and hermetic browser checks exercise the app without weakening secret
+  # isolation; real fixture tests still require the service-role secret.
+  VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://e2e.invalid' }}
+  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'e2e-public-anon-key' }}
+  VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID || 'e2e' }}
   VITE_PAYMENTS_CLIENT_TOKEN: ${{ secrets.VITE_PAYMENTS_CLIENT_TOKEN }}
 
 jobs:
@@ -26,8 +32,12 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-      - name: Build (typecheck)
+      - name: Type-check
+        run: bun run typecheck
+      - name: Production build
         run: bun run build
+      - name: Enforce bundle budget
+        run: bun run check:bundle
       - name: Lint
         run: bun run lint
       - name: Unit tests
@@ -57,6 +67,7 @@ jobs:
           else
             echo "No service-role fixture: running the hermetic browser smoke suite."
             bunx playwright test \
+              e2e/accessibility-smoke.spec.ts \
               e2e/discover-suggested-creator-nav.spec.ts \
               e2e/profile-follow-refresh.spec.ts \
               e2e/rewards.spec.ts \

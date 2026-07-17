@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from "react";
+import { reportClientError } from "@/lib/errorReporter";
 
 interface Props {
   children: ReactNode;
@@ -49,6 +50,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("[ErrorBoundary]", error, info.componentStack);
+    void reportClientError(error.message, error.stack, {
+      type: "react_error_boundary",
+      component_stack: info.componentStack?.slice(0, 8000),
+    });
 
     if (isStaleChunkError(error)) {
       try {
@@ -99,7 +104,8 @@ export class ErrorBoundary extends Component<Props, State> {
           <div>
             <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
             <p className="text-muted-foreground text-sm max-w-xs">
-              CrownMe hit an unexpected error. This has been reported. Try refreshing the page.
+              CrownMe hit an unexpected error. Try refreshing the page. If the problem
+              continues, contact support.
             </p>
           </div>
           <button

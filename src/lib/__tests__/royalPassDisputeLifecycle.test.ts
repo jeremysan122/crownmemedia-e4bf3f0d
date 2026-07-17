@@ -205,8 +205,9 @@ describe("Wave 8.2a — webhook routing", () => {
   it("does not crash on charge retrieval failure", () => {
     expect(webhook).toMatch(/could not retrieve charge[\s\S]+?catch/);
   });
-  it("wraps all dispute handling in a try/catch so errors don't abort the webhook", () => {
-    // The dispute block itself is inside a try { ... } catch { ... } that logs.
-    expect(webhook).toMatch(/dispute handler error/);
+  it("propagates dispute failures so Stripe can retry after the idempotency claim is released", () => {
+    expect(webhook).toMatch(/throw new Error\(`dispute handler failed:/);
+    expect(webhook).toMatch(/stripe_events"\)\.delete\(\)\.eq\("id", event\.id\)/);
+    expect(webhook).toMatch(/return jsonError\(500, "handler_error"/);
   });
 });

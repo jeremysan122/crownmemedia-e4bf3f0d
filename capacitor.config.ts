@@ -12,19 +12,14 @@ import type { CapacitorConfig } from "@capacitor/cli";
  *   4. `npm run build && npx cap sync`.
  *   5. `npx cap run android` (Android Studio) or `npx cap run ios` (Xcode).
  *
- * Hot-reload from the Lovable preview is enabled via `server.url` below.
- * Comment out `server` before producing a release build that should ship the
- * locally built web bundle.
+ * Release builds always load the bundled `dist/` assets. Developers can add
+ * a local server override in an uncommitted Capacitor config when needed.
  */
 const config: CapacitorConfig = {
-  appId: "app.lovable.fcbd98f7a4524e42a0f9b92cfce5c620",
+  appId: "com.crownmemedia.app",
   appName: "CrownMe",
   webDir: "dist",
   bundledWebRuntime: false,
-  server: {
-    url: "https://fcbd98f7-a452-4e42-a0f9-b92cfce5c620.lovableproject.com?forceHideBadge=true",
-    cleartext: true,
-  },
   ios: {
     contentInset: "always",
   },

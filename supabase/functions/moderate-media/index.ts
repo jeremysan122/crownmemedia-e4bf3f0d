@@ -35,23 +35,30 @@ Block (safe=false) for: nudity, sexual content, graphic violence/gore, hate symb
 illegal acts. Allow swimwear, art, tattoos, athletic context. When uncertain, prefer
 safe=false with category="suggestive".`
 
-// SSRF guard: only accept URLs that reference this project's Supabase Storage.
-const ALLOWED_BUCKETS = new Set(['avatars', 'posts', 'media', 'banners', 'share-cards'])
-function isAllowedStorageUrl(url: string, supabaseUrl: string): boolean {
+// SSRF/cost-abuse guard: this pre-publish endpoint only accepts objects under
+// the authenticated uploader's own media prefix in this Supabase project.
+function isAllowedStorageUrl(url: string, supabaseUrl: string, userId: string): boolean {
   if (typeof url !== 'string' || !url) return false
   let parsed: URL
   try { parsed = new URL(url) } catch { return false }
   let base: URL
   try { base = new URL(supabaseUrl) } catch { return false }
   if (parsed.origin !== base.origin) return false
-  const m = parsed.pathname.match(/^\/storage\/v1\/object\/(public|sign)\/([^/]+)\/.+/)
+  const m = parsed.pathname.match(/^\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)$/)
   if (!m) return false
-  return ALLOWED_BUCKETS.has(m[2])
+  let objectPath = ''
+  try { objectPath = decodeURIComponent(m[2]) } catch { return false }
+  return m[1] === 'media' && objectPath.startsWith(`${userId}/`)
 }
 
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
 
   try {
     // ─── Auth check ───
@@ -78,7 +85,7 @@ Deno.serve(async (req) => {
     const body = (await req.json().catch(() => ({}))) as ModerateBody
     const urls = Array.isArray(body.image_urls)
       ? body.image_urls
-          .filter((u): u is string => typeof u === 'string' && isAllowedStorageUrl(u, supabaseUrl))
+          .filter((u): u is string => typeof u === 'string' && isAllowedStorageUrl(u, supabaseUrl, userId))
           .slice(0, 10)
       : []
     const kind: 'photo' | 'video' = body.kind === 'video' ? 'video' : 'photo'
@@ -91,8 +98,9 @@ Deno.serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ safe: true, category: 'safe', confidence: 0, reason: 'moderation disabled' } satisfies Verdict), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      console.error('LOVABLE_API_KEY missing; moderation is unavailable')
+      return new Response(JSON.stringify({ safe: false, category: 'other', confidence: 0, reason: 'moderation unavailable' } satisfies Verdict), {
+        status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '30' },
       })
     }
 
@@ -137,28 +145,28 @@ Deno.serve(async (req) => {
     const raw = data?.choices?.[0]?.message?.content ?? '{}'
     let parsed: Partial<Verdict> = {}
     try { parsed = JSON.parse(raw) } catch { /* leave empty */ }
+    const validCategory = ['safe', 'suggestive', 'explicit', 'violence', 'hate', 'other'].includes(String(parsed.category))
     const verdict: Verdict = {
-      safe: parsed.safe !== false,
-      category: (parsed.category as Verdict['category']) ?? 'safe',
-      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
-      reason: typeof parsed.reason === 'string' ? parsed.reason.slice(0, 200) : 'ok',
+      // Invalid/ambiguous model output fails closed.
+      safe: parsed.safe === true,
+      category: validCategory ? parsed.category as Verdict['category'] : 'other',
+      confidence: typeof parsed.confidence === 'number' ? Math.max(0, Math.min(1, parsed.confidence)) : 0,
+      reason: typeof parsed.reason === 'string' ? parsed.reason.slice(0, 200) : 'ambiguous moderation response',
     }
 
     // ─── Audit log (service role bypasses RLS) ───
-    try {
-      const admin = createClient(supabaseUrl, serviceKey)
-      await admin.from('moderation_audit').insert({
-        user_id: userId,
-        kind,
-        safe: verdict.safe,
-        category: verdict.category,
-        confidence: verdict.confidence,
-        reason: verdict.reason,
-        image_urls: urls,
-      })
-    } catch (e) {
-      console.warn('audit insert failed', e)
-    }
+    // A moderation decision without an audit record is not a successful check.
+    // Throwing here keeps publication fail-closed and lets the caller retry.
+    const admin = createClient(supabaseUrl, serviceKey)
+    await admin.from('moderation_audit').insert({
+      user_id: userId,
+      kind,
+      safe: verdict.safe,
+      category: verdict.category,
+      confidence: verdict.confidence,
+      reason: verdict.reason,
+      image_urls: urls,
+    }).throwOnError()
 
     return new Response(JSON.stringify(verdict), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -424,11 +424,6 @@
       "count": 12
     }
   },
-  "src/lib/downloadMyData.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 13
-    }
-  },
   "src/lib/exportData.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 1
@@ -771,7 +766,7 @@
   },
   "supabase/functions/payments-webhook/index.ts": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 20
+      "count": 19
     }
   },
   "supabase/functions/royal-pass-reconcile/index.ts": {

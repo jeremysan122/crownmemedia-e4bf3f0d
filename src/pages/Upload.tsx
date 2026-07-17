@@ -15,7 +15,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { logRawError, toFriendlyMessage } from "@/lib/settingsSecurityErrors";
-import { validateUpload } from "@/lib/uploadValidation";
+import { validateUpload, videoExtensionForMime } from "@/lib/uploadValidation";
 import { isRateLimitError, RATE_LIMIT_FRIENDLY_MESSAGE } from "@/lib/rateLimit";
 import {
   isHeic,
@@ -111,6 +111,8 @@ export default function Upload() {
   const [mode, setMode] = useState<Mode>(initialContentType === "scroll" ? "video" : "photo");
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [video, setVideo] = useState<PickedVideo | null>(null);
+  const photosRef = useRef<PickedPhoto[]>([]);
+  const selectedVideoRef = useRef<PickedVideo | null>(null);
 
   const [caption, setCaption] = useState("");
   const [category, setCategory] = useState<CrownCategory>("overall");
@@ -404,13 +406,19 @@ export default function Upload() {
     }
   };
 
+  useEffect(() => { photosRef.current = photos; }, [photos]);
+  useEffect(() => { selectedVideoRef.current = video; }, [video]);
+
   // ────────── Object URL cleanup on unmount ──────────
   useEffect(() => {
     return () => {
-      photos.forEach((p) => URL.revokeObjectURL(p.preview));
-      if (video) URL.revokeObjectURL(video.preview);
+      photosRef.current.forEach((p) => URL.revokeObjectURL(p.preview));
+      const selected = selectedVideoRef.current;
+      if (selected) {
+        URL.revokeObjectURL(selected.preview);
+        if (selected.posterPreview) URL.revokeObjectURL(selected.posterPreview);
+      }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ────────── File pickers ──────────
@@ -517,16 +525,8 @@ export default function Upload() {
       if (remaining <= 0) { toast.error(`Max ${MAX_PHOTOS} photos`); return; }
       setPendingCrop({ file, fromCamera: true, origin: "camera" });
     } else {
-      try {
-        const meta = await probeVideo(file);
-        if (video) URL.revokeObjectURL(video.preview);
-        photos.forEach((p) => URL.revokeObjectURL(p.preview));
-        setPhotos([]);
-        setVideo({ file, preview: URL.createObjectURL(file), durationMs: meta.durationMs, width: meta.width, height: meta.height, origin: "camera" });
-        setMode("video");
-      } catch {
-        toast.error("Couldn't read recorded video");
-      }
+      // Camera output crosses the same validation boundary as gallery media.
+      await onPickVideo(file, "camera");
     }
   };
 
@@ -792,7 +792,8 @@ export default function Upload() {
           }, 3);
         }
       } else if (mode === "video" && video) {
-        const ext = video.file.name.split(".").pop() || "webm";
+        const ext = videoExtensionForMime(video.file.type);
+        if (!ext) throw new Error("Unsupported video format");
         const vPath = video.uploaded?.path ?? `${user.id}/video_${submissionKeyRef.current}.${ext}`;
         if (video.uploaded?.url) {
           setUploadStage("Video already uploaded — finishing…");
@@ -838,7 +839,7 @@ export default function Upload() {
           } catch (pe) {
             const msg = pe instanceof Error ? pe.message : "Preview frame upload failed";
             setVideo((cur) => (cur ? { ...cur, posterError: msg } : cur));
-            toast.warning("Couldn't make a preview thumbnail — you can retry it after posting.");
+            throw new Error("A verified preview image is required before a video can be published. Please retry.");
           }
         }
 
@@ -868,7 +869,8 @@ export default function Upload() {
             const { data: vVerdict, error: vModErr } = await supabase.functions.invoke("moderate-media", {
               body: { image_urls: frameUrls, kind: "video" },
             });
-            if (!vModErr && vVerdict?.safe === false) {
+            if (vModErr) throw new Error("Video safety review is temporarily unavailable. Please retry.");
+            if (vVerdict?.safe !== true) {
               throw new Error(`Blocked: ${vVerdict.reason || "Video flagged as unsafe."}`);
             }
           } finally {
@@ -877,32 +879,30 @@ export default function Upload() {
               try { await supabase.storage.from("media").remove(framePaths); } catch { /* noop */ }
             }
           }
+        } else {
+          throw new Error("Video safety frames could not be generated. Please choose another video.");
         }
 
-        if (imageUrls.length === 0 && videoUrl) imageUrls = [videoUrl];
+        if (!videoPosterUrl || imageUrls.length === 0) {
+          throw new Error("A valid video preview image is required before publishing.");
+        }
         setUploadProgress(90);
       }
 
       // ─── Pre-publish safety check ───
-      // Run NSFW/violence moderation on the uploaded image URLs. Server fails
-      // open on infra errors so users aren't blocked by transient gateway issues.
+      // Run NSFW/violence moderation on the uploaded image URLs. This is a
+      // launch safety boundary: infrastructure failures must keep media private
+      // from feed surfaces until a successful review can be completed.
       const toModerate = imageUrls.filter(Boolean).slice(0, 6);
       if (toModerate.length > 0) {
         setUploadStage("Reviewing media safety…");
-        try {
-          const { data: verdict, error: modErr } = await supabase.functions.invoke("moderate-media", {
-            body: { image_urls: toModerate },
-          });
-          if (modErr) {
-            // Network/function error — log and proceed. (We don't want infra to gate posting.)
-            console.warn("moderation invoke failed", modErr);
-          } else if (verdict && verdict.safe === false) {
-            const reason = (verdict.reason as string) || "Content flagged as not safe for the feed.";
-            throw new Error(`Blocked: ${reason}`);
-          }
-        } catch (e) {
-          if (e instanceof Error && e.message.startsWith("Blocked:")) throw e;
-          console.warn("moderation skipped", e);
+        const { data: verdict, error: modErr } = await supabase.functions.invoke("moderate-media", {
+          body: { image_urls: toModerate, kind: mode === "video" ? "video" : "photo" },
+        });
+        if (modErr) throw new Error("Media safety review is temporarily unavailable. Please retry.");
+        if (verdict?.safe !== true) {
+          const reason = (verdict?.reason as string) || "Content could not be approved for the feed.";
+          throw new Error(`Blocked: ${reason}`);
         }
       }
 
@@ -914,16 +914,15 @@ export default function Upload() {
       ).slice(0, 500);
 
       // ─── Idempotent publish via SECURITY DEFINER RPC ───
-      // Instant-publish model: new posts default to `approved` and appear on
-      // public surfaces immediately. The RPC dedupes on
+      // New posts enter `processing` and stay off public surfaces until the
+      // deeper server-side analysis explicitly approves them. The RPC dedupes on
       // (user_id, client_request_id) so refreshes, retries, and multi-tab
       // publishes can't create duplicates. Background moderation
-      // (moderate-media edge function + reports + admin actions) is the only
-      // path that can later flip the post to pending_review / rejected /
-      // sensitive — it runs after publish, not before.
+      // (moderate-media edge function + reports + admin actions) controls the
+      // transition to approved, pending_review, sensitive, or rejected.
       setUploadStage("Publishing…");
       const payload = {
-        image_url: imageUrls[0],
+        image_url: imageUrls[0] ?? null,
         image_urls: imageUrls,
         caption: finalCaption,
         category,
@@ -963,6 +962,7 @@ export default function Upload() {
         main_category_slug: derivedMain?.slug ?? null,
         subcategory_slug: derivedSub?.slug ?? null,
         content_type: contentType,
+        publish_status: "processing",
         // Per-post location. `location_source='none'` (the default) tells the
         // publish RPC + trigger to store nothing sensitive on the row.
         location_enabled: locationMode !== "none",
@@ -999,7 +999,7 @@ export default function Upload() {
       uploaded.length = 0;
       void postCommitted;
       const publishedRow = (published ?? null) as { id?: string; publish_status?: string; created_at?: string } | null;
-      const publishStatus = publishedRow?.publish_status ?? "approved";
+      const publishStatus = publishedRow?.publish_status ?? "processing";
       // If the RPC returned a row older than ~5s, it's a dedup-hit — the post
       // was created on a previous attempt with this same client_request_id.
       const wasExisting = !!publishedRow?.created_at &&
@@ -1008,30 +1008,18 @@ export default function Upload() {
         metadata: { publishStatus, deduped: wasExisting },
       });
 
-      // Kick off background AI media analysis (Gemini 2.5 Flash via Lovable AI
-      // Gateway). It runs once per post, writes safety/OCR/category results to
-      // `post_media_ai_analysis`, and may flip the post to
-      // sensitive/pending_review. Fire-and-forget so we never block the UI.
-      // The existing `moderate-media` pre-publish gate above still runs as a
-      // hard NSFW block; this new function is the deeper post-publish pass.
-      if (publishedRow?.id && !wasExisting) {
-        try {
-          void supabase.functions.invoke("analyze-post-media", {
-            body: { post_id: publishedRow.id },
-          });
-        } catch { /* non-fatal: admin can re-trigger or scheduled scanners pick it up */ }
-      }
+      // The publish RPC transactionally enqueues deeper media analysis. The
+      // authenticated queue worker owns retries, so closing this tab cannot
+      // strand a post or race a second moderation invocation.
 
       setUploadProgress(100);
-      // The post is live; AI media analysis runs in the background. Reflect
-      // that in the success label so users know review may still mark the
-      // post sensitive or send it to pending_review shortly after publish.
+      // Media analysis runs in the background while the post stays non-public.
       const statusLabel =
-        publishStatus === "approved" ? "Published! Analyzing media in background…" :
+        publishStatus === "approved" ? "Published!" :
         publishStatus === "rejected" ? "Rejected" :
         publishStatus === "pending_review" ? "Post is being reviewed" :
         wasExisting ? "Already published" :
-        "Published!";
+        "Post is processing";
       setUploadStage(statusLabel);
       if (wasExisting) trackEvent("post_publish_deduped");
 

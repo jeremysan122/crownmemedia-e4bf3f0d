@@ -359,7 +359,7 @@ export default function Auth() {
   // ============ Check inbox state ============
   if (checkInbox) {
     return (
-      <div className="min-h-screen flex flex-col px-6 py-10 bg-gradient-royal">
+      <main className="min-h-screen flex flex-col px-6 py-10 bg-gradient-royal">
         <Link to="/" className="flex flex-col items-center gap-2 mb-6 mx-auto" aria-label="CrownMe home">
           <BrandLogo size={88} priority />
         </Link>
@@ -389,12 +389,12 @@ export default function Auth() {
             Wrong email? Edit your details
           </button>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-[100svh] flex flex-col px-5 py-4 sm:py-6 bg-gradient-royal">
+    <main className="min-h-[100svh] flex flex-col px-5 py-4 sm:py-6 bg-gradient-royal">
       <Link to="/" className="flex flex-col items-center mb-2 mx-auto" aria-label="CrownMe home">
         <BrandLogo size={56} priority />
       </Link>
@@ -912,6 +912,6 @@ export default function Auth() {
 
         </form>
       </div>
-    </div>
+    </main>
   );
 }

@@ -29,11 +29,7 @@ Deno.serve(async (req) => {
   const rawEnv = new URL(req.url).searchParams.get("env");
   if (rawEnv !== "sandbox" && rawEnv !== "live") {
     console.error("[stripe-webhook] missing/invalid ?env=", rawEnv);
-    // Return 200 so Stripe doesn't retry forever on a misconfigured endpoint.
-    return new Response(JSON.stringify({ received: true, ignored: "invalid env" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonError(400, "invalid_environment", "Webhook URL must include ?env=sandbox or ?env=live");
   }
   const env: StripeEnv = rawEnv;
 
@@ -49,27 +45,13 @@ Deno.serve(async (req) => {
     .from("stripe_events")
     .insert({ id: event.id, type: event.type });
   if (dupErr) {
-    console.log(`[stripe-webhook] duplicate event ${event.id} — skipping`);
-    return new Response(JSON.stringify({ ok: true, duplicate: true }), {
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  // Idempotency #2 — per checkout session id
-  if (event.type === "checkout.session.completed") {
-    const sessionId = event.data.object.id as string;
-    const { data: existing } = await supabase
-      .from("shekel_ledger")
-      .select("id")
-      .eq("stripe_session_id", sessionId)
-      .limit(1)
-      .maybeSingle();
-    if (existing) {
-      console.log(`[stripe-webhook] session ${sessionId} already credited`);
-      return new Response(JSON.stringify({ ok: true, duplicate_session: true }), {
+    if ((dupErr as { code?: string }).code === "23505") {
+      console.log(`[stripe-webhook] duplicate event ${event.id} — skipping`);
+      return new Response(JSON.stringify({ ok: true, duplicate: true }), {
         headers: { "Content-Type": "application/json" },
       });
     }
+    return jsonError(500, "idempotency_store_unavailable", dupErr.message);
   }
 
   const stripe = createStripeClient(env);
@@ -88,8 +70,7 @@ Deno.serve(async (req) => {
   ) {
     const userId = userIdHint || sub.metadata?.userId || sub.metadata?.user_id;
     if (!userId) {
-      console.warn(`[stripe-webhook] sub ${sub.id} missing user_id`);
-      return;
+      throw new Error(`Subscription ${sub.id} is missing user_id metadata`);
     }
     const planId = planIdHint || sub.metadata?.plan_id || null;
     const item = sub.items?.data?.[0];
@@ -100,7 +81,8 @@ Deno.serve(async (req) => {
       .from("royal_pass_subscriptions")
       .select("id")
       .eq("user_id", userId)
-      .maybeSingle();
+      .maybeSingle()
+      .throwOnError();
 
     const row = {
       user_id: userId,
@@ -108,6 +90,8 @@ Deno.serve(async (req) => {
       stripe_customer_id:
         typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null,
       stripe_subscription_id: sub.id,
+      provider: "stripe",
+      provider_subscription_id: sub.id,
       status: sub.status,
       current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
       current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
@@ -116,14 +100,15 @@ Deno.serve(async (req) => {
     };
 
     if (existing) {
-      await supabase.from("royal_pass_subscriptions").update(row).eq("user_id", userId);
+      await supabase.from("royal_pass_subscriptions").update(row).eq("user_id", userId).throwOnError();
     } else {
-      await supabase.from("royal_pass_subscriptions").insert(row);
+      await supabase.from("royal_pass_subscriptions").insert(row).throwOnError();
     }
 
     if (sub.status === "active" || sub.status === "trialing") {
       try {
-        await supabase.rpc("grant_pass_invite_bonus", { _user_id: userId });
+        const { error } = await supabase.rpc("grant_pass_invite_bonus", { _user_id: userId });
+        if (error) throw error;
       } catch (e) {
         console.warn(`[stripe-webhook] grant_pass_invite_bonus failed for ${userId}: ${e}`);
       }
@@ -137,7 +122,8 @@ Deno.serve(async (req) => {
       .select("id")
       .eq("stripe_session_id", session.id)
       .eq("kind", "royal_pass")
-      .maybeSingle();
+      .maybeSingle()
+      .throwOnError();
     if (existing) return;
 
     let label = "Royal Pass · Subscription";
@@ -146,12 +132,13 @@ Deno.serve(async (req) => {
         .from("royal_pass_plans")
         .select("name, interval")
         .eq("id", planId)
-        .maybeSingle();
+        .maybeSingle()
+        .throwOnError();
       if (plan) label = `${plan.name} (${plan.interval}ly)`;
     }
     const usd = (session.amount_total ?? 0) / 100;
 
-    await supabase.from("shekel_ledger").insert({
+    await supabase.from("shekel_ledger").upsert({
       user_id: userId,
       kind: "royal_pass",
       shekels_delta: 0,
@@ -159,6 +146,7 @@ Deno.serve(async (req) => {
       label,
       stripe_session_id: session.id,
       stripe_event_id: event.id,
+      provider_event_id: `${session.id}:royal_pass`,
       metadata: {
         stripe_subscription_id: sub.id,
         stripe_customer_id:
@@ -167,14 +155,13 @@ Deno.serve(async (req) => {
         status: sub.status,
         plan_id: planId ?? null,
       },
-    });
+    }, { onConflict: "kind,provider_event_id", ignoreDuplicates: true }).throwOnError();
   }
 
   async function applyVerificationSubscription(sub: any, userIdHint?: string) {
     const userId = userIdHint || sub.metadata?.userId || sub.metadata?.user_id;
     if (!userId) {
-      console.warn(`[stripe-webhook] verification sub ${sub.id} missing user_id`);
-      return;
+      throw new Error(`Verification subscription ${sub.id} is missing user_id metadata`);
     }
     const isActive = sub.status === "active" || sub.status === "trialing";
     const item = sub.items?.data?.[0];
@@ -185,17 +172,18 @@ Deno.serve(async (req) => {
     // NOT auto-approval. Payment never sets profiles.verified = true and never
     // sets verification_requests.status = 'approved'. Admin still reviews the
     // submitted documents. If the user hasn't submitted a request yet, we
-    // create a `priority_review` placeholder so the admin queue picks it up.
+    // create a pending placeholder so the admin queue picks it up.
     const { data: existing } = await supabase
       .from("verification_requests")
       .select("id, status")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1)
-      .maybeSingle();
+      .maybeSingle()
+      .throwOnError();
 
     if (existing) {
-      // Preserve current status ('pending' | 'priority_review' | 'approved' | 'rejected')
+      // Preserve the current review status. Payment only updates billing linkage.
       // Only update billing linkage; never flip to 'approved' from payment alone.
       await supabase
         .from("verification_requests")
@@ -205,7 +193,8 @@ Deno.serve(async (req) => {
           subscription_renews_at: renewsAt,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", existing.id);
+        .eq("id", existing.id)
+        .throwOnError();
     } else {
       await supabase.from("verification_requests").insert({
         user_id: userId,
@@ -213,11 +202,11 @@ Deno.serve(async (req) => {
         legal_name: "(via subscription — pending user submission)",
         category: "subscription",
         reason: "Paid priority-review slot. Awaiting user documents + admin review.",
-        status: "priority_review",
+        status: "pending",
         subscription_active: isActive,
         subscription_id: sub.id,
         subscription_renews_at: renewsAt,
-      });
+      }).throwOnError();
     }
 
     // Do NOT touch profiles.verified from payment. Admin approval is required.
@@ -238,7 +227,8 @@ Deno.serve(async (req) => {
           details_submitted: !!acct.details_submitted,
           updated_at: new Date().toISOString(),
         })
-        .eq("stripe_account_id", acct.id);
+        .eq("stripe_account_id", acct.id)
+        .throwOnError();
       console.log(`[stripe-webhook] account.updated ${acct.id}`);
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
@@ -251,12 +241,12 @@ Deno.serve(async (req) => {
           : event.type === "payout.failed" ? "failed" : "pending";
         const { data: ca } = await supabase
           .from("connect_accounts").select("user_id")
-          .eq("stripe_account_id", accountId).maybeSingle();
+          .eq("stripe_account_id", accountId).maybeSingle().throwOnError();
         if (ca) {
           const { data: existing } = await supabase
-            .from("payouts").select("id").eq("stripe_payout_id", payout.id).maybeSingle();
+            .from("payouts").select("id").eq("stripe_payout_id", payout.id).maybeSingle().throwOnError();
           if (existing) {
-            await supabase.from("payouts").update({ status }).eq("stripe_payout_id", payout.id);
+            await supabase.from("payouts").update({ status }).eq("stripe_payout_id", payout.id).throwOnError();
           } else {
             await supabase.from("payouts").insert({
               user_id: (ca as any).user_id,
@@ -265,7 +255,7 @@ Deno.serve(async (req) => {
               payout_method: "stripe_connect",
               stripe_payout_id: payout.id,
               stripe_account_id: accountId,
-            });
+            }).throwOnError();
           }
         }
       }
@@ -318,7 +308,7 @@ Deno.serve(async (req) => {
                 _stripe_subscription_id: subId,
               });
               if (grantErr) {
-                console.error(`[stripe-webhook] grant_royal_monthly_benefits failed for ${userId}: ${grantErr.message}`);
+                throw grantErr;
               } else {
                 console.log(`[stripe-webhook] royal monthly benefits granted user=${userId} paid=${paidCents}`);
               }
@@ -327,7 +317,7 @@ Deno.serve(async (req) => {
             }
           }
         } catch (e) {
-          console.error(`[stripe-webhook] invoice.paid processing error: ${(e as Error).message}`);
+          throw new Error(`invoice.paid processing failed: ${(e as Error).message}`);
         }
       }
     }
@@ -339,12 +329,16 @@ Deno.serve(async (req) => {
     if (event.type === "charge.refunded") {
       try {
         const charge = event.data.object as any;
+        const refundFraction = Math.min(
+          1,
+          Math.max(0, Number(charge.amount_refunded ?? 0) / Math.max(1, Number(charge.amount ?? 0))),
+        );
+        const paymentIntentId = typeof charge.payment_intent === "string"
+          ? charge.payment_intent
+          : charge.payment_intent?.id ?? null;
         const isFullRefund = Number(charge.amount_refunded ?? 0) >= Number(charge.amount ?? 0);
         if (isFullRefund) {
           const invoiceId = typeof charge.invoice === "string" ? charge.invoice : charge.invoice?.id ?? null;
-          const paymentIntentId = typeof charge.payment_intent === "string"
-            ? charge.payment_intent
-            : charge.payment_intent?.id ?? null;
           const { error } = await supabase.rpc("handle_royal_refund", {
             _stripe_event_id: event.id,
             _reason: "charge.refunded",
@@ -353,13 +347,20 @@ Deno.serve(async (req) => {
             _stripe_charge_id: charge.id,
             _new_status: "reversed",
           });
-          if (error) console.error(`[stripe-webhook] handle_royal_refund failed: ${error.message}`);
+          if (error) throw error;
           else console.log(`[stripe-webhook] refund processed charge=${charge.id}`);
-        } else {
-          console.log(`[stripe-webhook] partial refund ignored charge=${(event.data.object as any).id}`);
+        }
+        if (paymentIntentId && refundFraction > 0) {
+          const { error: oneTimeRefundError } = await supabase.rpc("reverse_stripe_one_time_purchase", {
+            _stripe_payment_intent_id: paymentIntentId,
+            _provider_event_id: event.id,
+            _refund_fraction: refundFraction,
+            _reason: isFullRefund ? "charge.refunded" : "charge.partially_refunded",
+          });
+          if (oneTimeRefundError) throw oneTimeRefundError;
         }
       } catch (e) {
-        console.error(`[stripe-webhook] refund handler error: ${(e as Error).message}`);
+        throw new Error(`refund handler failed: ${(e as Error).message}`);
       }
     }
 
@@ -413,7 +414,7 @@ Deno.serve(async (req) => {
             _stripe_payment_intent_id: paymentIntentId,
             _stripe_charge_id: chargeId,
           });
-          if (error) console.error(`[stripe-webhook] handle_royal_dispute_created failed: ${error.message}`);
+          if (error) throw error;
           else console.log(`[stripe-webhook] dispute created dispute=${disputeId}`);
         } else if (event.type === "charge.dispute.funds_withdrawn") {
           const { error } = await supabase.rpc("handle_royal_dispute_funds_withdrawn", {
@@ -423,7 +424,7 @@ Deno.serve(async (req) => {
             _stripe_payment_intent_id: paymentIntentId,
             _stripe_charge_id: chargeId,
           });
-          if (error) console.error(`[stripe-webhook] handle_royal_dispute_funds_withdrawn failed: ${error.message}`);
+          if (error) throw error;
           else console.log(`[stripe-webhook] dispute funds withdrawn dispute=${disputeId}`);
         } else if (event.type === "charge.dispute.funds_reinstated") {
           const { error } = await supabase.rpc("handle_royal_dispute_reinstated", {
@@ -433,7 +434,7 @@ Deno.serve(async (req) => {
             _stripe_charge_id: chargeId,
             _stripe_dispute_id: disputeId,
           });
-          if (error) console.error(`[stripe-webhook] handle_royal_dispute_reinstated failed: ${error.message}`);
+          if (error) throw error;
           else console.log(`[stripe-webhook] dispute funds reinstated dispute=${disputeId}`);
         } else if (event.type === "charge.dispute.closed") {
           if (dispute.status === "lost") {
@@ -445,8 +446,17 @@ Deno.serve(async (req) => {
               _stripe_payment_intent_id: paymentIntentId,
               _stripe_charge_id: chargeId,
             });
-            if (error) console.error(`[stripe-webhook] handle_royal_dispute_lost failed: ${error.message}`);
-            else console.log(`[stripe-webhook] dispute lost dispute=${disputeId}`);
+            if (error) throw error;
+            if (paymentIntentId) {
+              const { error: oneTimeDisputeError } = await supabase.rpc("reverse_stripe_one_time_purchase", {
+                _stripe_payment_intent_id: paymentIntentId,
+                _provider_event_id: event.id,
+                _refund_fraction: 1,
+                _reason: `dispute_lost${dispute.reason ? `:${dispute.reason}` : ""}`,
+              });
+              if (oneTimeDisputeError) throw oneTimeDisputeError;
+            }
+            console.log(`[stripe-webhook] dispute lost dispute=${disputeId}`);
           } else if (dispute.status === "won") {
             const { error } = await supabase.rpc("handle_royal_dispute_won", {
               _stripe_event_id: event.id,
@@ -455,14 +465,14 @@ Deno.serve(async (req) => {
               _stripe_payment_intent_id: paymentIntentId,
               _stripe_charge_id: chargeId,
             });
-            if (error) console.error(`[stripe-webhook] handle_royal_dispute_won failed: ${error.message}`);
+            if (error) throw error;
             else console.log(`[stripe-webhook] dispute won dispute=${disputeId}`);
           } else {
             console.log(`[stripe-webhook] dispute closed with status=${dispute.status} — no-op`);
           }
         }
       } catch (e) {
-        console.error(`[stripe-webhook] dispute handler error: ${(e as Error).message}`);
+        throw new Error(`dispute handler failed: ${(e as Error).message}`);
       }
     }
 
@@ -509,7 +519,8 @@ Deno.serve(async (req) => {
         session.metadata?.kind === "royal_pass_gift"
       ) {
         const giftId = session.metadata?.gift_id as string | undefined;
-        if (giftId) {
+        if (!giftId) throw new Error("Royal Pass gift checkout is missing gift_id metadata");
+        {
           const paymentIntentId =
             typeof session.payment_intent === "string"
               ? session.payment_intent
@@ -523,17 +534,18 @@ Deno.serve(async (req) => {
               amount_usd: (session.amount_total ?? 0) / 100,
               updated_at: new Date().toISOString(),
             })
-            .eq("id", giftId);
+            .eq("id", giftId)
+            .throwOnError();
 
-          try {
-            const { data: grantRes } = await supabase.rpc(
-              "grant_royal_pass_gift_period",
-              { _gift_id: giftId },
-            );
-            console.log(`[stripe-webhook] royal_pass_gift granted`, grantRes);
-          } catch (e) {
-            console.error(`[stripe-webhook] grant_royal_pass_gift_period error: ${(e as Error).message}`);
+          const { data: grantRes, error: grantError } = await supabase.rpc(
+            "grant_royal_pass_gift_period",
+            { _gift_id: giftId },
+          );
+          if (grantError) throw grantError;
+          if (grantRes && typeof grantRes === "object" && "ok" in grantRes && !grantRes.ok) {
+            throw new Error(`Royal Pass gift grant rejected: ${JSON.stringify(grantRes)}`);
           }
+          console.log(`[stripe-webhook] royal_pass_gift granted`, grantRes);
         }
         return new Response(JSON.stringify({ ok: true, royal_pass_gift: true }), {
           headers: { "Content-Type": "application/json" },
@@ -556,9 +568,19 @@ Deno.serve(async (req) => {
       }
 
       // One-off checkout — Shekel bundle or Boost
+      const oneTimePaymentIntentId =
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : session.payment_intent?.id ?? null;
+      if (session.mode !== "payment" || !oneTimePaymentIntentId) {
+        throw new Error("Unsupported checkout session or missing payment intent");
+      }
       let totalShekels = 0;
       let totalUsd = 0;
+      let bundleUsd = 0;
+      const purchasedBundles: Array<{ label: string; quantity: number; shekels: number }> = [];
       const boostsActivated: string[] = [];
+      const unknownLineItems: string[] = [];
 
       const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
         limit: 20,
@@ -578,7 +600,8 @@ Deno.serve(async (req) => {
             .from("shekel_bundles")
             .select("shekels, label")
             .eq("stripe_price_id", lookupKey)
-            .maybeSingle();
+            .maybeSingle()
+            .throwOnError();
           bundle = r.data;
         }
         if (!bundle && stripePriceId) {
@@ -586,22 +609,15 @@ Deno.serve(async (req) => {
             .from("shekel_bundles")
             .select("shekels, label")
             .eq("stripe_price_id", stripePriceId)
-            .maybeSingle();
+            .maybeSingle()
+            .throwOnError();
           bundle = r.data;
         }
         if (bundle) {
           const credit = Number(bundle.shekels) * qty;
           totalShekels += credit;
-          await supabase.from("shekel_ledger").insert({
-            user_id: userId,
-            kind: "bundle_purchase",
-            shekels_delta: credit,
-            usd_amount: itemUsd,
-            label: bundle.label,
-            stripe_session_id: session.id,
-            stripe_event_id: event.id,
-            metadata: { lookup_key: lookupKey, price_id: stripePriceId, quantity: qty },
-          });
+          bundleUsd += itemUsd;
+          purchasedBundles.push({ label: bundle.label, quantity: qty, shekels: credit });
           continue;
         }
 
@@ -612,7 +628,8 @@ Deno.serve(async (req) => {
             .from("boost_bundles")
             .select("boost_type, duration_hours, label")
             .eq("stripe_price_id", lookupKey)
-            .maybeSingle();
+            .maybeSingle()
+            .throwOnError();
           boost = r.data;
         }
         if (!boost && stripePriceId) {
@@ -620,7 +637,8 @@ Deno.serve(async (req) => {
             .from("boost_bundles")
             .select("boost_type, duration_hours, label")
             .eq("stripe_price_id", stripePriceId)
-            .maybeSingle();
+            .maybeSingle()
+            .throwOnError();
           boost = r.data;
         }
         if (boost) {
@@ -633,24 +651,29 @@ Deno.serve(async (req) => {
               .from("posts")
               .select("id, user_id, is_removed")
               .eq("id", metaPostId)
-              .maybeSingle();
+              .maybeSingle()
+              .throwOnError();
             if (ownerPost && !ownerPost.is_removed && ownerPost.user_id === userId) {
               postIdToWrite = ownerPost.id;
             }
           }
+          const providerLineKey = `${lookupKey || stripePriceId || boost.boost_type}:${qty}`;
           const { data: b } = await supabase
             .from("boosts")
-            .insert({
+            .upsert({
               user_id: userId,
               post_id: postIdToWrite,
               boost_type: boost.boost_type,
               active: true,
               expires_at: expires,
-            })
+              provider_event_id: session.id,
+              provider_line_key: providerLineKey,
+            }, { onConflict: "provider_event_id,provider_line_key", ignoreDuplicates: true })
             .select("id")
-            .single();
+            .maybeSingle()
+            .throwOnError();
           boostsActivated.push(boost.label);
-          await supabase.from("shekel_ledger").insert({
+          await supabase.from("shekel_ledger").upsert({
             user_id: userId,
             kind: "boost_stripe",
             shekels_delta: 0,
@@ -658,33 +681,41 @@ Deno.serve(async (req) => {
             label: `${boost.label} (${boost.duration_hours}h)`,
             stripe_session_id: session.id,
             stripe_event_id: event.id,
+            provider_event_id: `${session.id}:boost:${providerLineKey}`,
             reference_id: b?.id ?? null,
-            metadata: { lookup_key: lookupKey, price_id: stripePriceId, boost_type: boost.boost_type },
-          });
+            metadata: {
+              lookup_key: lookupKey,
+              price_id: stripePriceId,
+              boost_type: boost.boost_type,
+              stripe_payment_intent_id: oneTimePaymentIntentId,
+            },
+          }, { onConflict: "kind,provider_event_id", ignoreDuplicates: true }).throwOnError();
           continue;
         }
 
-        console.warn(`[stripe-webhook] unknown line item lookup=${lookupKey} price=${stripePriceId}`);
+        unknownLineItems.push(`${lookupKey || "no_lookup"}/${stripePriceId || "no_price"}`);
+      }
+
+      if (unknownLineItems.length > 0) {
+        throw new Error(`Unrecognized paid checkout line item(s): ${unknownLineItems.join(", ")}`);
       }
 
       // Credit Shekels to wallet
       if (totalShekels > 0) {
-        const { data: wallet } = await supabase
-          .from("wallets")
-          .select("shekel_balance")
-          .eq("user_id", userId)
-          .maybeSingle();
-        if (wallet) {
-          await supabase
-            .from("wallets")
-            .update({
-              shekel_balance: Number(wallet.shekel_balance) + totalShekels,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("user_id", userId);
-        } else {
-          await supabase.from("wallets").insert({ user_id: userId, shekel_balance: totalShekels });
-        }
+        const { error } = await supabase.rpc("credit_provider_shekels", {
+          _user_id: userId,
+          _provider: "stripe",
+          _provider_event_id: session.id,
+          _amount: totalShekels,
+          _label: purchasedBundles.map((bundle) => bundle.label).join(" + ") || "Stripe Shekel purchase",
+          _metadata: {
+            bundles: purchasedBundles,
+            stripe_payment_intent_id: oneTimePaymentIntentId,
+          },
+          _usd_amount: bundleUsd,
+          _stripe_event_id: event.id,
+        });
+        if (error) throw error;
       }
 
       console.log(

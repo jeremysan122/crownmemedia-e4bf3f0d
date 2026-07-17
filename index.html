@@ -21,8 +21,8 @@
     <link rel="canonical" href="https://crownmemedia.com/" />
 
     <!-- ── DNS prefetch / Preconnect (critical third-party origins) ───── -->
-    <link rel="preconnect" href="https://pbfuhitldiftvucuqtai.supabase.co" crossorigin />
-    <link rel="dns-prefetch" href="https://pbfuhitldiftvucuqtai.supabase.co" />
+    <link rel="preconnect" href="https://bailrqskqpmzvsgivhvm.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://bailrqskqpmzvsgivhvm.supabase.co" />
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://api.mapbox.com" crossorigin />
     <link rel="dns-prefetch" href="https://api.mapbox.com" />
@@ -69,7 +69,7 @@
       "name": "CrownMe",
       "url": "https://crownmemedia.com",
       "applicationCategory": "SocialNetworkingApplication",
-      "operatingSystem": "Web, iOS, Android",
+      "operatingSystem": "Web",
       "description": "The 18+ social photo competition. Post, get voted, climb city, country, and global leaderboards.",
       "featureList": [
         "Photo competitions",
@@ -119,24 +119,6 @@
     }
     </script>
 
-    <!-- ── Structured Data: Website (for Sitelinks Searchbox) ────────── -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "CrownMe",
-      "url": "https://crownmemedia.com",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": {
-          "@type": "EntryPoint",
-          "urlTemplate": "https://crownmemedia.com/feed?q={search_term_string}"
-        },
-        "query-input": "required name=search_term_string"
-      }
-    }
-    </script>
-
   </head>
   <body>
     <!-- Apply saved theme before first paint to avoid flash -->
@@ -152,6 +134,12 @@
         } catch (e) {}
       })();
     </script>
+    <noscript>
+      <main style="max-width:42rem;margin:5rem auto;padding:1.5rem;color:#f7f2ff;font-family:system-ui,sans-serif;text-align:center">
+        <h1>CrownMe requires JavaScript</h1>
+        <p>Please enable JavaScript to use the app. For help, contact support@crownmemedia.com.</p>
+      </main>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

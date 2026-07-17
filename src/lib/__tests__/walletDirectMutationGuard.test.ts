@@ -27,6 +27,10 @@ const ALLOWED = new Set<string>([
   "public.handle_royal_dispute_reinstated",
   "public.refund_gift",
   "public.process_royal_reversal",
+  // Provider-only refund funnels intentionally bypass user-spend checks so a
+  // chargeback can record debt even after the purchased currency was spent.
+  "public.reverse_provider_shekel_purchase",
+  "public.reverse_stripe_one_time_purchase",
 ]);
 
 // Debit against wallet balance, tolerant of newlines/whitespace between

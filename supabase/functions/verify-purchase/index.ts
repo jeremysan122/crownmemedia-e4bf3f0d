@@ -11,6 +11,7 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -53,25 +54,12 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.retrieve(session_id, {
       expand: ["line_items", "line_items.data.price"],
     });
-    if (session.metadata?.user_id !== userId) {
+    if ((session.metadata?.user_id || session.metadata?.userId) !== userId) {
       return new Response(JSON.stringify({ error: "Not your session" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Already credited? Scoped to the authenticated user as defence-in-depth.
-    const { data: existing } = await admin
-      .from("shekel_ledger")
-      .select("id, kind, shekels_delta, usd_amount, label, created_at")
-      .eq("stripe_session_id", session_id)
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true });
-    if (existing && existing.length > 0) {
-      return new Response(JSON.stringify({
-        status: "already_credited",
-        ledger: existing,
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
     if (session.payment_status !== "paid") {
       return new Response(JSON.stringify({
         status: "unpaid",
@@ -89,6 +77,9 @@ Deno.serve(async (req) => {
     }
 
     let totalShekels = 0;
+    let bundleUsd = 0;
+    const purchasedBundles: Array<{ label: string; quantity: number; shekels: number }> = [];
+    const unknownLineItems: string[] = [];
     const lineItems = session.line_items?.data
       ?? (await stripe.checkout.sessions.listLineItems(session.id, { limit: 20 })).data;
 
@@ -101,7 +92,10 @@ Deno.serve(async (req) => {
       const lookupKey = priceObj?.lookup_key
         || priceObj?.metadata?.lovable_external_id
         || stripePriceId;
-      if (!lookupKey) continue;
+      if (!lookupKey) {
+        unknownLineItems.push("missing_lookup_and_price");
+        continue;
+      }
       const qty = item.quantity || 1;
       const itemUsd = (item.amount_total ?? 0) / 100;
 
@@ -109,27 +103,22 @@ Deno.serve(async (req) => {
         .from("shekel_bundles")
         .select("shekels, label")
         .eq("stripe_price_id", lookupKey)
-        .maybeSingle();
+        .maybeSingle()
+        .throwOnError();
       if (bundle) {
         const credit = Number(bundle.shekels) * qty;
         totalShekels += credit;
-        await admin.from("shekel_ledger").insert({
-          user_id: userId,
-          kind: "bundle_purchase",
-          shekels_delta: credit,
-          usd_amount: itemUsd,
-          label: bundle.label,
-          stripe_session_id: session.id,
-          metadata: { price_id: lookupKey, quantity: qty, source: "verify-purchase" },
-        });
+        bundleUsd += itemUsd;
+        purchasedBundles.push({ label: bundle.label, quantity: qty, shekels: credit });
         continue;
       }
 
       const { data: boost } = await admin
         .from("boost_bundles")
         .select("boost_type, duration_hours, label")
-        .eq("stripe_price_id", lookupKey)
-        .maybeSingle();
+          .eq("stripe_price_id", lookupKey)
+          .maybeSingle()
+          .throwOnError();
       if (boost) {
         const expires = new Date(Date.now() + boost.duration_hours * 3600_000).toISOString();
         const POST_TARGETED = new Set(["royal_boost", "vote_boost", "crown_spotlight", "crown_shield"]);
@@ -138,38 +127,56 @@ Deno.serve(async (req) => {
         if (POST_TARGETED.has(boost.boost_type) && metaPostId) {
           const { data: ownerPost } = await admin
             .from("posts").select("id, user_id, is_removed")
-            .eq("id", metaPostId).maybeSingle();
+            .eq("id", metaPostId).maybeSingle().throwOnError();
           if (ownerPost && !ownerPost.is_removed && ownerPost.user_id === userId) {
             postIdToWrite = ownerPost.id;
           }
         }
+        const providerLineKey = `${lookupKey}:${qty}`;
         const { data: b } = await admin.from("boosts")
-          .insert({ user_id: userId, post_id: postIdToWrite, boost_type: boost.boost_type, active: true, expires_at: expires })
-          .select("id").single();
-        await admin.from("shekel_ledger").insert({
+          .upsert({
+            user_id: userId,
+            post_id: postIdToWrite,
+            boost_type: boost.boost_type,
+            active: true,
+            expires_at: expires,
+            provider_event_id: session.id,
+            provider_line_key: providerLineKey,
+          }, { onConflict: "provider_event_id,provider_line_key", ignoreDuplicates: true })
+          .select("id").maybeSingle().throwOnError();
+        await admin.from("shekel_ledger").upsert({
           user_id: userId,
           kind: "boost_stripe",
           shekels_delta: 0,
           usd_amount: itemUsd,
           label: `${boost.label} (${boost.duration_hours}h)`,
           stripe_session_id: session.id,
+          provider_event_id: `${session.id}:boost:${providerLineKey}`,
           reference_id: b?.id ?? null,
           metadata: { price_id: lookupKey, boost_type: boost.boost_type, source: "verify-purchase" },
-        });
+        }, { onConflict: "kind,provider_event_id", ignoreDuplicates: true }).throwOnError();
+        continue;
       }
+
+      unknownLineItems.push(lookupKey);
+    }
+
+    if (unknownLineItems.length > 0) {
+      throw new Error(`Unrecognized paid checkout line item(s): ${unknownLineItems.join(", ")}`);
     }
 
     if (totalShekels > 0) {
-      const { data: w } = await admin.from("wallets")
-        .select("shekel_balance").eq("user_id", userId).maybeSingle();
-      if (w) {
-        await admin.from("wallets")
-          .update({
-            shekel_balance: Number(w.shekel_balance) + totalShekels,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", userId);
-      }
+      const { error } = await admin.rpc("credit_provider_shekels", {
+        _user_id: userId,
+        _provider: "stripe",
+        _provider_event_id: session.id,
+        _amount: totalShekels,
+        _label: purchasedBundles.map((bundle) => bundle.label).join(" + ") || "Stripe Shekel purchase",
+        _metadata: { bundles: purchasedBundles, source: "verify-purchase" },
+        _usd_amount: bundleUsd,
+        _stripe_event_id: null,
+      });
+      if (error) throw error;
     }
 
     const { data: fresh } = await admin
@@ -177,7 +184,8 @@ Deno.serve(async (req) => {
       .select("id, kind, shekels_delta, usd_amount, label, created_at")
       .eq("stripe_session_id", session_id)
       .eq("user_id", userId)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .throwOnError();
 
     return new Response(JSON.stringify({
       status: "credited",
