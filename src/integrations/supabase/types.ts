@@ -8182,7 +8182,6 @@ export type Database = {
         Args: { _error: string; _event_id: string }
         Returns: undefined
       }
-      finalize_expired_battles: { Args: never; Returns: Json }
       founder_program_public_status: { Args: never; Returns: Json }
       frame_reward_stats: { Args: { _user_id: string }; Returns: Json }
       fulfill_store_checkout: {
