@@ -82,6 +82,12 @@ describe("final launch security follow-ups", () => {
     );
     expect(royalRuntimeAudit).toMatch(/cleanup: \{ ok: cleanupOk, errors: cleanupErrors \}/);
     expect(migration).toMatch(/raw_user_meta_data->>'synthetic' = 'true'/);
+    expect(migration.indexOf("DELETE FROM public.royal_pass_grants")).toBeLessThan(
+      migration.indexOf("DELETE FROM auth.users"),
+    );
+    expect(migration.indexOf("DELETE FROM public.royal_shield_audit_log")).toBeLessThan(
+      migration.indexOf("DELETE FROM auth.users"),
+    );
     expect(migration).toMatch(/DELETE FROM auth\.users WHERE id = synthetic_user\.id/);
   });
 });
