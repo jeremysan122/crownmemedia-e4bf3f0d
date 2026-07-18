@@ -87,10 +87,7 @@ jobs:
           (github.event_name != 'pull_request' ||
            github.event.pull_request.head.repo.full_name == github.repository) }}
     env:
-      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
-      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       BROWSERSTACK_ENABLED: "true"
-      BROWSERSTACK_BUILD_NAME: CrownMe-${{ github.run_id }}-${{ github.run_attempt }}
       PLAYWRIGHT_BASE_URL: https://crownmemedia.com
     steps:
       - uses: actions/checkout@v4
@@ -100,8 +97,27 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Install pinned BrowserStack SDK
         run: bun add --dev --exact --no-save browserstack-node-sdk@1.63.6
+      - name: Configure BrowserStack environment
+        uses: browserstack/github-actions/setup-env@1ab56d9521ce20f4651bb5d9f3ef39c5ba54805a
+        with:
+          username: ${{ secrets.BROWSERSTACK_USERNAME }}
+          access-key: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          build-name: CrownMe-${{ github.run_id }}-${{ github.run_attempt }}
+          project-name: CrownMe production
+      - name: Start verified BrowserStack Local tunnel
+        uses: browserstack/github-actions/setup-local@1ab56d9521ce20f4651bb5d9f3ef39c5ba54805a
+        with:
+          local-testing: start
+          local-logging-level: all-logs
+          local-identifier: random
+          local-args: --force-local
       - name: Run production BrowserStack smoke
         run: >-
           bunx browserstack-node-sdk playwright test
           e2e/production-browser-smoke.spec.ts
           --project=browserstack-production
+      - name: Stop BrowserStack Local tunnel
+        if: always()
+        uses: browserstack/github-actions/setup-local@1ab56d9521ce20f4651bb5d9f3ef39c5ba54805a
+        with:
+          local-testing: stop

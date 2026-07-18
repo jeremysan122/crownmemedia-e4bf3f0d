@@ -31,7 +31,10 @@ parallelsPerPlatform: 1
 # secure BrowserStack Local tunnel; the URL under test remains crownmemedia.com.
 browserstackLocal: true
 browserStackLocalOptions:
-  forceLocal: true
+  # GitHub Actions starts and verifies this named tunnel before the SDK runs.
+  # Prevent the SDK from racing it with a second Local binary.
+  skipBinaryInitialisation: true
+  localIdentifier: ${BROWSERSTACK_LOCAL_IDENTIFIER}
 selfHeal: true
 debug: true
 networkLogs: true
