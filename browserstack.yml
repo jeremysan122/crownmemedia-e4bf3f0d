@@ -1,0 +1,33 @@
+userName: ${BROWSERSTACK_USERNAME}
+accessKey: ${BROWSERSTACK_ACCESS_KEY}
+
+projectName: CrownMe production
+buildName: ${BROWSERSTACK_BUILD_NAME}
+
+# Current production browser coverage. BrowserStack's Playwright 1.60 grid
+# supports Windows 11, macOS Tahoe, and real iOS Safari devices.
+platforms:
+  - os: Windows
+    osVersion: 11
+    browserName: Chrome
+    browserVersion: latest
+    playwrightConfigOptions:
+      name: browserstack-production
+  - os: OS X
+    osVersion: Tahoe
+    browserName: Safari
+    browserVersion: latest
+    playwrightConfigOptions:
+      name: browserstack-production
+  - deviceName: iPhone 17 Pro
+    osVersion: 26
+    browserName: Safari
+    deviceOrientation: portrait
+    playwrightConfigOptions:
+      name: browserstack-production
+
+parallelsPerPlatform: 1
+browserstackLocal: false
+selfHeal: true
+debug: true
+networkLogs: true
