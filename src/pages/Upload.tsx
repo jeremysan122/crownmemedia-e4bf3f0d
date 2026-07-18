@@ -113,7 +113,10 @@ export default function Upload() {
   const [video, setVideo] = useState<PickedVideo | null>(null);
 
   const [caption, setCaption] = useState("");
-  const [category, setCategory] = useState<CrownCategory>("overall");
+  const [category, setCategory] = useState<CrownCategory>(() => {
+    const preferred = profile?.default_category as CrownCategory | null | undefined;
+    return preferred && CATEGORIES.includes(preferred) ? preferred : "overall";
+  });
   const [city, setCity] = useState(profile?.city || "");
   const [state, setState] = useState(profile?.state || "");
   const [country, setCountry] = useState(profile?.country || "");

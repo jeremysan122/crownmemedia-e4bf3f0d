@@ -1,6 +1,6 @@
 // Cancels (or resumes) the user's Royal Pass at period end via Stripe
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { type StripeEnv, createStripeClient } from "../_shared/stripe.ts";
+import { type StripeEnv, createStripeClient, isStripeEnvironmentEnabled } from "../_shared/stripe.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -41,12 +41,19 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (!isStripeEnvironmentEnabled(environment)) {
+      return new Response(JSON.stringify({ error: "Sandbox billing is disabled" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const { data: sub } = await supabase
+    const { data: sub, error: subError } = await supabase
       .from("royal_pass_subscriptions")
       .select("stripe_subscription_id")
       .eq("user_id", userData.user.id)
       .maybeSingle();
+    if (subError) throw new Error(`Subscription lookup failed: ${subError.message}`);
 
     if (!sub?.stripe_subscription_id) {
       return new Response(
@@ -64,7 +71,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
-    await supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
       .from("royal_pass_subscriptions")
       .update({
         cancel_at_period_end: !resume,
@@ -72,6 +79,7 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", userData.user.id);
+    if (updateError) throw new Error(`Subscription status save failed: ${updateError.message}`);
 
     return new Response(
       JSON.stringify({ ok: true, cancel_at_period_end: !resume, status: updated.status }),

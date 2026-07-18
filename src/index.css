@@ -122,6 +122,38 @@
   }
 }
 
+/* Account-level accessibility preferences. Native OS reduced-motion remains
+   supported below; these classes add the same behavior when a user selects it
+   inside CrownMe. */
+html.crownme-larger-text { font-size: 112.5%; }
+
+html.crownme-high-contrast {
+  --foreground: 45 70% 98%;
+  --card-foreground: 45 65% 98%;
+  --popover-foreground: 45 65% 98%;
+  --muted-foreground: 260 12% 78%;
+  --border: 270 35% 32%;
+  --ring: 45 100% 66%;
+}
+
+html.light.crownme-high-contrast {
+  --foreground: 260 55% 5%;
+  --card-foreground: 260 55% 5%;
+  --popover-foreground: 260 55% 5%;
+  --muted-foreground: 260 25% 23%;
+  --border: 270 38% 58%;
+  --ring: 35 100% 29%;
+}
+
+html.crownme-reduce-motion *,
+html.crownme-reduce-motion *::before,
+html.crownme-reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+}
+
 @layer base {
   * { @apply border-border; }
   /* A fixed 100% height traps long feeds outside the document scroll range:

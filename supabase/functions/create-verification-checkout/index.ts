@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
   type StripeEnv,
   createStripeClient,
+  isStripeEnvironmentEnabled,
   resolveOrCreateCustomer,
 } from "../_shared/stripe.ts";
 import { safeReturnUrl } from "../_shared/origin.ts";
@@ -42,6 +43,9 @@ Deno.serve(async (req) => {
     const { environment, return_url } = body as { environment?: StripeEnv; return_url?: string };
     if (environment !== "sandbox" && environment !== "live") {
       return json(400, { error: "environment required" });
+    }
+    if (!isStripeEnvironmentEnabled(environment)) {
+      return json(403, { error: "Sandbox checkout is disabled" });
     }
 
     const stripe = createStripeClient(environment);

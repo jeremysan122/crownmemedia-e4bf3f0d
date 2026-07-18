@@ -6181,17 +6181,29 @@ export type Database = {
       }
       stripe_events: {
         Row: {
+          attempt_count: number
           id: string
+          last_error: string | null
+          processed_at: string | null
+          processing_started_at: string | null
           received_at: string
           type: string
         }
         Insert: {
+          attempt_count?: number
           id: string
+          last_error?: string | null
+          processed_at?: string | null
+          processing_started_at?: string | null
           received_at?: string
           type: string
         }
         Update: {
+          attempt_count?: number
           id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          processing_started_at?: string | null
           received_at?: string
           type?: string
         }
@@ -7916,6 +7928,10 @@ export type Database = {
           reason: string
         }[]
       }
+      claim_stripe_event: {
+        Args: { _event_id: string; _event_type: string }
+        Returns: Json
+      }
       claim_daily_reward: { Args: never; Returns: Json }
       claim_daily_royal_boost: { Args: { p_post_id: string }; Returns: Json }
       cleanup_orphaned_media: {
@@ -7932,6 +7948,10 @@ export type Database = {
         Returns: string
       }
       comments_allowed_on: { Args: { _post: string }; Returns: boolean }
+      complete_stripe_event: {
+        Args: { _event_id: string }
+        Returns: undefined
+      }
       compute_daily_usage_rollup: { Args: { _d?: string }; Returns: undefined }
       confirm_my_age: { Args: { _dob: string }; Returns: undefined }
       count_post_votes_by_type: {
@@ -8161,8 +8181,25 @@ export type Database = {
           newly_unlocked_crown_ids: string[]
         }[]
       }
+      fail_stripe_event: {
+        Args: { _error: string; _event_id: string }
+        Returns: undefined
+      }
       founder_program_public_status: { Args: never; Returns: Json }
       frame_reward_stats: { Args: { _user_id: string }; Returns: Json }
+      fulfill_store_checkout: {
+        Args: {
+          _boosts?: Json
+          _label: string
+          _metadata?: Json
+          _shekels: number
+          _stripe_event_id: string
+          _stripe_session_id: string
+          _usd_amount: number
+          _user_id: string
+        }
+        Returns: Json
+      }
       get_battle_official_result: {
         Args: { _battle_id: string }
         Returns: Json

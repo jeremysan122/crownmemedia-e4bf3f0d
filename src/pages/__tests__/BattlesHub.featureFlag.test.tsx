@@ -72,6 +72,16 @@ describe("BattlesHub feature flag gating", () => {
     expect(screen.getByText(/Real-time 1v1 head-to-head/i)).toBeInTheDocument();
   });
 
+  it("does not present illustrative activity as live user data", async () => {
+    flagVal.v = true;
+    await renderHub();
+    await waitFor(() => expect(screen.getByText(/Community voting/i)).toBeInTheDocument());
+    expect(screen.getByText(/Camera \+ microphone/i)).toBeInTheDocument();
+    expect(screen.queryByText(/620 vs 380/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/12h left/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/1\.2k watching/i)).not.toBeInTheDocument();
+  });
+
   it("hides Go Live CTA and Live mode card when flag is off", async () => {
     flagVal.v = false;
     await renderHub();

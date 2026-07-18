@@ -6,7 +6,7 @@
 // AND recorded in `royal_pass_sync_audit` for traceability, regardless of
 // success or failure.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { type StripeEnv, createStripeClient } from "../_shared/stripe.ts";
+import { type StripeEnv, createStripeClient, isStripeEnvironmentEnabled } from "../_shared/stripe.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -92,6 +92,10 @@ Deno.serve(async (req) => {
       return json(400, { error: "environment required" });
     }
     environment = parsed.environment;
+    if (!isStripeEnvironmentEnabled(environment)) {
+      await logAudit({ success: false, error: "sandbox disabled" });
+      return json(403, { error: "Sandbox synchronization is disabled" });
+    }
     targetId = parsed.target_user_id || callerId;
 
     const { data: sub } = await admin

@@ -199,14 +199,14 @@ describe("Wave 8.2a — webhook routing", () => {
     expect(win).toMatch(/dispute\.status === "lost"[\s\S]+?handle_royal_dispute_lost/);
     expect(win).toMatch(/dispute\.status === "won"[\s\S]+?handle_royal_dispute_won/);
   });
-  it("safely no-ops on missing charge id (logs and continues)", () => {
+  it("fails closed on a missing charge id so Stripe can retry", () => {
     expect(webhook).toMatch(/dispute \$\{disputeId\} missing charge id/);
   });
-  it("does not crash on charge retrieval failure", () => {
-    expect(webhook).toMatch(/could not retrieve charge[\s\S]+?catch/);
+  it("propagates charge retrieval failures to the retryable event handler", () => {
+    expect(webhook).toMatch(/could not retrieve dispute charge/);
+    expect(webhook).toMatch(/dispute handler error[\s\S]+?throw e/);
   });
-  it("wraps all dispute handling in a try/catch so errors don't abort the webhook", () => {
-    // The dispute block itself is inside a try { ... } catch { ... } that logs.
-    expect(webhook).toMatch(/dispute handler error/);
+  it("logs dispute failures and rethrows them instead of acknowledging lost work", () => {
+    expect(webhook).toMatch(/dispute handler error[\s\S]+?throw e/);
   });
 });
