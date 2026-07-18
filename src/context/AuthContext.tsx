@@ -24,6 +24,10 @@ export type Profile = {
   is_suspended: boolean;
   liked_posts_public?: boolean;
   avatar_position_y?: number | null;
+  default_category?: string | null;
+  reduce_motion?: boolean;
+  larger_text?: boolean;
+  high_contrast?: boolean;
 };
 
 interface AuthContextValue {
@@ -171,6 +175,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Apply account accessibility preferences at the document root so every
+  // route, dialog, and portal obeys the same setting. The cleanup also keeps
+  // one user's preferences from leaking into the next signed-in session.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("crownme-reduce-motion", !!profile?.reduce_motion);
+    root.classList.toggle("crownme-larger-text", !!profile?.larger_text);
+    root.classList.toggle("crownme-high-contrast", !!profile?.high_contrast);
+    return () => {
+      root.classList.remove(
+        "crownme-reduce-motion",
+        "crownme-larger-text",
+        "crownme-high-contrast",
+      );
+    };
+  }, [profile?.reduce_motion, profile?.larger_text, profile?.high_contrast]);
 
   // Watch age_confirmed in realtime — if it flips, force re-verification.
   useEffect(() => {

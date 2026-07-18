@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { isFeatureEnabled } from "@/lib/featureFlags";
 import {
   Swords, Radio, ChevronRight, History, Plus, Trophy, Users, Sparkles, Flame,
-  Crown, Vote, Info, Zap, Timer, ArrowRight, CalendarClock,
+  Crown, Vote, Info, Zap, ArrowRight, CalendarClock, Camera, MessageCircle,
 } from "lucide-react";
 import LiveNowStrip from "@/components/battles/LiveNowStrip";
 import PendingInvitesList from "@/components/battles/PendingInvitesList";
@@ -150,7 +150,7 @@ export default function BattlesHub() {
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
                   </span>
                   <Radio size={14} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Live now</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Live mode</span>
                 </div>
                 <div className="mt-2 text-white font-black text-lg leading-tight">Go Live Battle</div>
                 <div className="text-white/85 text-[11px] mt-0.5">Start a real-time 1v1</div>
@@ -187,14 +187,9 @@ export default function BattlesHub() {
             icon={<Swords size={22} />}
             accent="primary"
             preview={
-              <div className="space-y-1.5">
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full w-[62%] bg-gradient-to-r from-primary to-amber-400" />
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span className="inline-flex items-center gap-1"><Vote size={10} /> 620 vs 380</span>
-                  <span className="inline-flex items-center gap-1"><Timer size={10} /> 12h left</span>
-                </div>
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1"><Camera size={10} /> Photo or Scroll</span>
+                <span className="inline-flex items-center gap-1"><Vote size={10} /> Community voting</span>
               </div>
             }
           />
@@ -208,17 +203,9 @@ export default function BattlesHub() {
               icon={<Radio size={22} />}
               accent="destructive"
               preview={
-                <div className="flex items-center gap-2">
-                  <div className="flex -space-x-2">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-amber-400 border-2 border-card" />
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-destructive to-rose-400 border-2 border-card" />
-                  </div>
-                  <span className="text-[10px] font-bold text-red-500 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> LIVE
-                  </span>
-                  <span className="text-[10px] text-muted-foreground ml-auto inline-flex items-center gap-1">
-                    <Users size={10} /> 1.2k watching
-                  </span>
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1"><Radio size={10} /> Camera + microphone</span>
+                  <span className="inline-flex items-center gap-1"><MessageCircle size={10} /> Audience voting</span>
                 </div>
               }
             />

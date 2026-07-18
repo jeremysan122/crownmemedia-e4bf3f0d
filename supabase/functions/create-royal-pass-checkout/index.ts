@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
   type StripeEnv,
   createStripeClient,
+  isStripeEnvironmentEnabled,
   resolveOrCreateCustomer,
 } from "../_shared/stripe.ts";
 
@@ -49,15 +50,19 @@ Deno.serve(async (req) => {
     if (environment !== "sandbox" && environment !== "live") {
       return json(400, { error: "environment required" });
     }
+    if (!isStripeEnvironmentEnabled(environment)) {
+      return json(403, { error: "Sandbox checkout is disabled" });
+    }
     if (!plan_id || typeof plan_id !== "string") {
       return json(400, { error: "plan_id required" });
     }
 
-    const { data: plan } = await admin
+    const { data: plan, error: planError } = await admin
       .from("royal_pass_plans")
       .select("id, stripe_price_id, name, active")
       .eq("id", plan_id)
       .maybeSingle();
+    if (planError) throw new Error(`Royal Pass plan lookup failed: ${planError.message}`);
     if (!plan || !(plan as { active: boolean }).active) {
       return json(400, { error: "Invalid plan" });
     }
@@ -74,16 +79,18 @@ Deno.serve(async (req) => {
     // Trial gated by feature flag `royal_pass_trial_enabled`. Only grant a trial
     // to users who have never held a Royal Pass subscription before.
     let trialPeriodDays: number | undefined;
-    const { data: trialFlag } = await admin
+    const { data: trialFlag, error: trialFlagError } = await admin
       .from("feature_flags")
       .select("enabled, rollout_percent")
       .eq("key", "royal_pass_trial_enabled")
       .maybeSingle();
+    if (trialFlagError) throw new Error(`Trial flag lookup failed: ${trialFlagError.message}`);
     if (trialFlag?.enabled) {
-      const { count: priorSubs } = await admin
+      const { count: priorSubs, error: priorSubsError } = await admin
         .from("royal_pass_subscriptions")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId);
+      if (priorSubsError) throw new Error(`Prior subscription lookup failed: ${priorSubsError.message}`);
       if (!priorSubs || priorSubs === 0) trialPeriodDays = 7;
     }
 

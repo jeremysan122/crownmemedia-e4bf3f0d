@@ -1,6 +1,6 @@
 // Creates a Stripe Billing Portal session so the user can manage their Royal Pass
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { type StripeEnv, createStripeClient } from "../_shared/stripe.ts";
+import { type StripeEnv, createStripeClient, isStripeEnvironmentEnabled } from "../_shared/stripe.ts";
 import { safeOrigin } from "../_shared/origin.ts";
 
 const corsHeaders = {
@@ -41,12 +41,19 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (!isStripeEnvironmentEnabled(environment)) {
+      return new Response(JSON.stringify({ error: "Sandbox billing is disabled" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const { data: sub } = await supabase
+    const { data: sub, error: subError } = await supabase
       .from("royal_pass_subscriptions")
       .select("stripe_customer_id")
       .eq("user_id", userData.user.id)
       .maybeSingle();
+    if (subError) throw new Error(`Subscription lookup failed: ${subError.message}`);
 
     if (!sub?.stripe_customer_id) {
       return new Response(

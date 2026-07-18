@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
   type StripeEnv,
   createStripeClient,
+  isStripeEnvironmentEnabled,
   resolveOrCreateCustomer,
 } from "../_shared/stripe.ts";
 
@@ -63,8 +64,17 @@ Deno.serve(async (req) => {
     if (environment !== "sandbox" && environment !== "live") {
       return json(400, { error: "environment required" });
     }
+    // Sandbox Checkout Sessions grant real CrownMe entitlements because both
+    // Stripe modes share this database. Keep sandbox disabled by default and
+    // require an explicit server-side switch for controlled test projects.
+    if (!isStripeEnvironmentEnabled(environment)) {
+      return json(403, { error: "Sandbox checkout is disabled" });
+    }
     if (!bundle_id && !boost_bundle_id) {
       return json(400, { error: "bundle_id or boost_bundle_id required" });
+    }
+    if (bundle_id && boost_bundle_id) {
+      return json(400, { error: "Choose exactly one product" });
     }
     if (bundle_id && typeof bundle_id !== "string") return json(400, { error: "Invalid bundle_id" });
     if (boost_bundle_id && typeof boost_bundle_id !== "string") return json(400, { error: "Invalid boost_bundle_id" });
@@ -76,22 +86,24 @@ Deno.serve(async (req) => {
     let validatedPostId: string | null = null;
 
     if (bundle_id) {
-      const { data: bundle } = await admin
+      const { data: bundle, error: bundleError } = await admin
         .from("shekel_bundles")
         .select("id, stripe_price_id, label, active")
         .eq("id", bundle_id)
         .maybeSingle();
+      if (bundleError) throw new Error(`Bundle lookup failed: ${bundleError.message}`);
       if (!bundle || !(bundle as { active: boolean }).active) {
         return json(400, { error: "Invalid product" });
       }
       lookupKey = (bundle as { stripe_price_id: string }).stripe_price_id;
       productLabel = (bundle as { label: string }).label;
     } else if (boost_bundle_id) {
-      const { data: boost } = await admin
+      const { data: boost, error: boostError } = await admin
         .from("boost_bundles")
         .select("id, stripe_price_id, boost_type, label, active")
         .eq("id", boost_bundle_id)
         .maybeSingle();
+      if (boostError) throw new Error(`Boost lookup failed: ${boostError.message}`);
       if (!boost || !(boost as { active: boolean }).active) {
         return json(400, { error: "Invalid product" });
       }
@@ -103,11 +115,12 @@ Deno.serve(async (req) => {
         if (!target_post_id || typeof target_post_id !== "string") {
           return json(400, { error: "Select a post to boost" });
         }
-        const { data: post } = await admin
+        const { data: post, error: postError } = await admin
           .from("posts")
           .select("id, user_id, is_removed")
           .eq("id", target_post_id)
           .maybeSingle();
+        if (postError) throw new Error(`Boost target lookup failed: ${postError.message}`);
         if (
           !post ||
           (post as { is_removed: boolean }).is_removed ||

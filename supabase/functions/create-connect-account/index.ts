@@ -1,6 +1,6 @@
 // Creates (or returns) a Stripe Express account + onboarding link for the caller
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { type StripeEnv, createStripeClient } from "../_shared/stripe.ts";
+import { type StripeEnv, createStripeClient, isStripeEnvironmentEnabled } from "../_shared/stripe.ts";
 import { safeReturnUrl } from "../_shared/origin.ts";
 
 const corsHeaders = {
@@ -37,15 +37,22 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (!isStripeEnvironmentEnabled(environment)) {
+      return new Response(JSON.stringify({ error: "Sandbox Stripe Connect is disabled" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { data: existing } = await admin
+    const { data: existing, error: existingError } = await admin
       .from("connect_accounts").select("stripe_account_id")
       .eq("user_id", userId).maybeSingle();
+    if (existingError) throw new Error(`Connect account lookup failed: ${existingError.message}`);
 
     const stripe = createStripeClient(environment);
     let accountId = existing?.stripe_account_id;
@@ -57,10 +64,11 @@ Deno.serve(async (req) => {
         metadata: { user_id: userId },
       });
       accountId = account.id;
-      await admin.from("connect_accounts").insert({
+      const { error: insertError } = await admin.from("connect_accounts").insert({
         user_id: userId,
         stripe_account_id: accountId,
       });
+      if (insertError) throw new Error(`Connect account save failed: ${insertError.message}`);
     }
 
     const returnBase = safeReturnUrl(req, body.return_path ?? "/settings", "/settings");

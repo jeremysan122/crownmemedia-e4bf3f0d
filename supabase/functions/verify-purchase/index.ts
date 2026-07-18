@@ -2,7 +2,11 @@
 // If the webhook is delayed, this re-pulls the Stripe session and runs
 // the same crediting logic the webhook would, idempotent on session_id.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { type StripeEnv, createStripeClient } from "../_shared/stripe.ts";
+import {
+  type StripeEnv,
+  createStripeClient,
+  isStripeEnvironmentEnabled,
+} from "../_shared/stripe.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,7 +43,17 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const env: StripeEnv = environment === "live" ? "live" : "sandbox";
+    if (environment !== "sandbox" && environment !== "live") {
+      return new Response(JSON.stringify({ error: "environment required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const env: StripeEnv = environment;
+    if (!isStripeEnvironmentEnabled(env)) {
+      return new Response(JSON.stringify({ error: "Sandbox verification is disabled" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const stripe = createStripeClient(env);
 
     const admin = createClient(
@@ -60,12 +74,13 @@ Deno.serve(async (req) => {
     }
 
     // Already credited? Scoped to the authenticated user as defence-in-depth.
-    const { data: existing } = await admin
+    const { data: existing, error: existingError } = await admin
       .from("shekel_ledger")
       .select("id, kind, shekels_delta, usd_amount, label, created_at")
       .eq("stripe_session_id", session_id)
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
+    if (existingError) throw new Error(`Purchase receipt lookup failed: ${existingError.message}`);
     if (existing && existing.length > 0) {
       return new Response(JSON.stringify({
         status: "already_credited",
@@ -89,6 +104,15 @@ Deno.serve(async (req) => {
     }
 
     let totalShekels = 0;
+    let totalUsd = 0;
+    const labels: string[] = [];
+    const resolvedItems: Array<Record<string, unknown>> = [];
+    const boostsToActivate: Array<{
+      boost_type: string;
+      duration_hours: number;
+      post_id: string | null;
+      label: string;
+    }> = [];
     const lineItems = session.line_items?.data
       ?? (await stripe.checkout.sessions.listLineItems(session.id, { limit: 20 })).data;
 
@@ -103,81 +127,82 @@ Deno.serve(async (req) => {
         || stripePriceId;
       if (!lookupKey) continue;
       const qty = item.quantity || 1;
+      if (!Number.isInteger(qty) || qty !== 1) {
+        throw new Error(`Unexpected Store line-item quantity: ${qty}`);
+      }
       const itemUsd = (item.amount_total ?? 0) / 100;
+      totalUsd += itemUsd;
 
-      const { data: bundle } = await admin
+      const { data: bundle, error: bundleError } = await admin
         .from("shekel_bundles")
         .select("shekels, label")
         .eq("stripe_price_id", lookupKey)
         .maybeSingle();
+      if (bundleError) throw new Error(`Shekel bundle lookup failed: ${bundleError.message}`);
       if (bundle) {
         const credit = Number(bundle.shekels) * qty;
+        if (!Number.isFinite(credit) || credit <= 0) throw new Error("Invalid Shekel bundle amount");
         totalShekels += credit;
-        await admin.from("shekel_ledger").insert({
-          user_id: userId,
-          kind: "bundle_purchase",
-          shekels_delta: credit,
-          usd_amount: itemUsd,
-          label: bundle.label,
-          stripe_session_id: session.id,
-          metadata: { price_id: lookupKey, quantity: qty, source: "verify-purchase" },
-        });
+        labels.push(bundle.label);
+        resolvedItems.push({ kind: "shekel_bundle", price_id: lookupKey, quantity: qty, shekels: credit });
         continue;
       }
 
-      const { data: boost } = await admin
+      const { data: boost, error: boostError } = await admin
         .from("boost_bundles")
         .select("boost_type, duration_hours, label")
         .eq("stripe_price_id", lookupKey)
         .maybeSingle();
+      if (boostError) throw new Error(`Boost bundle lookup failed: ${boostError.message}`);
       if (boost) {
-        const expires = new Date(Date.now() + boost.duration_hours * 3600_000).toISOString();
         const POST_TARGETED = new Set(["royal_boost", "vote_boost", "crown_spotlight", "crown_shield"]);
         const metaPostId = (session.metadata?.target_post_id as string | undefined) || null;
-        let postIdToWrite: string | null = null;
-        if (POST_TARGETED.has(boost.boost_type) && metaPostId) {
-          const { data: ownerPost } = await admin
-            .from("posts").select("id, user_id, is_removed")
-            .eq("id", metaPostId).maybeSingle();
-          if (ownerPost && !ownerPost.is_removed && ownerPost.user_id === userId) {
-            postIdToWrite = ownerPost.id;
-          }
+        if (POST_TARGETED.has(boost.boost_type) && !metaPostId) {
+          throw new Error(`Boost ${boost.boost_type} is missing target_post_id metadata`);
         }
-        const { data: b } = await admin.from("boosts")
-          .insert({ user_id: userId, post_id: postIdToWrite, boost_type: boost.boost_type, active: true, expires_at: expires })
-          .select("id").single();
-        await admin.from("shekel_ledger").insert({
-          user_id: userId,
-          kind: "boost_stripe",
-          shekels_delta: 0,
-          usd_amount: itemUsd,
-          label: `${boost.label} (${boost.duration_hours}h)`,
-          stripe_session_id: session.id,
-          reference_id: b?.id ?? null,
-          metadata: { price_id: lookupKey, boost_type: boost.boost_type, source: "verify-purchase" },
+        const durationHours = Number(boost.duration_hours);
+        if (!Number.isInteger(durationHours) || durationHours < 1 || durationHours > 720) {
+          throw new Error(`Invalid duration for Boost ${boost.boost_type}`);
+        }
+        labels.push(`${boost.label} (${durationHours}h)`);
+        boostsToActivate.push({
+          boost_type: boost.boost_type,
+          duration_hours: durationHours,
+          post_id: POST_TARGETED.has(boost.boost_type) ? metaPostId : null,
+          label: boost.label,
         });
+        resolvedItems.push({
+          kind: "boost",
+          price_id: lookupKey,
+          quantity: qty,
+          boost_type: boost.boost_type,
+          duration_hours: durationHours,
+        });
+        continue;
       }
+
+      throw new Error(`Unknown paid Store line item: ${lookupKey}`);
     }
 
-    if (totalShekels > 0) {
-      const { data: w } = await admin.from("wallets")
-        .select("shekel_balance").eq("user_id", userId).maybeSingle();
-      if (w) {
-        await admin.from("wallets")
-          .update({
-            shekel_balance: Number(w.shekel_balance) + totalShekels,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", userId);
-      }
-    }
+    const { error: fulfillmentError } = await admin.rpc("fulfill_store_checkout", {
+      _user_id: userId,
+      _stripe_session_id: session.id,
+      _stripe_event_id: `verify-${session.id}`,
+      _shekels: totalShekels,
+      _usd_amount: totalUsd,
+      _label: labels.join(" + ") || "CrownMe Store purchase",
+      _boosts: boostsToActivate,
+      _metadata: { items: resolvedItems, source: "verify-purchase" },
+    });
+    if (fulfillmentError) throw new Error(`Store fulfillment failed: ${fulfillmentError.message}`);
 
-    const { data: fresh } = await admin
+    const { data: fresh, error: freshError } = await admin
       .from("shekel_ledger")
       .select("id, kind, shekels_delta, usd_amount, label, created_at")
       .eq("stripe_session_id", session_id)
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
+    if (freshError) throw new Error(`Purchase receipt reload failed: ${freshError.message}`);
 
     return new Response(JSON.stringify({
       status: "credited",

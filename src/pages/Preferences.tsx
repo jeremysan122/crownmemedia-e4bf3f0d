@@ -1,10 +1,6 @@
-// Preferences page — extended user settings backed by columns on `profiles`.
-// Kept as a separate route to avoid bloating Settings.tsx further.
-//
-// Each section reads & writes a slice of the profile. Saves are optimistic
-// with a sonner toast on error. Server-side enforcement of privacy fields
-// (who_can_tag/mention/dm, muted words) is TODO — this PR persists the
-// preference; readers must consult these fields when surfacing UI.
+// Preferences page — only settings that are enforced by the current web app
+// are exposed here. A stored value is not a product feature by itself: new
+// controls must not be added until every consuming surface honors them.
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
@@ -12,62 +8,26 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { CATEGORIES, CATEGORY_LABEL, CrownCategory } from "@/lib/crown";
 import { toast } from "sonner";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { Link } from "react-router-dom";
-import { ChevronRight, Languages, Image as ImageIcon, AtSign, MessageCircle, Eye, Volume2, Clock, Bell, Swords, Lock, Trash2, Info, KeyRound } from "lucide-react";
+import { ChevronRight, Image as ImageIcon, Eye, Lock, Trash2, Info, KeyRound } from "lucide-react";
 
 type Prefs = {
-  locale: string;
-  default_post_visibility: "public" | "followers" | "private";
   default_category: string | null;
-  default_comments_enabled: boolean;
-  watermark_enabled: boolean;
-  autosave_to_camera_roll: boolean;
-  who_can_tag: "everyone" | "followers" | "nobody";
-  who_can_mention: "everyone" | "followers" | "nobody";
-  who_can_dm: "everyone" | "followers" | "nobody";
-  tag_review_required: boolean;
   reduce_motion: boolean;
   larger_text: boolean;
   high_contrast: boolean;
-  captions_default_on: boolean;
-  autoplay_cellular: boolean;
-  quiet_hours_start: string | null;
-  quiet_hours_end: string | null;
-  timezone: string | null;
-  push_likes: boolean;
-  push_follows: boolean;
-  push_comments: boolean;
-  push_battles: boolean;
-  default_battle_stake: number;
-  auto_accept_battles_from_follows: boolean;
-  default_race_scope: "global" | "country" | "city";
   sensitive_content_mode: "blur" | "show" | "hide";
 };
-
-const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "es", label: "Español" },
-  { code: "fr", label: "Français" },
-  { code: "pt", label: "Português" },
-  { code: "de", label: "Deutsch" },
-  { code: "it", label: "Italiano" },
-  { code: "ar", label: "العربية" },
-  { code: "he", label: "עברית" },
-  { code: "ja", label: "日本語" },
-  { code: "zh", label: "中文" },
-];
 
 const VERSION = (import.meta as any).env?.VITE_APP_VERSION ?? "dev";
 
 export default function Preferences() {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const [p, setP] = useState<Prefs | null>(null);
 
   useEffect(() => {
@@ -88,15 +48,10 @@ export default function Preferences() {
       setP(prev);
       logRawError(error, "settings", { patchKeys: Object.keys(patch) });
       toast.error(toFriendlyMessage(error, "settings"));
+      return;
     }
+    await refreshProfile();
   };
-
-
-  const ComingSoon = () => (
-    <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-amber-500/40 text-amber-500">
-      Coming soon
-    </Badge>
-  );
 
   if (!p) {
     return (
@@ -131,89 +86,14 @@ export default function Preferences() {
       <div className="px-4 py-4 space-y-5">
         <h1 className="font-display text-2xl text-gold">Preferences</h1>
 
-        {/* Language */}
-        <Section title="Language" icon={Languages}>
-          <Row title="App language" hint="Used for in-app copy and dates.">
-            <Select value={p.locale} onValueChange={(v) => save({ locale: v })}>
-              <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {LANGUAGES.map((l) => <SelectItem key={l.code} value={l.code}>{l.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </Row>
-        </Section>
-
         {/* Default post settings */}
         <Section title="Default post settings" icon={ImageIcon}>
-          <Row title="Default visibility" hint="New posts use this audience.">
-            <Select value={p.default_post_visibility} onValueChange={(v) => save({ default_post_visibility: v as Prefs["default_post_visibility"] })}>
-              <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="public">Public</SelectItem>
-                <SelectItem value="followers">Followers</SelectItem>
-                <SelectItem value="private">Private</SelectItem>
-              </SelectContent>
-            </Select>
-          </Row>
-          <Row title="Default category">
+          <Row title="Default category" hint="Preselects this category when you create a post or Scroll.">
             <Select value={p.default_category ?? "none"} onValueChange={(v) => save({ default_category: v === "none" ? null : v })}>
               <SelectTrigger className="w-40 h-9"><SelectValue placeholder="None" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">No default</SelectItem>
                 {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{CATEGORY_LABEL[c as CrownCategory]}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </Row>
-          <Row title="Comments enabled by default">
-            <Switch checked={p.default_comments_enabled} onCheckedChange={(v) => save({ default_comments_enabled: v })} />
-          </Row>
-          <Row title="Watermark my photos" hint="Adds a small watermark to new uploads.">
-            <Switch checked={p.watermark_enabled} onCheckedChange={(v) => save({ watermark_enabled: v })} />
-          </Row>
-          <Row title="Save copies to my device" hint="Auto-save originals from the in-app camera.">
-            <Switch checked={p.autosave_to_camera_roll} onCheckedChange={(v) => save({ autosave_to_camera_roll: v })} />
-          </Row>
-        </Section>
-
-        {/* Tagging & mentions — enforcement lands in v1.1; controls disabled until then */}
-        <Section title="Tagging & mentions" icon={AtSign}>
-          <p className="text-[11px] text-amber-500">
-            Server-side enforcement lands in v1.1. Controls below are visible for reference only.
-          </p>
-          <Row title={<><span>Who can tag me</span><ComingSoon /></>}>
-            <Select value={p.who_can_tag} disabled onValueChange={() => {}}>
-              <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="everyone">Everyone</SelectItem>
-                <SelectItem value="followers">Followers</SelectItem>
-                <SelectItem value="nobody">Nobody</SelectItem>
-              </SelectContent>
-            </Select>
-          </Row>
-          <Row title={<><span>Who can @mention me</span><ComingSoon /></>}>
-            <Select value={p.who_can_mention} disabled onValueChange={() => {}}>
-              <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="everyone">Everyone</SelectItem>
-                <SelectItem value="followers">Followers</SelectItem>
-                <SelectItem value="nobody">Nobody</SelectItem>
-              </SelectContent>
-            </Select>
-          </Row>
-          <Row title={<><span>Review tags before they appear</span><ComingSoon /></>} hint="Tags by others wait for your approval.">
-            <Switch checked={p.tag_review_required} disabled onCheckedChange={() => {}} />
-          </Row>
-        </Section>
-
-        {/* Direct messages — enforcement lands in v1.1 */}
-        <Section title="Direct messages" icon={MessageCircle}>
-          <Row title={<><span>Who can message me</span><ComingSoon /></>} hint="Full DM privacy enforcement ships in v1.1.">
-            <Select value={p.who_can_dm} disabled onValueChange={() => {}}>
-              <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="everyone">Everyone</SelectItem>
-                <SelectItem value="followers">Followers</SelectItem>
-                <SelectItem value="nobody">Nobody</SelectItem>
               </SelectContent>
             </Select>
           </Row>
@@ -257,67 +137,6 @@ export default function Preferences() {
           </Row>
           <Row title="High contrast" hint="Stronger text/background contrast.">
             <Switch checked={p.high_contrast} onCheckedChange={(v) => save({ high_contrast: v })} />
-          </Row>
-          <Row title="Captions on by default" hint="For uploaded videos.">
-            <Switch checked={p.captions_default_on} onCheckedChange={(v) => save({ captions_default_on: v })} />
-          </Row>
-        </Section>
-
-        {/* Playback */}
-        <Section title="Playback & data" icon={Volume2}>
-          <Row title="Autoplay videos on cellular" hint="Off saves mobile data.">
-            <Switch checked={p.autoplay_cellular} onCheckedChange={(v) => save({ autoplay_cellular: v })} />
-          </Row>
-        </Section>
-
-        {/* Quiet hours */}
-        <Section title="Quiet hours" icon={Clock}>
-          <p className="text-[11px] text-muted-foreground">Silence non-essential notifications between these times.</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-[11px]">Start</Label>
-              <Input type="time" value={p.quiet_hours_start ?? ""} onChange={(e) => save({ quiet_hours_start: e.target.value || null })} className="h-9 bg-input" />
-            </div>
-            <div>
-              <Label className="text-[11px]">End</Label>
-              <Input type="time" value={p.quiet_hours_end ?? ""} onChange={(e) => save({ quiet_hours_end: e.target.value || null })} className="h-9 bg-input" />
-            </div>
-          </div>
-          <div>
-            <Label className="text-[11px]">Time zone</Label>
-            <Input value={p.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone} onChange={(e) => save({ timezone: e.target.value || null })} className="h-9 bg-input" />
-          </div>
-        </Section>
-
-        {/* Push channels */}
-        <Section title="Push notification categories" icon={Bell}>
-          <Row title="Likes & reactions"><Switch checked={p.push_likes} onCheckedChange={(v) => save({ push_likes: v })} /></Row>
-          <Row title="New followers"><Switch checked={p.push_follows} onCheckedChange={(v) => save({ push_follows: v })} /></Row>
-          <Row title="Comments & replies"><Switch checked={p.push_comments} onCheckedChange={(v) => save({ push_comments: v })} /></Row>
-          <Row title="Battles & duels"><Switch checked={p.push_battles} onCheckedChange={(v) => save({ push_battles: v })} /></Row>
-        </Section>
-
-        {/* Crown defaults */}
-        <Section title="Crown defaults" icon={Swords}>
-          <Row title="Default battle stake (shekels)">
-            <Input
-              type="number" min={0} value={p.default_battle_stake}
-              onChange={(e) => save({ default_battle_stake: Math.max(0, Number(e.target.value) || 0) })}
-              className="w-24 h-9 bg-input"
-            />
-          </Row>
-          <Row title="Auto-accept battles from people I follow">
-            <Switch checked={p.auto_accept_battles_from_follows} onCheckedChange={(v) => save({ auto_accept_battles_from_follows: v })} />
-          </Row>
-          <Row title="Default race scope">
-            <Select value={p.default_race_scope} onValueChange={(v) => save({ default_race_scope: v as Prefs["default_race_scope"] })}>
-              <SelectTrigger className="w-32 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="global">Global</SelectItem>
-                <SelectItem value="country">Country</SelectItem>
-                <SelectItem value="city">City</SelectItem>
-              </SelectContent>
-            </Select>
           </Row>
         </Section>
 

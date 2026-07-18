@@ -69,7 +69,7 @@ describe("Store refund lifecycle", () => {
     expect(refunded).toMatch(/handle_royal_refund/);
   });
 
-  it("releases the event claim and asks Stripe to retry failed reversals", () => {
+  it("marks failed event claims retryable and asks Stripe to redeliver", () => {
     expect(webhook).toMatch(
       /refund handler error[\s\S]+?throw e;/,
     );
@@ -77,7 +77,7 @@ describe("Store refund lifecycle", () => {
       /dispute handler error[\s\S]+?throw e;/,
     );
     expect(webhook).toMatch(
-      /handler error for \$\{event\.id\}[\s\S]+?from\("stripe_events"\)\.delete\(\)\.eq\("id", event\.id\)[\s\S]+?jsonError\(500, "handler_error"/,
+      /handler error for \$\{event\.id\}[\s\S]+?failEvent\(err\)[\s\S]+?jsonError\(500, "handler_error"/,
     );
   });
 

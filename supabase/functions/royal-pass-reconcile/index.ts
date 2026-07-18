@@ -14,7 +14,7 @@
 // recorded in `royal_pass_sync_audit` for traceability.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { type StripeEnv, createStripeClient } from "../_shared/stripe.ts";
+import { type StripeEnv, createStripeClient, isStripeEnvironmentEnabled } from "../_shared/stripe.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -100,10 +100,10 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Best-effort: try live first, fall back to sandbox. In practice
-      // production reconciliation only ever hits one env; the fallback
-      // keeps the cron useful in preview environments too.
-      const envsToTry: StripeEnv[] = ["live", "sandbox"];
+      // Production reconciles live subscriptions only. Controlled test
+      // projects may explicitly enable sandbox through the server secret.
+      const envsToTry: StripeEnv[] = (["live", "sandbox"] as StripeEnv[])
+        .filter(isStripeEnvironmentEnabled);
       let handled = false;
 
       for (const env of envsToTry) {

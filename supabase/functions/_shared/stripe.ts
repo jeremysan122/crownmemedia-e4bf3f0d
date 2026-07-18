@@ -13,6 +13,13 @@ const getEnv = (key: string): string => {
 
 export type StripeEnv = "sandbox" | "live";
 
+// Sandbox and live Stripe modes share the same Supabase database in this
+// deployment. Sandbox must therefore be an explicit server-side choice; a
+// client request alone can never enable test-card entitlement grants.
+export function isStripeEnvironmentEnabled(env: StripeEnv): boolean {
+  return env === "live" || Deno.env.get("PAYMENTS_ENABLE_SANDBOX") === "true";
+}
+
 const GATEWAY_STRIPE_BASE = "https://connector-gateway.lovable.dev/stripe";
 
 export function getConnectionApiKey(env: StripeEnv): string {

@@ -1,7 +1,7 @@
 // Returns live Stripe Connect account status for the caller, and upserts it
 // into connect_accounts so the UI reflects status immediately after onboarding.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { type StripeEnv, createStripeClient } from "../_shared/stripe.ts";
+import { type StripeEnv, createStripeClient, isStripeEnvironmentEnabled } from "../_shared/stripe.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,17 +37,21 @@ Deno.serve(async (req) => {
     if (environment !== "sandbox" && environment !== "live") {
       return safeError(400, "environment required");
     }
+    if (!isStripeEnvironmentEnabled(environment)) {
+      return safeError(403, "Sandbox Stripe Connect is disabled");
+    }
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { data: row } = await admin
+    const { data: row, error: rowError } = await admin
       .from("connect_accounts")
       .select("stripe_account_id, charges_enabled, payouts_enabled, details_submitted")
       .eq("user_id", userId)
       .maybeSingle();
+    if (rowError) return safeError(500, "Could not read account status", rowError);
 
     if (!row?.stripe_account_id) {
       return new Response(JSON.stringify({ connected: false }), {
@@ -85,10 +89,11 @@ Deno.serve(async (req) => {
       next.payouts_enabled !== row.payouts_enabled ||
       next.details_submitted !== row.details_submitted
     ) {
-      await admin
+      const { error: updateError } = await admin
         .from("connect_accounts")
         .update(next)
         .eq("stripe_account_id", row.stripe_account_id);
+      if (updateError) return safeError(500, "Could not save account status", updateError);
     }
 
     const fully_set_up = next.charges_enabled && next.payouts_enabled && next.details_submitted;
