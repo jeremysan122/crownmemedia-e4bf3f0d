@@ -1951,17 +1951,17 @@ export default function Upload() {
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <Label className="text-[11px]">City</Label>
-                      <Input ref={cityInputRef} value={city} onChange={(e) => setCity(e.target.value)} className="bg-input h-9 text-xs" />
+                      <Label htmlFor="post-location-city" className="text-[11px]">City</Label>
+                      <Input id="post-location-city" ref={cityInputRef} value={city} onChange={(e) => setCity(e.target.value)} className="bg-input h-9 text-xs" />
                     </div>
                     <div>
-                      <Label className="text-[11px]">State</Label>
-                      <Input value={state} onChange={(e) => setState(e.target.value)} className="bg-input h-9 text-xs" />
+                      <Label htmlFor="post-location-state" className="text-[11px]">State</Label>
+                      <Input id="post-location-state" value={state} onChange={(e) => setState(e.target.value)} className="bg-input h-9 text-xs" />
                     </div>
                   </div>
                   <div>
-                    <Label className="text-[11px]">Country</Label>
-                    <Input value={country} onChange={(e) => setCountry(e.target.value)} className="bg-input h-9 text-xs" />
+                    <Label htmlFor="post-location-country" className="text-[11px]">Country</Label>
+                    <Input id="post-location-country" value={country} onChange={(e) => setCountry(e.target.value)} className="bg-input h-9 text-xs" />
                   </div>
                 </div>
               )}

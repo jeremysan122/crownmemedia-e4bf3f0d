@@ -1429,15 +1429,20 @@ function MapView({
   const { token, version: tokenVersion, loading: tokenLoading, error: tokenError, refresh: refreshToken } = useMapboxToken();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  // Refs do not trigger React effects. Bump this after creating the Mapbox
+  // instance so marker/cluster/heat effects that initially ran before the
+  // async token arrived get a deterministic second pass.
+  const [mapReadyVersion, setMapReadyVersion] = useState(0);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
   const [markerMode, setMarkerMode] = useState<"posts" | "users">("posts");
   // Surface a friendly error UI when Mapbox rejects requests (401/403),
   // which usually means an expired/invalid token or a restricted account.
   const [mapAuthError, setMapAuthError] = useState(false);
-  // Track whether we've already attempted a one-shot token refresh for the
-  // current token version, so we don't loop forever on a genuinely bad token.
-  const refreshAttemptedRef = useRef<number | null>(null);
+  // Track the one automatic refresh for this mounted map. Keying this to the
+  // token version causes an endless rebuild loop when the provider keeps
+  // returning 401/403 because every refresh creates a new version.
+  const refreshAttemptedRef = useRef(false);
 
   const visibleRows = useMemo(
     () => rows.filter((r) => r.region_type !== "global"),
@@ -1474,9 +1479,10 @@ function MapView({
       if (status === 401 || status === 403) {
         // Try a one-shot refresh of the Mapbox token before giving up — the
         // current value may simply have expired. The map effect re-runs when
-        // `tokenVersion` changes, so a fresh token rebuilds the map cleanly.
-        if (refreshAttemptedRef.current !== tokenVersion) {
-          refreshAttemptedRef.current = tokenVersion;
+        // A fresh token rebuilds the map cleanly. Only do this automatically
+        // once per mounted map; the recovery button permits a deliberate retry.
+        if (!refreshAttemptedRef.current) {
+          refreshAttemptedRef.current = true;
           refreshToken().then((t) => {
             if (!t) setMapAuthError(true);
           }).catch(() => setMapAuthError(true));
@@ -1497,6 +1503,7 @@ function MapView({
       } catch { /* fog optional */ }
     });
     mapRef.current = map;
+    setMapReadyVersion((version) => version + 1);
     return () => {
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
@@ -1532,10 +1539,11 @@ function MapView({
       const bookmarked = isBookmarked(p.r.region_type, p.r.region_name, category);
 
       // Wrapper element is what Mapbox positions via `transform: translate(...)`.
-      // The inner button owns visual transforms (scale on hover) so we never
-      // clobber Mapbox's positional transform — that was the hover-drift bug.
+      // Give it the real marker dimensions so browser hit-testing cannot fall
+      // through to the canvas; the inner button owns hover scaling so we never
+      // clobber Mapbox's positional transform.
       const wrap = document.createElement("div");
-      wrap.style.cssText = "width:0;height:0;will-change:transform;";
+      wrap.style.cssText = `width:${size}px;height:${size}px;will-change:transform;z-index:3;pointer-events:auto;`;
 
       const el = document.createElement("button");
       el.type = "button";
@@ -1544,15 +1552,16 @@ function MapView({
         `${p.r.region_name}, ${p.r.region_type}, held by @${p.r.profile?.username ?? "unknown"}, score ${formatScore(p.r.crown_score)}`,
       );
       el.style.cssText = `
-        position:absolute;left:50%;top:50%;
+        position:absolute;left:0;top:0;
         width:${size}px;height:${size}px;border-radius:9999px;cursor:pointer;
         background:${mine ? "hsl(45 95% 55%)" : "hsl(45 90% 60%)"};
         border:2px solid rgba(0,0,0,0.6);
         box-shadow:0 0 ${Math.round(size * 0.6)}px hsl(45 95% 55% / ${0.35 + intensity * 0.5});
         opacity:0.95;
+        z-index:1;pointer-events:auto;
         display:flex;align-items:center;justify-content:center;color:#1a1208;
         font-weight:800;font-size:${Math.max(10, Math.round(size * 0.42))}px;
-        transform:translate(-50%, -50%);
+        transform:scale(1);
         transition:transform .15s ease;
         transform-origin:center;
       `;
@@ -1593,11 +1602,11 @@ function MapView({
       `;
 
       el.addEventListener("mouseenter", () => {
-        el.style.transform = "translate(-50%, -50%) scale(1.15)";
+        el.style.transform = "scale(1.15)";
         popup.setLngLat([p.coord[1], p.coord[0]]).setHTML(popupHtml).addTo(map);
       });
       el.addEventListener("mouseleave", () => {
-        el.style.transform = "translate(-50%, -50%) scale(1)";
+        el.style.transform = "scale(1)";
         popup.remove();
       });
       el.addEventListener("click", async (ev) => {
@@ -1635,7 +1644,7 @@ function MapView({
         .addTo(map);
       markersRef.current.push(marker);
     });
-  }, [points, markerMode, category, userId, maxScore, isBookmarked, navigate]);
+  }, [points, markerMode, category, userId, maxScore, isBookmarked, navigate, mapReadyVersion]);
 
   // Pulse flashed markers
   useEffect(() => {
@@ -1659,7 +1668,7 @@ function MapView({
       }
     });
 
-  }, [flashKeys, points]);
+  }, [flashKeys, points, mapReadyVersion]);
 
   // Lightweight client-side clustering: markers that project within a small
   // pixel bucket at the current zoom get merged into the top-scoring one
@@ -1738,7 +1747,7 @@ function MapView({
       map.off("moveend", runCluster);
       map.off("zoomend", runCluster);
     };
-  }, [points]);
+  }, [points, mapReadyVersion]);
 
 
 
@@ -1795,7 +1804,7 @@ function MapView({
 
     if (map.isStyleLoaded()) apply();
     else map.once("style.load", apply);
-  }, [points, heat, maxScore]);
+  }, [points, heat, maxScore, mapReadyVersion]);
 
   if (tokenLoading) {
     return (
@@ -1827,7 +1836,7 @@ function MapView({
           <Button size="sm" variant="outline" onClick={async () => {
             // Reset the one-shot guard and ask the hook for a fresh token —
             // far cheaper than a full page reload and preserves filters/state.
-            refreshAttemptedRef.current = null;
+            refreshAttemptedRef.current = false;
             setMapAuthError(false);
             const t = await refreshToken();
             if (!t) setMapAuthError(true);

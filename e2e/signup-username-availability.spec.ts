@@ -13,9 +13,16 @@ import { createClient } from "@supabase/supabase-js";
 
 const URL = process.env.VITE_SUPABASE_URL!;
 const ANON = process.env.VITE_SUPABASE_PUBLISHABLE_KEY!;
+const HAS_REAL_SUPABASE = !!URL && !!ANON && !/\.invalid(?:\/|$)/i.test(URL);
+
+type AvailabilityRow = { available: boolean; reason: string | null };
+const firstRow = (data: unknown): AvailabilityRow | null => {
+  const row = Array.isArray(data) ? data[0] : data;
+  return row && typeof row === "object" ? row as AvailabilityRow : null;
+};
 
 test.describe("reserved usernames — signup availability", () => {
-  test.skip(!URL || !ANON, "requires anon supabase env");
+  test.skip(!HAS_REAL_SUPABASE, "requires a real anon Supabase environment");
 
   const anon = URL && ANON
     ? createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
@@ -26,7 +33,7 @@ test.describe("reserved usernames — signup availability", () => {
       _username: "accountrecovery",
     } as never);
     expect(error).toBeNull();
-    const row = (data as { available: boolean; reason: string | null } | null);
+    const row = firstRow(data);
     expect(row?.available).toBe(false);
     // reason surface may be "reserved_blocked" / "reserved" — assert it's a rejection code.
     expect(row?.reason ?? "").not.toBe("");
@@ -38,13 +45,14 @@ test.describe("reserved usernames — signup availability", () => {
       _username: uname,
     } as never);
     expect(error).toBeNull();
-    expect((data as { available: boolean }).available).toBe(true);
+    expect(firstRow(data)?.available).toBe(true);
   });
 
   test("invalid formats are rejected", async () => {
-    const { data } = await anon!.rpc("check_username_available" as never, {
+    const { data, error } = await anon!.rpc("check_username_available" as never, {
       _username: "a",
     } as never);
-    expect((data as { available: boolean }).available).toBe(false);
+    expect(error).toBeNull();
+    expect(firstRow(data)?.available).toBe(false);
   });
 });
