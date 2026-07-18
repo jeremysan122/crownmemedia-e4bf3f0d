@@ -7928,12 +7928,12 @@ export type Database = {
           reason: string
         }[]
       }
+      claim_daily_reward: { Args: never; Returns: Json }
+      claim_daily_royal_boost: { Args: { p_post_id: string }; Returns: Json }
       claim_stripe_event: {
         Args: { _event_id: string; _event_type: string }
         Returns: Json
       }
-      claim_daily_reward: { Args: never; Returns: Json }
-      claim_daily_royal_boost: { Args: { p_post_id: string }; Returns: Json }
       cleanup_orphaned_media: {
         Args: { p_older_than_minutes?: number }
         Returns: number
@@ -7948,10 +7948,7 @@ export type Database = {
         Returns: string
       }
       comments_allowed_on: { Args: { _post: string }; Returns: boolean }
-      complete_stripe_event: {
-        Args: { _event_id: string }
-        Returns: undefined
-      }
+      complete_stripe_event: { Args: { _event_id: string }; Returns: undefined }
       compute_daily_usage_rollup: { Args: { _d?: string }; Returns: undefined }
       confirm_my_age: { Args: { _dob: string }; Returns: undefined }
       count_post_votes_by_type: {
