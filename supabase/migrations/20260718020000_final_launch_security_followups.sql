@@ -416,6 +416,45 @@ BEGIN
         AND event_type IN ('runtime_audit_pass', 'runtime_audit_fail');
     END IF;
 
+    -- Older runtime-audit versions left the operational rows below behind.
+    -- Clear them in dependency order before deleting the profile/auth user.
+    DELETE FROM public.shekel_spend_allocations
+    WHERE user_id = synthetic_user.id;
+
+    DELETE FROM public.boost_token_spend_allocations
+    WHERE user_id = synthetic_user.id;
+
+    DELETE FROM public.boost_token_lots
+    WHERE user_id = synthetic_user.id;
+
+    DELETE FROM public.debit_operations
+    WHERE user_id = synthetic_user.id;
+
+    DELETE FROM public.shekel_ledger
+    WHERE user_id = synthetic_user.id;
+
+    DELETE FROM public.boost_tokens_ledger
+    WHERE user_id = synthetic_user.id;
+
+    DELETE FROM public.gift_transactions
+    WHERE sender_id = synthetic_user.id
+       OR receiver_id = synthetic_user.id;
+
+    DELETE FROM public.boosts
+    WHERE user_id = synthetic_user.id;
+
+    DELETE FROM public.royal_pass_reversals
+    WHERE user_id = synthetic_user.id;
+
+    DELETE FROM public.royal_pass_shield_allowances
+    WHERE user_id = synthetic_user.id;
+
+    DELETE FROM public.royal_pass_grants
+    WHERE user_id = synthetic_user.id;
+
+    DELETE FROM public.wallets
+    WHERE user_id = synthetic_user.id;
+
     DELETE FROM public.royal_shield_audit_log
     WHERE user_id = synthetic_user.id;
 
