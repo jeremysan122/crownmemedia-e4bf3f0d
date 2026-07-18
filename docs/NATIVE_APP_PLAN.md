@@ -13,7 +13,7 @@
 | **PWA launch** | ✅ READY | None — click Publish in Lovable |
 | **Android native** | 🟡 SCAFFOLDED | `npx cap add android` locally; signed AAB; Play Console setup |
 | **iOS native** | 🟡 SCAFFOLDED | `npx cap add ios` locally; Apple Developer membership; Sign in with Apple; IAP gating verified |
-| **RevenueCat** | 🟡 CODE READY | SDK keys, products in App Store Connect + Play Console, webhook secret |
+| **RevenueCat** | 🟡 SCAFFOLDED | SDK initialization and native purchase UI; production SDK keys; store products; webhook secret |
 | **Native push** | 🟡 CODE READY | APNs cert (iOS), FCM project (Android), `send-native-push` function |
 | **App Store submission** | ❌ NOT READY | All iOS items above + reviewer demo account + privacy nutrition label |
 | **Play Store submission** | ❌ NOT READY | Signed AAB + Data Safety form + content rating + reviewer demo account |
@@ -22,7 +22,7 @@
 
 ## What this PR added
 
-- `capacitor.config.ts` — appId `app.lovable.fcbd98f7a4524e42a0f9b92cfce5c620`, appName `CrownMe`, splash + push plugin config, hot-reload via Lovable preview URL.
+- `capacitor.config.ts` — production appId `com.crownmemedia.app`, appName `CrownMe`, splash + push plugin config, and a release-safe local `dist/` bundle (no remote preview URL).
 - Capacitor + RevenueCat npm deps installed (`@capacitor/core`, `ios`, `android`, `push-notifications`, `app`, `splash-screen`, `@revenuecat/purchases-capacitor`, `@capacitor/cli`, `@capacitor/assets`).
 - `src/lib/purchaseGate.ts` — `shouldUseIAP()`, `purchaseProvider()`, `isAppleStrict()`.
 - `src/lib/nativePush.ts` — registers APNs/FCM token into `public.push_subscriptions` (reusing existing table, `endpoint = "ios:<token>"` / `"android:<token>"`, `user_agent = platform`). Deep-link handler reuses `routeNotification`.
@@ -53,9 +53,9 @@ npx cap open android     # Android Studio
 npx cap open ios         # Xcode
 ```
 
-Comment out the `server.url` block in `capacitor.config.ts` before producing a
-**release** build — release builds must ship the locally built `dist/` bundle,
-not the Lovable preview URL.
+The checked-in `capacitor.config.ts` is release-safe and intentionally has no
+`server.url`. If device hot reload is needed, use a temporary local development
+override and never commit that override to a release branch.
 
 ### App icons + splash
 Drop a 1024×1024 master icon at `resources/icon.png` and a 2732×2732 splash at
@@ -231,8 +231,8 @@ App Review.
 
 ## Final recommendation
 
-**Ship PWA v1.0 now.** Native Android scaffolding is in place; iOS scaffolding
-is in place; RevenueCat code path is in place. None of the native surfaces are
-submission-ready until the steps above are completed locally and verified
-against sandbox purchase flows. Treat App Store + Play Store submission as a
-v1.1 milestone, not a this-week deliverable.
+The PWA remains the current production surface. Native Android and iOS
+scaffolding is present, but RevenueCat currently has only the webhook and
+platform-gating foundations—not SDK initialization or native purchase UI.
+Neither native surface is submission-ready until every remaining item above is
+implemented and verified against store sandbox purchase and refund flows.
