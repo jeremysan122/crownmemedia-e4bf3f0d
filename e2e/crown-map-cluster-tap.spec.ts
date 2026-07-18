@@ -1,4 +1,5 @@
 import { test, expect, type Route } from "@playwright/test";
+import { installHermeticAuthMock, seedHermeticSession } from "./helpers/hermeticAuthMock";
 
 /**
  * Crown Map cluster-tap E2E — verifies the locked launch rule that a cluster
@@ -18,19 +19,21 @@ const HIGH_ID = "post-high-score-aaaaaaaaaaaa";
 const LOW_ID = "post-low-score-bbbbbbbbbbbbbb";
 const FAR_ID = "post-far-away-cccccccccccccc";
 
-// Two Edmonton posts ~150m apart (guaranteed to bucket together at low zoom)
-// plus one Calgary post that must stay unclustered.
+// Edmonton + Calgary are close enough to bucket together at the initial world
+// zoom but split as the user zooms in. London remains a standalone marker.
+// Distinct cities are intentional: public map rows snap posts to safe city
+// centers rather than exposing exact post coordinates.
 const CROWNED_POSTS = [
   {
-    region_name: "Edmonton",
+    region_name: "Calgary",
     region_type: "city",
     user_id: "user-high",
     post_id: HIGH_ID,
     crown_score: 9999,
     category: "overall",
-    profile: { username: "royal_edmonton", profile_photo_url: null },
+    profile: { username: "royal_calgary", profile_photo_url: null },
     post: {
-      city: "Edmonton",
+      city: "Calgary",
       state: "Alberta",
       country: "Canada",
       location_enabled: true,
@@ -56,29 +59,29 @@ const CROWNED_POSTS = [
       country: "Canada",
       location_enabled: true,
       location_source: "current_location",
-      post_lat: 53.5471,
-      post_lng: -113.4928,
+      post_lat: 51.0447,
+      post_lng: -114.0719,
       post_location_precision: "exact",
       image_url: null,
       caption: "second",
     },
   },
   {
-    region_name: "Calgary",
+    region_name: "London",
     region_type: "city",
     user_id: "user-far",
     post_id: FAR_ID,
     crown_score: 500,
     category: "overall",
-    profile: { username: "calgary_holder", profile_photo_url: null },
+    profile: { username: "london_holder", profile_photo_url: null },
     post: {
-      city: "Calgary",
-      state: "Alberta",
-      country: "Canada",
+      city: "London",
+      state: "England",
+      country: "United Kingdom",
       location_enabled: true,
       location_source: "current_location",
-      post_lat: 51.0447,
-      post_lng: -114.0719,
+      post_lat: 51.5072,
+      post_lng: -0.1276,
       post_location_precision: "exact",
       image_url: null,
       caption: "solo",
@@ -87,6 +90,8 @@ const CROWNED_POSTS = [
 ];
 
 async function stubCrownMapBackend(page: import("@playwright/test").Page) {
+  await seedHermeticSession(page);
+  await installHermeticAuthMock(page);
   await page.route("**/rest/v1/crowns**", (route: Route) => {
     route.fulfill({
       status: 200,
@@ -105,6 +110,18 @@ async function stubCrownMapBackend(page: import("@playwright/test").Page) {
       contentType: "application/json",
       body: JSON.stringify(id ? [{ id }] : []),
     });
+  });
+  // Keep this regression hermetic: a minimal valid style lets Mapbox finish
+  // booting without real tiles, telemetry, network access, or token refreshes.
+  await page.route("https://api.mapbox.com/**", (route: Route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ version: 8, name: "Hermetic CrownMe map", sources: {}, layers: [] }),
+    });
+  });
+  await page.route("https://events.mapbox.com/**", (route: Route) => {
+    route.fulfill({ status: 204, body: "" });
   });
 }
 
@@ -137,11 +154,12 @@ test.describe("Crown Map — cluster tap expands + opens correct /post/:id", () 
 
     // Mapbox NavigationControl exposes a "Zoom in" button by default.
     const zoomIn = page.getByRole("button", { name: /Zoom in/i });
-    // Two zoom levels is more than enough to move the two Edmonton pins
-    // into separate 44px buckets.
-    await zoomIn.click();
-    await zoomIn.click();
-    await zoomIn.click();
+    // Four zoom levels separate the Edmonton/Calgary city-center pins into
+    // distinct 44px buckets.
+    for (let i = 0; i < 4; i += 1) {
+      await zoomIn.click();
+      await page.waitForTimeout(350);
+    }
 
     // After zoomend re-runs the cluster pass, no bucket has extras → no badge.
     await expect(page.locator("[data-cluster-badge]")).toHaveCount(0, { timeout: 5000 });
@@ -153,7 +171,7 @@ test.describe("Crown Map — cluster tap expands + opens correct /post/:id", () 
 
     // Wait for the Edmonton cluster to appear so we know markers rendered.
     await expect(page.locator("[data-cluster-badge]").first()).toBeVisible({ timeout: 15000 });
-    // Exactly one cluster badge — Calgary stays standalone.
+    // Exactly one cluster badge — London stays standalone.
     await expect(page.locator("[data-cluster-badge]")).toHaveCount(1);
   });
 });

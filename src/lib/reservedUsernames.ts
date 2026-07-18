@@ -6,7 +6,7 @@ export const RESERVED_USERNAMES = new Set<string>([
   // Brand / staff / system
   "admin", "administrator", "root", "owner", "staff", "team", "support",
   "help", "crownme", "crown", "official", "system", "moderator", "mod",
-  "security", "billing", "legal", "abuse", "report", "anonymous", "null",
+  "security", "billing", "legal", "abuse", "report", "accountrecovery", "anonymous", "null",
   "undefined", "ceo", "founder", "king", "queen", "royalty",
 
   // App routes (must mirror src/App.tsx) — keep alphabetised

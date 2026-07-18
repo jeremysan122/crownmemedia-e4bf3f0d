@@ -40,6 +40,7 @@ describe("validateStep1 — Account", () => {
   });
   it("flags reserved/taken username", () => {
     expect(validateStep1({ ...baseStep1, username: "admin", usernameStatus: "idle" }).username).toBe("That username is reserved");
+    expect(validateStep1({ ...baseStep1, username: "accountrecovery", usernameStatus: "idle" }).username).toBe("That username is reserved");
     expect(validateStep1({ ...baseStep1, usernameStatus: "taken" }).username).toBe("That username is already taken");
   });
 });

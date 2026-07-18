@@ -8,8 +8,14 @@ import { useAuth } from "@/context/AuthContext";
  * Always wrap inside <ProtectedRoute> so user/profile/role state is loaded
  * before this component runs.
  */
-export default function AdminRoute({ children }: { children: ReactNode }) {
-  const { loading, isModerator, profile } = useAuth();
+export default function AdminRoute({
+  children,
+  requireAdmin = false,
+}: {
+  children: ReactNode;
+  requireAdmin?: boolean;
+}) {
+  const { loading, isModerator, isAdmin, profile } = useAuth();
 
   // ProtectedRoute already waited for auth, but the role lookup completes
   // alongside profile load. Block rendering until that has settled.
@@ -21,6 +27,8 @@ export default function AdminRoute({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!isModerator) return <Navigate to="/feed" replace />;
+  if (requireAdmin ? !isAdmin : !isModerator) {
+    return <Navigate to="/feed" replace />;
+  }
   return <>{children}</>;
 }

@@ -12,20 +12,22 @@
  * actually scrolls horizontally without moving the page vertically.
  */
 import { test, expect, devices } from "@playwright/test";
+import { installHermeticAuthMock, seedHermeticSession } from "./helpers/hermeticAuthMock";
 
 test.use({ ...devices["iPhone 13"] });
 
 test.describe("Crown Categories mobile carousel", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-    // Feed is the home route for the app; if a splash redirects, wait for it.
+    await seedHermeticSession(page);
+    await installHermeticAuthMock(page);
+    await page.goto("/feed");
     await page.waitForLoadState("networkidle");
   });
 
   test("carousel has the CSS guards that prevent pull-to-refresh", async ({
     page,
   }) => {
-    const rail = page.getByTestId("crown-category-carousel");
+    const rail = page.getByTestId("hub-category-carousel");
     await expect(rail).toBeVisible({ timeout: 15_000 });
 
     const styles = await rail.evaluate((el) => {
@@ -48,7 +50,7 @@ test.describe("Crown Categories mobile carousel", () => {
   test("rail scrolls horizontally without moving the page vertically", async ({
     page,
   }) => {
-    const rail = page.getByTestId("crown-category-carousel");
+    const rail = page.getByTestId("hub-category-carousel");
     await expect(rail).toBeVisible({ timeout: 15_000 });
 
     const pageScrollBefore = await page.evaluate(() => window.scrollY);
@@ -70,15 +72,28 @@ test.describe("Crown Categories mobile carousel", () => {
   test("vertical feed scrolling still works outside the carousel", async ({
     page,
   }) => {
-    const before = await page.evaluate(() => window.scrollY);
-    await page.evaluate(() => window.scrollBy({ top: 400, behavior: "instant" as ScrollBehavior }));
+    // Network idle can precede React's effect-driven feed commit. Wait for
+    // deterministic content before asserting page-level scroll geometry.
+    await expect(page.locator("article")).toHaveCount(8, { timeout: 15_000 });
+    const metrics = await page.evaluate(() => ({
+      before: window.scrollY,
+      innerHeight: window.innerHeight,
+      documentHeight: document.documentElement.scrollHeight,
+      bodyHeight: document.body.scrollHeight,
+    }));
+    expect(Math.max(metrics.documentHeight, metrics.bodyHeight)).toBeGreaterThan(metrics.innerHeight);
+    await page.evaluate(() => {
+      const scroller = document.scrollingElement;
+      if (scroller) scroller.scrollTop = 400;
+      else window.scrollTo({ top: 400, behavior: "instant" as ScrollBehavior });
+    });
     await page.waitForTimeout(100);
     const after = await page.evaluate(() => window.scrollY);
-    expect(after).toBeGreaterThan(before);
+    expect(after, JSON.stringify(metrics)).toBeGreaterThan(metrics.before);
   });
 
   test("category chips do not jitter / reflow on swipe", async ({ page }) => {
-    const rail = page.getByTestId("crown-category-carousel");
+    const rail = page.getByTestId("hub-category-carousel");
     await expect(rail).toBeVisible({ timeout: 15_000 });
     const firstChip = rail.locator("button").first();
 

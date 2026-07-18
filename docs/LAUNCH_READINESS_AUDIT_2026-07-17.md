@@ -6,6 +6,8 @@
 
 The browser media publication gate is complete. A labeled QA photo and a 1080×1920, 2.9-second Scroll were published, verified, and deleted; a 640×480 landscape clip was correctly rejected from the Scroll path with a 9:16 validation error. The test exposed one additional deletion defect: deleting a post removed its row immediately but left public media to the daily orphan job. All three user-facing delete paths now remove strictly owner-scoped Storage objects immediately, with the scheduled job retained as fallback. Software should not be described as “unbreakable”; the evidence and remaining gaps below define the current boundary.
 
+The extended platform inventory is now source-reconciled: **125 route declarations, 36 edge functions, 244 generated public-schema functions, and 153 RPCs invoked by runtime TypeScript**. An executable contract verifies that documented routes stay mounted, every deployable edge function has an explicit gateway policy, and every runtime RPC remains present in generated database types. See `docs/CROWNME_PLATFORM_REFERENCE.md`.
+
 ## Released revisions
 
 - `efa237c` — remove owned Storage objects immediately when a post is deleted from Feed, Profile, or Archived Posts.
@@ -33,6 +35,7 @@ The browser media publication gate is complete. A labeled QA photo and a 1080×1
 - Published a labeled 1080×1080 QA photo through the production file chooser, verified its alt text, caption, category, feed card, and profile tile, then deleted it and confirmed the profile returned to its original post count.
 - Verified that the Scroll composer rejects a 640×480 landscape video, then published a public-domain 1080×1920, 2.9-second WebM. The Scroll rendered in the immersive viewer, appeared under `@crownmemedia → Scrolls`, and opened with the correct caption/category metadata before deletion. The temporary Scroll and photo are no longer present in the UI.
 - Synced `efa237c` into Lovable and used the authenticated Publish → Update flow until all production domains reported **Up to date**. A second labeled photo canary was published and removed through the updated Feed deletion path; the card disappeared immediately. The final request to its captured public Storage URL was blocked by the test environment's external-action usage limit, so HTTP-level deletion verification remains explicitly open rather than being inferred from the UI.
+- Re-ran the hermetic Chromium launch smoke after the extended surface hardening: **14/14 browser tests passed** across canonical/legacy profile navigation, mobile/tablet follow persistence and rollback, Rewards freshness, and Royal Pass admin-only visibility.
 
 ## Security remediation
 
@@ -48,17 +51,22 @@ The browser media publication gate is complete. A labeled QA photo and a 1080×1
 | Refund did not reverse store Shekels | Added a transactional refund RPC and explicit purchase/refund ledger semantics | Authentic signed sandbox refund plus replay/idempotency checks |
 | Web-push UI could report enabled without server state | Reconciled browser subscription, server subscription, and preference; both Settings controls now use one durable operation | Production disable/enable flow plus one-account delivery canary |
 | Deleted posts left public media until the daily orphan job | Added owner-scoped media-manifest capture and immediate Storage removal to Feed, Profile, and Archived Posts deletion; deferred cleanup is surfaced and remains covered by the scheduled fallback | 4 focused regression tests, TypeScript, full unit suite, and production build |
+| Internal email-template tooling was publicly routable | Preserved the URL but placed the route behind authenticated administrator access | Route contract and production build |
+| Royal Pass reconciliation ran privileged Stripe/database work without caller authentication | Enabled gateway JWT verification and added a constant-time service-role bearer check before any privileged client is created | Static authorization-order contract and full test suite |
+| Edge gateway policy depended on defaults for 16 functions | Added explicit `verify_jwt` policy for all 36 deployable functions, including public RevenueCat ingress and authenticated reconciliation | Directory/config parity contract |
+| Profile could display a misleading empty state during a post-query failure or publish race | Added explicit loading/error/retry UI, realtime post INSERT handling, and removal handling for archived/removed updates | TypeScript, source contract, production build, and surrounding profile browser smoke; a live publish-to-profile canary remains a rollout check |
 
 Two Lovable warnings were reviewed as intentional fail-closed behavior, not vulnerabilities: feature flags are admin-managed and are not read by normal app clients; direct inserts into `profile_visits` are blocked because visits are recorded through the rate-limited `record_profile_visit` RPC.
 
 ## Automated verification
 
-- Vitest: **131 files passed, 5 skipped; 1,085 tests passed, 48 skipped**.
+- Vitest: **132 files passed, 5 skipped; 1,092 tests passed, 48 skipped**.
 - TypeScript: `tsc --noEmit` passed.
 - ESLint: **0 errors, 166 warnings**. The warnings are existing hook-dependency/Fast Refresh cleanup debt and do not fail the configured gate.
 - Production Vite build: passed. Vite still reports large-chunk optimization warnings.
+- Hermetic Chromium launch smoke: **14/14 passed**.
 - Focused refund and push-persistence regression suites: **13/13 passed**.
-- Production anonymous RLS probe: all 15 sensitive tables blocked or returned zero rows; `unsafe: false`.
+- Production anonymous RLS probe rerun: all 15 sensitive tables blocked or returned zero rows; `unsafe: false`.
 - Controlled privileged RLS/security probes passed against the authorized production test account.
 - Lovable dependency scan: 0 known package vulnerabilities reported.
 
@@ -81,15 +89,28 @@ Do not treat manual authenticated redelivery as proof that native Stripe deliver
 
 ## Remaining controlled gates
 
-1. Repeat the captured public-URL request when the external-action budget is available and confirm the updated deletion canary returns 404. Also confirm the pre-deployment synthetic QA orphan was removed by the scheduled fallback job; neither object contains user content.
-2. Confirm the push canary's OS/browser notification appears and opens the expected route. The server accepted one delivery, but visual receipt was outside the server runner's observability.
-3. Run an expired-subscription `410 Gone` cleanup check only with a deterministic first-party test endpoint. It was intentionally skipped because no safe endpoint existed.
-4. After the P0 webhook ingress fix, repeat Stripe-initiated purchase, refund, duplicate-event replay, dispute lifecycle, receipt, and failure retry without adding a Supabase authorization header.
-5. Monitor error rate, latency, webhook failures, email suppression, storage growth, queue depth, and database saturation during a limited rollout before expanding traffic.
+1. Before deploying the reconciliation hardening, locate or create the production `royal-pass-reconcile` scheduler and configure its `Authorization` header with the service-role bearer. The repository contains no migration that owns this schedule, so its current dashboard/external state cannot be proven from source. Verify an authenticated POST succeeds and an anonymous/non-service-role POST returns 401.
+2. Run a controlled publish-to-profile canary after deploying the profile freshness fix: publish, observe the post without a hard refresh, archive/delete it, and verify realtime removal plus error/retry behavior.
+3. Repeat the captured public-URL request when the external-action budget is available and confirm the updated deletion canary returns 404. Also confirm the pre-deployment synthetic QA orphan was removed by the scheduled fallback job; neither object contains user content.
+4. Confirm the push canary's OS/browser notification appears and opens the expected route. The server accepted one delivery, but visual receipt was outside the server runner's observability.
+5. Run an expired-subscription `410 Gone` cleanup check only with a deterministic first-party test endpoint. It was intentionally skipped because no safe endpoint existed.
+6. After the P0 webhook ingress fix, repeat Stripe-initiated purchase, refund, duplicate-event replay, dispute lifecycle, receipt, and failure retry without adding a Supabase authorization header.
+7. Monitor error rate, latency, webhook failures, email suppression, storage growth, queue depth, and database saturation during a limited rollout before expanding traffic.
 
 ## Non-blocking follow-up
 
-- Newly published media appeared in Feed immediately, while the authenticated Profile intermittently displayed its empty state after reload. The post remained available through Feed and could be deleted normally. Diagnose Profile query/cache invalidation and replace the misleading empty state with an explicit loading or refresh state before broad rollout.
 - Split the largest Vite production bundles to improve first-load performance on slower mobile devices.
 - Reduce the 166 lint warnings, prioritizing React hook dependency warnings on feed, post, and battle flows.
+- Replace the command center's coarse moderator/administrator UI gate with a documented per-route capability matrix; backend RLS and RPC authorization must remain the authority.
 - Keep recurring RLS probes, dependency scans, browser canaries, database backups, webhook alerts, and restore drills in the release process.
+
+## Major-platform readiness boundary
+
+Feature breadth is not the same as operating maturity. CrownMe should not be represented as equivalent to a major social platform until the following have measured evidence:
+
+- Native Stripe and RevenueCat webhook ingress, retries, disputes, and fulfillment are proven without a Supabase bearer-token workaround.
+- Sustained load, soak, abuse, and failure-injection tests establish SLOs for feed, uploads, messaging, live battles, notifications, and payments.
+- Backup restoration, disaster recovery, key rotation, incident response, rollback, and multi-region continuity are rehearsed with recorded recovery times.
+- BrowserStack or an equivalent real-device matrix covers current iOS Safari, Android Chrome, low-memory devices, native push, backgrounding, camera, microphone, and Store review builds.
+- Trust and safety has staffed moderation, appeals, CSAM/escalation procedures, copyright response, fraud controls, and response-time ownership—not only code paths.
+- Product analytics proves feed quality, creator supply, retention, notification quality, and monetization without dark patterns.

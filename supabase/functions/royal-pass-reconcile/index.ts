@@ -6,7 +6,9 @@
 // them directly from Stripe. Mirrors the manual "Refresh Entitlements"
 // admin action in `royal-pass-sync` but runs unattended and in batch.
 //
-// Auth: called by pg_cron with the project anon key (verify_jwt = false).
+// Auth: called by pg_cron with the service-role bearer. The gateway verifies
+// the JWT and this handler performs a constant-time service-role check before
+// any Stripe request or privileged database read.
 // All Stripe work uses the shared gateway client; all writes use the
 // service-role client. Every subscription touched (or attempted) is
 // recorded in `royal_pass_sync_audit` for traceability.
@@ -29,8 +31,32 @@ function json(status: number, body: unknown) {
 const STALE_STATUSES = new Set(["active", "trialing", "past_due", "unpaid", "incomplete"]);
 const MAX_BATCH = 50;
 
+async function isServiceRoleRequest(req: Request): Promise<boolean> {
+  const expected = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const authorization = req.headers.get("Authorization") ?? "";
+  const supplied = authorization.replace(/^Bearer\s+/i, "");
+  if (!expected || !supplied) return false;
+
+  const encoder = new TextEncoder();
+  const [expectedDigest, suppliedDigest] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(expected)),
+    crypto.subtle.digest("SHA-256", encoder.encode(supplied)),
+  ]);
+  const left = new Uint8Array(expectedDigest);
+  const right = new Uint8Array(suppliedDigest);
+  let mismatch = left.length ^ right.length;
+  for (let i = 0; i < Math.min(left.length, right.length); i += 1) {
+    mismatch |= left[i] ^ right[i];
+  }
+  return mismatch === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
+  if (!(await isServiceRoleRequest(req))) {
+    return json(401, { error: "unauthorized" });
+  }
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,

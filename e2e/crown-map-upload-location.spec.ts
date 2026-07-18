@@ -1,4 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { installHermeticAuthMock, seedHermeticSession } from "./helpers/hermeticAuthMock";
+
+const APP_ORIGIN = new URL(
+  process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:8080",
+).origin;
 
 /**
  * Crown Map upload/location smoke — mocks the browser geolocation API so
@@ -15,6 +20,11 @@ import { test, expect } from "@playwright/test";
  */
 
 test.describe("Crown Map — Upload location consent smoke", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedHermeticSession(page);
+    await installHermeticAuthMock(page);
+  });
+
   test("A. Location off is the default and requires no permission prompt", async ({ page }) => {
     await page.goto("/upload");
     // The consent section is collapsed by default and starts in "None" mode.
@@ -33,7 +43,7 @@ test.describe("Crown Map — Upload location consent smoke", () => {
   });
 
   test("C. Current location succeeds with granted permission + mocked coords", async ({ page, context }) => {
-    await context.grantPermissions(["geolocation"], { origin: "http://localhost:8080" });
+    await context.grantPermissions(["geolocation"], { origin: APP_ORIGIN });
     await context.setGeolocation({ latitude: 53.5461, longitude: -113.4938 }); // Edmonton
     await page.goto("/upload");
     await page.getByText(/Add location/i).first().click();
