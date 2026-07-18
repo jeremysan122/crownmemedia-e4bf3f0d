@@ -524,36 +524,38 @@ Deno.serve(async (req) => {
   results.push(
     await runScenario(admin, "J_kill_switch_blocks_debits", async () => {
       const steps: Step[] = [];
-      // Flip flag on
-      const flipOn = await admin
-        .from("feature_flags")
-        .update({ enabled: true, rollout_percent: 100 } as never)
-        .eq("key", "royal_pass_debits_paused");
-      steps.push({ name: "kill_switch_on", ok: !flipOn.error, detail: flipOn.error?.message });
+      try {
+        // Flip flag on only for the single blocked-debit assertion.
+        const flipOn = await admin
+          .from("feature_flags")
+          .update({ enabled: true, rollout_percent: 100 } as never)
+          .eq("key", "royal_pass_debits_paused");
+        steps.push({ name: "kill_switch_on", ok: !flipOn.error, detail: flipOn.error?.message });
 
-      const blocked = await admin.rpc("debit_shekels" as never, {
-        _user_id: testUserId,
-        _amount: 10,
-        _reason_code: "audit_kill",
-        _operation_id: crypto.randomUUID(),
-        _ref_table: null,
-        _ref_id: null,
-        _metadata: {} as never,
-        _caller: "admin_runtime_audit",
-        _request_fingerprint: `audit-J-${stamp}`,
-      } as never);
-      steps.push({
-        name: "debit_blocked_when_paused",
-        ok: !!blocked.error && /pause/i.test(blocked.error?.message ?? ""),
-        detail: blocked.error?.message,
-      });
-
-      // Flip flag back off
-      const flipOff = await admin
-        .from("feature_flags")
-        .update({ enabled: false, rollout_percent: 0 } as never)
-        .eq("key", "royal_pass_debits_paused");
-      steps.push({ name: "kill_switch_off", ok: !flipOff.error, detail: flipOff.error?.message });
+        const blocked = await admin.rpc("debit_shekels" as never, {
+          _user_id: testUserId,
+          _amount: 10,
+          _reason_code: "audit_kill",
+          _operation_id: crypto.randomUUID(),
+          _ref_table: null,
+          _ref_id: null,
+          _metadata: {} as never,
+          _caller: "admin_runtime_audit",
+          _request_fingerprint: `audit-J-${stamp}`,
+        } as never);
+        steps.push({
+          name: "debit_blocked_when_paused",
+          ok: !!blocked.error && /pause/i.test(blocked.error?.message ?? ""),
+          detail: blocked.error?.message,
+        });
+      } finally {
+        // Never leave the production economy paused if an assertion throws.
+        const flipOff = await admin
+          .from("feature_flags")
+          .update({ enabled: false, rollout_percent: 0 } as never)
+          .eq("key", "royal_pass_debits_paused");
+        steps.push({ name: "kill_switch_off", ok: !flipOff.error, detail: flipOff.error?.message });
+      }
 
       const allowed = await admin.rpc("debit_shekels" as never, {
         _user_id: testUserId,
@@ -570,21 +572,6 @@ Deno.serve(async (req) => {
       return steps;
     }),
   );
-
-  // Log summary into royal_shield_audit_log
-  const passCount = results.filter((r) => r.ok).length;
-  await admin.rpc("log_royal_shield_event" as never, {
-    _user_id: testUserId,
-    _event_type: passCount === results.length ? "runtime_audit_pass" : "runtime_audit_fail",
-    _reason_code: "admin_runtime_audit",
-    _delta: 0,
-    _grant_id: null,
-    _allowance_id: null,
-    _boost_id: null,
-    _battle_id: null,
-    _post_id: null,
-    _metadata: { scenarios: results, actor_id: callerId, email } as never,
-  } as never);
 
   // Signed-in client for K/L (public wrappers require auth.uid()).
   const testUserClient = createClient(
@@ -705,36 +692,74 @@ Deno.serve(async (req) => {
 
   await testUserClient.auth.signOut();
 
-  // Cleanup: remove test user (cascades grants/allowances/reversals via FKs where set)
-  // Explicitly delete rows without ON DELETE CASCADE first for safety.
-  await admin.from("shekel_spend_allocations").delete().eq("user_id", testUserId);
-  await admin.from("boost_token_spend_allocations").delete().eq("user_id", testUserId);
-  await admin.from("boost_token_lots").delete().eq("user_id", testUserId);
-  await admin.from("debit_operations").delete().eq("user_id", testUserId);
-  await admin.from("shekel_ledger").delete().eq("user_id", testUserId);
-  await admin.from("boost_tokens_ledger").delete().eq("user_id", testUserId);
-  await admin.from("gift_transactions").delete().eq("sender_id", testUserId);
-  await admin.from("boosts").delete().eq("user_id", testUserId);
-  await admin.from("royal_pass_reversals").delete().eq("user_id", testUserId);
-  await admin.from("royal_pass_shield_allowances").delete().eq("user_id", testUserId);
-  await admin.from("royal_pass_grants").delete().eq("user_id", testUserId);
-  await admin.from("wallets").delete().eq("user_id", testUserId);
-  await admin.from("profiles").delete().eq("id", testUserId);
-  await admin.auth.admin.deleteUser(testUserId);
+  // Cleanup: every delete is checked. Runtime audit detail belongs in the
+  // summary row, not in permanent synthetic-user ledger/audit rows.
+  const cleanupErrors: string[] = [];
+  const checkedDelete = async (
+    label: string,
+    operation: PromiseLike<{ error: { message: string } | null }>,
+  ) => {
+    const { error } = await operation;
+    if (error) cleanupErrors.push(`${label}: ${error.message}`);
+  };
+
+  await checkedDelete("shekel_spend_allocations", admin.from("shekel_spend_allocations").delete().eq("user_id", testUserId));
+  await checkedDelete("boost_token_spend_allocations", admin.from("boost_token_spend_allocations").delete().eq("user_id", testUserId));
+  await checkedDelete("boost_token_lots", admin.from("boost_token_lots").delete().eq("user_id", testUserId));
+  await checkedDelete("debit_operations", admin.from("debit_operations").delete().eq("user_id", testUserId));
+  await checkedDelete("shekel_ledger", admin.from("shekel_ledger").delete().eq("user_id", testUserId));
+  await checkedDelete("boost_tokens_ledger", admin.from("boost_tokens_ledger").delete().eq("user_id", testUserId));
+  await checkedDelete("gift_transactions_sender", admin.from("gift_transactions").delete().eq("sender_id", testUserId));
+  await checkedDelete("boosts", admin.from("boosts").delete().eq("user_id", testUserId));
+  await checkedDelete("royal_pass_reversals", admin.from("royal_pass_reversals").delete().eq("user_id", testUserId));
+  await checkedDelete("royal_pass_shield_allowances", admin.from("royal_pass_shield_allowances").delete().eq("user_id", testUserId));
+  await checkedDelete("royal_pass_grants", admin.from("royal_pass_grants").delete().eq("user_id", testUserId));
+  await checkedDelete("wallets", admin.from("wallets").delete().eq("user_id", testUserId));
+  await checkedDelete("synthetic_audit_rows", admin.from("royal_shield_audit_log").delete().eq("user_id", testUserId));
+  await checkedDelete("test_profile", admin.from("profiles").delete().eq("id", testUserId));
+  const { error: deleteTestAuthError } = await admin.auth.admin.deleteUser(testUserId);
+  if (deleteTestAuthError) cleanupErrors.push(`test_auth_user: ${deleteTestAuthError.message}`);
+
   if (recipientUserId) {
-    await admin.from("gift_transactions").delete().eq("receiver_id", recipientUserId);
-    await admin.from("wallets").delete().eq("user_id", recipientUserId);
-    await admin.from("profiles").delete().eq("id", recipientUserId);
-    await admin.auth.admin.deleteUser(recipientUserId);
+    await checkedDelete("gift_transactions_receiver", admin.from("gift_transactions").delete().eq("receiver_id", recipientUserId));
+    await checkedDelete("recipient_wallet", admin.from("wallets").delete().eq("user_id", recipientUserId));
+    await checkedDelete("recipient_profile", admin.from("profiles").delete().eq("id", recipientUserId));
+    const { error: deleteRecipientAuthError } = await admin.auth.admin.deleteUser(recipientUserId);
+    if (deleteRecipientAuthError) cleanupErrors.push(`recipient_auth_user: ${deleteRecipientAuthError.message}`);
   }
 
   const finalPassCount = results.filter((r) => r.ok).length;
+  const cleanupOk = cleanupErrors.length === 0;
+
+  // Preserve one durable summary against the real admin actor after all 12
+  // scenarios and cleanup have finished. This cannot block synthetic deletion.
+  const { error: summaryError } = await admin.rpc("log_royal_shield_event" as never, {
+    _user_id: callerId,
+    _event_type: finalPassCount === results.length && cleanupOk ? "runtime_audit_pass" : "runtime_audit_fail",
+    _reason_code: "admin_runtime_audit",
+    _delta: 0,
+    _grant_id: null,
+    _allowance_id: null,
+    _boost_id: null,
+    _battle_id: null,
+    _post_id: null,
+    _metadata: {
+      scenarios: results,
+      actor_id: callerId,
+      synthetic_user_id: testUserId,
+      synthetic_recipient_id: recipientUserId,
+      cleanup_errors: cleanupErrors,
+    } as never,
+  } as never);
+
   return json(200, {
-    ok: finalPassCount === results.length,
+    ok: finalPassCount === results.length && cleanupOk && !summaryError,
     passed: finalPassCount,
     total: results.length,
     results,
     test_user_id: testUserId,
+    cleanup: { ok: cleanupOk, errors: cleanupErrors },
+    summary_logged: !summaryError,
     ran_at: new Date().toISOString(),
   });
 });

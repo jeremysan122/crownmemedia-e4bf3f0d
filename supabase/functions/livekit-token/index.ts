@@ -56,11 +56,17 @@ Deno.serve(async (req) => {
 
   const { data: battle, error: bErr } = await admin
     .from("live_battles")
-    .select("id, host_id, opponent_id, room_name, status, is_hidden")
+    .select("id, host_id, opponent_id, room_name, status, is_hidden, ends_at")
     .eq("id", battleId)
     .maybeSingle();
   if (bErr || !battle) return json({ error: "This battle isn't available." }, 404);
   if (battle.is_hidden) return json({ error: "This battle isn't available." }, 403);
+  if (battle.status === "live" && battle.ends_at && new Date(battle.ends_at).getTime() <= Date.now()) {
+    // The minute cron is authoritative; this closes the small gap between its
+    // ticks and guarantees an expired room can never mint another token.
+    await admin.rpc("finalize_expired_battles");
+    return json({ error: "This battle has ended." }, 410);
+  }
   if (battle.status === "ended" || battle.status === "cancelled" || battle.status === "declined") {
     return json({ error: "This battle has ended." }, 410);
   }

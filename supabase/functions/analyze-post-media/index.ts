@@ -25,6 +25,26 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Only forward media hosted by this CrownMe project's Storage service to the
+// AI gateway. The post row is service-role readable, so RLS alone does not
+// protect this server-side fetch boundary from a poisoned or legacy URL.
+const ALLOWED_BUCKETS = new Set(["avatars", "posts", "media", "banners", "share-cards"]);
+
+function isAllowedStorageUrl(url: string, supabaseUrl: string): boolean {
+  if (!url) return false;
+  let parsed: URL;
+  let base: URL;
+  try {
+    parsed = new URL(url);
+    base = new URL(supabaseUrl);
+  } catch {
+    return false;
+  }
+  if (parsed.origin !== base.origin) return false;
+  const match = parsed.pathname.match(/^\/storage\/v1\/object\/(public|sign)\/([^/]+)\/.+/);
+  return !!match && ALLOWED_BUCKETS.has(match[2]);
+}
+
 // CrownMe master categories. Kept in sync with main_categories.slug.
 const MASTER_CATEGORIES = [
   "royal-crowns",
@@ -199,9 +219,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const urls: string[] = Array.isArray(post.image_urls) && post.image_urls.length > 0
-      ? post.image_urls.filter((u: unknown): u is string => typeof u === "string" && /^https?:\/\//.test(u)).slice(0, 6)
-      : (typeof post.image_url === "string" ? [post.image_url] : []);
+    const mediaCandidates: unknown[] = Array.isArray(post.image_urls) && post.image_urls.length > 0
+      ? post.image_urls.slice(0, 6)
+      : (post.image_url == null ? [] : [post.image_url]);
+    const urls = mediaCandidates.filter(
+      (url): url is string => typeof url === "string" && isAllowedStorageUrl(url, supabaseUrl),
+    );
+    const hasRejectedUrl = urls.length !== mediaCandidates.length;
 
     // Reserve a pending row (idempotent upsert) so concurrent invocations collide.
     await admin.from("post_media_ai_analysis").upsert({
@@ -212,6 +236,32 @@ Deno.serve(async (req) => {
       analysis_status: "pending",
       retry_count: (existing?.retry_count ?? 0) + (existing ? 1 : 0),
     }, { onConflict: "post_id" });
+
+    if (hasRejectedUrl) {
+      const reason = "media URL is outside CrownMe storage";
+      await Promise.all([
+        admin.from("post_media_ai_analysis").update({
+          analysis_status: "needs_review",
+          safety_status: "needs_review",
+          moderation_reason: reason,
+          error_message: "Rejected non-CrownMe media URL before AI analysis",
+          duration_ms: Date.now() - startedAt,
+        }).eq("post_id", postId),
+        admin.from("posts").update({ moderation_status: "pending_review" }).eq("id", postId),
+      ]);
+      await admin.from("moderation_queue").insert({
+        target_type: "post",
+        target_id: postId,
+        reason: "ai:needs_review:untrusted_media_url",
+        priority: 1,
+        status: "open",
+        metadata: { ai: true, rejected_media_url: true },
+      }).then(() => null, () => null);
+      return new Response(JSON.stringify({ ok: false, error: reason }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (urls.length === 0) {
       // Nothing to analyse (e.g. video-only post during first ship).
