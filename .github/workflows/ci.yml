@@ -98,6 +98,8 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
+      - name: Install pinned BrowserStack SDK
+        run: bun add --dev --exact --no-save browserstack-node-sdk@1.63.6
       - name: Run production BrowserStack smoke
         run: >-
           bunx browserstack-node-sdk playwright test
