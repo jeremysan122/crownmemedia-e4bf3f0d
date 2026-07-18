@@ -15,8 +15,7 @@ platforms:
       name: browserstack-production
   - os: OS X
     osVersion: Tahoe
-    browserName: Safari
-    browserVersion: latest
+    browserName: playwright-webkit
     playwrightConfigOptions:
       name: browserstack-production
   - deviceName: iPhone 17 Pro
@@ -32,7 +31,7 @@ parallelsPerPlatform: 1
 # secure BrowserStack Local tunnel; the URL under test remains crownmemedia.com.
 browserstackLocal: true
 browserStackLocalOptions:
-  forcelocal: true
+  forceLocal: true
 selfHeal: true
 debug: true
 networkLogs: true

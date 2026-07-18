@@ -18,7 +18,9 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // Remote device sessions are intentionally single-attempt: retries consume
+  // paid BrowserStack minutes and can conceal deterministic grid/config errors.
+  retries: browserStackEnabled ? 0 : process.env.CI ? 2 : 0,
   reporter: "list",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:8080",
