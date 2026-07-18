@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const browserStackEnabled = process.env.BROWSERSTACK_ENABLED === "true";
+
 /**
  * Visual regression config for share-card screenshots.
  *
@@ -40,6 +42,18 @@ export default defineConfig({
       name: "mobile-safari",
       use: { ...devices["iPhone 13"] },
     },
+    ...(browserStackEnabled
+      ? [
+          {
+            // BrowserStack's SDK replaces this emulated device with the real
+            // iPhone declared in browserstack.yml. Keeping the project
+            // explicit makes --project selection deterministic and lets
+            // `playwright test --list` validate the remote suite in CI.
+            name: "browserstack-ios-safari",
+            use: { ...devices["iPhone 13"] },
+          },
+        ]
+      : []),
   ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined

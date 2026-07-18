@@ -101,7 +101,25 @@ from Lovable Cloud → Users; the profile and post cascade.
    navigation, profile, rewards, and admin-visibility smoke specs. This keeps
    a real browser gate active without retrying credential-dependent tests.
 
-A separate optional `browserstack-ios` job runs only when both
-`BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` repo secrets exist —
-otherwise the Playwright `mobile-safari` (WebKit) project is the canonical
-mobile signal.
+A separate `browserstack-ios` job is an opt-in real-device staging gate. It
+does not silently pass when credentials are absent and refuses to run its
+controlled-user login against `https://crownmemedia.com`.
+
+To enable it, configure these GitHub repository settings:
+
+- Actions variables: `BROWSERSTACK_ENABLED=true` and `STAGING_BASE_URL` set
+  to a non-production CrownMe deployment.
+- Actions secrets: `BROWSERSTACK_USERNAME`, `BROWSERSTACK_ACCESS_KEY`,
+  `E2E_USER_C_EMAIL`, and `E2E_USER_C_PASSWORD`.
+
+The credentials must belong to a disposable, least-privilege staging account;
+never use a founder, moderator, or production customer account. The job runs
+`staging-auth-smoke.spec.ts` plus the hermetic mobile feed interaction suite on
+a real iPhone/Safari session through the pinned BrowserStack Node SDK. Until
+the job is enabled, the local Playwright `mobile-safari` (WebKit) project stays
+the canonical mobile signal.
+
+The regular `e2e` job also accepts the controlled `E2E_USER_A_*`,
+`E2E_USER_B_*`, and `E2E_USER_C_*` GitHub secrets (plus the service-role and
+public Supabase values) so the existing multi-user transactional specs stop
+skipping once those isolated accounts are provisioned.

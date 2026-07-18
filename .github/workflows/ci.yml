@@ -42,6 +42,19 @@ jobs:
     timeout-minutes: 25
     env:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      E2E_ADMIN_USER_ID: ${{ secrets.E2E_ADMIN_USER_ID }}
+      E2E_USER_A_EMAIL: ${{ secrets.E2E_USER_A_EMAIL }}
+      E2E_USER_A_ID: ${{ secrets.E2E_USER_A_ID }}
+      E2E_USER_A_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
+      E2E_USER_B_EMAIL: ${{ secrets.E2E_USER_B_EMAIL }}
+      E2E_USER_B_ID: ${{ secrets.E2E_USER_B_ID }}
+      E2E_USER_B_PASSWORD: ${{ secrets.E2E_USER_B_PASSWORD }}
+      E2E_USER_B_USERNAME: ${{ secrets.E2E_USER_B_USERNAME }}
+      E2E_USER_C_EMAIL: ${{ secrets.E2E_USER_C_EMAIL }}
+      E2E_USER_C_ID: ${{ secrets.E2E_USER_C_ID }}
+      E2E_USER_C_PASSWORD: ${{ secrets.E2E_USER_C_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -75,28 +88,70 @@ jobs:
           retention-days: 7
 
   browserstack-ios:
-    name: BrowserStack iOS Safari (optional)
+    name: BrowserStack real iOS Safari staging gate
     needs: static-checks
     runs-on: ubuntu-latest
-    # Job-level conditions cannot access the secrets context. Opt in with the
-    # repository variable after both BrowserStack secrets are configured.
-    if: ${{ vars.BROWSERSTACK_ENABLED == 'true' }}
+    timeout-minutes: 25
+    # Secrets cannot be referenced in a job-level condition. Enable the job
+    # only after the preflight values below have been added to GitHub.
+    if: ${{ vars.BROWSERSTACK_ENABLED == 'true' && vars.STAGING_BASE_URL != '' }}
     env:
+      BROWSERSTACK_ENABLED: "true"
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PLAYWRIGHT_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+      E2E_USER_C_EMAIL: ${{ secrets.E2E_USER_C_EMAIL }}
+      E2E_USER_C_PASSWORD: ${{ secrets.E2E_USER_C_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-      - name: Run BrowserStack iOS Safari smoke
-        # Placeholder: wired up only when a BrowserStack config is committed.
-        # The job is gated on secrets above, so absence of secrets => no failure.
+      - name: Validate BrowserStack staging configuration
+        shell: bash
         run: |
-          if [ -f browserstack.yml ]; then
-            bunx browserstack-node-sdk playwright test --project=browserstack-ios-safari
-          else
-            echo "browserstack.yml not present yet — skipping (see e2e/README.md to enable)."
+          missing=()
+          for name in \
+            BROWSERSTACK_USERNAME \
+            BROWSERSTACK_ACCESS_KEY \
+            PLAYWRIGHT_BASE_URL \
+            E2E_USER_C_EMAIL \
+            E2E_USER_C_PASSWORD
+          do
+            if [[ -z "${!name}" ]]; then missing+=("${name}"); fi
+          done
+
+          if (( ${#missing[@]} > 0 )); then
+            echo "Missing required BrowserStack staging values: ${missing[*]}" >&2
+            exit 1
           fi
+
+          if [[ "${PLAYWRIGHT_BASE_URL%/}" == "https://crownmemedia.com" ]]; then
+            echo "Refusing to run the controlled-user BrowserStack suite against production." >&2
+            exit 1
+          fi
+
+      - name: Configure BrowserStack build metadata
+        uses: browserstack/github-actions/setup-env@master
+        with:
+          username: ${{ secrets.BROWSERSTACK_USERNAME }}
+          access-key: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          project-name: CrownMe
+          build-name: "iOS staging - BUILD_INFO"
+      - name: Run BrowserStack iOS Safari smoke
+        run: >-
+          bunx browserstack-node-sdk@1.63.6 playwright test
+          e2e/staging-auth-smoke.spec.ts
+          e2e/crown-categories-mobile.spec.ts
+          --project=browserstack-ios-safari
+          --workers=1
+      - name: Upload BrowserStack Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browserstack-ios-playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
