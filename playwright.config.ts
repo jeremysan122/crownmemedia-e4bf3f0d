@@ -48,6 +48,7 @@ export default defineConfig({
             // The BrowserStack SDK replaces this local profile with each
             // platform declared in browserstack.yml.
             name: "browserstack-production",
+            retries: 0,
             use: { ...devices["Desktop Chrome"] },
           },
         ]

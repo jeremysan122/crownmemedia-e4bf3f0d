@@ -11,6 +11,8 @@ const publicRoutes = [
 ] as const;
 
 test("production public surfaces boot without browser or server failures", async ({ page }) => {
+  test.setTimeout(120_000);
+
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 

@@ -27,7 +27,12 @@ platforms:
       name: browserstack-production
 
 parallelsPerPlatform: 1
-browserstackLocal: false
+# Cloudflare rejects direct BrowserStack device egress for the production
+# domain. Force production requests through the authenticated GitHub runner's
+# secure BrowserStack Local tunnel; the URL under test remains crownmemedia.com.
+browserstackLocal: true
+browserStackLocalOptions:
+  forcelocal: true
 selfHeal: true
 debug: true
 networkLogs: true
