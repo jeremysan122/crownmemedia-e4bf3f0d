@@ -174,7 +174,7 @@ async function run() {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (!(await isServiceRoleRequest(req))) {
+  if (!(await isAuthorizedCronRequest(req))) {
     return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
