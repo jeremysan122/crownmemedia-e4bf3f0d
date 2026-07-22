@@ -58,9 +58,9 @@ describe("launch security remediation", () => {
 
   it("requires a verified service-role JWT before the comms scan runs", () => {
     expect(config).toMatch(/\[functions\.royal-pass-comms-cron\][\s\S]{0,80}verify_jwt = true/);
-    expect(commsCron).toMatch(/isServiceRoleRequest\(req\)/);
+    expect(commsCron).toMatch(/isAuthorizedCronRequest\(req\)/);
     expect(commsCron).toMatch(/status: 401/);
-    expect(commsCron.indexOf("isServiceRoleRequest(req)")).toBeLessThan(
+    expect(commsCron.indexOf("isAuthorizedCronRequest(req)")).toBeLessThan(
       commsCron.indexOf("const counts = await run()"),
     );
   });
