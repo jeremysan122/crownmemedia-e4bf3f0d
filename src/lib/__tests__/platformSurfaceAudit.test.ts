@@ -93,9 +93,9 @@ describe("launch-only surfaces fail closed", () => {
   });
 
   it("authenticates reconciliation before Stripe or service-role data access", () => {
-    expect(reconcile).toMatch(/isServiceRoleRequest\(req\)/);
+    expect(reconcile).toMatch(/isAuthorizedCronRequest\(req\)/);
     expect(reconcile).toMatch(/return json\(401, \{ error: "unauthorized" \}\)/);
-    expect(reconcile.indexOf("isServiceRoleRequest(req)")).toBeLessThan(
+    expect(reconcile.indexOf("isAuthorizedCronRequest(req)")).toBeLessThan(
       reconcile.indexOf("const admin = createClient"),
     );
   });
