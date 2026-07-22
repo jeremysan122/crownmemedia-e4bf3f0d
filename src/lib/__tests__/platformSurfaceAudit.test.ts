@@ -54,7 +54,7 @@ describe("platform surface inventory", () => {
     expect(functionDirs).toHaveLength(36);
     expect(configured).toEqual(functionDirs);
     for (const name of functionDirs) {
-      expect(config).toMatch(new RegExp(`\\[functions\\.${name.replaceAll("-", "\\-")}\\]\\s+verify_jwt = (?:true|false)`));
+      expect(config).toMatch(new RegExp(`\\[functions\\.${name.replace(/-/g, "\\-")}\\]\\s+verify_jwt = (?:true|false)`));
     }
   });
 
