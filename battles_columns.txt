@@ -1,0 +1,17 @@
+    column_name     
+--------------------
+ id
+ challenger_id
+ opponent_id
+ challenger_post_id
+ opponent_post_id
+ challenger_votes
+ opponent_votes
+ winner_id
+ status
+ ends_at
+ created_at
+ duration_seconds
+ accepted_at
+(13 rows)
+

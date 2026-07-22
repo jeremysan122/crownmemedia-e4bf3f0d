@@ -1,0 +1,4 @@
+ grantee | privilege_type 
+---------+----------------
+(0 rows)
+
