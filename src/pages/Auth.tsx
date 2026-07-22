@@ -47,6 +47,10 @@ type UsernameStatus = "idle" | "checking" | "available" | "taken" | "reserved" |
 export default function Auth() {
   const [params] = useSearchParams();
   const nav = useNavigate();
+  // Where to land after auth. Only same-app paths are honored ("/x", never
+  // "//host" or absolute URLs) so the param can't be abused as an open redirect.
+  const rawNext = params.get("next") || "";
+  const postAuthPath = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/feed";
   const initialMode = params.get("mode") === "login" ? "login" : "signup";
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
   useSeoMeta({
@@ -285,7 +289,7 @@ export default function Auth() {
         if (data.session) {
           await tryRedeemPendingInvite();
           toast.success("Welcome to CrownMe");
-          nav("/feed", { replace: true });
+          nav(postAuthPath, { replace: true });
         } else {
           setCheckInbox(parsed.data.email);
         }
@@ -311,7 +315,7 @@ export default function Auth() {
         persistRemember();
         await tryRedeemPendingInvite();
         toast.success("Welcome back");
-        nav("/feed", { replace: true });
+        nav(postAuthPath, { replace: true });
       }
     } finally {
       setLoading(false);

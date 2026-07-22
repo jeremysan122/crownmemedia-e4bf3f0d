@@ -19,6 +19,15 @@ function playVoteFx(voteType: VoteType) {
   else fxVote(voteType);
 }
 
+/** Duplicate-key SQLSTATE — the vote row already exists (double-tap race). */
+const DUPLICATE_KEY = "23505";
+
+// Rapid taps on the crown used to fire overlapping toggle calls: both read
+// "no existing vote", both INSERT, and the loser surfaced a scary duplicate-
+// key error toast. Serialize per (post, user) so each tap sees the row state
+// the previous tap left behind.
+const inflight = new Map<string, Promise<VoteType | null>>();
+
 /**
  * Enforces "one reaction per user per post". Selecting a different reaction
  * type replaces the old one; selecting the same one toggles it off.
@@ -29,12 +38,30 @@ export async function toggleVote(
   userId: string,
   voteType: VoteType
 ): Promise<VoteType | null> {
+  const key = `${postId}:${userId}`;
+  const prev = inflight.get(key);
+  if (prev) await prev.catch(() => { /* previous tap's failure is its own */ });
+  const run = doToggleVote(postId, userId, voteType);
+  inflight.set(key, run);
+  try {
+    return await run;
+  } finally {
+    if (inflight.get(key) === run) inflight.delete(key);
+  }
+}
+
+async function doToggleVote(
+  postId: string,
+  userId: string,
+  voteType: VoteType
+): Promise<VoteType | null> {
   trackUsageEvent("vote_attempted", { postId, metadata: { vote_type: voteType } });
   const { data: existing } = await supabase
     .from("votes")
     .select("id, vote_type")
     .eq("post_id", postId)
     .eq("user_id", userId)
+    .limit(1)
     .maybeSingle();
 
   // Same reaction → toggle off
@@ -62,11 +89,38 @@ export async function toggleVote(
     }
   }
 
-  const { error } = await supabase.from("votes").insert({
+  let { error } = await supabase.from("votes").insert({
     post_id: postId,
     user_id: userId,
     vote_type: voteType,
   });
+
+  // Duplicate key: a vote row already exists (e.g. a race with another tab or
+  // a tap that landed before this one). Reconcile instead of erroring: if the
+  // existing reaction already matches, we're done; otherwise swap it.
+  if (error && (error.code === DUPLICATE_KEY || /duplicate key/i.test(error.message ?? ""))) {
+    const { data: current } = await supabase
+      .from("votes")
+      .select("id, vote_type")
+      .eq("post_id", postId)
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+    if (current?.vote_type === voteType) {
+      trackUsageEvent("vote_success", { postId, metadata: { vote_type: voteType, action: "already_cast" } });
+      playVoteFx(voteType);
+      return voteType;
+    }
+    if (current) {
+      await supabase.from("votes").delete().eq("id", current.id);
+    }
+    ({ error } = await supabase.from("votes").insert({
+      post_id: postId,
+      user_id: userId,
+      vote_type: voteType,
+    }));
+  }
+
   if (error) {
     const rateLimited = /rate limit|too fast/i.test(error.message ?? "");
     const msg = rateLimited

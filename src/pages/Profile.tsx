@@ -181,6 +181,22 @@ export default function Profile() {
       setProfileNotFound(false);
       setProf(p as any);
       const pid = (p as any).id;
+
+      // The cached followers_count/following_count columns have drifted for
+      // some profiles (see the counter-guard fix migration). Overlay the live
+      // truth from the follows table so the number always matches the list.
+      void (async () => {
+        const [fRes, gRes] = await Promise.all([
+          supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", pid),
+          supabase.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", pid),
+        ]);
+        if (cancelled) return;
+        setProf((cur) => cur && cur.id === pid ? {
+          ...cur,
+          followers_count: fRes.count ?? cur.followers_count,
+          following_count: gRes.count ?? cur.following_count,
+        } : cur);
+      })();
       const equippedCrownId = (p as any).equipped_achievement_crown_id as string | null;
       if (equippedCrownId) {
         const { data: crown, error: crownError } = await supabase
@@ -401,9 +417,10 @@ export default function Profile() {
         setPosts((prev) => prev.filter((p) => p.id !== o.id));
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "follows", filter: `following_id=eq.${prof.id}` }, async () => {
-        // Refresh follower count + my following state
-        const { data: fp } = await supabase.from("profiles").select("followers_count").eq("id", prof.id).maybeSingle();
-        if (fp) setProf((p) => p ? { ...p, followers_count: (fp as any).followers_count } : p);
+        // Refresh follower count + my following state. Count the follows
+        // table directly — it's the source of truth the follower list uses.
+        const { count } = await supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", prof.id);
+        if (typeof count === "number") setProf((p) => p ? { ...p, followers_count: count } : p);
         if (user && user.id !== prof.id) {
           const { data: f } = await supabase.from("follows").select("id").eq("follower_id", user.id).eq("following_id", prof.id).maybeSingle();
           setFollowing(!!f);

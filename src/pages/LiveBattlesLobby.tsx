@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import CreateLiveBattleDialog from "@/components/battles/CreateLiveBattleDialog";
 import LiveBattleEmptyState from "@/components/battles/LiveBattleEmptyState";
 import { useMainCategories } from "@/lib/categories";
+import { humanizeSlug } from "@/lib/textLabels";
 
 interface Row {
   id: string; status: string; host_id: string; opponent_id: string;
@@ -156,7 +157,7 @@ function BattleRow({ row, profiles }: { row: Row; profiles: Record<string, Profi
             <span className={`inline-block w-2 h-2 rounded-full ${dot}`} />
             <span className="text-xs font-bold uppercase tracking-wider">{row.status}</span>
             {row.category_slug && (
-              <span className="text-[10px] text-muted-foreground uppercase">· {row.category_slug}</span>
+              <span className="text-[10px] text-muted-foreground uppercase">· {humanizeSlug(row.category_slug)}</span>
             )}
           </div>
           <span className="text-xs text-muted-foreground">{total} votes</span>

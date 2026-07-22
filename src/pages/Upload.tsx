@@ -795,19 +795,27 @@ export default function Upload() {
           }, 3);
         }
       } else if (mode === "video" && video) {
-        const ext = video.file.name.split(".").pop() || "webm";
-        const vPath = video.uploaded?.path ?? `${user.id}/video_${submissionKeyRef.current}.${ext}`;
-        if (video.uploaded?.url) {
-          setUploadStage("Video already uploaded — finishing…");
-          setUploadProgress(80);
-          videoUrl = video.uploaded.url;
-        } else {
-          setUploadStage("Uploading video…");
+        // ─── Parallel video pipeline ───
+        // The three stages below (main video upload, poster frame, safety-
+        // check frames) only depend on the local file, so they run
+        // concurrently. This used to be strictly sequential and roughly
+        // doubled-to-tripled total publish time on slower connections.
+        durationMs = video.durationMs;
+        setUploadStage("Uploading video…");
+
+        const uploadVideoTask = async () => {
+          if (video.uploaded?.url) {
+            videoUrl = video.uploaded.url;
+            setUploadProgress((p) => Math.max(p, 70));
+            return;
+          }
+          const ext = video.file.name.split(".").pop() || "webm";
+          const vPath = `${user.id}/video_${submissionKeyRef.current}.${ext}`;
           try {
             const result = await uploadWithProgress(vPath, video.file, {
               contentType: video.file.type,
               signal: uploadAbortRef.current?.signal,
-              onProgress: (r) => setUploadProgress(Math.round(r * 70)),
+              onProgress: (r) => setUploadProgress((p) => Math.max(p, Math.round(r * 70))),
             });
             uploaded.push({ bucket: "media", path: result.path });
             videoUrl = result.publicUrl;
@@ -817,15 +825,13 @@ export default function Upload() {
             setVideo((cur) => (cur ? { ...cur, error: msg } : cur));
             throw vErr;
           }
-        }
-        durationMs = video.durationMs;
-        setUploadProgress(72);
+        };
 
-        if (video.posterUploaded?.url) {
-          videoPosterUrl = video.posterUploaded.url;
-          imageUrls = [videoPosterUrl];
-        } else {
-          setUploadStage(video.posterFile ? "Uploading chosen frame…" : "Generating preview frame…");
+        const posterTask = async () => {
+          if (video.posterUploaded?.url) {
+            videoPosterUrl = video.posterUploaded.url;
+            return;
+          }
           try {
             const poster = video.posterFile ?? await captureVideoPoster(video.file);
             if (!poster) throw new Error("Could not generate preview frame");
@@ -836,27 +842,24 @@ export default function Upload() {
             });
             uploaded.push({ bucket: "media", path: result.path });
             videoPosterUrl = result.publicUrl;
-            imageUrls = [videoPosterUrl];
             setVideo((cur) => (cur ? { ...cur, posterUploaded: { path: result.path, url: result.publicUrl }, posterError: undefined } : cur));
           } catch (pe) {
+            // Non-fatal: the post can publish without a thumbnail.
             const msg = pe instanceof Error ? pe.message : "Preview frame upload failed";
             setVideo((cur) => (cur ? { ...cur, posterError: msg } : cur));
             toast.warning("Couldn't make a preview thumbnail — you can retry it after posting.");
           }
-        }
+        };
 
-        // ─── Video frame moderation ───
         // Sample 5 frames across the clip, upload to a temp scratch path, and
         // moderate. Any unsafe frame blocks publish. Scratch files are removed
         // after the check regardless of verdict.
-        setUploadStage("Sampling video frames for safety check…");
-        const frames = await sampleVideoFrames(video.file, 5);
-        const framePaths: string[] = [];
-        if (frames.length > 0) {
+        const moderationTask = async () => {
+          const frames = await sampleVideoFrames(video.file, 5);
+          if (frames.length === 0) return;
+          const framePaths: string[] = [];
           try {
-            // Upload the 5 sampled frames in parallel — sequential uploads
-            // here used to add seconds of stall time on slow connections.
-            const uploaded = await runWithConcurrency(
+            const frameResults = await runWithConcurrency(
               frames,
               async (frame, fi) => {
                 const fp = `${user.id}/_scratch/frames_${submissionKeyRef.current}_${fi}.jpg`;
@@ -865,9 +868,8 @@ export default function Upload() {
               },
               5,
             );
-            const frameUrls = uploaded.map((u) => u.publicUrl);
-            uploaded.forEach((u) => framePaths.push(u.path));
-            setUploadStage("Checking content safety…");
+            const frameUrls = frameResults.map((u) => u.publicUrl);
+            frameResults.forEach((u) => framePaths.push(u.path));
             const { data: vVerdict, error: vModErr } = await supabase.functions.invoke("moderate-media", {
               body: { image_urls: frameUrls, kind: "video" },
             });
@@ -880,8 +882,18 @@ export default function Upload() {
               try { await supabase.storage.from("media").remove(framePaths); } catch { /* noop */ }
             }
           }
+        };
+
+        try {
+          await Promise.all([uploadVideoTask(), posterTask(), moderationTask()]);
+        } catch (e) {
+          // Stop the sibling uploads still in flight so the failure cleanup
+          // below sees the full picture and nothing lands afterwards.
+          uploadAbortRef.current?.abort();
+          throw e;
         }
 
+        if (videoPosterUrl) imageUrls = [videoPosterUrl];
         if (imageUrls.length === 0 && videoUrl) imageUrls = [videoUrl];
         setUploadProgress(90);
       }
@@ -1054,8 +1066,14 @@ export default function Upload() {
         broadcastCacheInvalidation({ kind: "post:published", postId: (published as any)?.id, userId: user.id });
       } catch { /* noop */ }
       try {
+        // Land the author on a feed view where their brand-new post is the
+        // first thing they see (Instagram-style): Global tab, Latest sort,
+        // and no category/tag filters that could hide it.
         localStorage.setItem("crownme:feed:tab", "global");
+        localStorage.setItem("crownme:feed:sort", "latest");
         localStorage.removeItem("crownme:feed:tag");
+        localStorage.removeItem("crownme:feed:hub");
+        localStorage.removeItem("crownme:feed:topic");
       } catch { /* noop */ }
       setTimeout(() => nav("/feed"), 1700);
     } catch (e) {

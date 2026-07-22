@@ -56,6 +56,10 @@ export function getNotificationTarget(n: NotificationLike): string | null {
       }
       return null;
     }
+    case "mention": {
+      if (p.post_id) return `/post/${p.post_id}`;
+      return null;
+    }
     case "crown_won":
     case "crown_lost": {
       if (p.post_id) return `/post/${p.post_id}`;

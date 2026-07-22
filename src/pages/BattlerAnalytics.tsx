@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Crown, Eye, Gift, Loader2, Trophy, type LucideIcon } from "lucide-react";
 import { useSeoMeta } from "@/hooks/useSeoMeta";
+import { humanizeSlug } from "@/lib/textLabels";
 
 function Stat({ icon: Icon, label, value }: {
   icon: LucideIcon;
@@ -113,7 +114,7 @@ export default function BattlerAnalytics() {
                         </div>
                         <div className="mt-0.5 text-[11px] text-muted-foreground flex flex-wrap items-center gap-x-3">
                           {b.ended_at && <span>{new Date(b.ended_at).toLocaleString()}</span>}
-                          {b.category_slug && <span>· {b.category_slug}</span>}
+                          {b.category_slug && <span>· {humanizeSlug(b.category_slug)}</span>}
                           {b.region && <span>· {b.region}</span>}
                         </div>
                         {b.top_supporter && (

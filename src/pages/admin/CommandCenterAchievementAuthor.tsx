@@ -52,7 +52,7 @@ async function logAudit(action: string, target: string, meta: Record<string, unk
     action,
     target_type: "achievement_definition",
     target_id: target,
-    metadata: meta,
+    details: meta,
   });
 }
 

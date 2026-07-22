@@ -106,13 +106,20 @@ export default function PostMedia({
   // Reset loaded state when source changes
   useEffect(() => { setLoaded(false); }, [src]);
 
+  // Videos with a poster paint instantly: the browser renders the poster
+  // image natively, so there's no reason to hide the element behind a
+  // skeleton while video data streams in. Waiting for canplay/loadeddata
+  // here is what made feed videos feel like they "drag".
+  const paintImmediately = mediaType === "video" && !!poster;
+  const visible = loaded || paintImmediately;
+
   return (
     <div
       ref={containerRef}
       className={`relative w-full h-full flex items-center justify-center ${inView ? "is-visible" : ""} ${boost ? "animate-[filter-pop_650ms_ease-out]" : ""}`}
       onClick={onClick}
     >
-      {!loaded && (
+      {!visible && (
         <Skeleton className="absolute inset-0 w-full h-full rounded-none" aria-hidden />
       )}
       {inView && (mediaType === "video" ? (
@@ -126,8 +133,9 @@ export default function PostMedia({
           loop={autoPlay}
           preload={autoPlay ? "auto" : "metadata"}
           className={className ?? "w-full h-full object-cover"}
-          style={{ ...style, opacity: loaded ? 1 : 0, transition: "opacity 220ms ease-out, filter 220ms ease-out" }}
+          style={{ ...style, opacity: visible ? 1 : 0, transition: "opacity 220ms ease-out, filter 220ms ease-out" }}
           aria-label={alt}
+          onLoadedMetadata={() => setLoaded(true)}
           onLoadedData={() => setLoaded(true)}
           onCanPlay={() => setLoaded(true)}
           onError={() => setLoaded(true)}
