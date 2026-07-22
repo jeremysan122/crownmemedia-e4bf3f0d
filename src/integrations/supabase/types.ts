@@ -3244,6 +3244,7 @@ export type Database = {
       }
       live_battles: {
         Row: {
+          accepted_at: string | null
           category_slug: string | null
           comments_locked: boolean
           created_at: string
@@ -3273,6 +3274,7 @@ export type Database = {
           winner_id: string | null
         }
         Insert: {
+          accepted_at?: string | null
           category_slug?: string | null
           comments_locked?: boolean
           created_at?: string
@@ -3302,6 +3304,7 @@ export type Database = {
           winner_id?: string | null
         }
         Update: {
+          accepted_at?: string | null
           category_slug?: string | null
           comments_locked?: boolean
           created_at?: string
@@ -7971,6 +7974,7 @@ export type Database = {
           _region?: string
         }
         Returns: {
+          accepted_at: string | null
           category_slug: string | null
           comments_locked: boolean
           created_at: string
@@ -8009,6 +8013,7 @@ export type Database = {
       create_rematch: {
         Args: { _battle_id: string }
         Returns: {
+          accepted_at: string | null
           category_slug: string | null
           comments_locked: boolean
           created_at: string
@@ -8615,6 +8620,7 @@ export type Database = {
       live_battle_accept: {
         Args: { _battle_id: string }
         Returns: {
+          accepted_at: string | null
           category_slug: string | null
           comments_locked: boolean
           created_at: string
@@ -8657,6 +8663,7 @@ export type Database = {
       live_battle_cancel: {
         Args: { _battle_id: string }
         Returns: {
+          accepted_at: string | null
           category_slug: string | null
           comments_locked: boolean
           created_at: string
@@ -8695,6 +8702,7 @@ export type Database = {
       live_battle_decline: {
         Args: { _battle_id: string }
         Returns: {
+          accepted_at: string | null
           category_slug: string | null
           comments_locked: boolean
           created_at: string
@@ -8733,6 +8741,7 @@ export type Database = {
       live_battle_end: {
         Args: { _battle_id: string; _force?: boolean; _reason?: string }
         Returns: {
+          accepted_at: string | null
           category_slug: string | null
           comments_locked: boolean
           created_at: string
@@ -8798,6 +8807,7 @@ export type Database = {
       live_battle_start: {
         Args: { _battle_id: string }
         Returns: {
+          accepted_at: string | null
           category_slug: string | null
           comments_locked: boolean
           created_at: string
@@ -9284,6 +9294,7 @@ export type Database = {
           _scheduled_start_at: string
         }
         Returns: {
+          accepted_at: string | null
           category_slug: string | null
           comments_locked: boolean
           created_at: string
@@ -9391,6 +9402,7 @@ export type Database = {
           _slow_mode_seconds: number
         }
         Returns: {
+          accepted_at: string | null
           category_slug: string | null
           comments_locked: boolean
           created_at: string
@@ -9430,6 +9442,7 @@ export type Database = {
       set_lobby_ready: {
         Args: { _battle_id: string; _ready: boolean }
         Returns: {
+          accepted_at: string | null
           category_slug: string | null
           comments_locked: boolean
           created_at: string
@@ -9473,6 +9486,7 @@ export type Database = {
       start_battle_from_lobby: {
         Args: { _battle_id: string }
         Returns: {
+          accepted_at: string | null
           category_slug: string | null
           comments_locked: boolean
           created_at: string
@@ -9511,6 +9525,7 @@ export type Database = {
       start_tournament_match: {
         Args: { _match_id: string }
         Returns: {
+          accepted_at: string | null
           category_slug: string | null
           comments_locked: boolean
           created_at: string
@@ -9698,6 +9713,7 @@ export type Database = {
         | "dm_gift"
         | "dm_share"
         | "repost"
+        | "mention"
       ranking_period: "day" | "week" | "month" | "all"
       ranking_scope: "global" | "country" | "state" | "city"
       region_type: "city" | "state" | "country" | "global"
@@ -9920,6 +9936,7 @@ export const Constants = {
         "dm_gift",
         "dm_share",
         "repost",
+        "mention",
       ],
       ranking_period: ["day", "week", "month", "all"],
       ranking_scope: ["global", "country", "state", "city"],
