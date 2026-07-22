@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatScore, locationLabel } from "@/lib/crown";
 import { useAuth } from "@/context/AuthContext";
 import RoyalShieldBalanceCard from "@/components/store/RoyalShieldBalanceCard";
+import { changeFollowState } from "@/lib/follows";
 
 
 type CrownHolder = { region_name: string; region_type: string; profile: { username: string; profile_photo_url: string | null } | null };
@@ -75,13 +76,13 @@ export default function FeedRightRail() {
 
   const toggleFollow = async (id: string) => {
     if (!user) return;
-    if (following.has(id)) {
-      setFollowing((s) => { const n = new Set(s); n.delete(id); return n; });
-      await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", id);
-    } else {
-      setFollowing((s) => new Set(s).add(id));
-      await supabase.from("follows").insert({ follower_id: user.id, following_id: id });
-    }
+    const wasFollowing = following.has(id);
+    const state = await changeFollowState(id, !wasFollowing).catch(() => wasFollowing ? "following" : "none");
+    setFollowing((s) => {
+      const next = new Set(s);
+      if (state === "following") next.add(id); else next.delete(id);
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -90,7 +91,7 @@ export default function FeedRightRail() {
         supabase.from("crowns").select("region_name, region_type, profile:profiles!crowns_user_id_fkey(username, profile_photo_url)").eq("active", true).eq("category", "overall").order("crown_score", { ascending: false }).limit(5),
         supabase.from("posts").select("id, user_id, crown_score, city, state, country, profile:profiles!posts_user_id_fkey(username, profile_photo_url, crowns_held)").eq("is_removed", false).order("crown_score", { ascending: false }).limit(10),
         supabase.from("battles").select("id, challenger_votes, opponent_votes, challenger:profiles!battles_challenger_id_fkey(username), opponent:profiles!battles_opponent_id_fkey(username)").eq("status", "active").order("created_at", { ascending: false }).limit(4),
-        supabase.from("profiles").select("id, username, profile_photo_url, crowns_held").eq("is_suspended", false).neq("id", user?.id || "00000000-0000-0000-0000-000000000000").order("votes_received", { ascending: false }).limit(20),
+        supabase.from("profiles").select("id, username, profile_photo_url, crowns_held").eq("is_suspended", false).eq("is_private", false).neq("id", user?.id || "00000000-0000-0000-0000-000000000000").order("votes_received", { ascending: false }).limit(20),
         supabase.from("gift_transactions_public" as any).select("receiver_id, total_shekels, profile:profiles!gift_transactions_receiver_id_fkey(username, profile_photo_url)").gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()).limit(50),
       ]);
       setHolders((h.data as any) || []);

@@ -2702,6 +2702,48 @@ export type Database = {
         }
         Relationships: []
       }
+      follow_requests: {
+        Row: {
+          created_at: string
+          id: string
+          requester_id: string
+          responded_at: string | null
+          status: string
+          target_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          requester_id: string
+          responded_at?: string | null
+          status?: string
+          target_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          requester_id?: string
+          responded_at?: string | null
+          status?: string
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_requests_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_requests_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       follows: {
         Row: {
           created_at: string
@@ -7653,27 +7695,29 @@ export type Database = {
           equipped_achievement_crown_id: string | null
           equipped_avatar_frame_id: string | null
           equipped_frame_key: string | null
-          first_name: string | null
           followers_count: number | null
           following_count: number | null
           founder_title: string | null
           frames_hidden: boolean | null
+          gender: string | null
           hide_comments: boolean | null
           hide_likes: boolean | null
+          hide_recent_unlocks: boolean | null
           hide_views: boolean | null
           id: string | null
           is_founder: boolean | null
           is_private: boolean | null
-          last_name: string | null
           liked_posts_public: boolean | null
           links: Json | null
+          posts_visibility: string | null
           profile_photo_url: string | null
           pronouns: string | null
           royal_frame_variant: string | null
           state: string | null
           username: string | null
-          verification_plan: string | null
+          updated_at: string | null
           verified: boolean | null
+          verified_at: string | null
           votes_given: number | null
           votes_received: number | null
         }
@@ -7692,27 +7736,29 @@ export type Database = {
           equipped_achievement_crown_id?: string | null
           equipped_avatar_frame_id?: string | null
           equipped_frame_key?: string | null
-          first_name?: string | null
           followers_count?: number | null
           following_count?: number | null
           founder_title?: string | null
           frames_hidden?: boolean | null
+          gender?: string | null
           hide_comments?: boolean | null
           hide_likes?: boolean | null
+          hide_recent_unlocks?: boolean | null
           hide_views?: boolean | null
           id?: string | null
           is_founder?: boolean | null
           is_private?: boolean | null
-          last_name?: string | null
           liked_posts_public?: boolean | null
           links?: Json | null
+          posts_visibility?: string | null
           profile_photo_url?: string | null
           pronouns?: string | null
           royal_frame_variant?: string | null
           state?: string | null
           username?: string | null
-          verification_plan?: string | null
+          updated_at?: string | null
           verified?: boolean | null
+          verified_at?: string | null
           votes_given?: number | null
           votes_received?: number | null
         }
@@ -7731,27 +7777,29 @@ export type Database = {
           equipped_achievement_crown_id?: string | null
           equipped_avatar_frame_id?: string | null
           equipped_frame_key?: string | null
-          first_name?: string | null
           followers_count?: number | null
           following_count?: number | null
           founder_title?: string | null
           frames_hidden?: boolean | null
+          gender?: string | null
           hide_comments?: boolean | null
           hide_likes?: boolean | null
+          hide_recent_unlocks?: boolean | null
           hide_views?: boolean | null
           id?: string | null
           is_founder?: boolean | null
           is_private?: boolean | null
-          last_name?: string | null
           liked_posts_public?: boolean | null
           links?: Json | null
+          posts_visibility?: string | null
           profile_photo_url?: string | null
           pronouns?: string | null
           royal_frame_variant?: string | null
           state?: string | null
           username?: string | null
-          verification_plan?: string | null
+          updated_at?: string | null
           verified?: boolean | null
+          verified_at?: string | null
           votes_given?: number | null
           votes_received?: number | null
         }
@@ -8236,6 +8284,10 @@ export type Database = {
         Args: { _post_id: string; _removed: boolean }
         Returns: undefined
       }
+      admin_set_profile_status: {
+        Args: { _action: string; _reason?: string | null; _user_id: string }
+        Returns: undefined
+      }
       admin_set_prize_stock: {
         Args: { _id: string; _stock: number }
         Returns: undefined
@@ -8357,7 +8409,9 @@ export type Database = {
         Args: { _battle_id: string }
         Returns: number
       }
+      can_send_dm_to: { Args: { _recipient: string }; Returns: boolean }
       can_view_posts_of: { Args: { _owner: string }; Returns: boolean }
+      can_view_social_actor: { Args: { _subject: string }; Returns: boolean }
       cancel_account_deletion: { Args: never; Returns: undefined }
       capture_db_health_snapshot: { Args: never; Returns: string }
       check_and_award_frames: { Args: never; Returns: Json }
@@ -8655,6 +8709,7 @@ export type Database = {
         Args: { _limit?: number; _user_id: string }
         Returns: Json
       }
+      get_follow_state: { Args: { _target_id: string }; Returns: string }
       get_category_leaderboard: {
         Args: {
           _limit?: number
@@ -9660,6 +9715,10 @@ export type Database = {
       }
       request_account_deletion: { Args: never; Returns: Json }
       request_standard_verification: { Args: never; Returns: Json }
+      respond_follow_request: {
+        Args: { _accept: boolean; _request_id: string }
+        Returns: string
+      }
       resolve_gift_recipient: {
         Args: { _username: string }
         Returns: {
@@ -9880,6 +9939,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_follow_state: {
+        Args: { _follow: boolean; _target_id: string }
+        Returns: string
       }
       set_frames_hidden: { Args: { _hidden: boolean }; Returns: undefined }
       set_lobby_ready: {

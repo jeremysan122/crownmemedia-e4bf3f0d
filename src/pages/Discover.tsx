@@ -29,6 +29,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useIsRoyalPassUser } from "@/hooks/useIsRoyalPassUser";
 import AppShell from "@/components/AppShell";
 import { trackEvent } from "@/lib/analytics";
+import { changeFollowState } from "@/lib/follows";
 import { toast } from "@/hooks/use-toast";
 import {
   type RadiusMiles, loadSavedRadius, saveRadius,
@@ -739,15 +740,17 @@ export default function Discover() {
       return next;
     });
     try {
+      const state = await changeFollowState(targetId, !isFollowing);
       if (isFollowing) {
-        const { error } = await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", targetId);
-        if (error) throw error;
         void trackEvent("discover_creator_unfollowed", { metadata: { username } });
       } else {
-        const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: targetId });
-        if (error) throw error;
         void trackEvent("discover_creator_followed", { metadata: { username } });
       }
+      setFollowing((s) => {
+        const next = new Set(s);
+        if (state === "following") next.add(targetId); else next.delete(targetId);
+        return next;
+      });
     } catch (e: any) {
       // Rollback
       setFollowing((s) => {

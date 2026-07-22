@@ -39,7 +39,7 @@ export default function Admin() {
       .eq("status", filter)
       .order("created_at", { ascending: false })
       .limit(100);
-    setReports((data as any) || []);
+    setReports((data as unknown as ReportRow[]) || []);
   };
   useEffect(() => { if (isModerator) load(); }, [isModerator, filter]);
 
@@ -54,7 +54,13 @@ export default function Admin() {
       if (r.comment_id) {
         await supabase.rpc("admin_moderate_comment" as never, { _comment_id: r.comment_id, _removed: true } as never);
       }
-      if (r.reported_user_id) await supabase.from("profiles").update({ is_suspended: true }).eq("id", r.reported_user_id);
+      if (r.reported_user_id) {
+        await supabase.rpc("admin_set_profile_status", {
+          _user_id: r.reported_user_id,
+          _action: "suspend",
+          _reason: "Moderation report action",
+        });
+      }
     }
     await supabase.from("reports").update({ status: action === "remove" ? "resolved" : "dismissed" }).eq("id", id);
     toast.success(action === "remove" ? "Removed" : "Dismissed");

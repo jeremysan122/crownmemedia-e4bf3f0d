@@ -19,6 +19,7 @@ import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useWebPush } from "@/hooks/useWebPush";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
+import FollowRequestsSection from "@/components/settings/FollowRequestsSection";
 
 export default function Settings() {
   useSeoMeta({ title: "Settings · CrownMe", noIndex: true });
@@ -365,6 +366,8 @@ export default function Settings() {
               aria-label="Make my voting activity public"
             />
           </div>
+
+          <FollowRequestsSection />
         </section>
 
 
