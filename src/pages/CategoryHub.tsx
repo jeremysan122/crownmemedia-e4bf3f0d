@@ -130,14 +130,23 @@ export default function CategoryHub() {
       .filter(Boolean) as string[];
     if (legacyEnums.length === 0) { setBattles([]); return; }
     (async () => {
+      // battles has no category column — the category lives on the
+      // challenger's post, so filter through the embedded join.
       const { data, error } = await supabase
         .from("battles" as any)
-        .select("id, status, ends_at, category")
-        .in("category", legacyEnums as any)
+        .select("id, status, ends_at, challenger_post:posts!battles_challenger_post_id_fkey!inner(category)")
+        .in("challenger_post.category", legacyEnums as any)
         .eq("status", "active")
         .order("ends_at", { ascending: true })
         .limit(5);
-      if (!error) setBattles((data as any) || []);
+      if (!error) {
+        setBattles(((data as any[]) || []).map((b: any) => ({
+          id: b.id,
+          status: b.status,
+          ends_at: b.ends_at,
+          category: b.challenger_post?.category ?? null,
+        })));
+      }
     })();
   }, [main?.id, sub?.id, mainSubs.length]);
 
