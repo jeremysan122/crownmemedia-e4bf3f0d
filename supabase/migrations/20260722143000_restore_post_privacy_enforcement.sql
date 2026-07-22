@@ -28,3 +28,9 @@ CREATE POLICY "posts_public_read_approved"
     AND (scheduled_for IS NULL OR scheduled_for <= now())
     AND public.can_view_posts_of(user_id)
   );
+
+-- RLS policies execute functions as the calling role. A prior lint
+-- remediation revoked broad EXECUTE grants on SECURITY DEFINER functions,
+-- which included this policy helper — without these grants every post read
+-- fails with "permission denied for function can_view_posts_of".
+GRANT EXECUTE ON FUNCTION public.can_view_posts_of(uuid) TO anon, authenticated;
