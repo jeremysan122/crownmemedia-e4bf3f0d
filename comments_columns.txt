@@ -1,0 +1,14 @@
+   column_name    
+------------------
+ id
+ user_id
+ post_id
+ body
+ is_removed
+ created_at
+ parent_id
+ mention_user_ids
+ edited_at
+ reply_count
+(10 rows)
+
