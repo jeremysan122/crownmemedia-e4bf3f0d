@@ -17,6 +17,7 @@ export type ErrorContext =
   | "restricted"
   | "push_enable"
   | "push_disable"
+  | "push_refresh"
   | "legal"
   | "export"
   | "password"
@@ -38,6 +39,7 @@ const GENERIC_BY_CONTEXT: Record<ErrorContext, string> = {
   restricted: "Couldn't update restricted accounts. Try again.",
   push_enable: "Couldn't enable push notifications. Try again.",
   push_disable: "Couldn't disable push notifications. Try again.",
+  push_refresh: "Couldn't check push notification status. Try again.",
   legal: "Couldn't record legal acceptance. Try again.",
   export: "Couldn't export your data. Try again.",
   password: "Couldn't update password. Try again.",

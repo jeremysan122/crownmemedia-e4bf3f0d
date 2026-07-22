@@ -31,30 +31,35 @@ function json(status: number, body: unknown) {
 const STALE_STATUSES = new Set(["active", "trialing", "past_due", "unpaid", "incomplete"]);
 const MAX_BATCH = 50;
 
-async function isServiceRoleRequest(req: Request): Promise<boolean> {
-  const expected = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const authorization = req.headers.get("Authorization") ?? "";
-  const supplied = authorization.replace(/^Bearer\s+/i, "");
-  if (!expected || !supplied) return false;
-
+async function constantTimeEquals(a: string, b: string): Promise<boolean> {
   const encoder = new TextEncoder();
-  const [expectedDigest, suppliedDigest] = await Promise.all([
-    crypto.subtle.digest("SHA-256", encoder.encode(expected)),
-    crypto.subtle.digest("SHA-256", encoder.encode(supplied)),
+  const [ad, bd] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(a)),
+    crypto.subtle.digest("SHA-256", encoder.encode(b)),
   ]);
-  const left = new Uint8Array(expectedDigest);
-  const right = new Uint8Array(suppliedDigest);
-  let mismatch = left.length ^ right.length;
-  for (let i = 0; i < Math.min(left.length, right.length); i += 1) {
-    mismatch |= left[i] ^ right[i];
-  }
+  const l = new Uint8Array(ad);
+  const r = new Uint8Array(bd);
+  let mismatch = l.length ^ r.length;
+  for (let i = 0; i < Math.min(l.length, r.length); i += 1) mismatch |= l[i] ^ r[i];
   return mismatch === 0;
+}
+
+async function isAuthorizedCronRequest(req: Request): Promise<boolean> {
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const supplied = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  if (serviceKey && supplied && await constantTimeEquals(serviceKey, supplied)) return true;
+
+  const cronSecret = Deno.env.get("CRON_SHARED_SECRET") ?? "";
+  const header = req.headers.get("x-cron-secret") ?? "";
+  if (cronSecret && header && await constantTimeEquals(cronSecret, header)) return true;
+
+  return false;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
-  if (!(await isServiceRoleRequest(req))) {
+  if (!(await isAuthorizedCronRequest(req))) {
     return json(401, { error: "unauthorized" });
   }
 
