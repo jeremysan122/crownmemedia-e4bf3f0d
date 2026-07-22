@@ -17,6 +17,7 @@ export type ErrorContext =
   | "restricted"
   | "push_enable"
   | "push_disable"
+  | "push_refresh"
   | "legal"
   | "export"
   | "password"
