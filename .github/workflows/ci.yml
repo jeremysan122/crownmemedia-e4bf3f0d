@@ -54,6 +54,13 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - name: Fall back to tracked public env when secrets are absent
+        shell: bash
+        run: |
+          if [[ -z "${VITE_SUPABASE_URL}" ]]; then
+            echo "VITE secrets not configured; using tracked .env browser-public values."
+            grep -E '^VITE_' .env >> "$GITHUB_ENV"
+          fi
       - run: bun install --frozen-lockfile
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium webkit
