@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Radio } from "lucide-react";
 import { useBattleFilters } from "@/components/battles/BattleFilterBar";
 import FollowBattlerButton from "@/components/battles/FollowBattlerButton";
+import { humanizeSlug } from "@/lib/textLabels";
 
 interface Row {
   id: string;
@@ -83,7 +84,7 @@ export default function LiveNowStrip() {
                   <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                   <span className="text-[10px] font-bold uppercase tracking-wider text-red-500">Live</span>
                   {r.category_slug && (
-                    <span className="ml-auto text-[10px] text-muted-foreground uppercase">{r.category_slug}</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground uppercase">{humanizeSlug(r.category_slug)}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">

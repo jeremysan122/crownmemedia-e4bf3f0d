@@ -3,7 +3,7 @@
 // actions call server RPCs / edge functions. Feature-flag gated.
 
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   LiveKitRoom, GridLayout, ParticipantTile, RoomAudioRenderer,
   ControlBar, useTracks, useParticipants,
@@ -36,6 +36,7 @@ import BattleModerationPanel from "@/components/battles/BattleModerationPanel";
 import BeautyFilterPanel from "@/components/battles/BeautyFilterPanel";
 import RematchButton from "@/components/battles/RematchButton";
 import { readKeywordFilters } from "@/lib/battleModeration";
+import { endedReasonLabel } from "@/lib/textLabels";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -388,6 +389,7 @@ export default function LiveBattlePage() {
         isHost={isHost}
         isOpponent={isOpponent}
         onBack={() => nav("/battles/live")}
+        onEnterLobby={() => nav(`/battles/${battle.id}/lobby`)}
       />
     );
   }
@@ -867,7 +869,7 @@ function ResultsScreen({ battle, onBack }: { battle: LiveBattleRow; onBack: () =
 
         {battle.ended_reason && (
           <p className="mt-4 text-xs text-muted-foreground italic">
-            Ended: {battle.ended_reason.replace(/_/g, " ")}
+            {endedReasonLabel(battle.ended_reason)}
           </p>
         )}
         <div className="mt-6 grid gap-2">
@@ -967,30 +969,62 @@ function Gate({ msg, onBack }: { msg: string; onBack: () => void }) {
 
 // ------------------------- Pending invite screen -------------------------
 
+interface ChallengerLite {
+  id: string;
+  username: string | null;
+  profile_photo_url: string | null;
+  crowns_held?: number | null;
+}
+
 function PendingScreen({
-  battle, isHost, isOpponent, onBack,
+  battle, isHost, isOpponent, onBack, onEnterLobby,
 }: {
   battle: LiveBattleRow; isHost: boolean; isOpponent: boolean; onBack: () => void;
+  onEnterLobby: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const status = battle.status;
+  const accepted = !!battle.accepted_at;
 
-  const run = async (fn: () => Promise<unknown>, ok: string) => {
+  // Show who the invite is from (host for the opponent, opponent for the
+  // host) with a link to their profile — invites used to be anonymous.
+  const otherId = isOpponent ? battle.host_id : battle.opponent_id;
+  const [other, setOther] = useState<ChallengerLite | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, username, profile_photo_url, crowns_held")
+        .eq("id", otherId)
+        .maybeSingle();
+      if (!cancelled) setOther((data as ChallengerLite) ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [otherId]);
+
+  const run = async (fn: () => Promise<unknown>, ok: string, after?: () => void) => {
     setBusy(true);
-    try { await fn(); toast({ title: ok }); }
+    try { await fn(); toast({ title: ok }); after?.(); }
     catch (e) { toast({ title: liveBattleErrorMessage(e, "That didn't work."), variant: "destructive" }); }
     finally { setBusy(false); }
   };
 
   const heading =
-    status === "pending" ? (isOpponent ? "You've been challenged" : isHost ? "Waiting for opponent" : "Invite pending")
+    status === "pending" ? (
+      accepted ? "Challenge accepted"
+      : isOpponent ? "You've been challenged"
+      : isHost ? "Waiting for your opponent"
+      : "Invite pending"
+    )
     : status === "declined" ? "Invite declined"
     : status === "cancelled" ? "Invite cancelled"
     : "Not live";
 
   const sub =
-    status === "pending" && isOpponent ? "Accept to go live now, or decline the invite."
-    : status === "pending" && isHost ? "We'll notify you the moment your opponent accepts."
+    status === "pending" && accepted ? "Head to the lobby and ready up — the battle starts once you're both ready."
+    : status === "pending" && isOpponent ? "Accept to meet in the lobby, or decline the invite."
+    : status === "pending" && isHost ? "We'll let you know the moment your opponent accepts."
     : status === "declined" ? "Your opponent declined this invite."
     : status === "cancelled" ? "The host cancelled this invite."
     : "This battle isn't live.";
@@ -1002,11 +1036,38 @@ function PendingScreen({
           <ShieldAlert className="text-primary" size={26} />
         </div>
         <h1 className="mt-4 text-xl font-black">{heading}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{sub}</p>
 
-        {status === "pending" && isOpponent && (
+        {other?.username && (
+          <Link
+            to={`/${other.username}`}
+            className="mt-3 inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 hover:border-primary/50 transition"
+            aria-label={`View @${other.username}'s profile`}
+          >
+            <span className="size-7 rounded-full bg-muted overflow-hidden ring-1 ring-border shrink-0">
+              {other.profile_photo_url ? (
+                <img src={other.profile_photo_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+              ) : (
+                <span className="w-full h-full flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                  {other.username[0]?.toUpperCase()}
+                </span>
+              )}
+            </span>
+            <span className="text-sm font-semibold">
+              {status === "pending" && isOpponent && !accepted ? "Challenged by " : ""}@{other.username}
+            </span>
+          </Link>
+        )}
+
+        <p className="mt-2 text-sm text-muted-foreground">{sub}</p>
+
+        {status === "pending" && accepted && (isHost || isOpponent) && (
+          <Button className="mt-5 w-full" onClick={onEnterLobby}>
+            Enter the lobby
+          </Button>
+        )}
+        {status === "pending" && !accepted && isOpponent && (
           <div className="mt-5 grid grid-cols-2 gap-2">
-            <Button disabled={busy} onClick={() => run(() => acceptLiveBattle(battle.id), "Invite accepted — going live")}>
+            <Button disabled={busy} onClick={() => run(() => acceptLiveBattle(battle.id), "Invite accepted — meet in the lobby", onEnterLobby)}>
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-1" />Accept</>}
             </Button>
             <Button variant="outline" disabled={busy} onClick={() => run(() => declineLiveBattle(battle.id), "Invite declined")}>
@@ -1014,13 +1075,13 @@ function PendingScreen({
             </Button>
           </div>
         )}
-        {status === "pending" && isHost && (
+        {status === "pending" && !accepted && isHost && (
           <Button variant="outline" disabled={busy} onClick={() => run(() => cancelLiveBattle(battle.id), "Invite cancelled")} className="mt-5 w-full">
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Cancel invite"}
           </Button>
         )}
 
-        <Button variant="ghost" onClick={onBack} className="mt-3 w-full">Back to lobby</Button>
+        <Button variant="ghost" onClick={onBack} className="mt-3 w-full">Back to battles</Button>
       </div>
     </div>
   );

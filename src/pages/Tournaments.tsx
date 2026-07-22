@@ -10,6 +10,7 @@ import { isFeatureEnabled } from "@/lib/featureFlags";
 import { listActiveTournaments, type TournamentRow } from "@/lib/tournaments";
 import { Button } from "@/components/ui/button";
 import CreateTournamentDialog from "@/components/battles/CreateTournamentDialog";
+import { humanizeSlug } from "@/lib/textLabels";
 
 export default function Tournaments() {
   useSeoMeta({
@@ -86,7 +87,7 @@ export default function Tournaments() {
                       <div className="font-semibold truncate">{t.title}</div>
                       <div className="text-xs text-muted-foreground mt-0.5">
                         {t.size}-battler bracket · Round {t.current_round}
-                        {t.category_slug ? ` · ${t.category_slug}` : ""}
+                        {t.category_slug ? ` · ${humanizeSlug(t.category_slug)}` : ""}
                       </div>
                     </div>
                     <span className="text-xs font-semibold text-primary shrink-0">Open →</span>

@@ -25,7 +25,9 @@ export interface LiveBattleRow {
   opponent_ready?: boolean;
   lobby_opened_at?: string | null;
   go_live_at?: string | null;
-
+  /** Set when the opponent accepted the invite. The battle stays 'pending'
+   * until both players ready up in the lobby and the host starts it. */
+  accepted_at?: string | null;
 }
 
 /** Extract cooldown seconds from `duplicate_report:NN` / `rate_limited:NN`. */
@@ -298,6 +300,7 @@ export function lobbyErrorMessage(err: unknown): string {
   if (msg.includes("battle_not_in_lobby")) return "This battle isn't in a pre-live state anymore.";
   if (msg.includes("not_participant")) return "Only the host or opponent can use the lobby.";
   if (msg.includes("only_host")) return "Only the host can start the battle.";
+  if (msg.includes("battle_not_accepted")) return "Your opponent hasn't accepted the challenge yet.";
   if (msg.includes("both_must_be_ready")) return "Both battlers need to be ready first.";
   return "Something went wrong in the lobby. Try again.";
 }

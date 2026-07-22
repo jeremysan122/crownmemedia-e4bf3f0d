@@ -452,7 +452,17 @@ export default function Feed() {
       .channel(`feed-posts-rt-${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, async (payload) => {
         const n: any = payload.new;
-        if (!n || !matchesCurrentFilters(n)) return;
+        if (!n) return;
+        // Instagram-style: the author's own new post goes straight to the top
+        // of their feed, bypassing tab/category filters (but never mixing
+        // Scrolls or removed/archived rows into the post feed).
+        const isOwn = !!user?.id && n.user_id === user.id;
+        if (isOwn) {
+          if (n.is_removed || n.is_archived) return;
+          if (n.content_type && n.content_type !== "post") return;
+        } else if (!matchesCurrentFilters(n)) {
+          return;
+        }
         // hydrate profile join
         const { data: prof } = await supabase
           .from("profiles")
@@ -460,6 +470,11 @@ export default function Feed() {
           .eq("id", n.user_id)
           .maybeSingle();
         const enriched = { ...n, profile: prof || { username: "—", profile_photo_url: null, crowns_held: 0 } } as FeedPost;
+        if (isOwn) {
+          setPosts((prev) => prev.some((p) => p.id === n.id) ? prev : [enriched, ...prev]);
+          setNewPosts((prev) => prev.filter((p) => p.id !== n.id));
+          return;
+        }
         setNewPosts((prev) => prev.some((p) => p.id === n.id) ? prev : [enriched, ...prev].slice(0, 50));
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "posts" }, (payload) => {
@@ -512,7 +527,7 @@ export default function Feed() {
       window.removeEventListener("post:deleted", onDeleted);
       supabase.removeChannel(ch);
     };
-  }, [matchesCurrentFilters]);
+  }, [matchesCurrentFilters, user?.id]);
 
   // Show queued new posts at the top of the feed.
   // Wrapped in useCallback so the "new posts" pill button gets a stable onClick ref.
