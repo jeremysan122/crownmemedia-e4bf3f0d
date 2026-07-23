@@ -15,17 +15,28 @@ const RAW_SQL = readdirSync(MIG_DIR)
   .map((f) => readFileSync(join(MIG_DIR, f), "utf8"))
   .join("\n\n-- FILE BREAK --\n\n");
 
-// Strip line comments so /* --- comment mentions of sensitive columns --- */
-// never trigger false positives in the grant/view scans below.
+// Strip line comments so "-- comment mentioning sensitive columns"
+// never triggers false positives in the grant/view scans below.
 const ALL_SQL = RAW_SQL.replace(/--[^\n]*/g, "");
 
+// Only migrations from the 2026-07-23 lockdown wave onward establish the
+// current anon read allowlist. Earlier migrations were fully revoked by
+// `REVOKE SELECT ON public.profiles/posts FROM anon` and no longer reflect
+// live privileges.
+const LOCKDOWN_SQL = readdirSync(MIG_DIR)
+  .filter((f) => f.endsWith(".sql") && f >= "20260723124843")
+  .sort()
+  .map((f) => readFileSync(join(MIG_DIR, f), "utf8"))
+  .join("\n\n-- FILE BREAK --\n\n")
+  .replace(/--[^\n]*/g, "");
+
 /** Return only column-list bodies from GRANT SELECT (...) ON <table> TO <role>. */
-function anonGrantColumnLists(table: string, role: string): string[] {
+function grantColumnLists(sql: string, table: string, role: string): string[] {
   const re = new RegExp(
     String.raw`GRANT\s+SELECT\s*\(\s*([^()]*?)\s*\)\s+ON\s+public\.${table}\s+TO\s+[^;]*\b${role}\b`,
     "g",
   );
-  return [...ALL_SQL.matchAll(re)].map((m) => m[1]);
+  return [...sql.matchAll(re)].map((m) => m[1]);
 }
 
 describe("posts anon/authenticated column lockdown (2026-07-23)", () => {
