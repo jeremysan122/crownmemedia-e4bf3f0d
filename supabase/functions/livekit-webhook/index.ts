@@ -1,18 +1,23 @@
 // LiveKit webhook receiver.
 // - Verifies the signed body with LIVEKIT_API_KEY / LIVEKIT_API_SECRET
-//   (WebhookReceiver from livekit-server-sdk).
+//   (WebhookReceiver from livekit-server-sdk, pinned).
 // - Idempotency: every event id is inserted into `livekit_webhook_events`;
 //   duplicates short-circuit with 200.
 // - `room_finished` → live_battle_end_by_room(reason='room_finished').
-// - `participant_left` for host with terminal disconnect reasons → mark the
-//   battle ended with 'host_left'.
+// - `participant_left` is logged only. We intentionally do NOT end the
+//   battle here: LiveKit does not deliver a reliable "intentional vs
+//   transient" disconnect reason cross-version, so acting on it risks
+//   ending battles during flaky-network reconnects. Terminal cleanup is
+//   handled by `room_finished` (fired after emptyTimeout) and by the
+//   finalize_expired_battles cron.
 // - No JWT: the LiveKit signature IS the authentication.
 //
 // LIVEKIT_API_SECRET is only read inside this Deno function; it is never
 // exposed to any client bundle.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { WebhookReceiver } from "npm:livekit-server-sdk@2";
+import { WebhookReceiver } from "npm:livekit-server-sdk@2.17.0";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -66,23 +71,14 @@ Deno.serve(async (req) => {
 
   try {
     if (eventType === "room_finished" && roomName) {
+      // Never end from lobby room lifecycle; live_battle_end_by_room strips the suffix anyway.
       await admin.rpc("live_battle_end_by_room" as never, {
         _room_name: roomName, _reason: "room_finished",
       } as never);
-    } else if (eventType === "participant_left" && roomName && participantId) {
-      // Only end when host leaves the live room (skip the lobby suffix).
-      const cleanRoom = roomName.replace(/__lobby$/, "");
-      const { data: battle } = await admin
-        .from("live_battles")
-        .select("id, host_id, status")
-        .eq("room_name", cleanRoom)
-        .maybeSingle();
-      if (battle && battle.status === "live" && battle.host_id === participantId) {
-        await admin.rpc("live_battle_end_by_room" as never, {
-          _room_name: cleanRoom, _reason: "host_left",
-        } as never);
-      }
     }
+    // NOTE: participant_left is intentionally NOT handled as a terminal
+    // signal — see file header. Event is logged above for observability only.
+
   } catch (e) {
     await admin.from("error_logs").insert({
       message: "livekit_webhook_processing_failed",

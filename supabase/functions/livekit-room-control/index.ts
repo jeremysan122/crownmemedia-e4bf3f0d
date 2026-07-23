@@ -5,7 +5,7 @@
 //   flips DB state via `live_battle_end`.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { RoomServiceClient } from "npm:livekit-server-sdk@2";
+import { RoomServiceClient } from "npm:livekit-server-sdk@2.17.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 Deno.serve(async (req) => {

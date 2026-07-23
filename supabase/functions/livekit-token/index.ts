@@ -10,7 +10,7 @@
 //   Platform Health can chart cost/usage.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { AccessToken, RoomServiceClient } from "npm:livekit-server-sdk@2";
+import { AccessToken, RoomServiceClient } from "npm:livekit-server-sdk@2.17.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 

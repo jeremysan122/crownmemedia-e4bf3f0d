@@ -104,5 +104,27 @@ describe("livekit-webhook function", () => {
     const cfg = readFileSync("supabase/config.toml", "utf8");
     expect(cfg).toMatch(/\[functions\.livekit-webhook\][\s\S]*verify_jwt\s*=\s*false/);
   });
+
+  it("does NOT terminate battles on participant_left (prevents transient-disconnect false endings)", () => {
+    const src = readFileSync("supabase/functions/livekit-webhook/index.ts", "utf8");
+    // Must not branch into an RPC call when the event is participant_left.
+    // room_finished remains the only terminal trigger.
+    expect(src).not.toMatch(/participant_left[\s\S]{0,400}live_battle_end_by_room/);
+    expect(src).toMatch(/room_finished[\s\S]{0,200}live_battle_end_by_room/);
+  });
+
+  it("pins livekit-server-sdk to an explicit patch version in every function", () => {
+    for (const p of [
+      "supabase/functions/livekit-webhook/index.ts",
+      "supabase/functions/livekit-token/index.ts",
+      "supabase/functions/livekit-room-control/index.ts",
+    ]) {
+      const src = readFileSync(p, "utf8");
+      const m = src.match(/livekit-server-sdk@(\d+\.\d+\.\d+)"/);
+      expect(m, `missing pinned sdk in ${p}`).not.toBeNull();
+      expect(m![1]).toBe("2.17.0");
+    }
+  });
 });
+
 
