@@ -57,8 +57,8 @@ describe("posts anon/authenticated column lockdown (2026-07-23)", () => {
 describe("profiles anon/authenticated column lockdown (2026-07-23)", () => {
   it("latest migration revokes and re-grants SELECT on profiles with an allowlist", () => {
     expect(ALL_SQL).toMatch(/REVOKE SELECT ON public\.profiles FROM anon, authenticated/);
-    const anonGrant = ALL_SQL.match(/GRANT SELECT \(([\s\S]*?)\) ON public\.profiles TO anon/)?.[1] ?? "";
-    expect(anonGrant, "anon profiles allowlist must exist").toBeTruthy();
+    const anonGrant = LATEST.match(/GRANT SELECT \(([\s\S]*?)\) ON public\.profiles TO anon/)?.[1] ?? "";
+    expect(anonGrant, "anon profiles allowlist must exist in the latest lockdown migration").toBeTruthy();
     // Anon MUST have the columns the profiles_public view needs.
     for (const col of ["id", "username", "is_banned", "deactivated_at", "deletion_requested_at"]) {
       expect(anonGrant).toMatch(new RegExp(`\\b${col}\\b`));
