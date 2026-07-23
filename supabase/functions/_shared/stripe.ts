@@ -75,7 +75,7 @@ export async function verifyWebhook(
 ): Promise<{ id: string; type: string; data: { object: any } }> {
   const signature = req.headers.get("stripe-signature");
   const body = await req.text();
-  if (!signature || !body) throw new Error("Missing signature or body");
+  if (!signature) throw new Error("Missing stripe-signature header");
 
   const secret = resolveWebhookSecret(env);
   const stripe = createStripeClient(env);
