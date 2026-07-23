@@ -15,15 +15,14 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const FIX = readFileSync(
-  join(
-    process.cwd(),
-    "supabase",
-    "migrations",
-    "20260723134713_fix_posts_guard_trigger_depth_bypass.sql",
-  ),
-  "utf8",
-);
+import { readdirSync } from "node:fs";
+const MIG_DIR = join(process.cwd(), "supabase", "migrations");
+const fixFile = readdirSync(MIG_DIR)
+  .filter((f) => f.startsWith("20260723134705") && f.endsWith(".sql"))
+  .sort()
+  .pop();
+if (!fixFile) throw new Error("guard-depth fix migration not found");
+const FIX = readFileSync(join(MIG_DIR, fixFile), "utf8");
 
 function extractFn(name: string) {
   const re = new RegExp(
