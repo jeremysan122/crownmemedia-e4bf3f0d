@@ -9,11 +9,24 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const MIG_DIR = join(process.cwd(), "supabase", "migrations");
-const ALL_SQL = readdirSync(MIG_DIR)
+const RAW_SQL = readdirSync(MIG_DIR)
   .filter((f) => f.endsWith(".sql"))
   .sort()
   .map((f) => readFileSync(join(MIG_DIR, f), "utf8"))
   .join("\n\n-- FILE BREAK --\n\n");
+
+// Strip line comments so /* --- comment mentions of sensitive columns --- */
+// never trigger false positives in the grant/view scans below.
+const ALL_SQL = RAW_SQL.replace(/--[^\n]*/g, "");
+
+/** Return only column-list bodies from GRANT SELECT (...) ON <table> TO <role>. */
+function anonGrantColumnLists(table: string, role: string): string[] {
+  const re = new RegExp(
+    String.raw`GRANT\s+SELECT\s*\(\s*([^()]*?)\s*\)\s+ON\s+public\.${table}\s+TO\s+[^;]*\b${role}\b`,
+    "g",
+  );
+  return [...ALL_SQL.matchAll(re)].map((m) => m[1]);
+}
 
 describe("posts anon/authenticated column lockdown (2026-07-23)", () => {
   it("some migration revokes table-wide SELECT on posts from anon/authenticated", () => {
