@@ -31,7 +31,10 @@ function anonGrantColumnLists(table: string, role: string): string[] {
 describe("posts anon/authenticated column lockdown (2026-07-23)", () => {
   it("some migration revokes table-wide SELECT on posts from anon/authenticated", () => {
     expect(ALL_SQL).toMatch(/REVOKE SELECT ON public\.posts FROM anon, authenticated/);
-    const grants = [...ALL_SQL.matchAll(/GRANT SELECT \(([\s\S]*?)\) ON public\.posts TO (anon|authenticated)/g)];
+    const grants = [
+      ...anonGrantColumnLists("posts", "anon"),
+      ...anonGrantColumnLists("posts", "authenticated"),
+    ];
     expect(grants.length).toBeGreaterThanOrEqual(2);
   });
 
