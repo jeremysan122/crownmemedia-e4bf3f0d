@@ -36,8 +36,9 @@ describe("web launch payment hardening", () => {
   });
 
   it("keeps sandbox money flows disabled unless the server explicitly enables them", () => {
-    expect(sharedStripe).toMatch(/PAYMENTS_ENABLE_SANDBOX/);
-    expect(sharedStripe).toMatch(/env === "live" \|\|/);
+    // BYOK sandbox is enabled by a dedicated test key or a test-prefixed secret key.
+    expect(sharedStripe).toMatch(/STRIPE_TEST_SECRET_KEY/);
+    expect(sharedStripe).toMatch(/sk_test_|rk_test_/);
     expect(createCheckout).toMatch(/isStripeEnvironmentEnabled\(environment\)/);
     expect(webhook).toMatch(/isStripeEnvironmentEnabled\(env\)/);
     expect(verifyPurchase).toMatch(/isStripeEnvironmentEnabled\(env\)/);
