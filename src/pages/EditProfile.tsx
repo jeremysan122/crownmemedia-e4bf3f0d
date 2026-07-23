@@ -294,9 +294,14 @@ export default function EditProfile() {
       };
       if (usernameChanged) profilePayload.username = nextUsername;
 
+      // The profile row is created by a signup trigger, so this is always an
+      // UPDATE. Using upsert would force an INSERT attempt whose NOT NULL
+      // constraints (username) fail whenever we omit an unchanged field.
+      const { id: _ignoredId, ...profileUpdate } = profilePayload;
       const { error: profileError } = await supabase
         .from("profiles")
-        .upsert(profilePayload as any, { onConflict: "id" });
+        .update(profileUpdate)
+        .eq("id", uid);
 
       if (profileError) throw profileError;
 
