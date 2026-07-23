@@ -52,8 +52,9 @@ Deno.serve(async (req) => {
     try {
       event = await verifyConnectWebhook(
         new Request(req.url, { method: req.method, headers: req.headers, body }),
+        env,
       );
-    } catch (connectErr) {
+    } catch (_connectErr) {
       return jsonError(400, "invalid_signature", (err as Error).message);
     }
   }
