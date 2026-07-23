@@ -489,7 +489,24 @@ Deno.serve(async (req) => {
           if (error) throw new Error(`handle_royal_refund failed: ${error.message}`);
           else console.log(`[stripe-webhook] refund processed charge=${charge.id}`);
         } else {
-          console.log(`[stripe-webhook] partial refund ignored charge=${(event.data.object as any).id}`);
+          // Partial refund → proportional Shekel reversal
+          const paymentIntentId = typeof charge.payment_intent === "string"
+            ? charge.payment_intent
+            : charge.payment_intent?.id ?? null;
+          const sessionId = await resolveCheckoutSessionId(paymentIntentId);
+          if (sessionId) {
+            const { data, error } = await supabase.rpc("handle_store_partial_refund", {
+              _stripe_event_id: event.id,
+              _stripe_session_id: sessionId,
+              _refunded_cents: Number(charge.amount_refunded ?? 0),
+              _original_cents: Number(charge.amount ?? 0),
+              _reason: "charge.refunded.partial",
+            });
+            if (error) throw new Error(`handle_store_partial_refund failed: ${error.message}`);
+            console.log(`[stripe-webhook] partial refund charge=${charge.id} result=${JSON.stringify(data)}`);
+          } else {
+            console.log(`[stripe-webhook] partial refund: no session found for pi=${paymentIntentId}`);
+          }
         }
       } catch (e) {
         console.error(`[stripe-webhook] refund handler error: ${(e as Error).message}`);
