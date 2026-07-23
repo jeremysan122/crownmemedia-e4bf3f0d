@@ -39,8 +39,7 @@ describe("posts anon/authenticated column lockdown (2026-07-23)", () => {
   });
 
   it("no migration ever grants anon SELECT on sensitive posts columns", () => {
-    const anonGrants = [...ALL_SQL.matchAll(/GRANT SELECT \(([\s\S]*?)\) ON public\.posts TO anon/g)]
-      .map((m) => m[1]);
+    const anonGrants = anonGrantColumnLists("posts", "anon");
     for (const col of [
       "post_lat",
       "post_lng",
