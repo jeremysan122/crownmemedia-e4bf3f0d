@@ -43,14 +43,14 @@ describe("posts anon/authenticated column lockdown (2026-07-23)", () => {
   it("some migration revokes table-wide SELECT on posts from anon/authenticated", () => {
     expect(ALL_SQL).toMatch(/REVOKE SELECT ON public\.posts FROM anon, authenticated/);
     const grants = [
-      ...anonGrantColumnLists("posts", "anon"),
-      ...anonGrantColumnLists("posts", "authenticated"),
+      ...grantColumnLists(LOCKDOWN_SQL, "posts", "anon"),
+      ...grantColumnLists(LOCKDOWN_SQL, "posts", "authenticated"),
     ];
     expect(grants.length).toBeGreaterThanOrEqual(2);
   });
 
   it("no migration ever grants anon SELECT on sensitive posts columns", () => {
-    const anonGrants = anonGrantColumnLists("posts", "anon");
+    const anonGrants = grantColumnLists(LOCKDOWN_SQL, "posts", "anon");
     for (const col of [
       "post_lat",
       "post_lng",
@@ -115,7 +115,7 @@ describe("profiles anon/authenticated column lockdown (2026-07-23)", () => {
   });
 
   it("no anon grant on profiles exposes sensitive PII", () => {
-    const anonGrants = anonGrantColumnLists("profiles", "anon");
+    const anonGrants = grantColumnLists(LOCKDOWN_SQL, "profiles", "anon");
     for (const col of ["email", "phone", "date_of_birth", "gender", "stripe_customer_id", "is_suspended"]) {
       for (const grant of anonGrants) {
         expect(grant, `anon profiles grant must exclude ${col}`).not.toMatch(new RegExp(`\\b${col}\\b`));
