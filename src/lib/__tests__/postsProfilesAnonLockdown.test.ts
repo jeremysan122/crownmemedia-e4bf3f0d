@@ -116,12 +116,17 @@ describe("profiles anon/authenticated column lockdown (2026-07-23)", () => {
 
   it("no anon grant on profiles exposes sensitive PII", () => {
     const anonGrants = grantColumnLists(LOCKDOWN_SQL, "profiles", "anon");
-    for (const col of ["email", "phone", "date_of_birth", "gender", "stripe_customer_id", "is_suspended"]) {
+    // PII / financial identifiers only. Moderation flags (is_banned,
+    // is_suspended, deactivated_at, deletion_requested_at) are intentionally
+    // granted so that the security_invoker profiles_public view's RLS
+    // predicate can evaluate for the anon role.
+    for (const col of ["email", "phone", "date_of_birth", "gender", "stripe_customer_id"]) {
       for (const grant of anonGrants) {
         expect(grant, `anon profiles grant must exclude ${col}`).not.toMatch(new RegExp(`\\b${col}\\b`));
       }
     }
   });
+
 
   it("profiles_public safe view is granted to anon (unchanged)", () => {
     expect(ALL_SQL).toMatch(/GRANT SELECT ON public\.profiles_public TO anon, authenticated/);
