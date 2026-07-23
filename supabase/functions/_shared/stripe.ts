@@ -1,8 +1,7 @@
-// Shared Stripe utility for Lovable-managed Stripe via the connector gateway.
-// All payment edge functions MUST import createStripeClient from here.
-// The API keys in this project (STRIPE_SANDBOX_API_KEY / STRIPE_LIVE_API_KEY)
-// are opaque gateway connection identifiers — they are NOT real Stripe secret keys.
-import { encode } from "https://deno.land/std@0.168.0/encoding/hex.ts";
+// Shared Stripe utility for BYOK (bring-your-own-key) Stripe.
+// All payment edge functions import createStripeClient from here.
+// The API key is the builder's own Stripe secret key (sk_test_... / sk_live_...),
+// NOT a Lovable-managed gateway connection identifier.
 import Stripe from "https://esm.sh/stripe@22.0.2";
 
 const getEnv = (key: string): string => {
@@ -13,44 +12,56 @@ const getEnv = (key: string): string => {
 
 export type StripeEnv = "sandbox" | "live";
 
-// Sandbox and live Stripe modes share the same Supabase database in this
-// deployment. Sandbox must therefore be an explicit server-side choice; a
-// client request alone can never enable test-card entitlement grants.
+// Sandbox mode is enabled when a test secret key is configured, or when the
+// single configured STRIPE_SECRET_KEY is a test key. For production BYOK
+// deployments, live webhooks use STRIPE_SECRET_KEY (sk_live_...).
 export function isStripeEnvironmentEnabled(env: StripeEnv): boolean {
-  return env === "live" || Deno.env.get("PAYMENTS_ENABLE_SANDBOX") === "true";
+  if (env === "live") {
+    const key = Deno.env.get("STRIPE_SECRET_KEY");
+    return !!key && key.startsWith("sk_live_");
+  }
+  const testKey = Deno.env.get("STRIPE_TEST_SECRET_KEY");
+  const mainKey = Deno.env.get("STRIPE_SECRET_KEY");
+  return !!(testKey || mainKey?.startsWith("sk_test_"));
 }
 
-const GATEWAY_STRIPE_BASE = "https://connector-gateway.lovable.dev/stripe";
-
-export function getConnectionApiKey(env: StripeEnv): string {
-  return env === "sandbox"
-    ? getEnv("STRIPE_SANDBOX_API_KEY")
-    : getEnv("STRIPE_LIVE_API_KEY");
+function resolveSecretKey(env: StripeEnv): string {
+  if (env === "sandbox") {
+    const testKey = Deno.env.get("STRIPE_TEST_SECRET_KEY");
+    if (testKey) return testKey;
+    const mainKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (mainKey?.startsWith("sk_test_")) return mainKey;
+    throw new Error(
+      "Stripe sandbox is not configured. Add STRIPE_TEST_SECRET_KEY or set STRIPE_SECRET_KEY to a test key (sk_test_...).",
+    );
+  }
+  const mainKey = getEnv("STRIPE_SECRET_KEY");
+  if (!mainKey.startsWith("sk_live_")) {
+    throw new Error(
+      "STRIPE_SECRET_KEY is not a live key. For production BYOK use sk_live_...",
+    );
+  }
+  return mainKey;
 }
 
 export function createStripeClient(env: StripeEnv): Stripe {
-  const connectionApiKey = getConnectionApiKey(env);
-  const lovableApiKey = getEnv("LOVABLE_API_KEY");
-
-  return new Stripe(connectionApiKey, {
+  const secretKey = resolveSecretKey(env);
+  return new Stripe(secretKey, {
     apiVersion: "2026-03-25.dahlia",
-    httpClient: Stripe.createFetchHttpClient((input, init) => {
-      const stripeUrl = input instanceof Request ? input.url : input.toString();
-      const gatewayUrl = stripeUrl.replace("https://api.stripe.com", GATEWAY_STRIPE_BASE);
-      return fetch(gatewayUrl, {
-        ...init,
-        headers: {
-          ...Object.fromEntries(
-            new Headers(
-              init?.headers ?? (input instanceof Request ? input.headers : undefined),
-            ).entries(),
-          ),
-          "X-Connection-Api-Key": connectionApiKey,
-          "Lovable-API-Key": lovableApiKey,
-        },
-      });
-    }),
   });
+}
+
+function resolveWebhookSecret(env: StripeEnv): string {
+  if (env === "sandbox") {
+    const testSecret = Deno.env.get("STRIPE_TEST_WEBHOOK_SECRET");
+    if (testSecret) return testSecret;
+    const mainSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+    if (mainSecret) return mainSecret;
+    throw new Error(
+      "Stripe sandbox webhook secret is not configured. Add STRIPE_TEST_WEBHOOK_SECRET or STRIPE_WEBHOOK_SECRET.",
+    );
+  }
+  return getEnv("STRIPE_WEBHOOK_SECRET");
 }
 
 export async function verifyWebhook(
@@ -59,42 +70,28 @@ export async function verifyWebhook(
 ): Promise<{ id: string; type: string; data: { object: any } }> {
   const signature = req.headers.get("stripe-signature");
   const body = await req.text();
-  const secret =
-    env === "sandbox"
-      ? getEnv("PAYMENTS_SANDBOX_WEBHOOK_SECRET")
-      : getEnv("PAYMENTS_LIVE_WEBHOOK_SECRET");
-
   if (!signature || !body) throw new Error("Missing signature or body");
 
-  let timestamp: string | undefined;
-  const v1Signatures: string[] = [];
-  for (const part of signature.split(",")) {
-    const [key, value] = part.split("=", 2);
-    if (key === "t") timestamp = value;
-    if (key === "v1") v1Signatures.push(value);
-  }
-  if (!timestamp || v1Signatures.length === 0) throw new Error("Invalid signature format");
+  const secret = resolveWebhookSecret(env);
+  const stripe = createStripeClient(env);
+  const event = stripe.webhooks.constructEvent(body, signature, secret);
+  return event as { id: string; type: string; data: { object: any } };
+}
 
-  const age = Math.abs(Date.now() / 1000 - Number(timestamp));
-  if (age > 300) throw new Error("Webhook timestamp too old");
+export async function verifyConnectWebhook(
+  req: Request,
+): Promise<{ id: string; type: string; account?: string; data: { object: any } }> {
+  const signature = req.headers.get("stripe-signature");
+  const body = await req.text();
+  if (!signature || !body) throw new Error("Missing signature or body");
 
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signed = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(`${timestamp}.${body}`),
-  );
-  const expected = new TextDecoder().decode(encode(new Uint8Array(signed)));
-
-  if (!v1Signatures.includes(expected)) throw new Error("Invalid webhook signature");
-
-  return JSON.parse(body);
+  const secret = getEnv("STRIPE_CONNECT_WEBHOOK_SECRET");
+  const secretKey = getEnv("STRIPE_SECRET_KEY");
+  const stripe = new Stripe(secretKey, {
+    apiVersion: "2026-03-25.dahlia",
+  });
+  const event = stripe.webhooks.constructEvent(body, signature, secret);
+  return event as { id: string; type: string; account?: string; data: { object: any } };
 }
 
 // Resolve/create a Stripe Customer keyed by userId metadata.
