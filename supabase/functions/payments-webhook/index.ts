@@ -41,11 +41,21 @@ Deno.serve(async (req) => {
     return jsonError(403, "sandbox_disabled", "Sandbox payments are disabled for this deployment");
   }
 
-  let event: { id: string; type: string; data: { object: any } };
+  let event: { id: string; type: string; account?: string; data: { object: any } };
+  const body = await req.text();
   try {
-    event = await verifyWebhook(req, env);
+    event = await verifyWebhook(
+      new Request(req.url, { method: req.method, headers: req.headers, body }),
+      env,
+    );
   } catch (err) {
-    return jsonError(400, "invalid_signature", (err as Error).message);
+    try {
+      event = await verifyConnectWebhook(
+        new Request(req.url, { method: req.method, headers: req.headers, body }),
+      );
+    } catch (connectErr) {
+      return jsonError(400, "invalid_signature", (err as Error).message);
+    }
   }
 
   // A received event is not considered complete until every entitlement write
