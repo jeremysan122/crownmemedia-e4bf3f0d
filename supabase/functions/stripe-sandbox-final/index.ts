@@ -14,7 +14,7 @@ const admin = createClient(
 );
 
 const stripe = new Stripe(Deno.env.get("STRIPE_TEST_SECRET_KEY")!, {
-  apiVersion: "2026-03-25.dahlia",
+  apiVersion: "2024-06-20" as any,
 });
 
 const BUYER = "06415869-792a-47fa-8af4-a563b2c02c82"; // @remyjpolo
