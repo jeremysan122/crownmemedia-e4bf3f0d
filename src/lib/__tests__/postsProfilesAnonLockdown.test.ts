@@ -104,8 +104,7 @@ describe("profiles anon/authenticated column lockdown (2026-07-23)", () => {
   });
 
   it("no anon grant on profiles exposes sensitive PII", () => {
-    const anonGrants = [...ALL_SQL.matchAll(/GRANT SELECT \(([\s\S]*?)\) ON public\.profiles TO anon/g)]
-      .map((m) => m[1]);
+    const anonGrants = anonGrantColumnLists("profiles", "anon");
     for (const col of ["email", "phone", "date_of_birth", "gender", "stripe_customer_id", "is_suspended"]) {
       for (const grant of anonGrants) {
         expect(grant, `anon profiles grant must exclude ${col}`).not.toMatch(new RegExp(`\\b${col}\\b`));
