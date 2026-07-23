@@ -87,26 +87,37 @@ export function lastTableGrantHolds(
  * targeting individual columns are NOT counted as whole-table grants.
  */
 export function anonWholeTableSelectIsBlocked(qualifiedTable: string): boolean {
+  return wholeTableSelectIsBlocked(qualifiedTable, "anon");
+}
+
+/**
+ * Same as `anonWholeTableSelectIsBlocked` but parameterized by role. Used to
+ * lock the least-privilege contract that authenticated must NOT hold
+ * whole-table SELECT on `posts` (only a column allowlist).
+ */
+export function wholeTableSelectIsBlocked(
+  qualifiedTable: string,
+  role: string,
+): boolean {
   const sql = allMigrationsSql();
   const t = qualifiedTable.replace(".", "\\.");
-  // GRANT SELECT ON public.foo TO anon  — no column list after SELECT.
+  const r = role.replace(/[^a-z_]/gi, "");
   const wholeGrant = new RegExp(
-    `GRANT\\s+SELECT(?:\\s*,\\s*[A-Z]+)*\\s+ON\\s+(?:TABLE\\s+)?${t}\\b[^;]*\\bTO\\b[^;]*\\banon\\b[^;]*;`,
+    `GRANT\\s+SELECT(?:\\s*,\\s*[A-Z]+)*\\s+ON\\s+(?:TABLE\\s+)?${t}\\b[^;]*\\bTO\\b[^;]*\\b${r}\\b[^;]*;`,
     "gi",
   );
   const wholeRevoke = new RegExp(
-    `REVOKE\\s+(?:ALL|SELECT(?:\\s*,\\s*[A-Z]+)*)\\s+ON\\s+(?:TABLE\\s+)?${t}\\b[^;]*\\bFROM\\b[^;]*\\banon\\b[^;]*;`,
+    `REVOKE\\s+(?:ALL|SELECT(?:\\s*,\\s*[A-Z]+)*)\\s+ON\\s+(?:TABLE\\s+)?${t}\\b[^;]*\\bFROM\\b[^;]*\\b${r}\\b[^;]*;`,
     "gi",
   );
   let lastGrant = -1, lastRevoke = -1;
   for (const m of sql.matchAll(wholeGrant)) {
-    // Skip column-scoped grants: they look like GRANT SELECT (col1, col2) ...
     const snippet = sql.slice(m.index ?? 0, (m.index ?? 0) + m[0].length);
+    // Skip column-scoped grants: they look like GRANT SELECT (col1, col2) ...
     if (/SELECT\s*\(/i.test(snippet)) continue;
     lastGrant = Math.max(lastGrant, m.index ?? -1);
   }
   for (const m of sql.matchAll(wholeRevoke)) lastRevoke = Math.max(lastRevoke, m.index ?? -1);
-  // If there is no grant at all, treat as blocked (nothing to revoke).
   if (lastGrant === -1) return true;
   return lastRevoke > lastGrant;
 }

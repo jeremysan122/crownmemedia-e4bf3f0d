@@ -102,3 +102,49 @@ probe described in each section.
    (profile update, vote insert with count refresh, direct crown_score
    tamper — all three must still PASS / DENIED as appropriate).
 3. Only then update this document and the affected test.
+
+## 5. Posts safe-column allowlist (2026-07-23 CRITICAL re-fix)
+
+- **What broke:** the emergency migration `20260723134156` re-granted
+  whole-table `SELECT ON public.posts TO authenticated` to unbreak vote /
+  battle / profile flows. Combined with the RLS policy
+  `posts_public_read_approved` (roles = PUBLIC), any signed-in user could
+  read every column of every approved post — including `post_lat` /
+  `post_lng` / `location_captured_at`, `submission_key`,
+  `client_request_id`, `moderation_notes`, `moderation_status`,
+  `moderated_by`, `moderated_at`, `sensitive_reason`, and AI internals.
+- **Root cause:** granting a table-wide privilege to satisfy a small set
+  of columns needed by owner UIs. Column privileges cannot distinguish
+  owners, so once granted every authenticated user gets the column.
+- **Contract:**
+  - `authenticated` MUST NOT hold whole-table `SELECT` on `public.posts`.
+    Only a column-level allowlist is allowed. Enforced by
+    `permissionContract.test.ts → posts least-privilege for authenticated`.
+  - The column allowlist granted to `anon` and `authenticated` MUST NOT
+    include `post_lat`, `post_lng`, `location_captured_at`,
+    `submission_key`, `client_request_id`, `moderation_notes`,
+    `moderated_by`, `moderated_at`, `sensitive_reason`, or AI moderation
+    columns. Enforced by the same test block by parsing the LAST
+    column-scoped `GRANT SELECT (…) ON public.posts TO <role>`.
+  - Owner reads of a protected column must go through a SECURITY DEFINER
+    RPC. Today the client doesn't need any of them — a repo scan of
+    `src/**/*.{ts,tsx}` returns zero hits.
+  - `REVOKE SELECT ON public.posts FROM <role>` also drops column-level
+    grants; any migration that revokes must immediately re-grant the
+    intended column list in the same file.
+  - Vote / crown recalcs run via `trg_recalc_from_votes → recalc_post_score`
+    (SECURITY DEFINER, `SET search_path = public`), which bypasses caller
+    column grants — no client column privilege on `vote_count` /
+    `crown_score` is needed.
+
+- **Runtime probes (kept under `/tmp/browser/posts_exposure/probe.py`):**
+  1. anon raw `post_lat` → 401 permission denied ✅
+  2. authenticated non-owner raw `post_lat` / `submission_key` /
+     `client_request_id` / `moderation_notes` / `moderated_by` /
+     `moderated_at` / `sensitive_reason` / `location_captured_at` → 403 ✅
+  3. owner safe read (`id, caption, image_url, crown_score, vote_count`) → 200 ✅
+  4. `posts_public` anon 200, authenticated 200 ✅
+  5. vote insert + count refresh: covered by prior signed-in probe (the
+     SECURITY DEFINER trigger bypass keeps working) ✅
+  6. direct crown_score tamper on somebody else's post → 403 ✅
+  7. battle re-read (`moderation_status`) → 200 ✅

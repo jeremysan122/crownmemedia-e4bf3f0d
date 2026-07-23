@@ -15,24 +15,26 @@
  * that revokes something later will fail this test — not a historical file.
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import {
   latestFunctionDefinition,
   lastTableGrantHolds,
   anonWholeTableSelectIsBlocked,
+  wholeTableSelectIsBlocked,
+  allMigrationsSql,
 } from "./_migrationEffectiveState";
 
 describe("permission contract — authenticated write capabilities", () => {
   // Only the privileges the screenshot flows actually exercise directly.
-  // Column-scoped grants (posts UPDATE allowlist) intentionally bypass the
-  // whole-table check — the helper skips column-scoped grants so a future
-  // migration that reverts to a whole-table UPDATE grant on `posts` won't
-  // silently unbreak this test.
+  // NB: posts.SELECT is column-scoped (allowlist), not whole-table — see
+  // the "posts least-privilege" block below.
   const AUTH_REQUIREMENTS: Array<[string, Array<"SELECT" | "INSERT" | "UPDATE" | "DELETE">]> = [
-    ["public.profiles",     ["SELECT", "UPDATE"]],           // EditProfile own-row UPDATE
-    ["public.posts",        ["SELECT", "INSERT", "DELETE"]], // owner insert/delete; column-scoped UPDATE
-    ["public.votes",        ["SELECT"]],                    // INSERT/DELETE covered by RLS policy contract; see crownVoteRegressionContract
-    ["public.battles",      ["SELECT"]],                     // Battles list read; writes via RPC
-    ["public.live_battles", ["SELECT"]],                     // LiveBattles list read; writes via RPC
+    ["public.profiles",     ["SELECT", "UPDATE"]],  // EditProfile own-row UPDATE
+    ["public.posts",        ["INSERT", "DELETE"]],  // owner insert/delete; SELECT is column-scoped; UPDATE is column-scoped
+    ["public.votes",        ["SELECT"]],            // INSERT/DELETE covered by RLS policy contract
+    ["public.battles",      ["SELECT"]],            // Battles list read; writes via RPC
+    ["public.live_battles", ["SELECT"]],            // LiveBattles list read; writes via RPC
   ];
   for (const [t, privs] of AUTH_REQUIREMENTS) {
     for (const priv of privs) {
@@ -53,6 +55,7 @@ describe("permission contract — anon lockdown for sensitive tables", () => {
   const SENSITIVE = [
     "public.profiles",         // PII, private geo, email
     "public.crown_map_points", // exact coordinates
+    "public.posts",            // coords + moderation + submission IDs
   ];
   for (const t of SENSITIVE) {
     it(`anon has no whole-table SELECT on ${t}`, () => {
@@ -64,11 +67,51 @@ describe("permission contract — anon lockdown for sensitive tables", () => {
   }
 
   it("anon reaches profiles/posts through the *_public views only", () => {
-    // The views are the sanctioned public surface. Requiring anon SELECT on
-    // them stops a future migration from silently removing the surface.
     expect(lastTableGrantHolds("SELECT", "anon", "public.profiles_public")).toBe(true);
     expect(lastTableGrantHolds("SELECT", "anon", "public.posts_public")).toBe(true);
   });
+});
+
+describe("permission contract — posts least-privilege for authenticated", () => {
+  // CRITICAL: posts contains coords, submission IDs, moderator notes, AI
+  // internals. Because column-level grants cannot distinguish owners, we
+  // NEVER grant those columns to `authenticated` — owner UIs that need them
+  // must use a SECURITY DEFINER RPC.
+  it("authenticated has NO whole-table SELECT on public.posts", () => {
+    expect(
+      wholeTableSelectIsBlocked("public.posts", "authenticated"),
+      "authenticated regained whole-table SELECT on posts — every approved post's coords/moderation/submission ids are readable by non-owners",
+    ).toBe(true);
+  });
+
+  // Parse the LAST column-scoped GRANT SELECT on public.posts to each role
+  // and assert none of the protected columns appear.
+  const PROTECTED_COLUMNS = [
+    "post_lat", "post_lng", "location_captured_at",
+    "submission_key", "client_request_id",
+    "moderation_notes", "moderated_by", "moderated_at",
+    "sensitive_reason",
+    // AI/internal fields (safe even if renamed — regex tolerates absence)
+    "ai_moderation_score", "ai_moderation_categories",
+  ];
+  for (const role of ["anon", "authenticated"] as const) {
+    it(`no protected column appears in the LAST column-scoped SELECT grant to ${role} on posts`, () => {
+      const sql = allMigrationsSql();
+      const re = new RegExp(
+        `GRANT\\s+SELECT\\s*\\(([^)]*)\\)\\s*ON\\s+(?:TABLE\\s+)?public\\.posts\\b[^;]*\\bTO\\b[^;]*\\b${role}\\b[^;]*;`,
+        "gi",
+      );
+      let lastCols: string | null = null;
+      for (const m of sql.matchAll(re)) lastCols = m[1];
+      expect(lastCols, `no column-scoped GRANT SELECT on public.posts TO ${role} — sanctioned safe surface missing`).toBeTruthy();
+      const cols = new Set(
+        (lastCols ?? "").split(/[,\s]+/).map((c) => c.trim()).filter(Boolean),
+      );
+      for (const bad of PROTECTED_COLUMNS) {
+        expect(cols.has(bad), `column ${bad} was granted to ${role} on posts — protected internal exposure`).toBe(false);
+      }
+    });
+  }
 });
 
 describe("permission contract — trigger depth bypass survives", () => {
