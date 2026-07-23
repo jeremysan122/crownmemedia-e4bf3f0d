@@ -16,13 +16,17 @@ export type StripeEnv = "sandbox" | "live";
 // single configured STRIPE_SECRET_KEY is a test key. For production BYOK
 // deployments, live webhooks use STRIPE_SECRET_KEY (sk_live_...).
 export function isStripeEnvironmentEnabled(env: StripeEnv): boolean {
-  if (env === "live") {
-    const key = Deno.env.get("STRIPE_SECRET_KEY");
-    return !!key && key.startsWith("sk_live_");
-  }
-  const testKey = Deno.env.get("STRIPE_TEST_SECRET_KEY");
   const mainKey = Deno.env.get("STRIPE_SECRET_KEY");
-  return !!(testKey || mainKey?.startsWith("sk_test_"));
+  const testKey = Deno.env.get("STRIPE_TEST_SECRET_KEY");
+  const hasMainKey = !!mainKey;
+  const mainPrefix = hasMainKey ? mainKey.slice(0, 7) : "(unset)";
+  const isLive = hasMainKey && mainKey.startsWith("sk_live_");
+  const isTest = hasMainKey && mainKey.startsWith("sk_test_");
+  console.log(
+    `[stripe-env] env=${env} mainKeyPrefix=${mainPrefix} isLive=${isLive} isTest=${isTest} testKeySet=${!!testKey}`,
+  );
+  if (env === "live") return isLive;
+  return !!(testKey || isTest);
 }
 
 function resolveSecretKey(env: StripeEnv): string {
