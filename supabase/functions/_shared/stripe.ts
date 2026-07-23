@@ -14,17 +14,13 @@ export type StripeEnv = "sandbox" | "live";
 
 // Sandbox mode is enabled when a test secret key is configured, or when the
 // single configured STRIPE_SECRET_KEY is a test key. For production BYOK
-// deployments, live webhooks use STRIPE_SECRET_KEY (sk_live_...).
+// deployments, live webhooks use STRIPE_SECRET_KEY (sk_live_... or rk_live_...).
+// Restricted keys (rk_...) are accepted but may not support every Stripe operation.
 export function isStripeEnvironmentEnabled(env: StripeEnv): boolean {
   const mainKey = Deno.env.get("STRIPE_SECRET_KEY");
   const testKey = Deno.env.get("STRIPE_TEST_SECRET_KEY");
-  const hasMainKey = !!mainKey;
-  const mainPrefix = hasMainKey ? mainKey.slice(0, 7) : "(unset)";
-  const isLive = hasMainKey && mainKey.startsWith("sk_live_");
-  const isTest = hasMainKey && mainKey.startsWith("sk_test_");
-  console.log(
-    `[stripe-env] env=${env} mainKeyPrefix=${mainPrefix} isLive=${isLive} isTest=${isTest} testKeySet=${!!testKey}`,
-  );
+  const isLive = !!mainKey && (mainKey.startsWith("sk_live_") || mainKey.startsWith("rk_live_"));
+  const isTest = !!mainKey && (mainKey.startsWith("sk_test_") || mainKey.startsWith("rk_test_"));
   if (env === "live") return isLive;
   return !!(testKey || isTest);
 }
