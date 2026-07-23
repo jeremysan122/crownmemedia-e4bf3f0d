@@ -71,23 +71,14 @@ Deno.serve(async (req) => {
 
   try {
     if (eventType === "room_finished" && roomName) {
+      // Never end from lobby room lifecycle; live_battle_end_by_room strips the suffix anyway.
       await admin.rpc("live_battle_end_by_room" as never, {
         _room_name: roomName, _reason: "room_finished",
       } as never);
-    } else if (eventType === "participant_left" && roomName && participantId) {
-      // Only end when host leaves the live room (skip the lobby suffix).
-      const cleanRoom = roomName.replace(/__lobby$/, "");
-      const { data: battle } = await admin
-        .from("live_battles")
-        .select("id, host_id, status")
-        .eq("room_name", cleanRoom)
-        .maybeSingle();
-      if (battle && battle.status === "live" && battle.host_id === participantId) {
-        await admin.rpc("live_battle_end_by_room" as never, {
-          _room_name: cleanRoom, _reason: "host_left",
-        } as never);
-      }
     }
+    // NOTE: participant_left is intentionally NOT handled as a terminal
+    // signal — see file header. Event is logged above for observability only.
+
   } catch (e) {
     await admin.from("error_logs").insert({
       message: "livekit_webhook_processing_failed",
