@@ -25,20 +25,25 @@ export function isStripeEnvironmentEnabled(env: StripeEnv): boolean {
   return !!(testKey || isTest);
 }
 
+function isStripeKey(key: string): boolean {
+  return key.startsWith("sk_test_") || key.startsWith("sk_live_") || key.startsWith("rk_test_") ||
+    key.startsWith("rk_live_");
+}
+
 function resolveSecretKey(env: StripeEnv): string {
   if (env === "sandbox") {
     const testKey = Deno.env.get("STRIPE_TEST_SECRET_KEY");
     if (testKey) return testKey;
     const mainKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (mainKey?.startsWith("sk_test_")) return mainKey;
+    if (mainKey && isStripeKey(mainKey)) return mainKey;
     throw new Error(
-      "Stripe sandbox is not configured. Add STRIPE_TEST_SECRET_KEY or set STRIPE_SECRET_KEY to a test key (sk_test_...).",
+      "Stripe sandbox is not configured. Add STRIPE_TEST_SECRET_KEY or set STRIPE_SECRET_KEY to a test key (sk_test_... / rk_test_...).",
     );
   }
   const mainKey = getEnv("STRIPE_SECRET_KEY");
-  if (!mainKey.startsWith("sk_live_")) {
+  if (!isStripeKey(mainKey)) {
     throw new Error(
-      "STRIPE_SECRET_KEY is not a live key. For production BYOK use sk_live_...",
+      "STRIPE_SECRET_KEY is not a valid Stripe key. For production BYOK use sk_live_... or rk_live_...",
     );
   }
   return mainKey;
