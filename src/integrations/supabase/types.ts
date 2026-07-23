@@ -9018,6 +9018,16 @@ export type Database = {
         }
         Returns: Json
       }
+      handle_store_partial_refund: {
+        Args: {
+          _original_cents: number
+          _reason?: string
+          _refunded_cents: number
+          _stripe_event_id: string
+          _stripe_session_id: string
+        }
+        Returns: Json
+      }
       handle_store_refund: {
         Args: {
           _reason?: string
