@@ -79,7 +79,7 @@ export async function verifyWebhook(
 
   const secret = resolveWebhookSecret(env);
   const stripe = createStripeClient(env);
-  const event = stripe.webhooks.constructEvent(body, signature, secret);
+  const event = await stripe.webhooks.constructEventAsync(body, signature, secret);
   return event as { id: string; type: string; data: { object: any } };
 }
 
