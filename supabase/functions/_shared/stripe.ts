@@ -88,7 +88,7 @@ export async function verifyConnectWebhook(
 ): Promise<{ id: string; type: string; account?: string; data: { object: any } }> {
   const signature = req.headers.get("stripe-signature");
   const body = await req.text();
-  if (!signature || !body) throw new Error("Missing signature or body");
+  if (!signature) throw new Error("Missing stripe-signature header");
 
   const secret = getEnv("STRIPE_CONNECT_WEBHOOK_SECRET");
   const secretKey = getEnv("STRIPE_SECRET_KEY");
