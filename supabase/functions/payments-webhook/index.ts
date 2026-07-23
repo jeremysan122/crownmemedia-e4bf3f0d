@@ -1,13 +1,14 @@
-// Lovable-managed Stripe webhook
+// BYOK Stripe webhook
 //   Routes via ?env=sandbox or ?env=live
-//   Verifies with PAYMENTS_SANDBOX_WEBHOOK_SECRET / PAYMENTS_LIVE_WEBHOOK_SECRET
-//   Resolves prices via lookup_key (stable across sandbox/live) with fallback to Stripe price ID
+//   Verifies with STRIPE_WEBHOOK_SECRET / STRIPE_TEST_WEBHOOK_SECRET
+//   Falls back to STRIPE_CONNECT_WEBHOOK_SECRET for Stripe Connect events
 //   Preserves: Shekel crediting, boost activation, Royal Pass subscription state, verification flow
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
   type StripeEnv,
   createStripeClient,
   isStripeEnvironmentEnabled,
+  verifyConnectWebhook,
   verifyWebhook,
 } from "../_shared/stripe.ts";
 
@@ -40,11 +41,21 @@ Deno.serve(async (req) => {
     return jsonError(403, "sandbox_disabled", "Sandbox payments are disabled for this deployment");
   }
 
-  let event: { id: string; type: string; data: { object: any } };
+  let event: { id: string; type: string; account?: string; data: { object: any } };
+  const body = await req.text();
   try {
-    event = await verifyWebhook(req, env);
+    event = await verifyWebhook(
+      new Request(req.url, { method: req.method, headers: req.headers, body }),
+      env,
+    );
   } catch (err) {
-    return jsonError(400, "invalid_signature", (err as Error).message);
+    try {
+      event = await verifyConnectWebhook(
+        new Request(req.url, { method: req.method, headers: req.headers, body }),
+      );
+    } catch (connectErr) {
+      return jsonError(400, "invalid_signature", (err as Error).message);
+    }
   }
 
   // A received event is not considered complete until every entitlement write
