@@ -96,9 +96,7 @@ describe("livekit-webhook function", () => {
     const src = readFileSync("supabase/functions/livekit-webhook/index.ts", "utf8");
     expect(src).toMatch(/WebhookReceiver/);
     expect(src).toMatch(/livekit_webhook_events/);
-    // signature failures return 401 before doing any writes
     expect(src).toMatch(/invalid_signature/);
-    // idempotency short-circuit on unique_violation
     expect(src).toMatch(/23505/);
 
     const cfg = readFileSync("supabase/config.toml", "utf8");
@@ -107,10 +105,13 @@ describe("livekit-webhook function", () => {
 
   it("does NOT terminate battles on participant_left (prevents transient-disconnect false endings)", () => {
     const src = readFileSync("supabase/functions/livekit-webhook/index.ts", "utf8");
-    // Must not branch into an RPC call when the event is participant_left.
-    // room_finished remains the only terminal trigger.
     expect(src).not.toMatch(/participant_left[\s\S]{0,400}live_battle_end_by_room/);
     expect(src).toMatch(/room_finished[\s\S]{0,200}live_battle_end_by_room/);
+  });
+
+  it("ignores lobby room_finished before calling the battle-ending RPC", () => {
+    const src = readFileSync("supabase/functions/livekit-webhook/index.ts", "utf8");
+    expect(src).toContain('eventType === "room_finished" && roomName && !roomName.endsWith("__lobby")');
   });
 
   it("pins livekit-server-sdk to an explicit patch version in every function", () => {
@@ -126,5 +127,3 @@ describe("livekit-webhook function", () => {
     }
   });
 });
-
-
