@@ -34,19 +34,19 @@ async function poll<T>(fn: () => Promise<T | null>, timeoutMs = 25_000, interval
   return null;
 }
 
-async function payWithTestCard(sessionId: string): Promise<string> {
-  const s0 = await stripe.checkout.sessions.retrieve(sessionId);
-  console.log(`[pay] session ${sessionId} status=${s0.status} payment_status=${s0.payment_status} pi=${s0.payment_intent} mode=${s0.mode}`);
-  let piId: string | null = typeof s0.payment_intent === "string" ? s0.payment_intent : s0.payment_intent?.id ?? null;
-  if (!piId) {
-    // Some session configurations defer PI creation. Poll a few times.
-    for (let i = 0; i < 5 && !piId; i++) {
-      await new Promise((r) => setTimeout(r, 1500));
-      const s = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["payment_intent"] });
-      piId = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? null;
-    }
+async function payWithTestCard(sessionId: string, sessionUrl?: string | null): Promise<string> {
+  // Hosted Checkout Sessions defer PaymentIntent creation until the customer
+  // hits the page. Simulate that by fetching the session URL.
+  if (sessionUrl) {
+    try { await fetch(sessionUrl, { redirect: "follow" }); } catch (_e) { /* ignore */ }
   }
-  if (!piId) throw new Error(`session ${sessionId} has no payment_intent`);
+  let piId: string | null = null;
+  for (let i = 0; i < 10 && !piId; i++) {
+    const s = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["payment_intent"] });
+    piId = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? null;
+    if (!piId) await new Promise((r) => setTimeout(r, 1500));
+  }
+  if (!piId) throw new Error(`session ${sessionId} has no payment_intent after priming`);
   const pm = await stripe.paymentMethods.create({ type: "card", card: { token: "tok_visa" } });
   const confirmed = await stripe.paymentIntents.confirm(piId, {
     payment_method: pm.id,
