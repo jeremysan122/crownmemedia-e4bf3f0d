@@ -83,18 +83,31 @@ export async function verifyWebhook(
   return event as { id: string; type: string; data: { object: any } };
 }
 
+function resolveConnectWebhookSecret(env: StripeEnv): string {
+  if (env === "sandbox") {
+    const testSecret = Deno.env.get("STRIPE_TEST_CONNECT_WEBHOOK_SECRET");
+    if (testSecret) return testSecret;
+    // Fall back to the standard test webhook secret if configured, so a single
+    // sandbox endpoint that fans out both direct and connected events still verifies.
+    const testFallback = Deno.env.get("STRIPE_TEST_WEBHOOK_SECRET");
+    if (testFallback) return testFallback;
+    throw new Error(
+      "Sandbox Connect webhook secret is not configured. Add STRIPE_TEST_CONNECT_WEBHOOK_SECRET.",
+    );
+  }
+  return getEnv("STRIPE_CONNECT_WEBHOOK_SECRET");
+}
+
 export async function verifyConnectWebhook(
   req: Request,
+  env: StripeEnv = "live",
 ): Promise<{ id: string; type: string; account?: string; data: { object: any } }> {
   const signature = req.headers.get("stripe-signature");
   const body = await req.text();
   if (!signature) throw new Error("Missing stripe-signature header");
 
-  const secret = getEnv("STRIPE_CONNECT_WEBHOOK_SECRET");
-  const secretKey = getEnv("STRIPE_SECRET_KEY");
-  const stripe = new Stripe(secretKey, {
-    apiVersion: "2026-03-25.dahlia",
-  });
+  const secret = resolveConnectWebhookSecret(env);
+  const stripe = createStripeClient(env);
   const event = await stripe.webhooks.constructEventAsync(body, signature, secret);
   return event as { id: string; type: string; account?: string; data: { object: any } };
 }
