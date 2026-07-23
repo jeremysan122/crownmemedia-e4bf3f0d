@@ -10,8 +10,9 @@
 //   Platform Health can chart cost/usage.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { AccessToken } from "npm:livekit-server-sdk@2";
+import { AccessToken, RoomServiceClient } from "npm:livekit-server-sdk@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+
 
 const TOKEN_TTL_SECONDS = 60 * 10; // 10 minutes; client reconnects can re-mint
 
@@ -107,7 +108,26 @@ Deno.serve(async (req) => {
 
   const identity = uid;
   const roomName = mode === "lobby" ? `${battle.room_name}__lobby` : battle.room_name;
-  const at = new AccessToken(lkKey, lkSecret, { identity, ttl: TOKEN_TTL_SECONDS });
+
+  // Look up the caller's display name so the LiveKit ParticipantTile renders
+  // it correctly even before the profile fetch settles on the client.
+  let displayName: string | undefined;
+  try {
+    const { data: prof } = await admin
+      .from("profiles").select("username").eq("id", uid).maybeSingle();
+    if (prof?.username) displayName = String(prof.username);
+  } catch (_) { /* non-fatal */ }
+
+  // Best-effort room provisioning with an empty-timeout so zombie rooms clean
+  // up when everyone drops. Ignore "already exists" errors.
+  if (mode !== "lobby") {
+    try {
+      const rooms = new RoomServiceClient(lkUrl.replace(/^wss?:\/\//, "https://"), lkKey, lkSecret);
+      await rooms.createRoom({ name: roomName, emptyTimeout: 90, maxParticipants: 200 });
+    } catch (_) { /* non-fatal — createRoom is idempotent server-side */ }
+  }
+
+  const at = new AccessToken(lkKey, lkSecret, { identity, ttl: TOKEN_TTL_SECONDS, name: displayName });
   at.addGrant({
     room: roomName,
     roomJoin: true,
@@ -115,6 +135,7 @@ Deno.serve(async (req) => {
     canSubscribe: true,
     canPublishData: isHost || isOpponent,
   });
+
 
 
   const token = await at.toJwt();

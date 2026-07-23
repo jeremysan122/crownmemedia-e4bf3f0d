@@ -3475,6 +3475,36 @@ export type Database = {
         }
         Relationships: []
       }
+      livekit_webhook_events: {
+        Row: {
+          event_id: string
+          event_type: string
+          id: string
+          participant_identity: string | null
+          raw: Json | null
+          received_at: string
+          room_name: string | null
+        }
+        Insert: {
+          event_id: string
+          event_type: string
+          id?: string
+          participant_identity?: string | null
+          raw?: Json | null
+          received_at?: string
+          room_name?: string | null
+        }
+        Update: {
+          event_id?: string
+          event_type?: string
+          id?: string
+          participant_identity?: string | null
+          raw?: Json | null
+          received_at?: string
+          room_name?: string | null
+        }
+        Relationships: []
+      }
       main_categories: {
         Row: {
           created_at: string
@@ -9193,6 +9223,45 @@ export type Database = {
       }
       live_battle_end: {
         Args: { _battle_id: string; _force?: boolean; _reason?: string }
+        Returns: {
+          accepted_at: string | null
+          category_slug: string | null
+          comments_locked: boolean
+          created_at: string
+          duration_seconds: number
+          ended_reason: string | null
+          ends_at: string | null
+          force_ended_by: string | null
+          go_live_at: string | null
+          host_id: string
+          host_ready: boolean
+          host_votes: number
+          id: string
+          is_hidden: boolean
+          keyword_filters: Json
+          lobby_opened_at: string | null
+          opponent_id: string
+          opponent_ready: boolean
+          opponent_votes: number
+          peak_viewers: number
+          region: string | null
+          room_name: string
+          scheduled_start_at: string | null
+          slow_mode_seconds: number
+          started_at: string | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "live_battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      live_battle_end_by_room: {
+        Args: { _reason?: string; _room_name: string }
         Returns: {
           accepted_at: string | null
           category_slug: string | null
