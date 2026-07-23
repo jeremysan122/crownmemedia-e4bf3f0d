@@ -3,7 +3,8 @@
 //   (WebhookReceiver from livekit-server-sdk, pinned).
 // - Idempotency: every event id is inserted into `livekit_webhook_events`;
 //   duplicates short-circuit with 200.
-// - `room_finished` → live_battle_end_by_room(reason='room_finished').
+// - Live-room `room_finished` → live_battle_end_by_room(reason='room_finished').
+// - Lobby-room `room_finished` is logged only so lobby cleanup cannot end the battle.
 // - `participant_left` is logged only. We intentionally do NOT end the
 //   battle here: LiveKit does not deliver a reliable "intentional vs
 //   transient" disconnect reason cross-version, so acting on it risks
@@ -17,7 +18,6 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { WebhookReceiver } from "npm:livekit-server-sdk@2.17.0";
-
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -70,15 +70,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    if (eventType === "room_finished" && roomName) {
-      // Never end from lobby room lifecycle; live_battle_end_by_room strips the suffix anyway.
+    if (eventType === "room_finished" && roomName && !roomName.endsWith("__lobby")) {
       await admin.rpc("live_battle_end_by_room" as never, {
         _room_name: roomName, _reason: "room_finished",
       } as never);
     }
-    // NOTE: participant_left is intentionally NOT handled as a terminal
-    // signal — see file header. Event is logged above for observability only.
-
+    // Lobby room_finished and all participant_left events are intentionally
+    // observability-only. Neither is a safe terminal signal for the battle.
   } catch (e) {
     await admin.from("error_logs").insert({
       message: "livekit_webhook_processing_failed",
