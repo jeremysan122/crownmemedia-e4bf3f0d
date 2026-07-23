@@ -121,3 +121,51 @@ export function wholeTableSelectIsBlocked(
   if (lastGrant === -1) return true;
   return lastRevoke > lastGrant;
 }
+
+/**
+ * Extract the LAST column-scoped `GRANT SELECT (col1, col2, ...) ON public.<table> TO <role>;`
+ * for a role. Returns the set of column names in that grant, or null if none.
+ * Column-level GRANTs are additive across statements, so downstream callers
+ * that need the *effective* column set should union results from every match
+ * — but the "last one wins" semantics apply for identity/allowlist assertions
+ * because the current authorization migrations issue one canonical grant per
+ * role per table (after a REVOKE that clears prior column grants).
+ */
+export function latestColumnSelectGrant(
+  qualifiedTable: string,
+  role: string,
+): Set<string> | null {
+  const sql = allMigrationsSql();
+  const t = qualifiedTable.replace(".", "\\.");
+  const r = role.replace(/[^a-z_]/gi, "");
+  // `REVOKE SELECT ON public.<table> FROM <role>` (whole-table, no column
+  // list) revokes both table-level AND all column-level SELECT in Postgres.
+  // We therefore find the last such REVOKE and union every column grant
+  // issued after it — that is the effective column allowlist.
+  const revokeRe = new RegExp(
+    `REVOKE\\s+(?:ALL|SELECT(?:\\s*,\\s*[A-Z]+)*)\\s+ON\\s+(?:TABLE\\s+)?${t}\\b[^;]*\\bFROM\\b[^;]*\\b${r}\\b[^;]*;`,
+    "gi",
+  );
+  let lastRevokeIdx = -1;
+  for (const m of sql.matchAll(revokeRe)) {
+    const snippet = m[0];
+    if (/SELECT\s*\(/i.test(snippet)) continue; // column-specific REVOKE doesn't wipe others
+    lastRevokeIdx = Math.max(lastRevokeIdx, m.index ?? -1);
+  }
+  const grantRe = new RegExp(
+    `GRANT\\s+SELECT\\s*\\(([^)]*)\\)\\s*ON\\s+(?:TABLE\\s+)?${t}\\b[^;]*\\bTO\\b[^;]*\\b${r}\\b[^;]*;`,
+    "gi",
+  );
+  const union = new Set<string>();
+  let matched = false;
+  for (const m of sql.matchAll(grantRe)) {
+    if ((m.index ?? -1) <= lastRevokeIdx) continue;
+    matched = true;
+    for (const c of m[1].split(/[,\s]+/).map((x) => x.trim()).filter(Boolean)) {
+      union.add(c);
+    }
+  }
+  return matched ? union : null;
+}
+
+
