@@ -95,7 +95,7 @@ export async function verifyConnectWebhook(
   const stripe = new Stripe(secretKey, {
     apiVersion: "2026-03-25.dahlia",
   });
-  const event = stripe.webhooks.constructEvent(body, signature, secret);
+  const event = await stripe.webhooks.constructEventAsync(body, signature, secret);
   return event as { id: string; type: string; account?: string; data: { object: any } };
 }
 
