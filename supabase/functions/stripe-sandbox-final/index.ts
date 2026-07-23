@@ -99,7 +99,7 @@ async function scenarioA() {
   });
   await admin.from("royal_pass_gifts").update({ stripe_session_id: session.id }).eq("id", gift.id);
 
-  const piId = await payWithTestCard(session.id);
+  const piId = await payWithTestCard(session.id, session.url);
 
   const finalGift = await poll(async () => {
     const { data } = await admin.from("royal_pass_gifts").select("status,granted_at,stripe_payment_intent_id")
@@ -153,7 +153,7 @@ async function scenarioB() {
       bundle_id: "shekels_starter_pouch",
     },
   });
-  const piId = await payWithTestCard(session.id);
+  const piId = await payWithTestCard(session.id, session.url);
 
   const purchaseLedger = await poll(async () => {
     const { data } = await admin.from("shekel_ledger").select("id,shekels_delta,kind,stripe_session_id")
