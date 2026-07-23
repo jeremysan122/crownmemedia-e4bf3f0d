@@ -1,13 +1,14 @@
-// Lovable-managed Stripe webhook
+// BYOK Stripe webhook
 //   Routes via ?env=sandbox or ?env=live
-//   Verifies with PAYMENTS_SANDBOX_WEBHOOK_SECRET / PAYMENTS_LIVE_WEBHOOK_SECRET
-//   Resolves prices via lookup_key (stable across sandbox/live) with fallback to Stripe price ID
+//   Verifies with STRIPE_WEBHOOK_SECRET / STRIPE_TEST_WEBHOOK_SECRET
+//   Falls back to STRIPE_CONNECT_WEBHOOK_SECRET for Stripe Connect events
 //   Preserves: Shekel crediting, boost activation, Royal Pass subscription state, verification flow
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
   type StripeEnv,
   createStripeClient,
   isStripeEnvironmentEnabled,
+  verifyConnectWebhook,
   verifyWebhook,
 } from "../_shared/stripe.ts";
 
