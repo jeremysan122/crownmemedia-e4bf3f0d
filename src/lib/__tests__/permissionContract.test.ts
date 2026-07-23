@@ -22,19 +22,20 @@ import {
   lastTableGrantHolds,
   anonWholeTableSelectIsBlocked,
   wholeTableSelectIsBlocked,
+  latestColumnSelectGrant,
   allMigrationsSql,
 } from "./_migrationEffectiveState";
 
 describe("permission contract — authenticated write capabilities", () => {
   // Only the privileges the screenshot flows actually exercise directly.
-  // NB: posts.SELECT is column-scoped (allowlist), not whole-table — see
-  // the "posts least-privilege" block below.
+  // NB: posts.SELECT AND profiles.SELECT are column-scoped (allowlist),
+  // not whole-table — see the least-privilege blocks below.
   const AUTH_REQUIREMENTS: Array<[string, Array<"SELECT" | "INSERT" | "UPDATE" | "DELETE">]> = [
-    ["public.profiles",     ["SELECT", "UPDATE"]],  // EditProfile own-row UPDATE
-    ["public.posts",        ["INSERT", "DELETE"]],  // owner insert/delete; SELECT is column-scoped; UPDATE is column-scoped
-    ["public.votes",        ["SELECT"]],            // INSERT/DELETE covered by RLS policy contract
-    ["public.battles",      ["SELECT"]],            // Battles list read; writes via RPC
-    ["public.live_battles", ["SELECT"]],            // LiveBattles list read; writes via RPC
+    ["public.profiles",     ["UPDATE"]],           // EditProfile own-row UPDATE; SELECT is column-scoped
+    ["public.posts",        ["INSERT", "DELETE"]], // owner insert/delete; SELECT/UPDATE column-scoped
+    ["public.votes",        ["SELECT"]],           // INSERT/DELETE covered by RLS policy contract
+    ["public.battles",      ["SELECT"]],           // Battles list read; writes via RPC
+    ["public.live_battles", ["SELECT"]],           // LiveBattles list read; writes via RPC
   ];
   for (const [t, privs] of AUTH_REQUIREMENTS) {
     for (const priv of privs) {
@@ -50,6 +51,7 @@ describe("permission contract — authenticated write capabilities", () => {
     });
   }
 });
+
 
 describe("permission contract — anon lockdown for sensitive tables", () => {
   const SENSITIVE = [
@@ -113,6 +115,55 @@ describe("permission contract — posts least-privilege for authenticated", () =
     });
   }
 });
+
+describe("permission contract — profiles least-privilege for authenticated & anon", () => {
+
+  // Authenticated users must NOT hold whole-table SELECT on profiles — that
+  // exposed private preference/notification/quiet-hours/timezone columns of
+  // every active user. Reads must go through the column allowlist (peers) or
+  // get_my_profile RPC (owner).
+  it("authenticated has NO whole-table SELECT on public.profiles", () => {
+    expect(
+      wholeTableSelectIsBlocked("public.profiles", "authenticated"),
+      "authenticated regained whole-table SELECT on profiles — private preferences of every user are readable",
+    ).toBe(true);
+  });
+
+  // Columns that must NEVER appear in a column-scoped SELECT grant to
+  // anon or authenticated. These are private preferences, notification
+  // settings, or admin-only fields.
+  const PROTECTED_PROFILE_COLUMNS = [
+    "push_likes", "push_follows", "push_comments", "push_battles",
+    "quiet_hours_start", "quiet_hours_end", "timezone", "locale",
+    "reduce_motion", "larger_text", "high_contrast", "captions_default_on",
+    "autoplay_cellular", "watermark_enabled", "autosave_to_camera_roll",
+    "who_can_dm", "who_can_tag", "who_can_mention", "tag_review_required",
+    "sensitive_content_mode", "vote_privacy",
+    "default_post_visibility", "default_category", "default_comments_enabled",
+    "default_battle_stake", "default_race_scope",
+    "auto_accept_battles_from_follows",
+    "boost_tokens_balance", "banned_by",
+  ];
+  for (const role of ["anon", "authenticated"] as const) {
+    it(`no protected preference column appears in the LAST column-scoped SELECT grant to ${role} on profiles`, () => {
+      const cols = latestColumnSelectGrant("public.profiles", role);
+      expect(cols, `no column-scoped GRANT SELECT on public.profiles TO ${role} — safe surface missing`).toBeTruthy();
+      for (const bad of PROTECTED_PROFILE_COLUMNS) {
+        expect(cols!.has(bad), `column ${bad} was granted to ${role} on profiles — private preference exposure`).toBe(false);
+      }
+    });
+  }
+
+  it("anon retains column-level SELECT on the profiles_public projection", () => {
+    const cols = latestColumnSelectGrant("public.profiles", "anon");
+    expect(cols).toBeTruthy();
+    // Minimum safe columns that public browsing depends on.
+    for (const need of ["id", "username", "profile_photo_url", "bio", "followers_count"]) {
+      expect(cols!.has(need), `anon lost SELECT on ${need} — public profile browsing breaks`).toBe(true);
+    }
+  });
+});
+
 
 describe("permission contract — trigger depth bypass survives", () => {
   for (const fn of [
