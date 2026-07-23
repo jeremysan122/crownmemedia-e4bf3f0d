@@ -300,7 +300,7 @@ export default function EditProfile() {
       const { id: _ignoredId, ...profileUpdate } = profilePayload;
       const { error: profileError } = await supabase
         .from("profiles")
-        .update(profileUpdate)
+        .update(profileUpdate as any)
         .eq("id", uid);
 
       if (profileError) throw profileError;
