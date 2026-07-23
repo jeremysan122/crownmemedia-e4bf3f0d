@@ -859,6 +859,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "battles_challenger_post_id_fkey"
+            columns: ["challenger_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "battles_opponent_id_fkey"
             columns: ["opponent_id"]
             isOneToOne: false
@@ -877,6 +884,13 @@ export type Database = {
             columns: ["opponent_post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battles_opponent_post_id_fkey"
+            columns: ["opponent_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
             referencedColumns: ["id"]
           },
           {
@@ -1280,6 +1294,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "boosts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "boosts_royal_allowance_fk"
             columns: ["royal_pass_shield_allowance_id"]
             isOneToOne: false
@@ -1603,6 +1624,13 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
             referencedColumns: ["id"]
           },
           {
@@ -2114,6 +2142,13 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crowns_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
             referencedColumns: ["id"]
           },
           {
@@ -3709,6 +3744,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "messages_shared_post_id_fkey"
+            columns: ["shared_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "messages_shared_profile_id_fkey"
             columns: ["shared_profile_id"]
             isOneToOne: false
@@ -3858,6 +3900,13 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "muted_threads_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
             referencedColumns: ["id"]
           },
         ]
@@ -4183,6 +4232,13 @@ export type Database = {
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "post_bookmarks_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       post_drafts: {
@@ -4275,6 +4331,13 @@ export type Database = {
             referencedRelation: "posts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "post_edits_audit_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       post_media: {
@@ -4350,6 +4413,13 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_media_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
             referencedColumns: ["id"]
           },
         ]
@@ -4436,6 +4506,13 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: true
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_media_ai_analysis_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: true
+            referencedRelation: "posts_public"
             referencedColumns: ["id"]
           },
         ]
@@ -4654,6 +4731,13 @@ export type Database = {
             columns: ["parent_post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_parent_post_id_fkey"
+            columns: ["parent_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
             referencedColumns: ["id"]
           },
           {
@@ -5247,6 +5331,13 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
             referencedColumns: ["id"]
           },
           {
@@ -7501,6 +7592,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "votes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "votes_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -7661,6 +7759,209 @@ export type Database = {
           {
             foreignKeyName: "gift_transactions_sender_id_fkey"
             columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts_public: {
+        Row: {
+          alt_texts: string[] | null
+          archived_at: string | null
+          aspect_ratio: string | null
+          battle_wins: number | null
+          caption: string | null
+          category: Database["public"]["Enums"]["crown_category"] | null
+          city: string | null
+          comment_count: number | null
+          content_rating: Database["public"]["Enums"]["content_rating"] | null
+          content_type: string | null
+          country: string | null
+          created_at: string | null
+          crown_score: number | null
+          crown_shield_until: string | null
+          duration_ms: number | null
+          edited_at: string | null
+          filter: string | null
+          filter_type: string | null
+          hashtags: string[] | null
+          id: string | null
+          image_url: string | null
+          image_urls: string[] | null
+          is_archived: boolean | null
+          is_removed: boolean | null
+          is_sensitive: boolean | null
+          location_enabled: boolean | null
+          location_label: string | null
+          location_source: string | null
+          main_category_slug: string | null
+          media_height: number | null
+          media_origin: string | null
+          media_type: string | null
+          media_width: number | null
+          parent_post_id: string | null
+          photo_filter: string | null
+          pinned_at: string | null
+          post_location_precision: string | null
+          publish_status: string | null
+          region_name: string | null
+          region_type: string | null
+          repost_caption: string | null
+          repost_count: number | null
+          royal_boost_until: string | null
+          scheduled_for: string | null
+          share_count: number | null
+          spotlight_until: string | null
+          state: string | null
+          subcategory_slug: string | null
+          tagged_user_ids: string[] | null
+          user_id: string | null
+          video_filter: string | null
+          video_poster_url: string | null
+          video_url: string | null
+          vote_boost_until: string | null
+          vote_count: number | null
+        }
+        Insert: {
+          alt_texts?: string[] | null
+          archived_at?: string | null
+          aspect_ratio?: string | null
+          battle_wins?: number | null
+          caption?: string | null
+          category?: Database["public"]["Enums"]["crown_category"] | null
+          city?: string | null
+          comment_count?: number | null
+          content_rating?: Database["public"]["Enums"]["content_rating"] | null
+          content_type?: string | null
+          country?: string | null
+          created_at?: string | null
+          crown_score?: number | null
+          crown_shield_until?: string | null
+          duration_ms?: number | null
+          edited_at?: string | null
+          filter?: string | null
+          filter_type?: string | null
+          hashtags?: string[] | null
+          id?: string | null
+          image_url?: string | null
+          image_urls?: string[] | null
+          is_archived?: boolean | null
+          is_removed?: boolean | null
+          is_sensitive?: boolean | null
+          location_enabled?: boolean | null
+          location_label?: string | null
+          location_source?: string | null
+          main_category_slug?: string | null
+          media_height?: number | null
+          media_origin?: string | null
+          media_type?: string | null
+          media_width?: number | null
+          parent_post_id?: string | null
+          photo_filter?: string | null
+          pinned_at?: string | null
+          post_location_precision?: string | null
+          publish_status?: string | null
+          region_name?: string | null
+          region_type?: string | null
+          repost_caption?: string | null
+          repost_count?: number | null
+          royal_boost_until?: string | null
+          scheduled_for?: string | null
+          share_count?: number | null
+          spotlight_until?: string | null
+          state?: string | null
+          subcategory_slug?: string | null
+          tagged_user_ids?: string[] | null
+          user_id?: string | null
+          video_filter?: string | null
+          video_poster_url?: string | null
+          video_url?: string | null
+          vote_boost_until?: string | null
+          vote_count?: number | null
+        }
+        Update: {
+          alt_texts?: string[] | null
+          archived_at?: string | null
+          aspect_ratio?: string | null
+          battle_wins?: number | null
+          caption?: string | null
+          category?: Database["public"]["Enums"]["crown_category"] | null
+          city?: string | null
+          comment_count?: number | null
+          content_rating?: Database["public"]["Enums"]["content_rating"] | null
+          content_type?: string | null
+          country?: string | null
+          created_at?: string | null
+          crown_score?: number | null
+          crown_shield_until?: string | null
+          duration_ms?: number | null
+          edited_at?: string | null
+          filter?: string | null
+          filter_type?: string | null
+          hashtags?: string[] | null
+          id?: string | null
+          image_url?: string | null
+          image_urls?: string[] | null
+          is_archived?: boolean | null
+          is_removed?: boolean | null
+          is_sensitive?: boolean | null
+          location_enabled?: boolean | null
+          location_label?: string | null
+          location_source?: string | null
+          main_category_slug?: string | null
+          media_height?: number | null
+          media_origin?: string | null
+          media_type?: string | null
+          media_width?: number | null
+          parent_post_id?: string | null
+          photo_filter?: string | null
+          pinned_at?: string | null
+          post_location_precision?: string | null
+          publish_status?: string | null
+          region_name?: string | null
+          region_type?: string | null
+          repost_caption?: string | null
+          repost_count?: number | null
+          royal_boost_until?: string | null
+          scheduled_for?: string | null
+          share_count?: number | null
+          spotlight_until?: string | null
+          state?: string | null
+          subcategory_slug?: string | null
+          tagged_user_ids?: string[] | null
+          user_id?: string | null
+          video_filter?: string | null
+          video_poster_url?: string | null
+          video_url?: string | null
+          vote_boost_until?: string | null
+          vote_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_parent_post_id_fkey"
+            columns: ["parent_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_parent_post_id_fkey"
+            columns: ["parent_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles_public"
             referencedColumns: ["id"]
