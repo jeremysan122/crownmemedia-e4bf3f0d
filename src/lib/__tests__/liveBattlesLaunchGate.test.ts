@@ -88,6 +88,21 @@ describe("Client bundle secrecy", () => {
     const files = walk("src").filter((f) => !f.includes("__tests__") && !f.includes(".test."));
     const hits = files.filter((f) => /LIVEKIT_API_SECRET|LIVEKIT_SECRET/.test(readFileSync(f, "utf8")));
     expect(hits).toEqual([]);
-
   });
 });
+
+describe("livekit-webhook function", () => {
+  it("uses WebhookReceiver, is verify_jwt=false, and dedupes on event_id", () => {
+    const src = readFileSync("supabase/functions/livekit-webhook/index.ts", "utf8");
+    expect(src).toMatch(/WebhookReceiver/);
+    expect(src).toMatch(/livekit_webhook_events/);
+    // signature failures return 401 before doing any writes
+    expect(src).toMatch(/invalid_signature/);
+    // idempotency short-circuit on unique_violation
+    expect(src).toMatch(/23505/);
+
+    const cfg = readFileSync("supabase/config.toml", "utf8");
+    expect(cfg).toMatch(/\[functions\.livekit-webhook\][\s\S]*verify_jwt\s*=\s*false/);
+  });
+});
+
