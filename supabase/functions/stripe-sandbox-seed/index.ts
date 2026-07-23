@@ -40,8 +40,9 @@ const CATALOG: Item[] = [
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const secret = Deno.env.get("CRON_SHARED_SECRET");
-  if (!secret || req.headers.get("x-cron-secret") !== secret) {
+  const secret = Deno.env.get("SANDBOX_SEED_TOKEN") ?? Deno.env.get("CRON_SHARED_SECRET");
+  const provided = req.headers.get("x-seed-token") ?? req.headers.get("x-cron-secret");
+  if (!secret || provided !== secret) {
     return new Response(JSON.stringify({ error: "forbidden" }), {
       status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
