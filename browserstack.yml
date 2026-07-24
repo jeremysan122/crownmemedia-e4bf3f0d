@@ -1,0 +1,18 @@
+userName: ${BROWSERSTACK_USERNAME}
+accessKey: ${BROWSERSTACK_ACCESS_KEY}
+
+projectName: ${BROWSERSTACK_PROJECT_NAME}
+buildName: ${BROWSERSTACK_BUILD_NAME}
+
+platforms:
+  - browserName: safari
+    osVersion: 18
+    deviceName: iPhone 14
+    playwrightConfigOptions:
+      name: browserstack-ios-safari
+
+parallelsPerPlatform: 1
+browserstackLocal: false
+debug: true
+networkLogs: true
+
