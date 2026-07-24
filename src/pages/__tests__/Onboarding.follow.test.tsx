@@ -1,6 +1,5 @@
 // Integration tests for Onboarding suggested-follow persistence + race safety.
-// We use a fake Supabase client that records inserts/deletes and simulates
-// unique-constraint / no-row responses.
+// We use a fake Supabase client that records the effects of the follow RPC.
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -82,6 +81,22 @@ vi.mock("@/integrations/supabase/client", () => {
   return {
     supabase: {
       from: (table: string) => build(table),
+      rpc: async (name: string, args: { _target_id?: string; _follow?: boolean }) => {
+        if (name !== "set_follow_state" || !args._target_id) return { data: null, error: null };
+        const targetId = args._target_id;
+        const forced = forceInsertError[targetId];
+        if (forced && !/duplicate|already exists|23505/i.test(forced)) {
+          return { data: null, error: { message: forced } };
+        }
+        if (args._follow) {
+          if (!state.follows.some((f) => f.follower_id === "u1" && f.following_id === targetId)) {
+            state.follows.push({ follower_id: "u1", following_id: targetId });
+          }
+          return { data: "following", error: null };
+        }
+        state.follows = state.follows.filter((f) => !(f.follower_id === "u1" && f.following_id === targetId));
+        return { data: "none", error: null };
+      },
       storage: { from: () => ({ upload: async () => ({}), getPublicUrl: () => ({ data: { publicUrl: "" } }) }) },
       auth: { getUser: async () => ({ data: { user: null } }) },
     },
@@ -140,7 +155,7 @@ describe("Onboarding suggested follows", () => {
     });
   });
 
-  it("treats duplicate insert as already-following (no user-facing error)", async () => {
+  it("keeps the RPC idempotent when a relationship already exists", async () => {
     // Pre-seed the row so the insert we're about to fire hits the unique constraint.
     state.follows = [{ follower_id: "u1", following_id: "u2" }];
     renderOnboarding();

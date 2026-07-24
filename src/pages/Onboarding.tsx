@@ -9,6 +9,7 @@ import { Loader2, Upload, Bell, UserPlus, ArrowRight, Check } from "lucide-react
 import BrandLogo from "@/components/BrandLogo";
 import { toFriendlyMessage, logRawError } from "@/lib/settingsSecurityErrors";
 import { validateUpload } from "@/lib/uploadValidation";
+import { changeFollowState } from "@/lib/follows";
 
 type Step = "avatar" | "follows" | "notifications";
 const STEPS: Step[] = ["avatar", "follows", "notifications"];
@@ -97,6 +98,7 @@ export default function Onboarding() {
       .select("id, username, profile_photo_url")
       .neq("id", user?.id || "")
       .eq("is_banned", false)
+      .eq("is_private", false)
       .order("followers_count", { ascending: false })
       .limit(8);
     setSuggested((data as Suggested[]) || []);
@@ -134,39 +136,28 @@ export default function Onboarding() {
     });
     inflight.current.add(id);
     try {
-      const { error } = willFollow
-        ? await supabase.from("follows").insert({ follower_id: user.id, following_id: id })
-        : await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", id);
-      if (error) {
-        const msg = (error as { message?: string }).message || "";
-        // Idempotent: duplicate insert = already following; missing delete = already unfollowed.
-        const idempotent =
-          (willFollow && /duplicate|already exists|23505/i.test(msg)) ||
-          (!willFollow && /not found|no rows/i.test(msg));
-        if (!idempotent) {
-          logRawError(error, "generic", {
-            feature: "follow_toggle",
-            follower_id: user.id,
-            following_id: id,
-            action: willFollow ? "follow" : "unfollow",
-          });
-          // Only roll back if the intent hasn't changed since this write started
-          if (intent.current.get(id) === willFollow) {
-            setFollowing((prev) => {
-              const next = new Set(prev);
-              if (willFollow) next.delete(id); else next.add(id);
-              return next;
-            });
-          }
-          toast.error(toFriendlyMessage(error, "generic"));
-          return;
-        }
-      }
+      const state = await changeFollowState(id, willFollow);
+      if (state !== (willFollow ? "following" : "none")) throw new Error("Unexpected follow state");
       // On success, reconcile with the LATEST intent (not this stale write).
       const latest = intent.current.get(id);
       if (latest !== undefined && latest !== willFollow) {
         // Newer tap already flipped intent; leave UI as the newest optimistic state.
       }
+    } catch (error) {
+      logRawError(error, "generic", {
+        feature: "follow_toggle",
+        follower_id: user.id,
+        following_id: id,
+        action: willFollow ? "follow" : "unfollow",
+      });
+      if (intent.current.get(id) === willFollow) {
+        setFollowing((prev) => {
+          const next = new Set(prev);
+          if (willFollow) next.delete(id); else next.add(id);
+          return next;
+        });
+      }
+      toast.error(toFriendlyMessage(error, "generic"));
     } finally {
       inflight.current.delete(id);
     }

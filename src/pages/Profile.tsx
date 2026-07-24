@@ -43,6 +43,7 @@ import ReportDialog from "@/components/ReportDialog";
 import RoyalPassBadge from "@/components/store/RoyalPassBadge";
 import { useIsRoyalPassUser } from "@/hooks/useIsRoyalPassUser";
 import { deletePostWithMedia } from "@/lib/deletePostWithMedia";
+import { changeFollowState, getFollowState, type FollowState } from "@/lib/follows";
 
 import { useActiveBoost } from "@/hooks/useActiveBoost";
 import VerifiedBadge from "@/components/VerifiedBadge";
@@ -65,6 +66,7 @@ interface ProfileFull {
   banner_position_y: number | null;
   avatar_position_y: number | null;
   liked_posts_public: boolean;
+  is_private: boolean;
   city: string | null; state: string | null; country: string | null;
   followers_count: number; following_count: number;
   votes_received: number; votes_given: number;
@@ -106,7 +108,9 @@ export default function Profile() {
   const [liked, setLiked] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null; filter?: string | null; media_type?: string | null; video_poster_url?: string | null; image_urls?: string[] | null }[]>([]);
   const [saved, setSaved] = useState<{ id: string; image_url: string; crown_score: number; is_sensitive?: boolean | null; filter?: string | null; media_type?: string | null; video_poster_url?: string | null; image_urls?: string[] | null }[]>([]);
   const [battles, setBattles] = useState<BattleRow[]>([]);
-  const [following, setFollowing] = useState(false);
+  const [followState, setFollowState] = useState<FollowState>("none");
+  const following = followState === "following";
+  const followRequested = followState === "requested";
   const [followBusy, setFollowBusy] = useState(false);
   const [openPost, setOpenPost] = useState<FeedPost | null>(null);
   const [listMode, setListMode] = useState<"followers" | "following" | null>(null);
@@ -185,7 +189,7 @@ export default function Profile() {
       // The cached followers_count/following_count columns have drifted for
       // some profiles (see the counter-guard fix migration). Overlay the live
       // truth from the follows table so the number always matches the list.
-      void (async () => {
+      if (!(p as any).is_private || user?.id === pid) void (async () => {
         const [fRes, gRes] = await Promise.all([
           supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", pid),
           supabase.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", pid),
@@ -336,8 +340,12 @@ export default function Profile() {
       })));
 
       if (user && user.id !== pid) {
-        const { data: f } = await supabase.from("follows").select("id").eq("follower_id", user.id).eq("following_id", pid).maybeSingle();
-        if (!cancelled) setFollowing(!!f);
+        try {
+          const state = await getFollowState(pid);
+          if (!cancelled) setFollowState(state);
+        } catch (error) {
+          logRawError(error, "generic", { feature: "profile_follow_state", target_id: pid });
+        }
       }
     };
     load();
@@ -419,11 +427,12 @@ export default function Profile() {
       .on("postgres_changes", { event: "*", schema: "public", table: "follows", filter: `following_id=eq.${prof.id}` }, async () => {
         // Refresh follower count + my following state. Count the follows
         // table directly — it's the source of truth the follower list uses.
-        const { count } = await supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", prof.id);
-        if (typeof count === "number") setProf((p) => p ? { ...p, followers_count: count } : p);
+        if (!prof.is_private || user?.id === prof.id) {
+          const { count } = await supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", prof.id);
+          if (typeof count === "number") setProf((p) => p ? { ...p, followers_count: count } : p);
+        }
         if (user && user.id !== prof.id) {
-          const { data: f } = await supabase.from("follows").select("id").eq("follower_id", user.id).eq("following_id", prof.id).maybeSingle();
-          setFollowing(!!f);
+          getFollowState(prof.id).then(setFollowState).catch(() => { /* next refresh retries */ });
         }
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "votes" }, (payload) => {
@@ -465,63 +474,30 @@ export default function Profile() {
     return () => { mountedRef.current = false; };
   }, []);
 
-  const runFollowOp = async (
-    wasFollowing: boolean,
-    profileId: string,
-    userId: string,
-    attempt: number,
-  ): Promise<void> => {
-    const started = performance.now();
-    void trackEvent("profile_follow_attempted", {
-      metadata: { op: wasFollowing ? "unfollow" : "follow", attempt },
-    });
-    const { error } = wasFollowing
-      ? await supabase.from("follows").delete().eq("follower_id", userId).eq("following_id", profileId)
-      : await supabase.from("follows").insert({ follower_id: userId, following_id: profileId });
-    const latency_ms = Math.round(performance.now() - started);
-
-    if (!mountedRef.current) return; // navigated away — skip UI updates
-
-    if (error) {
-      // Rollback optimistic UI
-      setFollowing(wasFollowing);
-      setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count + (wasFollowing ? 1 : -1)) } : p);
-      logRawError(error, "generic", { op: wasFollowing ? "follow_delete" : "follow_insert" });
-      void trackEvent("profile_follow_failed", {
-        metadata: { op: wasFollowing ? "unfollow" : "follow", attempt, latency_ms, code: (error as { code?: string }).code ?? null },
-      });
-      toast.error(toFriendlyMessage(error, "generic"), {
-        action: {
-          label: "Retry",
-          onClick: () => {
-            if (!mountedRef.current) return;
-            void trackEvent("profile_follow_retry", { metadata: { op: wasFollowing ? "unfollow" : "follow", attempt } });
-            // Re-apply optimistic state and try again.
-            setFollowBusy(true);
-            setFollowing(!wasFollowing);
-            setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count + (wasFollowing ? -1 : 1)) } : p);
-            runFollowOp(wasFollowing, profileId, userId, attempt + 1).finally(() => {
-              if (mountedRef.current) setFollowBusy(false);
-            });
-          },
-        },
-      });
-    } else {
-      void trackEvent("profile_follow_success", {
-        metadata: { op: wasFollowing ? "unfollow" : "follow", attempt, latency_ms },
-      });
-    }
-  };
-
   const toggleFollow = async () => {
     if (!user || !prof || followBusy) return;
     setFollowBusy(true);
-    const wasFollowing = following;
-    // Optimistic
-    setFollowing(!wasFollowing);
-    setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count + (wasFollowing ? -1 : 1)) } : p);
+    const previous = followState;
+    const shouldFollow = previous === "none";
+    const started = performance.now();
+    void trackEvent("profile_follow_attempted", {
+      metadata: { op: shouldFollow ? "follow" : "unfollow", previous },
+    });
     try {
-      await runFollowOp(wasFollowing, prof.id, user.id, 1);
+      const next = await changeFollowState(prof.id, shouldFollow);
+      if (!mountedRef.current) return;
+      setFollowState(next);
+      const countDelta = (next === "following" ? 1 : 0) - (previous === "following" ? 1 : 0);
+      if (countDelta !== 0) {
+        setProf((p) => p ? { ...p, followers_count: Math.max(0, p.followers_count + countDelta) } : p);
+      }
+      if (next === "requested") toast.success("Follow request sent");
+      void trackEvent("profile_follow_success", {
+        metadata: { state: next, latency_ms: Math.round(performance.now() - started) },
+      });
+    } catch (error) {
+      logRawError(error, "generic", { feature: "profile_follow", target_id: prof.id });
+      toast.error(toFriendlyMessage(error, "generic"));
     } finally {
       if (mountedRef.current) setFollowBusy(false);
     }
@@ -885,11 +861,11 @@ export default function Profile() {
                   onClick={toggleFollow}
                   disabled={followBusy}
                   aria-busy={followBusy}
-                  aria-pressed={following}
-                  className={following ? "" : "bg-gradient-gold text-primary-foreground"}
-                  variant={following ? "outline" : "default"}
+                  aria-pressed={following || followRequested}
+                  className={following || followRequested ? "" : "bg-gradient-gold text-primary-foreground"}
+                  variant={following || followRequested ? "outline" : "default"}
                 >
-                  {followBusy ? "…" : (following ? "Following" : "Follow")}
+                  {followBusy ? "…" : (following ? "Following" : followRequested ? "Requested" : "Follow")}
                 </Button>
                 <Button onClick={() => nav(`/messages/${prof.id}`)} variant="outline"><MessageCircle size={14} className="mr-1.5" /> Message</Button>
                 <Button onClick={() => setChallengeOpen(true)} variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">
@@ -944,11 +920,11 @@ export default function Profile() {
                 onClick={toggleFollow}
                 disabled={followBusy}
                 aria-busy={followBusy}
-                aria-pressed={following}
-                className={`flex-1 ${following ? "" : "bg-gradient-gold text-primary-foreground"}`}
-                variant={following ? "outline" : "default"}
+                aria-pressed={following || followRequested}
+                className={`flex-1 ${following || followRequested ? "" : "bg-gradient-gold text-primary-foreground"}`}
+                variant={following || followRequested ? "outline" : "default"}
               >
-                {followBusy ? "…" : (following ? "Following" : "Follow")}
+                {followBusy ? "…" : (following ? "Following" : followRequested ? "Requested" : "Follow")}
               </Button>
               <Button onClick={() => nav(`/messages/${prof.id}`)} variant="outline" size="icon" aria-label="Message"><MessageCircle size={16} /></Button>
               <Button onClick={() => setChallengeOpen(true)} variant="outline" size="icon" aria-label="Challenge to Crown Battle" className="border-primary/50 text-primary">

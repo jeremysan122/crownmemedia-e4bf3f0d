@@ -49,6 +49,7 @@ const sensitiveTables = [
 ];
 
 const results = [];
+const permissionResults = [];
 let unsafe = false;
 
 for (const table of sensitiveTables) {
@@ -93,5 +94,35 @@ for (const table of sensitiveTables) {
   }
 }
 
-console.log(JSON.stringify({ unsafe, results }, null, 2));
+// Column grants are independent from RLS. These probes catch the exact class
+// of regression where a later table-wide GRANT SELECT silently defeats an
+// earlier protected-column allowlist.
+const permissionProbes = [
+  { name: "profiles-public-columns", table: "profiles", select: "id,username", shouldBlock: false },
+  { name: "profiles-protected-columns", table: "profiles", select: "first_name,last_name,banned_reason,deletion_requested_at,verification_plan", shouldBlock: true },
+  { name: "posts-public-columns", table: "posts", select: "id,caption", shouldBlock: false },
+  { name: "posts-protected-columns", table: "posts", select: "submission_key,client_request_id,moderation_notes,moderated_by,post_lat,post_lng,location_captured_at", shouldBlock: true },
+  { name: "profiles-public-view", table: "profiles_public", select: "id,username", shouldBlock: false },
+];
+
+for (const probe of permissionProbes) {
+  const endpoint = new URL(`/rest/v1/${encodeURIComponent(probe.table)}`, supabaseUrl);
+  endpoint.searchParams.set("select", probe.select);
+  endpoint.searchParams.set("limit", "1");
+  const response = await fetch(endpoint, {
+    method: "HEAD",
+    headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+  });
+  const blocked = response.status === 401 || response.status === 403 || response.status === 404;
+  const passed = probe.shouldBlock ? blocked : response.ok;
+  if (!passed) unsafe = true;
+  permissionResults.push({
+    name: probe.name,
+    expected: probe.shouldBlock ? "blocked" : "allowed",
+    result: blocked ? "blocked" : response.ok ? "allowed" : "unexpected-response",
+    status: response.status,
+  });
+}
+
+console.log(JSON.stringify({ unsafe, results, permissionResults }, null, 2));
 process.exit(unsafe ? 1 : 0);

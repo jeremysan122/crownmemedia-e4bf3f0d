@@ -53,10 +53,7 @@ const POSTS_SAFE_OWNER = [
   "country",
   "region_name",
   "region_type",
-  "post_lat",
-  "post_lng",
   "post_location_precision",
-  "location_captured_at",
   "edited_at",
   "is_archived",
   "archived_at",
@@ -81,6 +78,9 @@ describe("posts UPDATE lockdown", () => {
     // (Enforced defense-in-depth by the guard trigger — checked below.)
     for (const c of ["crown_score", "vote_count", "comment_count", "share_count", "repost_count", "moderation_status", "is_removed", "royal_boost_until"]) {
       expect(cols, `column ${c} leaked into tightened grant`).not.toMatch(new RegExp(`\\b${c}\\b`));
+    }
+    for (const c of ["post_lat", "post_lng", "location_captured_at"]) {
+      expect(cols, `precise location column ${c} leaked into owner update grant`).not.toMatch(new RegExp(`\\b${c}\\b`));
     }
   });
 

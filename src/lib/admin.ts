@@ -137,21 +137,17 @@ export async function removeComment(commentId: string, reason: string) {
 // ---------- User actions ----------
 
 export async function suspendUser(userId: string, reason: string) {
-  const { error: e1 } = await supabase
-    .from("profiles")
-    .update({ is_suspended: true })
-    .eq("id", userId);
-  if (e1) throw e1;
-  await logAdminAction("suspend_user", "user", userId, { reason });
+  const { error } = await supabase.rpc("admin_set_profile_status", {
+    _user_id: userId, _action: "suspend", _reason: reason,
+  });
+  if (error) throw error;
 }
 
 export async function unsuspendUser(userId: string) {
-  const { error } = await supabase
-    .from("profiles")
-    .update({ is_suspended: false })
-    .eq("id", userId);
+  const { error } = await supabase.rpc("admin_set_profile_status", {
+    _user_id: userId, _action: "unsuspend", _reason: null,
+  });
   if (error) throw error;
-  await logAdminAction("unsuspend_user", "user", userId, {});
 }
 
 export async function issueStrike(
@@ -382,36 +378,17 @@ export async function endAdminSession(sessionId: string) {
 // ---------- Bans (stronger than suspend; persistent) ----------
 
 export async function banUser(userId: string, reason: string) {
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) throw new Error("Not authenticated");
-  const { error } = await supabase
-    .from("profiles")
-    .update({
-      is_banned: true,
-      is_suspended: true,
-      banned_at: new Date().toISOString(),
-      banned_by: u.user.id,
-      banned_reason: reason,
-    })
-    .eq("id", userId);
+  const { error } = await supabase.rpc("admin_set_profile_status", {
+    _user_id: userId, _action: "ban", _reason: reason,
+  });
   if (error) throw error;
-  // Ban is the most severe user action — always write an audit entry.
-  await logAdminAction("ban_user", "user", userId, { reason });
 }
 
 export async function unbanUser(userId: string) {
-  const { error } = await supabase
-    .from("profiles")
-    .update({
-      is_banned: false,
-      is_suspended: false,
-      banned_at: null,
-      banned_by: null,
-      banned_reason: null,
-    })
-    .eq("id", userId);
+  const { error } = await supabase.rpc("admin_set_profile_status", {
+    _user_id: userId, _action: "unban", _reason: null,
+  });
   if (error) throw error;
-  await logAdminAction("unban_user", "user", userId, {});
 }
 
 // ---------- Reports ----------

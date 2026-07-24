@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Crown } from "lucide-react";
 import { toast } from "sonner";
 import { logRawError } from "@/lib/settingsSecurityErrors";
+import { changeFollowState } from "@/lib/follows";
 
 type Mode = "followers" | "following";
 
@@ -29,6 +30,7 @@ export default function UserListDialog({ open, onOpenChange, userId, mode }: Pro
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [followingSet, setFollowingSet] = useState<Set<string>>(new Set());
+  const [requestedSet, setRequestedSet] = useState<Set<string>>(new Set());
   const [pending, setPending] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -38,10 +40,12 @@ export default function UserListDialog({ open, onOpenChange, userId, mode }: Pro
       const col = mode === "followers" ? "follower_id" : "following_id";
       const filterCol = mode === "followers" ? "following_id" : "follower_id";
       const { data: f } = await supabase.from("follows").select(`${col}`).eq(filterCol, userId).limit(500);
-      const ids = (f || []).map((r: any) => r[col]).filter(Boolean) as string[];
+      const ids = ((f ?? []) as unknown as Array<Record<string, string>>)
+        .map((r) => r[col]).filter(Boolean);
       if (!ids.length) {
         setRows([]);
         setFollowingSet(new Set());
+        setRequestedSet(new Set());
         setLoading(false);
         return;
       }
@@ -53,12 +57,12 @@ export default function UserListDialog({ open, onOpenChange, userId, mode }: Pro
 
       // Which of these am I already following?
       if (user) {
-        const { data: mine } = await supabase
-          .from("follows")
-          .select("following_id")
-          .eq("follower_id", user.id)
-          .in("following_id", ids);
-        setFollowingSet(new Set(((mine as any) || []).map((r: any) => r.following_id)));
+        const [{ data: mine }, { data: requested }] = await Promise.all([
+          supabase.from("follows").select("following_id").eq("follower_id", user.id).in("following_id", ids),
+          supabase.from("follow_requests").select("target_id").eq("requester_id", user.id).eq("status", "pending").in("target_id", ids),
+        ]);
+        setFollowingSet(new Set((mine ?? []).map((r) => r.following_id)));
+        setRequestedSet(new Set((requested ?? []).map((r) => r.target_id)));
       }
       setLoading(false);
     };
@@ -74,27 +78,20 @@ export default function UserListDialog({ open, onOpenChange, userId, mode }: Pro
     if (pending.has(targetId)) return;
     setPending((p) => new Set(p).add(targetId));
     const isFollowing = followingSet.has(targetId);
-    // optimistic
-    setFollowingSet((s) => {
-      const next = new Set(s);
-      if (isFollowing) next.delete(targetId); else next.add(targetId);
-      return next;
-    });
+    const isRequested = requestedSet.has(targetId);
     try {
-      if (isFollowing) {
-        const { error } = await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", targetId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: targetId });
-        if (error) throw error;
-      }
-    } catch (err: any) {
-      // rollback
+      const state = await changeFollowState(targetId, !(isFollowing || isRequested));
       setFollowingSet((s) => {
         const next = new Set(s);
-        if (isFollowing) next.add(targetId); else next.delete(targetId);
+        if (state === "following") next.add(targetId); else next.delete(targetId);
         return next;
       });
+      setRequestedSet((s) => {
+        const next = new Set(s);
+        if (state === "requested") next.add(targetId); else next.delete(targetId);
+        return next;
+      });
+    } catch (err: unknown) {
       logRawError(err, "generic", { feature: "user_list_follow_toggle", target_id: targetId });
       toast.error("Couldn't follow this user. Try again.");
     } finally {
@@ -120,6 +117,7 @@ export default function UserListDialog({ open, onOpenChange, userId, mode }: Pro
           {rows.map((r) => {
             const isMe = user?.id === r.id;
             const isFollowing = followingSet.has(r.id);
+            const isRequested = requestedSet.has(r.id);
             const isPending = pending.has(r.id);
             return (
               <div
@@ -149,12 +147,12 @@ export default function UserListDialog({ open, onOpenChange, userId, mode }: Pro
                 {!isMe && user && (
                   <Button
                     size="sm"
-                    variant={isFollowing ? "outline" : "default"}
+                    variant={isFollowing || isRequested ? "outline" : "default"}
                     disabled={isPending}
                     onClick={() => toggle(r.id)}
-                    className={`h-8 px-3 text-xs shrink-0 ${isFollowing ? "" : "bg-gradient-gold text-primary-foreground"}`}
+                    className={`h-8 px-3 text-xs shrink-0 ${isFollowing || isRequested ? "" : "bg-gradient-gold text-primary-foreground"}`}
                   >
-                    {isFollowing ? "Following" : "Follow"}
+                    {isFollowing ? "Following" : isRequested ? "Requested" : "Follow"}
                   </Button>
                 )}
               </div>
