@@ -1,0 +1,40 @@
+userName: ${BROWSERSTACK_USERNAME}
+accessKey: ${BROWSERSTACK_ACCESS_KEY}
+
+projectName: CrownMe production
+buildName: ${BROWSERSTACK_BUILD_NAME}
+
+# Current production browser coverage. BrowserStack's Playwright 1.60 grid
+# supports Windows 11, macOS Tahoe, and real iOS Safari devices.
+platforms:
+  - os: Windows
+    osVersion: 11
+    browserName: Chrome
+    browserVersion: latest
+    playwrightConfigOptions:
+      name: browserstack-production
+  - os: OS X
+    osVersion: Tahoe
+    browserName: playwright-webkit
+    playwrightConfigOptions:
+      name: browserstack-production
+  - deviceName: iPhone 17 Pro
+    osVersion: 26
+    browserName: Safari
+    deviceOrientation: portrait
+    playwrightConfigOptions:
+      name: browserstack-production
+
+parallelsPerPlatform: 1
+# Cloudflare rejects direct BrowserStack device egress for the production
+# domain. Force production requests through the authenticated GitHub runner's
+# secure BrowserStack Local tunnel; the URL under test remains crownmemedia.com.
+browserstackLocal: true
+browserStackLocalOptions:
+  # GitHub Actions starts and verifies this named tunnel before the SDK runs.
+  # Prevent the SDK from racing it with a second Local binary.
+  skipBinaryInitialisation: true
+  localIdentifier: ${BROWSERSTACK_LOCAL_IDENTIFIER}
+selfHeal: true
+debug: true
+networkLogs: true

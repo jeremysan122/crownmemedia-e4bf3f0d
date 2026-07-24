@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const browserStackEnabled = process.env.BROWSERSTACK_ENABLED === "true";
+
 /**
  * Visual regression config for share-card screenshots.
  *
@@ -16,7 +18,9 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // Remote device sessions are intentionally single-attempt: retries consume
+  // paid BrowserStack minutes and can conceal deterministic grid/config errors.
+  retries: browserStackEnabled ? 0 : process.env.CI ? 2 : 0,
   reporter: "list",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:8080",
@@ -40,6 +44,17 @@ export default defineConfig({
       name: "mobile-safari",
       use: { ...devices["iPhone 13"] },
     },
+    ...(browserStackEnabled
+      ? [
+          {
+            // The BrowserStack SDK replaces this local profile with each
+            // platform declared in browserstack.yml.
+            name: "browserstack-production",
+            retries: 0,
+            use: { ...devices["Desktop Chrome"] },
+          },
+        ]
+      : []),
   ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
